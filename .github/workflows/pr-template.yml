@@ -1,0 +1,32 @@
+name: Auto Apply PR Template
+
+on:
+  pull_request:
+    types: [opened, edited]
+
+jobs:
+  apply-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set PR Template Content
+        id: template
+        run: |
+          BRANCH_NAME="${GITHUB_HEAD_REF}"
+          if [[ "$BRANCH_NAME" == feature/* ]]; then
+            echo "template=$(cat .github/PULL_REQUEST_TEMPLATE/feature.md)" >> $GITHUB_ENV
+          elif [[ "$BRANCH_NAME" == bugfix/* ]]; then
+            echo "template=$(cat .github/PULL_REQUEST_TEMPLATE/bugfix.md)" >> $GITHUB_ENV
+          else
+            echo "template=" >> $GITHUB_ENV
+          fi
+
+      - name: Update PR Body
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ env.template }}
+          edit-mode: replace
