@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-// same dummy data (we can later move to a shared file)
+// Dummy doctors
 const dummyDoctors = [
   {
     id: 101,
@@ -13,7 +13,7 @@ const dummyDoctors = [
     active: true,
     next_available: "2025-10-07T10:00:00Z",
     qualifications: ["BPT", "MPT - Sports Medicine"],
-    clinic: { name: "PhysioCare Clinic", location: "Bangalore, India" }
+    clinic: { name: "PhysioCare Clinic", location: "Bangalore, India" },
   },
   {
     id: 102,
@@ -26,7 +26,7 @@ const dummyDoctors = [
     active: true,
     next_available: "2025-10-07T11:30:00Z",
     qualifications: ["MBBS", "MD - Internal Medicine"],
-    clinic: { name: "CarePoint Medical", location: "Mumbai, India" }
+    clinic: { name: "CarePoint Medical", location: "Mumbai, India" },
   },
   {
     id: 103,
@@ -39,54 +39,19 @@ const dummyDoctors = [
     active: true,
     next_available: "2025-10-08T09:00:00Z",
     qualifications: ["MBBS", "MD - Dermatology"],
-    clinic: { name: "DermaGlow Clinic", location: "Delhi, India" }
+    clinic: { name: "DermaGlow Clinic", location: "Delhi, India" },
   },
-  {
-    id: 104,
-    first_name: "Vikram",
-    last_name: "Patel",
-    provider_type: "Physiotherapist",
-    bio: "Focused on sports injuries and rehabilitation therapies.",
-    email: "vikram@gmail.com",
-    phone: "+91-8877665544",
-    active: false,
-    next_available: "2025-10-08T09:00:00Z",
-    qualifications: ["BPT", "Certified Sports Therapist"],
-    clinic: { name: "ActiveLife Physiotherapy", location: "Chennai, India" }
-  },
-  {
-    id: 105,
-    first_name: "Sneha",
-    last_name: "Iyer",
-    provider_type: "Cardiologist",
-    bio: "Specialist in heart health and cardiovascular disease management.",
-    email: "sneha@gmail.com",
-    phone: "+91-7766554433",
-    active: true,
-    next_available: "2025-10-09T14:00:00Z",
-    qualifications: ["MBBS", "MD - Cardiology"],
-    clinic: { name: "HeartCare Center", location: "Hyderabad, India" }
-  },
-  {
-    id: 106,
-    first_name: "Arjun",
-    last_name: "Reddy",
-    provider_type: "Neurologist",
-    bio: "Experienced in treating neurological disorders and brain health.",
-    email: "arjun@gmail.com",
-    phone: "+91-6655443322",
-    active: true,
-    next_available: "2025-10-09T15:30:00Z",
-    qualifications: ["MBBS", "MD - Neurology"],
-    clinic: { name: "NeuroHealth Clinic", location: "Pune, India"}
-  }
 ];
 
+// ✅ FIX for Next.js 15
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-  const doctorId = parseInt(params.id, 10);
+  // ⬅️ `params` is now a Promise in new builds
+  const { id } = await context.params;
+
+  const doctorId = parseInt(id, 10);
   const doctor = dummyDoctors.find((doc) => doc.id === doctorId);
 
   if (!doctor) {
@@ -98,6 +63,6 @@ export async function GET(
 
   return NextResponse.json({
     status: "success",
-    data: doctor
+    data: doctor,
   });
 }

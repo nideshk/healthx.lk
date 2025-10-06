@@ -103,13 +103,16 @@ const dummyDoctors = [
 ];
 
 // =====================
-// GET /api/services/[id]
+// ✅ FIXED HANDLER SIGNATURE
 // =====================
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const serviceId = params.id;
+  // ✅ IMPORTANT FIX — await the promise
+  const { id } = await context.params;
+
+  const serviceId = id;
 
   // 1️⃣ Find the service
   const service = dummyServices.find((s) => s.id === serviceId);
@@ -123,7 +126,7 @@ export async function GET(
   // 2️⃣ Find doctors that offer this service
   const doctors = dummyDoctors
     .filter((doc) => doc.services.includes(serviceId))
-    .slice(0, 3); // ensure only 3 doctors returned
+    .slice(0, 3);
 
   // 3️⃣ Return combined data
   return NextResponse.json({
