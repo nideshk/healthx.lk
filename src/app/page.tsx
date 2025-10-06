@@ -1,9 +1,17 @@
-import SignupForm from "@/components/form/SignupForm";
+"use client";
+
+import { useEffect } from "react";
 
 export default function Home() {
-  return (
-    <>
-    <SignupForm></SignupForm>
-    </>
-  );
+  const fetchCliniko = async () => {
+    const response = await fetch("/api/cliniko-users");
+    const data = await response.json();
+    console.log(data);
+  };
+
+  useEffect(() => {
+    fetchCliniko();
+  }, []);
+
+  return <div>Check console for Cliniko response</div>;
 }
