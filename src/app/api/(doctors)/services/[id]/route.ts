@@ -1,11 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+// =====================
 // Dummy services
+// =====================
 const dummyServices = [
   {
     id: "svc1",
     name: "General Consultation",
-    description: "Consult with our general practitioners for any health concern.",
+    description:
+      "Consult with our general practitioners for any health concern.",
     duration: 30,
     price: 1200,
     cliniko_appointment_type_id: 101,
@@ -14,7 +17,8 @@ const dummyServices = [
   {
     id: "svc2",
     name: "Physical Therapy",
-    description: "Book a session with our physiotherapists for rehab or mobility improvement.",
+    description:
+      "Book a session with our physiotherapists for rehab or mobility improvement.",
     duration: 45,
     price: 1500,
     cliniko_appointment_type_id: 102,
@@ -23,7 +27,8 @@ const dummyServices = [
   {
     id: "svc3",
     name: "Dermatology Consultation",
-    description: "Skin, hair, and cosmetic consultation with expert dermatologists.",
+    description:
+      "Skin, hair, and cosmetic consultation with expert dermatologists.",
     duration: 30,
     price: 2000,
     cliniko_appointment_type_id: 103,
@@ -31,7 +36,9 @@ const dummyServices = [
   },
 ];
 
-// Dummy doctors — each belongs to multiple services
+// =====================
+// Dummy doctors
+// =====================
 const dummyDoctors = [
   {
     id: "doc1",
@@ -99,11 +106,13 @@ const dummyDoctors = [
 // GET /api/services/[id]
 // =====================
 export async function GET(
-  req: Request,
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const service = dummyServices.find((s) => s.id === params.id);
+  const serviceId = params.id;
 
+  // 1️⃣ Find the service
+  const service = dummyServices.find((s) => s.id === serviceId);
   if (!service) {
     return NextResponse.json(
       { status: "error", message: "Service not found" },
@@ -111,14 +120,12 @@ export async function GET(
     );
   }
 
-  // Filter doctors that belong to this service
-  const relatedDoctors = dummyDoctors.filter((doc) =>
-    doc.services.includes(service.id)
-  );
+  // 2️⃣ Find doctors that offer this service
+  const doctors = dummyDoctors
+    .filter((doc) => doc.services.includes(serviceId))
+    .slice(0, 3); // ensure only 3 doctors returned
 
-  // Always return 3 doctors (take first 3)
-  const doctors = relatedDoctors.slice(0, 3);
-
+  // 3️⃣ Return combined data
   return NextResponse.json({
     status: "success",
     data: {
