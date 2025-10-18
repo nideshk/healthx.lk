@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import CreateAppointmentForm from '@/components/form/CreateAppointmentForm'
 
 export default async function DashboardPage() {
   const supabase = createServerComponentClient({ cookies })
@@ -9,5 +10,11 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/login')
 
-  return <h1>Welcome {user.email}</h1>
+  return <h1>
+    Welcome {user.email} 
+
+    Book an Appointment now!
+
+    <CreateAppointmentForm/>
+   </h1>
 }

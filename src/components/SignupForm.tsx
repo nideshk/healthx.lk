@@ -1,8 +1,9 @@
 import { useState } from "react";
 
 import { Mail, Lock } from "lucide-react";
-import Input from "./Input/Input";
-import Button from "./Button/Button";
+import Input from "./atom/Input/Input";
+import Button from "./atom/Button/Button";
+
 
 export default function SignupForm() {
   const [email, setEmail] = useState("");
