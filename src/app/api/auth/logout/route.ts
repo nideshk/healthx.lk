@@ -1,9 +1,9 @@
+import { supabaseClient } from '@/lib/supabaseClient'
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabaseServer'
 
 export async function POST() {
-  const supabase =await createClient()
-  const { error } = await supabase.auth.signOut()
+  
+  const { error } = await supabaseClient.auth.signOut()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ message: 'Logged out' })

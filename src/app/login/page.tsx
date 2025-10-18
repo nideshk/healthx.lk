@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient' // client-side Supabase instance
+import { supabaseClient } from '@/lib/supabaseClient' // client-side Supabase instance
 
 export default function LoginPage() {
   const router = useRouter()
@@ -14,7 +14,7 @@ export default function LoginPage() {
   // ✅ Check session on mount
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { session } } = await supabaseClient.auth.getSession()
       if (session) {
         router.replace('/dashboard')
       }
