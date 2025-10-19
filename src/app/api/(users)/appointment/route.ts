@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { clinikoFetch } from "@/lib/cliniko";
 import { requireUser } from "@/lib/authGuard";
-import { Currency } from "lucide-react";
-import { email } from "zod";
+import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(req: Request) {
 
@@ -51,6 +51,8 @@ export async function POST(req: Request) {
       );
     }
 
+
+
     // 🩺 Build Cliniko payload
     const payload = {
       appointment_type_id,
@@ -91,9 +93,33 @@ export async function POST(req: Request) {
         { error: `Cliniko API failed (${res.status})`, details: text },
         { status: res.status }
       );
+
+    }
+    const appointment = JSON.parse(text);
+    
+      const { error: dbError } = await supabaseAdmin.from("appointments").insert([
+  {
+    cliniko_appointment_id: appointment.id,          // Cliniko appointment ID
+    appointment_type_id,                             // TEXT
+    cliniko_patient_id: patient_id,                  // ✅ Use this instead of patient_id (UUID)
+    cliniko_practitioner_id: practitioner_id,        // ✅ Use this instead of practitioner_id (UUID)
+    starts_at,
+    ends_at,
+    notes: notes || "Created from Medx Portal",
+    status: "confirmed",
+    telehealth_url:appointment.telehealth_url,
+    business_id: "1725382642183972780",
+    created_at: new Date().toISOString(),
+    source: "cliniko",
+  },
+]);
+
+    if (dbError) {
+      console.error("⚠️ Failed to insert appointment in Supabase:", dbError);
+    } else {
+      console.log("📥 Appointment synced to Supabase successfully");
     }
 
-    const appointment = JSON.parse(text);
 
     console.log("✅ Appointment created successfully:", appointment.id);
 
