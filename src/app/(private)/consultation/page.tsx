@@ -21,7 +21,7 @@ const StethoscopeIcon = () => (
 type ConsultationCardProps = {
   title: string;
   description: string;
-    onCardClick: () => void; // <-- Added handler signature
+    onCardClick: (title:string) => void; // <-- Added handler signature
 
 };
 const ConsultationCard = ({ title, description, onCardClick }: ConsultationCardProps) => {
@@ -38,7 +38,7 @@ const ConsultationCard = ({ title, description, onCardClick }: ConsultationCardP
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       // For a real app, this would use a router link or a state change to navigate
-      onClick={onCardClick} // <-- ROUTING TRIGGER: Use the new handler on click
+      onClick={() => onCardClick(title)} // <-- ROUTING TRIGGER: Use the new handler on click
     >
       <div className="p-4 bg-blue-100 rounded-full mb-4 inline-block">
         <StethoscopeIcon />
@@ -54,7 +54,7 @@ const ConsultationCard = ({ title, description, onCardClick }: ConsultationCardP
       
       {/* The "Select Service" link/button */}
       <div className="text-center">
-        <a href="#"  onClick={(e) => { e.preventDefault(); onCardClick(); }} className="text-sm font-semibold text-blue-500 hover:text-blue-700 transition">
+        <a href="#"  onClick={(e) => { e.preventDefault(); onCardClick(title); }} className="text-sm font-semibold text-blue-500 hover:text-blue-700 transition">
           Select service 
           <span className="ml-1 text-xs">→</span>
         </a>
@@ -129,9 +129,13 @@ export default function Consultation() {
         }
     };
 
-      const handleServiceSelect = () => {
-        // Flow step: Navigate to attendee selection page.
-        router.push('/attendee-selection'); // <--- ROUTING IMPLEMENTED
+      const handleServiceSelect = (serviceTitle:string) => {
+        if (typeof window !== 'undefined') {
+            // Store the selected service title
+            sessionStorage.setItem('selectedConsultationService', serviceTitle); 
+        }
+        // Flow step: Navigate to appointment page.
+        router.push('/appointment');
     };
 
     
