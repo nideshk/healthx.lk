@@ -41,17 +41,12 @@ const LoginModal = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          loginInput: loginInput.trim(),
-          password: password.trim(),
-        }),
-        credentials: 'include', // ✅ allows backend cookies to be used
-      });
+      const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email:loginInput, password }),
+    })
+
 
       const data = await response.json();
 

@@ -13,6 +13,7 @@ import {
     MinusCircle
 } from 'lucide-react'; 
 import { useForm, SubmitHandler } from 'react-hook-form'; 
+import { requireUser } from '@/lib/authGuard';
 
 // --- MOCK Data Structures ---
 interface Attendee {

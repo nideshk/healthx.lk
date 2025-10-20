@@ -1,5 +1,7 @@
 // src\app\(private)\layout.tsx
 
+import { requireUser } from "@/lib/authGuard";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 // import { cookies } from "next/headers"; // <-- CRITICAL IMPORT
 
@@ -8,16 +10,9 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // 1. CALL cookies() SYNCHRONOUSLY to get the cookie store object
-  // const cookieStore = cookies();
-
-  // // 2. Use the .get() method on the cookieStore object (ReadonlyRequestCookies)
-  // const tokenCookie = cookieStore.get("sb-access-token");
-  // const token = tokenCookie?.value;
-
-  // if (!token) {
-  //   redirect("/#");
-  // }
-
+  const {authorized} = await requireUser();
+  if(!authorized){
+    redirect("/")
+  }
   return <>{children}</>;
 }
