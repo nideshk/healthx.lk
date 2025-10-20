@@ -30,7 +30,6 @@ export default function RootLayout({
       >
         <Header></Header>
         {children} 
-        {/* render page.tsx here */}
       </body>
     </html>
   );

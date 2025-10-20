@@ -48,6 +48,8 @@ export async function GET(_, { params }) {
       })
     );
 
+    console.log(practitioners)
+
     return Response.json(
       {
         service_id: serviceId,

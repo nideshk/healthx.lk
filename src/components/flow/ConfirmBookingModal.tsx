@@ -1,529 +1,395 @@
 'use client';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { 
-    User, 
-    FileText, 
-    Upload, 
-    Clock, 
-    Calendar, 
-    Check, 
-    Users, 
-    X,
-    MinusCircle
-} from 'lucide-react'; 
-import { useForm, SubmitHandler } from 'react-hook-form'; 
-import { requireUser } from '@/lib/authGuard';
+import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
+import { AppointmentFormInputs } from './AppointmentBookingFlow';
+import Modal from '../atom/Modal/Modal';
+import { Upload, CheckCircle, Loader2, Users, User, Wallet } from 'lucide-react';
 
-// --- MOCK Data Structures ---
-interface Attendee {
-    id: string;
-    name: string;
-}
-
-const MOCK_ATTENDEES: Attendee[] = [
-    { id: '1798559871122023774', name: 'John Doe (Husband)' },
-    { id: '1798559871111111111', name: 'Jane Smith (Daughter)' }, 
-    { id: '1798559872222222222', name: 'Ravi Perera (Brother)' }, 
-    { id: '1798559873333333333', name: 'Alia Khan (Mother)' }, 
-];
-
-// --- RHF and API Payload Interfaces (Truncated for brevity) ---
-interface BookingFormInputs {
-    practitioner_id: string; 
-    appointment_type_id: string; 
-    starts_at: string; 
-    ends_at: string; 
-    business_id: string; 
-    notes: string; 
-    attendeeType: 'patient' | 'additional'; 
-    patient_id: string; 
-    displayDoctorName: string;
-    displayPatientName: string;
-    uploadDocuments: string; 
-}
-
-interface ConfirmedBookingData extends BookingFormInputs {
-    additionalAttendeeIds: string[];
-}
-export interface DoctorProfile {
-
-    name: string;
-
-    specialty: string;
-
-    fee: number;
-
-    currency: string;
-
-}
-
-
-
-// --- Props Interface (Truncated for brevity) ---
 interface ConfirmBookingModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    initialPatientId: string; 
-    initialPatientName: string; 
-    initialPractitionerId: string;
-    initialDoctorName: string;
-    initialAppointmentTypeId: string;
-    initialStartsAt: string; 
-    initialEndsAt: string; 
-    initialBusinessId: string;
-     doctorProfile: DoctorProfile; 
-     initialSelectedDate: Date | null; // The original Date object
-    initialSelectedTimeSlot: string | null; // The original time slot string (e.g., "10:00 AM")
-     attendeeCount: number; // New prop from flow
-    onFinalSubmit: (data: ConfirmedBookingData) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  bookingData: AppointmentFormInputs;
+  resetFlow: () => void;
 }
 
-// --- RHF Input/Field Component (No changes) ---
-type RHFInputFieldProps = {
-    label: string;
-    placeholder: string;
-    name: keyof BookingFormInputs; 
-    register: ReturnType<typeof useForm<BookingFormInputs>>['register'];
-    error: string | undefined;
-    isTextArea?: boolean;
-    isReadOnly?: boolean; 
-    isUpload?: boolean;
-    isRequired?: boolean;
-    icon?: React.ReactNode; 
-    children?: React.ReactNode; 
-};
+interface Patient {
+  patient_id: string;
+  supabase_id: string;
+  name: string;
+}
 
-const RHFInputField: React.FC<RHFInputFieldProps> = ({
-    label,
-    placeholder,
-    name,
-    register,
-    error,
-    isTextArea = false,
-    isReadOnly = false, 
-    isUpload = false,
-    isRequired = true,
-    icon,
-    children
-}) => {
-    
-    const baseClasses = `w-full px-4 py-2 border rounded-lg shadow-sm focus:ring-blue-400 focus:border-blue-400 text-gray-800 transition duration-150`;
-    const readOnlyClasses = isReadOnly ? 'bg-gray-100 text-gray-600 cursor-default' : 'bg-white';
-    const errorClasses = error ? 'border-red-500' : 'border-gray-300'; 
-    const inputStyle = isTextArea ? 
-        `${baseClasses} min-h-[100px] py-3 ${readOnlyClasses} ${errorClasses}` : 
-        `${baseClasses} h-10 ${readOnlyClasses} ${errorClasses}`; 
+export default function ConfirmBookingModal({
+  isOpen,
+  onClose,
+  bookingData,
+  resetFlow,
+}: ConfirmBookingModalProps) {
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [file, setFile] = useState<File | null>(null);
 
-    return (
-        <div className="space-y-1">
-            <label htmlFor={name} className="text-sm text-gray-600 font-medium">
-                {label}
-            </label>
-            <div className="relative">
-                {children ? children : isTextArea ? (
-                    <textarea
-                        id={name}
-                        placeholder={placeholder}
-                        readOnly={isReadOnly}
-                        {...register(name, {
-                            required: isRequired ? 'Required field' : false,
-                        })}
-                        className={inputStyle}
-                    />
-                ) : (
-                    <input
-                        id={name}
-                        type={isUpload ? 'text' : 'text'}
-                        placeholder={placeholder}
-                        readOnly={isReadOnly || isUpload}
-                        {...register(name, {
-                            required: isRequired ? 'Required field' : false,
-                        })}
-                        className={inputStyle}
-                    />
-                )}
-                
-                {!children && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        {icon}
-                        {isUpload && (
-                            <label 
-                                htmlFor={`upload-file-input-${name}`}
-                                className="pointer-events-auto cursor-pointer text-gray-500 hover:text-blue-500 transition ml-2 p-1"
-                            >
-                                <Upload size={20} />
-                                <input type="file" id={`upload-file-input-${name}`} className="hidden" />
-                            </label>
-                        )}
-                    </div>
-                )}
-            </div>
-            
-            {error && isRequired && (
-                <p className="text-red-500 font-bold text-xs flex items-center">
-                    <span className='mr-1'>!</span>
-                    {error}
-                </p>
-            )}
-        </div>
+  // --- Attendee Management ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
+  const [selectedAttendees, setSelectedAttendees] = useState<Patient[]>([]);
+  const [isGroupAppointment, setIsGroupAppointment] = useState(
+    bookingData.attendeeCount > 1
+  );
+
+  // Mock data (replace with Supabase or API fetch later)
+  const allPatients: Patient[] = [
+    { patient_id: '1234566', supabase_id: '439085340963', name: 'Anirudh Kulkarni' },
+    { patient_id: '9875632', supabase_id: '4909025253', name: 'Nidesh' },
+  ];
+
+  // 🔍 Filter logic for patient search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredPatients([]);
+      return;
+    }
+    const q = searchQuery.toLowerCase();
+    const matches = allPatients.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.patient_id.includes(q) ||
+        p.supabase_id.includes(q)
     );
-};
+    setFilteredPatients(matches);
+  }, [searchQuery]);
 
-// --- Helper Functions for Formatting (No changes) ---
-const formatDateTime = (isoString: string): { date: string, time: string } => {
-    if (!isoString) return { date: 'N/A', time: 'N/A' };
-    try {
-        const date = new Date(isoString);
-        const formattedDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); 
-        return { date: formattedDate, time: formattedTime }; 
-    } catch {
-        return { date: 'N/A', time: 'N/A' };
+  const handleAddAttendee = (patient: Patient) => {
+    const alreadyAdded = selectedAttendees.some(
+      (a) => a.patient_id === patient.patient_id
+    );
+    if (!alreadyAdded) {
+      setSelectedAttendees((prev) => [...prev, patient]);
+      setSearchQuery('');
+      setFilteredPatients([]);
     }
-};
+  };
 
-// --- Confirm Booking Modal Component ---
-const ConfirmBookingModal: React.FC<ConfirmBookingModalProps> = ({ 
-    isOpen, 
-    onClose, 
-    attendeeCount,
-    initialPatientId,
-    initialPatientName, 
-    initialPractitionerId,
-    initialDoctorName,
-    initialAppointmentTypeId,
-    initialStartsAt,
-    initialEndsAt,
-    initialBusinessId,
-    initialSelectedDate,
-    initialSelectedTimeSlot,
-        doctorProfile,
-    onFinalSubmit 
-}) => {
-    
-    const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<BookingFormInputs>({
-        defaultValues: {
-            practitioner_id: initialPractitionerId, 
-            appointment_type_id: initialAppointmentTypeId,
-            starts_at: initialStartsAt,
-            ends_at: initialEndsAt,
-            business_id: initialBusinessId,
-            notes: '',
-            attendeeType: attendeeCount > 1 ? 'additional' : 'patient',
-            patient_id: initialPatientId,
-            displayDoctorName: initialDoctorName,
-            displayPatientName: initialPatientName,
-            uploadDocuments: '',
-        }
-    });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) setFile(selected);
+  };
 
-    const attendeeType = watch('attendeeType');
-    
-    const [selectedAttendeeIds, setSelectedAttendeeIds] = useState<string[]>([]);
+  // 💰 Dynamic pricing logic
+  const baseFee = bookingData.selectedDoctor?.fee || 0;
+  const additionalFee = 500;
+  const totalAmount = useMemo(() => {
+    if (isGroupAppointment) {
+      const extra = selectedAttendees.length * additionalFee;
+      return baseFee + extra;
+    }
+    return baseFee;
+  }, [isGroupAppointment, selectedAttendees, baseFee]);
 
-    // const { date: startDate, time: startTime } = useMemo(() => formatDateTime(initialStartsAt), [initialStartsAt]);
-    // const { time: endTime } = useMemo(() => formatDateTime(initialEndsAt), [initialEndsAt]);
-    const endTime = useMemo(() => {
-        if (!initialEndsAt) return '';
-        // Create a new date object from the ISO string
-        const date = new Date(initialEndsAt);
-        // Format it to local time (HH:MM AM/PM)
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }, [initialEndsAt]);
-    const numAdditionalSlots = attendeeCount - 1;
-    useEffect(() => {
-        if (numAdditionalSlots > 0 && selectedAttendeeIds.length === 0) {
-            // Auto-select the first available attendees up to the count selected in step 1
-            const initialSelection = MOCK_ATTENDEES
-                .filter(a => a.id !== initialPatientId)
-                .slice(0, numAdditionalSlots)
-                .map(a => a.id);
-            setSelectedAttendeeIds(initialSelection);
-        }
-    }, [numAdditionalSlots, initialPatientId, selectedAttendeeIds.length]);
-    const availableAttendees = useMemo(() => {
-        return MOCK_ATTENDEES.filter(
-            attendee => attendee.id !== initialPatientId && !selectedAttendeeIds.includes(attendee.id)
-        );
-    }, [selectedAttendeeIds, initialPatientId]);
-    
-    const getAttendeeName = useCallback((id: string) => {
-        const attendee = MOCK_ATTENDEES.find(a => a.id === id);
-        return attendee ? attendee.name : 'Unknown Attendee';
-    }, []);
+  const handleConfirm = async () => {
+  setLoading(true);
 
-    const handleSelectAttendee = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newId = e.target.value;
-        if (newId && !selectedAttendeeIds.includes(newId)) {
-            setSelectedAttendeeIds(prev => [...prev, newId]);
-            e.target.value = "";
-        }
-    };
-    
-    const handleRemoveAttendee = (id: string) => {
-        setSelectedAttendeeIds(selectedAttendeeIds.filter(aId => aId !== id));
-    };
-    
-    const handleFormConfirm: SubmitHandler<BookingFormInputs> = (data) => {
-        const confirmedData: ConfirmedBookingData = {
-            ...data,
-            additionalAttendeeIds: selectedAttendeeIds, 
-        };
-        onFinalSubmit(confirmedData);
-    };
+  try {
+    // 1️⃣ Fetch Practitioner Info
+    const { data: practitioner } = await axios.get(
+      `/api/practitioner/${bookingData.selectedDoctor!.registration}`
+    );
 
-    // useEffect(() => {
-    //     if (attendeeType === 'patient' && selectedAttendeeIds.length > 0) {
-    //          setSelectedAttendeeIds([]);
-    //     }
-    // }, [attendeeType, selectedAttendeeIds]);
+    // 2️⃣ Calculate Start & End Times
+    const start = new Date(bookingData.appointmentDate!);
+    const [hours, minutes] = bookingData.appointmentTimeSlot!.split(':').map(Number);
+    start.setHours(hours, minutes);
+    const end = new Date(start.getTime() + 30 * 60000);
 
-
-    if (!isOpen) {
-        return null;
+    // 3️⃣ Upload File if Provided
+    let attachmentUrl: string | null = null;
+    if (file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await axios.post("/api/attachment", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      attachmentUrl = uploadRes.data?.url || null;
     }
 
-    // CSS style to hide the scrollbar for Webkit browsers (Chrome, Safari)
-    const scrollbarHideStyle = {
-        msOverflowStyle: 'none',  /* IE and Edge */
-        scrollbarWidth: 'none',   /* Firefox */
-        WebkitScrollbar: { display: 'none' } // Not directly valid in JSX style prop, but included here for reference. We use -webkit-scrollbar: none; via the `style` object's vendor prefix equivalent below.
+    // 4️⃣ Build Appointment Payload
+    const payload = {
+      appointment_type_id: bookingData.selectedServiceId,
+      practitioner_id: bookingData.selectedDoctor!.registration,
+      starts_at: start.toISOString(),
+      ends_at: end.toISOString(),
+      notes: notes || "Created from MedX Portal",
+      patient_case_id: null,
+      repeat_rule: null,
+      patient_id: bookingData.initialPatientId,
+      attachment: attachmentUrl,
+      total_amount: totalAmount,
     };
-    
-    // Combining Tailwind classes with inline styles for cross-browser scrollbar hiding
-    const modalContentClasses = "w-full max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-2xl transition-transform transform scale-100 opacity-100 max-h-[90vh] overflow-y-auto";
 
-    return createPortal(
-        <div 
-            className="fixed p-4 inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-opacity-50 transition-opacity" 
-            onClick={onClose} 
-        >
-            
-            <div
-                className={modalContentClasses}
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                    backgroundColor: 'white',
-                    border: '1px solid rgba(220, 220, 220, 0.5)',
-                    // --- SCROLLBAR HIDING STYLES ADDED HERE ---
-                    msOverflowStyle: 'none',  /* IE and Edge */
-                    scrollbarWidth: 'none',   /* Firefox */
-                    // The common Webkit solution is tricky in inline React styles, but we include 
-                    // the other two widely used properties for better coverage. 
-                    // For full Webkit support (Chrome/Safari), a dedicated CSS file is typically needed,
-                    // but the `scrollbarWidth` and `msOverflowStyle` cover Firefox/IE/Edge.
-                }}
+    console.log("✅ Final Payload Sent:", payload);
+
+    // 5️⃣ Send to Backend
+    await axios.post("/api/appointment", payload);
+
+    // ✅ Success UX
+    setSuccess(true);
+    setTimeout(() => {
+      setLoading(false);
+      onClose();
+      resetFlow();
+    }, 1500);
+  } catch (err) {
+    console.error("❌ Booking failed:", err);
+    setLoading(false);
+  }
+};
+
+
+  const disabled = loading || success;
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Review & Confirm Appointment"
+      theme="light"
+      footer={
+        success ? null : (
+          <>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border rounded-md text-gray-600 hover:bg-gray-100"
+              disabled={disabled}
             >
-                <button
-                    className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition z-10"
-                    onClick={onClose}
-                    aria-label="Close modal"
-                >
-                    <X size={24} />
-                </button>
-
-                <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">Confirm Booking</h2>
-
-                <form onSubmit={handleSubmit(handleFormConfirm)} className="space-y-5"> 
-                    
-                    {/* --- MAIN BOOKING DETAILS (TWO COLUMNS) --- */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-                        
-                        {/* Column 1 */}
-                        <div className="space-y-5">
-                            <RHFInputField
-                                label="Doctor"
-                                placeholder={initialDoctorName}
-                                name="displayDoctorName"
-                                register={register}
-                                error={errors.displayDoctorName?.message}
-                                isReadOnly={true}
-                                isRequired={true}
-                                icon={<Check size={20} className="text-green-500" />}
-                            />
-                            
-                            <RHFInputField
-                                label="Date"
-                                placeholder={initialSelectedDate ? initialSelectedDate.toLocaleDateString() : 'N/A'}
-                                name="starts_at" 
-                                register={register}
-                                error={errors.starts_at?.message}
-                                isReadOnly={true}
-                                isRequired={true}
-                                icon={<Calendar size={20} className="text-gray-400" />}
-                            />
-                        </div>
-                        
-                        {/* Column 2 */}
-                        <div className="space-y-5">
-                            <RHFInputField
-                                label="Service Type"
-                                placeholder="General Consultation"
-                                name="appointment_type_id" 
-                                register={register}
-                                error={errors.appointment_type_id?.message}
-                                isReadOnly={true}
-                                isRequired={true}
-                                icon={<Check size={20} className="text-green-500" />}
-                            />
-                            
-                            <RHFInputField
-                                label="Time Slot"
-                                placeholder={`${initialSelectedTimeSlot} - ${endTime}`}
-                                name="ends_at" 
-                                register={register}
-                                error={errors.ends_at?.message}
-                                isReadOnly={true}
-                                isRequired={true}
-                                icon={<Clock size={20} className="text-gray-400" />}
-                            />
-                        </div>
-                        
-                    </div>
-                    
-                    {/* --- ATTENDEE SELECTION & PRIMARY PATIENT (Full Width) --- */}
-                    <div className="border-t pt-5 space-y-4">
-                        
-                        {/* Primary Patient Name (Always displayed, read-only) */}
-                        <RHFInputField
-                            label="Primary Patient Name"
-                            placeholder={initialPatientName}
-                            name="displayPatientName"
-                            register={register}
-                            error={errors.displayPatientName?.message}
-                            isRequired={true}
-                            isReadOnly={true} 
-                            icon={<User size={20} className="text-blue-500" />}
-                        />
-                        
-                        {/* Radio Buttons for Attendee Type */}
-                        <div className='pt-2'>
-                            <label className="text-sm text-gray-600 font-medium block mb-2">Who is attending?</label>
-                            <div className='flex items-center space-x-6'>
-                                <label className="flex items-center space-x-2 text-gray-700 font-medium cursor-pointer">
-                                    <input 
-                                        type="radio" 
-                                        {...register('attendeeType')}
-                                        value="patient"
-                                        checked={attendeeType === 'patient'}
-                                        onChange={() => setValue('attendeeType', 'patient')}
-                                        className="form-radio text-blue-500 w-4 h-4"
-                                    />
-                                    <span>Only Patient</span>
-                                </label>
-                                
-                                <label className="flex items-center space-x-2 text-gray-700 font-medium cursor-pointer">
-                                    <input 
-                                        type="radio" 
-                                        {...register('attendeeType')}
-                                        value="additional"
-                                        checked={attendeeType === 'additional'}
-                                        onChange={() => setValue('attendeeType', 'additional')}
-                                        className="form-radio text-blue-500 w-4 h-4"
-                                    />
-                                    <span>Patient + Others</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* CONDITIONAL MULTI-SELECT DROPDOWN */}
-                        {attendeeType === 'additional' && (
-                            <div className="space-y-3 pt-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                                <label className="text-sm text-gray-700 font-medium block mb-2 flex items-center">
-                                    <Users size={18} className="mr-2 text-blue-600" />
-                                    Select Additional Attendees ({selectedAttendeeIds.length})
-                                </label>
-                                
-                                {/* Multi-Select Dropdown */}
-                                <div className="relative">
-                                    <select
-                                        id="additionalAttendeeSelect"
-                                        onChange={handleSelectAttendee}
-                                        value=""
-                                        className="w-full h-10 px-4 py-2 border rounded-lg shadow-sm focus:ring-blue-400 focus:border-blue-400 text-gray-800 transition duration-150 pr-10 border-gray-300 bg-white"
-                                    >
-                                        <option value="" disabled>Select family member(s) to add...</option>
-                                        {availableAttendees.map(attendee => (
-                                            <option key={attendee.id} value={attendee.id}>
-                                                {attendee.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                
-                                {/* Selected Attendee Tags */}
-                                {selectedAttendeeIds.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 pt-2">
-                                        {selectedAttendeeIds.map(id => (
-                                            <span 
-                                                key={id} 
-                                                className="inline-flex items-center px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 rounded-full"
-                                            >
-                                                {getAttendeeName(id)}
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleRemoveAttendee(id)}
-                                                    className="ml-2 text-blue-500 hover:text-blue-700 transition"
-                                                    aria-label={`Remove ${getAttendeeName(id)}`}
-                                                >
-                                                    <MinusCircle size={16} />
-                                                </button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                                
-                                {selectedAttendeeIds.length === 0 && (
-                                    <p className="text-xs text-gray-500 pt-1">No additional attendees selected.</p>
-                                )}
-                            </div>
-                        )}
-                        
-                    </div>
-                    
-                    {/* --- NOTES AND UPLOAD (Full Width) --- */}
-                    <div className='pt-2 space-y-4'>
-                        <RHFInputField
-                            label="Additional Description (Notes)"
-                            placeholder="Add notes for your doctor (e.g., symptoms, recent medications)."
-                            name="notes"
-                            register={register}
-                            error={errors.notes?.message}
-                            isTextArea={true}
-                            isRequired={false}
-                        />
-                    
-                        <RHFInputField
-                            label="Upload Documents"
-                            placeholder="No file chosen"
-                            name="uploadDocuments"
-                            register={register}
-                            error={errors.uploadDocuments?.message}
-                            isRequired={false} 
-                            isUpload={true}
-                            icon={<FileText size={20} className="text-gray-400" />}
-                        />
-                    </div>
-                    
-                    {/* Submit Button (Paynow) */}
-                    <div className="relative bottom-0 bg-white pt-4 z-10 flex justify-center shadow-lg"> 
-                        <button
-                            type="submit"
-                            className="w-full py-3 text-white font-bold text-base rounded-lg shadow-md transition duration-200 hover:opacity-90"
-                            style={{
-                                background: 'rgba(0, 139, 181, 0.89)',
-                                boxShadow: '0 2px 8px rgba(0, 113, 147, 0.3)'
-                            }}
-                        >
-                            Pay now
-                        </button>
-                    </div>
-                </form>
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={disabled}
+              className={`px-4 py-2 rounded-md text-white font-semibold flex items-center gap-2 ${
+                disabled ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Processing...
+                </>
+              ) : (
+                <>
+                  <Wallet className="w-4 h-4" />
+                  Confirm & Pay
+                </>
+              )}
+            </button>
+          </>
+        )
+      }
+    >
+      {success ? (
+        <div className="p-6 text-center text-green-600 font-semibold">
+          <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-600" />
+          Appointment successfully booked and payment confirmed!
+        </div>
+      ) : (
+        <div className="space-y-5 text-sm text-gray-700">
+          {/* Practitioner Info */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Practitioner
+              </label>
+              <input
+                type="text"
+                value={bookingData.selectedDoctor?.name || ''}
+                disabled
+                className="w-full border rounded-md p-2 text-sm bg-gray-50 text-gray-700"
+              />
             </div>
-        </div>,
-        document.body
-    );
-};
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Appointment Type
+              </label>
+              <input
+                type="text"
+                value={bookingData.selectedServiceTitle}
+                disabled
+                className="w-full border rounded-md p-2 text-sm bg-gray-50 text-gray-700"
+              />
+            </div>
+          </div>
 
-export default ConfirmBookingModal;
+          {/* Date & Time */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Start Time
+              </label>
+              <input
+                type="text"
+                value={`${bookingData.appointmentDate?.toLocaleDateString()} ${bookingData.appointmentTimeSlot}`}
+                disabled
+                className="w-full border rounded-md p-2 text-sm bg-gray-50 text-gray-700"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                End Time
+              </label>
+              <input
+                type="text"
+                value="(auto +30 min)"
+                disabled
+                className="w-full border rounded-md p-2 text-sm bg-gray-50 text-gray-700"
+              />
+            </div>
+          </div>
+
+          {/* 🔄 Switch Single / Group */}
+          <div className="flex items-center justify-between border-t pt-3 mt-2">
+            <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              {isGroupAppointment ? (
+                <>
+                  <Users className="w-4 h-4 text-blue-600" /> Group Appointment
+                </>
+              ) : (
+                <>
+                  <User className="w-4 h-4 text-blue-600" /> Single Appointment
+                </>
+              )}
+            </span>
+            <button
+              onClick={() => {
+                setIsGroupAppointment((prev) => !prev);
+                setSelectedAttendees([]);
+              }}
+              className="text-xs font-medium text-blue-600 hover:underline"
+            >
+              Switch to {isGroupAppointment ? 'Single' : 'Group'}
+            </button>
+          </div>
+
+          {/* 👥 Attendee Section */}
+          {isGroupAppointment && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2 mt-2">
+                Add Family Members Attending
+              </label>
+
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  placeholder="Search by name or patient ID..."
+                  className="w-full border rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <div className="absolute mt-1 w-full bg-white border rounded-md shadow-lg z-20 max-h-48 overflow-y-auto">
+                    {filteredPatients.length > 0 ? (
+                      filteredPatients.map((p) => (
+                        <button
+                          key={p.patient_id}
+                          onClick={() => handleAddAttendee(p)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50"
+                        >
+                          <span className="font-medium text-gray-800">{p.name}</span>
+                          <span className="block text-xs text-gray-500">
+                            ID: {p.patient_id}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-red-500">
+                        ❌ No matching patient found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {selectedAttendees.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedAttendees.map((attendee) => (
+                    <div
+                      key={attendee.patient_id}
+                      className="flex items-center gap-2 bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full"
+                    >
+                      <span>{attendee.name}</span>
+                      <button
+                        onClick={() =>
+                          setSelectedAttendees((prev) =>
+                            prev.filter((a) => a.patient_id !== attendee.patient_id)
+                          )
+                        }
+                        className="text-blue-700 hover:text-blue-900"
+                        title="Remove"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 flex items-center gap-2 mt-1">
+                  <Users className="w-4 h-4 text-blue-500" />
+                  No attendees added yet. Search above to add.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* 💰 Price Summary */}
+          <div className="mt-4 border-t pt-3">
+            <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-blue-600" /> Fee Summary
+            </h4>
+            <div className="text-xs text-gray-700 space-y-1">
+              <div className="flex justify-between">
+                <span>Base consultation fee:</span>
+                <span>{baseFee} LKR</span>
+              </div>
+              {isGroupAppointment && (
+                <div className="flex justify-between">
+                  <span>Additional members ({selectedAttendees.length} × 500 LKR):</span>
+                  <span>{selectedAttendees.length * additionalFee} LKR</span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-gray-900 border-t pt-2 mt-1">
+                <span>Total payable:</span>
+                <span>{totalAmount.toLocaleString()} LKR</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 mt-3">
+              Notes
+            </label>
+            <textarea
+              placeholder="Add any appointment notes..."
+              className="w-full border rounded-md p-2 text-sm"
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+
+          {/* File upload */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Attachment (optional)
+            </label>
+            <label className="flex items-center gap-2 border p-2 rounded-md cursor-pointer hover:bg-blue-50">
+              <Upload className="w-4 h-4 text-blue-500" />
+              <input type="file" className="hidden" onChange={handleFileChange} />
+              <span className="text-sm text-gray-600">
+                {file ? file.name : 'Upload file (PDF, image, etc.)'}
+              </span>
+            </label>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}

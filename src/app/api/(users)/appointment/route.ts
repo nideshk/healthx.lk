@@ -20,10 +20,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("📥 Incoming Appointment Request:", body);
 
+
+    const {user} = await requireUser();
+
     const {
       appointment_type_id,
-      business_id,
-      patient_id,
       practitioner_id,
       starts_at,
       ends_at,
@@ -39,8 +40,6 @@ export async function POST(req: Request) {
     // 🧩 Validate required fields
     if (
       !appointment_type_id ||
-      !business_id ||
-      !patient_id ||
       !practitioner_id ||
       !starts_at ||
       !ends_at
@@ -54,8 +53,8 @@ export async function POST(req: Request) {
     // 🩺 Build Cliniko payload
     const payload = {
       appointment_type_id,
-      business_id,
-      patient_id,
+      business_id:"1725382642183972780",
+      patient_id: user.cliniko_patient_id,
       practitioner_id,
       starts_at,
       ends_at,
