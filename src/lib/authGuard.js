@@ -4,7 +4,7 @@ import { supabaseAdmin } from "./supabaseAdmin";
 
 
 async function getSupabase() {
-  const cookieStore = await cookies(); // ✅ must await
+  const cookieStore = await cookies(); 
   return createRouteHandlerClient({ cookies: () => cookieStore });
 }
 
@@ -23,16 +23,12 @@ export async function requireUser() {
     };
   }
 
-  console.log("user data from supabase auth:", user);
   // ✅ Use supabaseAdmin to bypass RLS when reading profiles
   const { data: profile, error: profileError } = await supabaseAdmin
     .from("patients")
     .select("*")
     .eq("supabase_user_id", user.id)
     .single();
-
-    console.log("User Profile:", profile);
-  console.log("Profile Error:", profileError);
 
   if (profileError || !profile) {
     return {

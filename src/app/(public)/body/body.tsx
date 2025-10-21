@@ -144,9 +144,6 @@ const DemoSection = () => (
   </section>
 );
 
-
-// --- Main Body Component ---
-
 const Body = () => {
   return (
     <main> 
