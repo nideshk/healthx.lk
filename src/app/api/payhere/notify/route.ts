@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
+import { createServerSupabaseClient as supabase } from '@/lib/supabaseServer';
 
 const MERCHANT_SECRET = process.env.PAYHERE_MERCHANT_SECRET!;
 
@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
 
     // Step-3: Update Supabase transaction record
     try {
-        const { data: updateResult, error: updateError } = await supabase
+        const supabaseServer = await supabase();
+        const { data: updateResult, error: updateError } = await supabaseServer
             .from('transactions')
             .update(updateData)
             .eq('order_id', order_id)

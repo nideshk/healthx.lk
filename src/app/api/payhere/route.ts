@@ -1,11 +1,37 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin as supabase } from "@/lib/supabaseAdmin"; // supabase Server
+import { createServerSupabaseClient as supabase } from "@/lib/supabaseServer"; // supabase Server
 import { requireUser } from "@/lib/authGuard";
-import { parse } from "path";
+import crypto from "crypto";
 
 export async function POST(request: Request) {
     const { authorized, response, user } = await requireUser();
-    // add patiuent_id and cliniko_id in table columns later
+
+    if (!authorized) {
+        console.log("Not authorized access to /api/payhere");
+        return response;
+    }
+
+    if (!user) {
+        console.log("No user found in /api/payhere");
+        return NextResponse.json({ error: "User not authenticated." }, { status: 401 });
+    }
+
+    let patient_id = null;
+    let cliniko_patient_id = null;
+
+    if (user) {
+        patient_id = user.id;
+        cliniko_patient_id = user.cliniko_patient_id;
+    }
+
+    console.log("*******User patient_id:", patient_id, " ********cliniko_patient_id:", cliniko_patient_id);
+
+
+    if (!patient_id || !cliniko_patient_id) {
+        console.log("User missing patient_id or cliniko_patient_id");
+        return NextResponse.json({ error: "User profile incomplete for payment processing." }, { status: 400 });
+    }
+
     console.log("API Route Reached: /api/payhere");
 
     try {
@@ -13,9 +39,17 @@ export async function POST(request: Request) {
         const currency = process.env.PAYHERE_CURRENCY || 'LKR';
         const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         const NGROK_URL = process.env.NGROK_URL;
+        const PAYHERE_RETURN_PATH = process.env.PAYHERE_RETURN_PATH;
+        const PAYHERE_CANCEL_PATH = process.env.PAYHERE_CANCEL_PATH;
+        const PAYHERE_NOTIFY_PATH = process.env.PAYHERE_NOTIFY_PATH;
 
-        if(!BASE_URL)
-        {
+        console.log("BASE URL:", BASE_URL);
+        console.log("NGROK URL:", NGROK_URL);
+        console.log("PAYHERE RETURN PATH:", PAYHERE_RETURN_PATH);
+        console.log("PAYHERE CANCEL PATH:", PAYHERE_CANCEL_PATH);
+        console.log("PAYHERE NOTIFY PATH:", PAYHERE_NOTIFY_PATH);
+
+        if (!BASE_URL) {
             throw new Error("BASE_URL is not defined in environment variables.");
         }
 
@@ -32,12 +66,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
         }
 
-        const orderID = `BOOK-${Date.now()}`; // uuid 
+        const orderID = crypto.randomUUID();
 
-        // add two more comuns
-        const {data: dbData, error: dbError} = await supabase.from('transactions').insert({
+        const supabaseServer = await supabase();
+        const { data: dbData, error: dbError } = await supabaseServer.from('transactions').insert({
             order_id: orderID,
-            status:'PENDING',
+            status: 'PENDING',
             amount: parseFloat(booking_amount).toFixed(2),
             currency: currency,
             customer_email: email,
@@ -45,12 +79,14 @@ export async function POST(request: Request) {
             customer_phone: phone,
             customer_address: address,
             customer_city: city,
-            customer_country: country
+            customer_country: country,
+            patient_id: patient_id,
+            cliniko_patient_id: cliniko_patient_id
         });
 
-        if(dbError){
+        if (dbError) {
             console.error("Error inserting transaction into DB:", dbError);
-            return NextResponse.json({error: "Failed to initialize payment transaction in DB."}, {status: 500});
+            return NextResponse.json({ error: "Failed to initialize payment transaction in DB." }, { status: 500 });
         }
 
         console.log("DB : Created PENDING transaction with Order ID:", orderID);
@@ -70,7 +106,7 @@ export async function POST(request: Request) {
         }
 
         // Extract data from hashResponse
-        const data: {order_id: string, hash: string; amount: string; currency: string } = await hashResponse.json();
+        const data: { order_id: string, hash: string; amount: string; currency: string } = await hashResponse.json();
 
         const itemsDescription = `Booking Payment for your reservation (Ref: ${orderID})`;
 
@@ -78,9 +114,9 @@ export async function POST(request: Request) {
         const payHerePayload = {
             sandbox: true,
             merchant_id: MERCHANT_ID,
-            return_url: `${BASE_URL}/success`,
-            cancel_url: `${BASE_URL}/failure`,
-            notify_url: `${NGROK_URL}/api/payhere/notify`,
+            return_url: `${BASE_URL}${PAYHERE_RETURN_PATH}`,
+            cancel_url: `${BASE_URL}${PAYHERE_CANCEL_PATH}`,
+            notify_url: `${NGROK_URL}${PAYHERE_NOTIFY_PATH}`,
             first_name,
             last_name,
             email,
@@ -88,7 +124,7 @@ export async function POST(request: Request) {
             address,
             city,
             country,
-            amount: data.amount, 
+            amount:data.amount,
             currency,
             order_id:data.order_id,
             hash: data.hash,
