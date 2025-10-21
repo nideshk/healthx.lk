@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/authGuard";
 import { clinikoFetch } from "@/lib/cliniko";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * GET /api/practitioners/[id]
@@ -95,6 +95,52 @@ export async function GET(req, context) {
     console.error("❌ Practitioner fetch failed:", error);
     return NextResponse.json(
       { error: error.message || "Failed to fetch practitioner details" },
+      { status: 500 }
+    );
+  }
+}
+
+
+export async function PUT(
+  req,
+  { params } 
+) {
+  try {
+    const { id } = params;
+    const body = await req.json();
+    const { cliniko_practitioner_id } = body;
+
+    if (!cliniko_practitioner_id) {
+      return NextResponse.json(
+        { error: "Missing cliniko_practitioner_id" },
+        { status: 400 }
+      );
+    }
+
+
+    const { data, error } = await supabase
+      .from("practitioners")
+      .update({ cliniko_practitioner_id })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase Update Error:", error);
+      return NextResponse.json(
+        { error: "Failed to update practitioner", details: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Practitioner updated successfully", data },
+      { status: 200 }
+    );
+  } catch (err) {
+    console.error("Unexpected Error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error", details: String(err) },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Trash2, Search, Loader2, AlertCircle } from "lucide-react";
+import { Trash2, RotateCcw, Search, Loader2, AlertCircle } from "lucide-react";
 import axios from "axios";
 
 interface Patient {
@@ -9,6 +9,7 @@ interface Patient {
   last_name?: string;
   email?: string;
   phone?: string;
+  archived_at?: string | null;
 }
 
 export default function PatientsPage() {
@@ -22,9 +23,11 @@ export default function PatientsPage() {
     const fetchPatients = async () => {
       try {
         const res = await axios.get("/api/patient").then(res=>{
-            console.log(res.data.data);
-            setPatients(res.data.data)
+            setPatients(res.data.data);
         });
+        // const data = res.data?.data?.patients || [];
+        // console.log(data)
+        // setPatients(data);
       } catch (err: any) {
         console.error("❌ Failed to fetch patients:", err);
         setError(err.response?.data?.message || "Failed to load patients");
@@ -46,14 +49,26 @@ export default function PatientsPage() {
     );
   });
 
-  // 🗑 Delete patient (future implementation)
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this patient permanently?")) return;
+  // 🗑 Archive / Unarchive patient (Cliniko API)
+  const handleToggleArchive = async (id: number, archived: boolean) => {
+    const action = archived ? "unarchive" : "archive";
+    const confirmMsg = archived
+      ? "Restore this patient from archive?"
+      : "Archive this patient?";
+    if (!confirm(confirmMsg)) return;
+
     try {
-      await axios.delete(`/api/patient/${id}`);
-      setPatients((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      alert("Failed to delete patient.");
+      await axios.post(`/api/patient/${id}/${action}`);
+
+      // update local state
+      setPatients((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, archived_at: archived ? null : new Date().toISOString() } : p
+        )
+      );
+    } catch (err:any) {
+        console.log(err)
+      alert(`Failed to ${action} patient. ${err.response.request.statusText}`);
     }
   };
 
@@ -62,7 +77,7 @@ export default function PatientsPage() {
       <div className="bg-white border border-gray-200 rounded-lg p-4">
         <h1 className="text-lg font-semibold mb-1">Search Patients</h1>
         <p className="text-xs text-gray-500 mb-3">
-          Find patient records and manage data. Use delete permanent with caution.
+          Find patient records and manage data. You can archive (soft delete) or unarchive them.
         </p>
 
         {/* 🔎 Search Input */}
@@ -98,27 +113,49 @@ export default function PatientsPage() {
 
         {!loading &&
           !error &&
-          filtered.map((p) => (
-            <div
-              key={p.id}
-              className="border border-gray-200 rounded-md px-3 py-2 flex justify-between items-center mb-2 hover:bg-gray-50 transition"
-            >
-              <div>
-                <p className="font-medium text-sm">
-                  {p.first_name} {p.last_name}
-                </p>
-                {p.email && <p className="text-xs text-gray-500">{p.email}</p>}
-                {p.phone && <p className="text-xs text-gray-500">{p.phone}</p>}
-              </div>
-
-              <button
-                onClick={() => handleDelete(p.id)}
-                className="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded-md transition"
+          filtered.map((p) => {
+            const archived = !!p.archived_at;
+            return (
+              <div
+                key={p.id}
+                className={`border border-gray-200 rounded-md px-3 py-2 flex justify-between items-center mb-2 transition ${
+                  archived ? "bg-gray-50 opacity-70" : "hover:bg-gray-50"
+                }`}
               >
-                <Trash2 size={12} /> Delete Permanent
-              </button>
-            </div>
-          ))}
+                <div>
+                  <p className="font-medium text-sm">
+                    {p.first_name} {p.last_name}
+                    {archived && (
+                      <span className="ml-2 text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">
+                        Archived
+                      </span>
+                    )}
+                  </p>
+                  {p.email && <p className="text-xs text-gray-500">{p.email}</p>}
+                  {p.phone && <p className="text-xs text-gray-500">{p.phone}</p>}
+                </div>
+
+                <button
+                  onClick={() => handleToggleArchive(p.id, archived)}
+                  className={`flex items-center gap-1 text-xs px-3 py-1 rounded-md transition ${
+                    archived
+                      ? "bg-blue-500 hover:bg-blue-600 text-white"
+                      : "bg-red-500 hover:bg-red-600 text-white"
+                  }`}
+                >
+                  {archived ? (
+                    <>
+                      <RotateCcw size={12} /> Unarchive
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={12} /> Archive
+                    </>
+                  )}
+                </button>
+              </div>
+            );
+          })}
       </div>
     </div>
   );

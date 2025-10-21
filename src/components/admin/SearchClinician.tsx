@@ -1,34 +1,58 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import ClinicianCard from "./ClinicianCard";
 import { Search } from "lucide-react";
 
-const clinicians = [
-  {
-    name: "Dr. Kumari Silva",
-    specialty: "General Physician",
-    registration: "SLMC-GP-2018-0156",
-    soloFee: "LKR 3,500",
-    familyFee: "LKR 5,000",
-    ratings: { overall: 4.7, advice: 4.8, punctuality: 4.6 },
-    tags: ["general", "preventive", "chronic"],
-  },
-  {
-    name: "Dr. Nimal Perera",
-    specialty: "General Physician",
-    registration: "SLMC-GP-2020-0234",
-    soloFee: "LKR 3,000",
-    familyFee: "LKR 4,500",
-    ratings: { overall: 4.7, advice: 4.5, punctuality: 4.9 },
-    tags: ["checkup", "family", "wellness"],
-  },
-];
+interface Practitioner {
+  id: string;
+  full_name: string;
+  specialization?: string;
+  license_number?: string;
+  solo_consultation_fee?: number;
+  family_consultation_fee?: number;
+  available_services?: string[];
+  contact_email?: string;
+  contact_number?: string;
+  profile_picture_url?: string;
+}
 
 export default function SearchClinician() {
   const [search, setSearch] = useState("");
-  const filtered = clinicians.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const [clinicians, setClinicians] = useState<Practitioner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ✅ Fetch practitioners from API
+  useEffect(() => {
+    const fetchPractitioners = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/practitioners");
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || "Failed to fetch clinicians");
+        setClinicians(data.data || []);
+      } catch (err: any) {
+        console.error("Error fetching clinicians:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPractitioners();
+  }, []);
+
+  // ✅ Filter by name, specialty, or registration
+  const filtered = clinicians.filter((c) => {
+    const term = search.toLowerCase();
+    return (
+      c.full_name?.toLowerCase().includes(term) ||
+      c.specialization?.toLowerCase().includes(term) ||
+      c.license_number?.toLowerCase().includes(term)
+    );
+  });
 
   return (
     <>
@@ -47,11 +71,47 @@ export default function SearchClinician() {
         />
       </div>
 
-      <div className="space-y-3">
-        {filtered.map((c, i) => (
-          <ClinicianCard key={i} clinician={c} />
-        ))}
-      </div>
+      {/* ✅ Handle Loading & Error */}
+      {loading && (
+        <div className="text-center py-4 text-gray-500 text-sm">
+          Loading clinicians...
+        </div>
+      )}
+      {error && (
+        <div className="text-center py-4 text-red-500 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* ✅ Render Clinicians */}
+      {!loading && !error && (
+        <div className="space-y-3">
+          {filtered.length > 0 ? (
+            filtered.map((c) => (
+              <ClinicianCard
+                key={c.id}
+                clinician={{
+                  id: c.id,
+                  name: c.full_name,
+                  specialty: c.specialization || "—",
+                  registration: c.license_number || "—",
+                  soloFee: c.solo_consultation_fee
+                    ? `LKR ${c.solo_consultation_fee.toLocaleString()}`
+                    : "—",
+                  familyFee: c.family_consultation_fee
+                    ? `LKR ${c.family_consultation_fee.toLocaleString()}`
+                    : "—",
+                  tags: c.available_services || [],
+                }}
+              />
+            ))
+          ) : (
+            <p className="text-center text-gray-400 text-sm">
+              No clinicians found.
+            </p>
+          )}
+        </div>
+      )}
     </>
   );
 }
