@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
 
 const MERCHANT_SECRET = process.env.PAYHERE_MERCHANT_SECRET!;
 
@@ -18,25 +19,51 @@ export async function POST(request: NextRequest) {
     console.log("--- IPN RECEIVED ---", paymentData);
 
     const {
-        merchant_id, order_id, payhere_amount, payhere_currency, status_code, md5sig 
+        merchant_id, order_id, payhere_amount, payhere_currency, status_code, md5sig, payment_id
     } = paymentData;
-    
-    // --- Step 1: Re-validate Hash (Security Gate) ---
+
+    // Step1 : Re-validate hash
     const innerHash = getMd5Hash(MERCHANT_SECRET);
     const hashString = merchant_id + order_id + payhere_amount + payhere_currency + status_code + innerHash;
     const calculatedMd5Sig = getMd5Hash(hashString);
 
     if (calculatedMd5Sig !== md5sig) {
         console.error(`IPN FAILED: Hash mismatch for Order ID ${order_id}`);
-        return new NextResponse("Hash Verification Failed.", { status: 200 }); 
+        return new NextResponse(null, { status: 200 });
     }
 
-    // --- Step 2: Process Status and Update DB ---
-    if (status_code === '2') {
-        // For now only logging success, but here we would update our DB to mark the order as paid
-        console.log(`SUCCESS: Booking ${order_id} CONFIRMED. Amount: ${payhere_amount} ${payhere_currency}`);
-    } else {
-        console.log(`TRANSACTION FAILED: ${status_code} for Order ${order_id}.`);
+    // Step2: Determine Status and Prepare Update data
+    const newStatus = status_code === '2' ? 'PAID' : 'FAILED';
+
+    const updateData = {
+        status: newStatus,
+        payment_id: payment_id || null,
+        status_code: parseInt(status_code, 10),
+        payhere_data: paymentData,
+        updated_at: new Date().toISOString()
+    };
+
+
+    // Step-3: Update Supabase transaction record
+    try {
+        const { data: updateResult, error: updateError } = await supabase
+            .from('transactions')
+            .update(updateData)
+            .eq('order_id', order_id)
+            .eq('status', 'PENDING') // Only update if still PENDING
+            .select();
+
+        if (updateError) {
+            console.error("Supabase update error for order ID", order_id, ":", updateError);
+        }
+        else if (updateResult.length === 0) {
+            console.warn("No PENDING transaction found to update for order ID", order_id);
+        }
+        else {
+            console.log("Supabase transaction updated for order ID", order_id, "to status", newStatus);
+        }
+    } catch (error) {
+        console.log("Critical DB Update Failure:", error);
     }
 
     // Always respond with 200 OK

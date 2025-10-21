@@ -1,5 +1,3 @@
-// Adding this as per my dummy app for now and will update fields and as required by our app form
-
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
@@ -14,24 +12,28 @@ const getMd5Hash = (input: string): string => {
 export async function GET(request: NextRequest) {
     try {
         let amount = request.nextUrl.searchParams.get('amount');
+        let order_id = request.nextUrl.searchParams.get('order_id');
 
         if (!amount) {
             return NextResponse.json({ error: "Amount parameter is required." }, { status: 400 });
         }
+
+        if(!order_id) {
+            return NextResponse.json({ error: "Order ID parameter is required." }, { status: 400 });
+        }
         
         // Step 1: Format Amount (PayHere requires 2 decimal places)
         const amountFormatted = parseFloat(amount).toFixed(2);
-        const orderID = `BOOK-${Date.now()}`; 
 
         // Step 2: Calculate Inner Hash (MD5 of Merchant Secret)
         const innerHash = getMd5Hash(MERCHANT_SECRET);
         
         // Step 3: Concatenate string for final hash
-        const hashString = MERCHANT_ID + orderID + amountFormatted + CURRENCY + innerHash;
+        const hashString = MERCHANT_ID + order_id + amountFormatted + CURRENCY + innerHash;
         const finalHash = getMd5Hash(hashString);
 
         return NextResponse.json({
-            order_id: orderID,
+            order_id: order_id,
             hash: finalHash,
             amount: amountFormatted,
             currency: CURRENCY
