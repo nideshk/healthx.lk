@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import CreateAppointmentForm from '@/components/form/CreateAppointmentForm'
+import FileUpload from '@/components/FileUpload'
 
 export default async function DashboardPage() {
   const supabase = createServerComponentClient({ cookies })
@@ -15,6 +16,7 @@ export default async function DashboardPage() {
 
     Book an Appointment now!
 
+<FileUpload></FileUpload>
     <CreateAppointmentForm/>
    </h1>
 }
