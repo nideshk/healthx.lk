@@ -58,13 +58,15 @@ export async function POST(request: Request) {
 
         // These are paramters that we expect from the booking form
         const {
-            first_name, last_name, email, phone, address, city, country, booking_amount
+            first_name, last_name, email, phone, address, city, country, booking_amount, appointment_id, practitioner_id
         } = body;
 
         // if any required field is missing, return error 
         if (!first_name || !last_name || !email || !phone || !address || !city || !country || !booking_amount) {
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
         }
+
+        // Add null checks for appointment_id and practitioner_id (Not adding now because I am assuming I will always get them)
 
         const orderID = crypto.randomUUID();
 
@@ -81,7 +83,9 @@ export async function POST(request: Request) {
             customer_city: city,
             customer_country: country,
             patient_id: patient_id,
-            cliniko_patient_id: cliniko_patient_id
+            cliniko_patient_id: cliniko_patient_id,
+            appointment_id: appointment_id,
+            practitioner_id: practitioner_id
         });
 
         if (dbError) {
