@@ -1,8 +1,8 @@
 // lib/createAppointment.ts
+import { AppointmentFormInputs } from "@/types/FormType";
 import axios from "axios";
-import { AppointmentFormInputs } from "@/components/flow/AppointmentBookingFlow";
 
-export async function createAppointment(bookingData: AppointmentFormInputs) {
+export async function createAppointment(bookingData: any) {
   if (
     !bookingData.selectedDoctor ||
     !bookingData.appointmentDate ||

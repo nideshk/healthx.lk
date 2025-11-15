@@ -4,24 +4,32 @@ export const runtime = "nodejs";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   console.log("▶️ Fetching Cliniko attachments for patient...");
 
   try {
-    const patient_id = params.id;
+    // ⬅️ Required for typed routes
+    const { id: patient_id } = await context.params;
+
     const { searchParams } = new URL(req.url);
     const page = searchParams.get("page") || "1";
     const per_page = searchParams.get("per_page") || "20";
 
     if (!patient_id) {
-      return NextResponse.json({ error: "Missing patient_id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing patient_id" },
+        { status: 400 }
+      );
     }
 
     // 🔐 Cliniko API Setup
     const apiKey = process.env.CLINIKO_API_KEY!;
-    const region = process.env.CLINIKO_REGION || "au1"; // Change if needed
-    const authHeader = "Basic " + Buffer.from(apiKey + ":").toString("base64");
+    const region = process.env.CLINIKO_REGION || "au1";
+
+    const authHeader =
+      "Basic " + Buffer.from(apiKey + ":").toString("base64");
+
     const userAgent = `${process.env.CLINIKO_APP_NAME || "Medx"} (${
       process.env.CLINIKO_APP_EMAIL || "admin@medx.app"
     })`;
@@ -45,7 +53,10 @@ export async function GET(
     if (!res.ok) {
       console.error("❌ Cliniko API error:", data);
       return NextResponse.json(
-        { error: "Cliniko API failed", details: data },
+        {
+          error: "Cliniko API failed",
+          details: data,
+        },
         { status: res.status }
       );
     }

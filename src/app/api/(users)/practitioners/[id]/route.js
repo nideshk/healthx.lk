@@ -1,13 +1,15 @@
 import { requireUser } from "@/lib/authGuard";
 import { clinikoFetch } from "@/lib/cliniko";
+import { supabaseClient } from "@/lib/supabaseClient";
 import { NextResponse } from "next/server";
 
 /**
  * GET /api/practitioners/[id]
- * Fetch practitioner info + available slots (Cliniko-compliant)
+ * Fetch practitioner info from Supabase, and appointment types from Cliniko.
  */
 export async function GET(req, context) {
   const { authorized, response, user } = await requireUser();
+  console.log("Authorized:", authorized, "User:", user);
   if (!authorized) return response;
 
   try {
@@ -18,83 +20,132 @@ export async function GET(req, context) {
         { status: 400 }
       );
 
-    console.log(`👨‍⚕️ Fetching details for practitioner ID: ${id}`);
+    console.log(`👨‍⚕️ Fetching practitioner from Supabase: ${id}`);
 
-    // 🔹 Hardcoded configs for MVP
-    const BUSINESS_ID = "1725382642183972780";
-    const DEFAULT_APPOINTMENT_TYPE = "1725382641949091611";
+    // 🧩 Step 1 — Get practitioner record from Supabase
+    const { data: practitioner, error: dbError } = await supabaseClient
+      .from("practitioners")
+      .select("*")
+      .eq("cliniko_practitioner_id", id)
+      .single();
 
-    // 1️⃣ Fetch core data
-    const [practitioner, appointmentTypes, business] = await Promise.all([
-      clinikoFetch(`practitioners/${id}`),
-      clinikoFetch(`practitioners/${id}/appointment_types`),
-      clinikoFetch(`businesses/${BUSINESS_ID}`),
-    ]);
-
-    // 2️⃣ Compute Cliniko-safe `from` and `to` (YYYY-MM-DD format)
-    const now = new Date();
-    const fromDate = new Date(now);
-    const toDate = new Date(fromDate);
-    toDate.setDate(fromDate.getDate() + 6); // 7-day window total
-
-    const from = fromDate.toISOString().slice(0, 10); // YYYY-MM-DD
-    const to = toDate.toISOString().slice(0, 10); // YYYY-MM-DD
-
-    console.log("📅 Using Cliniko-safe dates:", { from, to });
-
-    // 3️⃣ Cliniko availability endpoint (requires just YYYY-MM-DD)
-    const endpoint = `businesses/${BUSINESS_ID}/practitioners/${id}/appointment_types/${DEFAULT_APPOINTMENT_TYPE}/available_times?from=${from}&to=${to}`;
-
-    console.log("🔗 Fetching available times:", endpoint);
-    const availableTimesData = await clinikoFetch(endpoint);
-
-    // 4️⃣ Group by date
-    const availableTimes = availableTimesData?.available_times || [];
-    const groupedAvailability = {};
-
-    for (const slot of availableTimes) {
-      const slotDate = new Date(slot.appointment_start);
-      const dateKey = slotDate.toISOString().slice(0, 10);
-      const timeStr = slotDate.toISOString().slice(11, 16);
-      if (!groupedAvailability[dateKey]) groupedAvailability[dateKey] = [];
-      groupedAvailability[dateKey].push(timeStr);
+    if (dbError || !practitioner) {
+      console.error("❌ Practitioner not found in Supabase:", dbError?.message);
+      return NextResponse.json(
+        { error: "Practitioner not found in database" },
+        { status: 404 }
+      );
     }
 
-    // ✅ Final combined response
+    const clinikoId = practitioner.cliniko_practitioner_id;
+    if (!clinikoId) {
+      return NextResponse.json(
+        {
+          error:
+            "Practitioner record exists, but missing linked Cliniko practitioner ID",
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log(`🔗 Found Cliniko Practitioner ID: ${clinikoId}`);
+
+    // 🧩 Step 2 — Fetch appointment types (offered services) from Cliniko
+    const appointmentTypesRes = await clinikoFetch(
+      `practitioners/${clinikoId}/appointment_types`
+    );
+
+    console.log("appointment_types", appointmentTypesRes)
+    // 🧩 Step 3 — Format appointment type data
+    const appointmentTypes =
+      appointmentTypesRes?.appointment_types?.map((type) => ({
+        id: type.id,
+        name: type.name,
+        duration: type.duration_in_minutes,
+        max_attendees : type.max_attendees
+      })) || [];
+
+    console.log(`✅ Found ${appointmentTypes.length} appointment types`);
+
+     console.log("practitioner", practitioner)
+
+    // ✅ Step 4 — Return combined response
     return NextResponse.json({
+      success: true,
       practitioner: {
         id: practitioner.id,
-        name:
-          practitioner.display_name ||
-          `${practitioner.first_name} ${practitioner.last_name}`,
-        title: practitioner.title,
-        designation: practitioner.designation,
-        description: practitioner.description,
-      },
-      business: {
-        id: business.id,
-        name: business.display_name,
-        time_zone: business.time_zone,
-      },
-      appointment_types:
-        appointmentTypes?.appointment_types?.map((a) => ({
-          id: a.id,
-          name: a.name,
-          duration: a.duration,
-        })) || [],
-      availability: {
-        range: { from, to },
-        total_slots: availableTimes.length,
-        grouped: groupedAvailability,
+        first_name: practitioner.first_name,
+        full_name: practitioner.full_name,
+        last_name: practitioner.last_name,
+        email: practitioner.contact_email,
+        profile_bio : practitioner.profile_bio,
+        contact_number : practitioner.contact_number,
+        contact_email : practitioner.contact_email,
+        specialization: practitioner.specialization,
+        qualifications: practitioner.qualification,
+        price: practitioner.solo_consultation_fee,
+        profile_image: practitioner.profile_picture_url,
+        cliniko_practitioner_id: clinikoId,
+        appointment_type : appointmentTypes,
       },
       requested_by: user.email,
-      
-        userData: user
     });
   } catch (error) {
     console.error("❌ Practitioner fetch failed:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch practitioner details" },
+      {
+        success: false,
+        message: "Failed to fetch practitioner details",
+        error: error?.message || "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT /api/practitioners/[id]
+ * Update Cliniko practitioner ID for a given practitioner record.
+ */
+export async function PUT(
+  req,
+  params 
+) {
+  try {
+    const { id } = params;
+    const body = await req.json();
+    const { cliniko_practitioner_id } = body;
+
+    if (!cliniko_practitioner_id) {
+      return NextResponse.json(
+        { error: "Missing cliniko_practitioner_id" },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabaseClient
+      .from("practitioners")
+      .update({ cliniko_practitioner_id })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase Update Error:", error.message);
+      return NextResponse.json(
+        { error: "Failed to update practitioner", details: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: true, message: "Practitioner updated successfully", data },
+      { status: 200 }
+    );
+  } catch (err) {
+    console.error("Unexpected Error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error", details: String(err) },
       { status: 500 }
     );
   }

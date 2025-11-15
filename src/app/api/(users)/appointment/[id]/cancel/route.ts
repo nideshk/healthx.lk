@@ -6,14 +6,19 @@ export const runtime = "nodejs";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   console.log("▶️ Cancelling Cliniko appointment...");
 
   try {
-    const appointment_id = params.id;
-    if (!appointment_id)
-      return NextResponse.json({ error: "Missing appointment_id" }, { status: 400 });
+    const { id: appointment_id } = await context.params;
+
+    if (!appointment_id) {
+      return NextResponse.json(
+        { error: "Missing appointment_id" },
+        { status: 400 }
+      );
+    }
 
     const supabase = createRouteHandlerClient({ cookies });
 
@@ -23,8 +28,9 @@ export async function PATCH(
       error: userError,
     } = await supabase.auth.getUser();
 
-    if (userError || !user)
+    if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     console.log("👤 Logged in user:", user.id);
 
@@ -44,7 +50,6 @@ export async function PATCH(
     }
 
     if (!appointment) {
-      console.warn("⚠️ Appointment not found in Supabase mirror");
       return NextResponse.json(
         { error: "Appointment not found" },
         { status: 404 }
@@ -52,7 +57,6 @@ export async function PATCH(
     }
 
     if (appointment.supabase_user_id !== user.id) {
-      console.warn("🚫 Unauthorized cancellation attempt by user:", user.id);
       return NextResponse.json(
         { error: "You are not allowed to cancel this appointment" },
         { status: 403 }
@@ -60,7 +64,8 @@ export async function PATCH(
     }
 
     // 🧩 3️⃣ Parse request body
-    const { cancellation_note, cancellation_reason, apply_to_repeats } = await req.json();
+    const { cancellation_note, cancellation_reason, apply_to_repeats } =
+      await req.json();
 
     if (!cancellation_reason) {
       return NextResponse.json(
@@ -72,12 +77,14 @@ export async function PATCH(
     // 🔐 4️⃣ Cliniko API setup
     const apiKey = process.env.CLINIKO_API_KEY!;
     const region = process.env.CLINIKO_REGION || "au1";
+
     const authHeader = "Basic " + Buffer.from(apiKey + ":").toString("base64");
     const userAgent = `${process.env.CLINIKO_APP_NAME || "Medx"} (${
       process.env.CLINIKO_APP_EMAIL || "admin@medx.app"
     })`;
 
     const url = `https://api.${region}.cliniko.com/v1/individual_appointments/${appointment_id}/cancel`;
+
     console.log("📡 Cancelling appointment at:", url);
 
     // 🧩 5️⃣ Send cancel request to Cliniko
@@ -99,10 +106,12 @@ export async function PATCH(
     if (res.status === 204) {
       console.log(`✅ Appointment ${appointment_id} cancelled successfully`);
 
-      // 🧩 6️⃣ Optionally mark it as cancelled in Supabase
       await supabase
         .from("appointments")
-        .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+        .update({
+          status: "cancelled",
+          cancelled_at: new Date().toISOString(),
+        })
         .eq("cliniko_appointment_id", appointment_id);
 
       return NextResponse.json({
@@ -114,7 +123,11 @@ export async function PATCH(
     console.error("❌ Cliniko API error:", res.status, errorText);
 
     return NextResponse.json(
-      { error: "Cliniko API failed", status: res.status, details: errorText },
+      {
+        error: "Cliniko API failed",
+        status: res.status,
+        details: errorText,
+      },
       { status: res.status }
     );
   } catch (err: any) {
