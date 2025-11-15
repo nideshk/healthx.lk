@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Users, User } from "lucide-react";
-import { AppointmentFormInputs } from "./AppointmentBookingFlow";
+import { AppointmentFormInputs } from "@/types/FormType";
 
 interface AttendeeSelectionStepProps {
   nextStep: () => void;
@@ -19,10 +19,8 @@ const AttendeeSelectionStep = ({
   updateData,
   bookingData,
 }: AttendeeSelectionStepProps) => {
-  console.log(bookingData)
   const [selectedOption, setSelectedOption] = useState<"single" | "group" | null>(null);
   const maxAttendee = bookingData?.maxAttendees || 1;
-console.log(maxAttendee)
   const handleSelect = (type: "single" | "group") => {
     setSelectedOption(type);
 

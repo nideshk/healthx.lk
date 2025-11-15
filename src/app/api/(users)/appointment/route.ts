@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { clinikoFetch } from "@/lib/cliniko";
 import { requireUser } from "@/lib/authGuard";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(req: Request) {
@@ -100,7 +99,7 @@ export async function POST(req: Request) {
   {
     cliniko_appointment_id: appointment.id,          // Cliniko appointment ID
     appointment_type_id,                             // TEXT
-    cliniko_patient_id: patient_id,                  // ✅ Use this instead of patient_id (UUID)
+    cliniko_patient_id: payload.patient_id,                  // ✅ Use this instead of patient_id (UUID)
     cliniko_practitioner_id: practitioner_id,        // ✅ Use this instead of practitioner_id (UUID)
     starts_at,
     ends_at,

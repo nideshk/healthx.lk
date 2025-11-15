@@ -4,21 +4,28 @@ export const runtime = "nodejs";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   console.log("▶️ Archiving Cliniko patient attachment...");
 
   try {
-    const attachment_id = params.id;
+    // ⬅️ Required for typed routes
+    const { id: attachment_id } = await context.params;
 
     if (!attachment_id) {
-      return NextResponse.json({ error: "Missing attachment_id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing attachment_id" },
+        { status: 400 }
+      );
     }
 
     // 🔐 Cliniko API Setup
     const apiKey = process.env.CLINIKO_API_KEY!;
-    const region = process.env.CLINIKO_REGION || "au1"; // ✅ Set your correct shard
-    const authHeader = "Basic " + Buffer.from(apiKey + ":").toString("base64");
+    const region = process.env.CLINIKO_REGION || "au1";
+
+    const authHeader =
+      "Basic " + Buffer.from(apiKey + ":").toString("base64");
+
     const userAgent = `${process.env.CLINIKO_APP_NAME || "Medx"} (${
       process.env.CLINIKO_APP_EMAIL || "admin@medx.app"
     })`;
@@ -43,7 +50,7 @@ export async function POST(
       });
     }
 
-    // If Cliniko returns an error, capture it
+    // Capture Cliniko error response
     const errorText = await res.text();
     console.error("❌ Cliniko archive failed:", res.status, errorText);
 

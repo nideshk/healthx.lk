@@ -9,9 +9,20 @@ export const runtime = "nodejs";
  */
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ⬅️ Required: typed routes pass params as a Promise
+    const { id } = await context.params;
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing patient ID" },
+        { status: 400 }
+      );
+    }
+
+    // Optional admin check
     // const { role } = await requireAdmin();
     // if (role !== "admin") {
     //   return NextResponse.json(
@@ -19,11 +30,6 @@ export async function POST(
     //     { status: 401 }
     //   );
     // }
-
-    const id = params.id;
-    if (!id) {
-      return NextResponse.json({ message: "Missing patient ID" }, { status: 400 });
-    }
 
     const region = process.env.CLINIKO_REGION || "au1";
     const apiKey = process.env.CLINIKO_API_KEY;
@@ -52,6 +58,7 @@ export async function POST(
     });
 
     let body: any = null;
+
     try {
       const text = await response.text();
       body = text ? JSON.parse(text) : null;
@@ -86,6 +93,7 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("❌ Unarchive patient error:", error);
+
     return NextResponse.json(
       {
         success: false,
