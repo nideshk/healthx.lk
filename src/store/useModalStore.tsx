@@ -1,22 +1,23 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-type ModalStore = {
+interface ModalStore {
   isLoginModalOpen: boolean;
+  isSignupModalOpen: boolean;
+
   openLoginModal: () => void;
   closeLoginModal: () => void;
-};
 
-interface ModalStoreState {
-    isLoginModalOpen: boolean;
+  openSignupModal: () => void;
+  closeSignupModal: () => void;
 }
 
-interface ModalStoreActions {
-    openLoginModal: () => void;
-    closeLoginModal: () => void;
-}
+export const useModalStore = create<ModalStore>((set) => ({
+  isLoginModalOpen: false,
+  isSignupModalOpen: false,
 
-export const useModalStore = create<ModalStoreState & ModalStoreActions>((set) => ({
-    isLoginModalOpen: false,
-    openLoginModal: () => set({ isLoginModalOpen: true }),
-    closeLoginModal: () => set({ isLoginModalOpen: false }),
+  openLoginModal: () => set({ isLoginModalOpen: true }),
+  closeLoginModal: () => set({ isLoginModalOpen: false }),
+
+  openSignupModal: () => set({ isSignupModalOpen: true }),
+  closeSignupModal: () => set({ isSignupModalOpen: false }),
 }));

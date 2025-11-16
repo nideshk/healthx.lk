@@ -27,29 +27,55 @@ export async function GET(
   context: { params: Promise<{ practitionerId: string }> }
 ) {
   try {
-    // ⬅️ Required for typed routes
+    // Next.js 15 typed route params
     const { practitionerId } = await context.params;
 
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
 
+    // Check user session
     const { authorized, user } = await requireUser();
-
     if (!authorized) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (!date) {
       return NextResponse.json(
-        { error: "date is required. Format: YYYY-MM-DD" },
+        { error: "date is required. Use YYYY-MM-DD" },
         { status: 400 }
       );
     }
 
-    // 1) Fetch availability block
+    /* ---------------------------------------------------------------------
+      STEP 1: Fetch practitioner details (including what services they offer)
+    ----------------------------------------------------------------------*/
+    const { data: practitioner, error: practitionerErr } = await supabaseClient
+      .from("practitioners")
+      .select("available_services")
+      .eq("id", practitionerId)
+      .single();
+
+    if (practitionerErr || !practitioner) {
+      return NextResponse.json(
+        { error: "Practitioner not found" },
+        { status: 404 }
+      );
+    }
+
+    const offeredTypes = practitioner.available_services || [];
+
+    if (offeredTypes.length === 0) {
+      return NextResponse.json({
+        practitioner_id: practitionerId,
+        date,
+        available: false,
+        reason: "No services offered by practitioner",
+      });
+    }
+
+    /* ---------------------------------------------------------------------
+      STEP 2: Fetch availability block
+    ----------------------------------------------------------------------*/
     const { data: availability, error: avErr } = await supabaseClient
       .from("practitioner_availability")
       .select("starts_at, ends_at, days_unavailable")
@@ -58,7 +84,7 @@ export async function GET(
 
     if (avErr || !availability) {
       return NextResponse.json(
-        { error: "Practitioner availability not found" },
+        { error: "Availability not found" },
         { status: 404 }
       );
     }
@@ -74,16 +100,28 @@ export async function GET(
       });
     }
 
-    // Extract HH:mm times
+    // Extract HH:mm
     const start_time = availability.starts_at.split("T")[1].substring(0, 5);
     const end_time = availability.ends_at.split("T")[1].substring(0, 5);
 
-    // 2) Fetch appointment types
-    const { data: appointmentTypes } = await supabaseClient
+    /* ---------------------------------------------------------------------
+      STEP 3: Fetch appointment types for offered services only
+    ----------------------------------------------------------------------*/
+    const { data: appointmentTypes, error: typeErr } = await supabaseClient
       .from("appointment_type")
-      .select("id, name, duration_mins");
+      .select("id, name, duration_mins")
+      .in("id", offeredTypes);
 
-    // 3) Fetch booked appointments for the date
+    if (typeErr) {
+      return NextResponse.json(
+        { error: "Failed to fetch appointment types" },
+        { status: 500 }
+      );
+    }
+
+    /* ---------------------------------------------------------------------
+      STEP 4: Fetch booked appointments for that day
+    ----------------------------------------------------------------------*/
     const { data: booked } = await supabaseClient
       .from("appointments")
       .select("starts_at")
@@ -95,28 +133,30 @@ export async function GET(
     const bookedTimes =
       booked?.map((a) => a.starts_at.split("T")[1].substring(0, 5)) || [];
 
-    // 4) Generate slots per appointment type
+    /* ---------------------------------------------------------------------
+      STEP 5: Generate available slots for each appointment type
+    ----------------------------------------------------------------------*/
     const slots_by_type: Record<string, string[]> = {};
 
     appointmentTypes?.forEach((type) => {
       const generated = generateSlots(start_time, end_time, type.duration_mins);
-
       const filtered = generated.filter((t) => !bookedTimes.includes(t));
-
-      slots_by_type[type.duration_mins] = filtered;
+      slots_by_type[type.name] = filtered; // keyed by appointment type ID
     });
 
-    console.log("User requesting availability:", user);
-
+    /* ---------------------------------------------------------------------
+      RESPONSE
+    ----------------------------------------------------------------------*/
     return NextResponse.json({
       practitioner_id: practitionerId,
       date,
       start_time,
       end_time,
+      offered_types: appointmentTypes, // return type details too
       slots_by_type,
       requestedby: {
         user_email: user.email,
-        user_id: user.user_metadata?.sub,
+        user_id: user.user_metadata.sub,
       },
     });
   } catch (err: any) {

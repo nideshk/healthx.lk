@@ -19,7 +19,7 @@ export async function requireUser() {
   if (error || !user) {
     return {
       authorized: false,
-      response: Response.json({ error: "Unauthorized" }, { status: 401 }),
+      response: Response.json({ error: "Unauthorized, cant perform " }, { status: 401 }),
     };
   }
 

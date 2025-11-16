@@ -29,7 +29,7 @@ export async function PATCH(
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized, dont know" }, { status: 401 });
     }
 
     console.log("👤 Logged in user:", user.id);
