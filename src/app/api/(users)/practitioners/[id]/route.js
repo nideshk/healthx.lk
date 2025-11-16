@@ -5,28 +5,39 @@ import { NextResponse } from "next/server";
 
 /**
  * GET /api/practitioners/[id]
- * Fetch practitioner info from Supabase, and appointment types from Cliniko.
+ * Fetch practitioner info from Supabase, and appointment types from local DB.
  */
 export async function GET(req, context) {
   const { authorized, response, user } = await requireUser();
-  console.log("Authorized:", authorized, "User:", user);
   if (!authorized) return response;
 
   try {
     const { id } = context.params;
-    if (!id)
+    if (!id) {
       return NextResponse.json(
         { error: "Practitioner ID is required" },
         { status: 400 }
       );
+    }
 
-    console.log(`👨‍⚕️ Fetching practitioner from Supabase: ${id}`);
+    // RBAC
+    if (user.role === "patient") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
 
-    // 🧩 Step 1 — Get practitioner record from Supabase
+    // If the requester is a practitioner, ensure they can only view their own record
+    if (user.role === "practitioner" && user.practitioner_id !== id) {
+      return NextResponse.json(
+        { error: "You cannot view another practitioner's profile" },
+        { status: 403 }
+      );
+    }
+
+    // Fetch practitioner by DB id
     const { data: practitioner, error: dbError } = await supabaseClient
       .from("practitioners")
       .select("*")
-      .eq("cliniko_practitioner_id", id)
+      .eq("id", id)
       .single();
 
     if (dbError || !practitioner) {
@@ -37,56 +48,52 @@ export async function GET(req, context) {
       );
     }
 
-    const clinikoId = practitioner.cliniko_practitioner_id;
-    if (!clinikoId) {
-      return NextResponse.json(
-        {
-          error:
-            "Practitioner record exists, but missing linked Cliniko practitioner ID",
-        },
-        { status: 400 }
-      );
+    // Fetch appointment types (services) that this practitioner offers.
+    // available_services is expected to be an array of appointment_type ids.
+    let appointmentTypes = [];
+    const serviceIds = practitioner.available_services || [];
+
+    if (Array.isArray(serviceIds) && serviceIds.length > 0) {
+      const { data: types, error: typesErr } = await supabaseClient
+        .from("appointment_type")
+        .select("*")
+        .in("id", serviceIds);
+
+      if (typesErr) {
+        console.error("Failed to fetch appointment types:", typesErr);
+        // don't fail hard — return empty list
+      } else {
+        appointmentTypes = types.map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          duration_mins: t.duration_mins,
+          max_attendee: t.max_attendee,
+          base_fee: t.base_fee,
+        }));
+      }
     }
 
-    console.log(`🔗 Found Cliniko Practitioner ID: ${clinikoId}`);
-
-    // 🧩 Step 2 — Fetch appointment types (offered services) from Cliniko
-    const appointmentTypesRes = await clinikoFetch(
-      `practitioners/${clinikoId}/appointment_types`
-    );
-
-    console.log("appointment_types", appointmentTypesRes)
-    // 🧩 Step 3 — Format appointment type data
-    const appointmentTypes =
-      appointmentTypesRes?.appointment_types?.map((type) => ({
-        id: type.id,
-        name: type.name,
-        duration: type.duration_in_minutes,
-        max_attendees : type.max_attendees
-      })) || [];
-
-    console.log(`✅ Found ${appointmentTypes.length} appointment types`);
-
-     console.log("practitioner", practitioner)
-
-    // ✅ Step 4 — Return combined response
+    // Build response object
     return NextResponse.json({
       success: true,
       practitioner: {
         id: practitioner.id,
-        first_name: practitioner.first_name,
         full_name: practitioner.full_name,
-        last_name: practitioner.last_name,
-        email: practitioner.contact_email,
-        profile_bio : practitioner.profile_bio,
-        contact_number : practitioner.contact_number,
-        contact_email : practitioner.contact_email,
+        first_name: practitioner.first_name || null,
+        last_name: practitioner.last_name || null,
+        contact_number: practitioner.contact_number,
+        contact_email: practitioner.contact_email,
+        profile_bio: practitioner.profile_bio,
         specialization: practitioner.specialization,
         qualifications: practitioner.qualification,
+        experience_years: practitioner.experience_years,
         price: practitioner.solo_consultation_fee,
+        family_price: practitioner.family_consultation_fee,
         profile_image: practitioner.profile_picture_url,
-        cliniko_practitioner_id: clinikoId,
-        appointment_type : appointmentTypes,
+        available_services: practitioner.available_services,
+        cliniko_practitioner_id: practitioner.cliniko_practitioner_id || null,
+        appointment_types: appointmentTypes,
       },
       requested_by: user.email,
     });
@@ -98,54 +105,6 @@ export async function GET(req, context) {
         message: "Failed to fetch practitioner details",
         error: error?.message || "Unknown error",
       },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * PUT /api/practitioners/[id]
- * Update Cliniko practitioner ID for a given practitioner record.
- */
-export async function PUT(
-  req,
-  params 
-) {
-  try {
-    const { id } = params;
-    const body = await req.json();
-    const { cliniko_practitioner_id } = body;
-
-    if (!cliniko_practitioner_id) {
-      return NextResponse.json(
-        { error: "Missing cliniko_practitioner_id" },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabaseClient
-      .from("practitioners")
-      .update({ cliniko_practitioner_id })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Supabase Update Error:", error.message);
-      return NextResponse.json(
-        { error: "Failed to update practitioner", details: error.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(
-      { success: true, message: "Practitioner updated successfully", data },
-      { status: 200 }
-    );
-  } catch (err) {
-    console.error("Unexpected Error:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error", details: String(err) },
       { status: 500 }
     );
   }

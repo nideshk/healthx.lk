@@ -1,11 +1,6 @@
-import { requireUser } from "@/lib/authGuard";
-import { clinikoFetch } from "@/lib/cliniko";
+
 import { NextResponse } from "next/server";
 
-/**
- * GET /api/practitioners/[id]
- * Fetch practitioner info + available slots (Cliniko-compliant)
- */
 import { supabaseClient } from "@/lib/supabaseClient";
 
 interface PractitionerPayload {

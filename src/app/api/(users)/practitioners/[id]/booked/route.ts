@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
 import { DateTime } from "luxon";
+import { supabaseClient } from "@/lib/supabaseClient";
+import { requireUser } from "@/lib/authGuard";
 
 export const runtime = "nodejs";
 
-/**
- * GET /api/practitioners/[id]/booked?from=YYYY-MM-DD&to=YYYY-MM-DD
- * Fetch all booked appointments for a practitioner within a date range.
- * Converts UTC -> local timezone (Asia/Colombo)
- */
 export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ⬅️ Typed routes requires awaiting this
     const { id: practitionerId } = await context.params;
-
     const { searchParams } = new URL(req.url);
+
     const from = searchParams.get("from");
     const to = searchParams.get("to");
 
@@ -27,99 +23,82 @@ export async function GET(
       );
     }
 
-    const region = process.env.CLINIKO_REGION || "au1";
-    const apiKey = process.env.CLINIKO_API_KEY;
-    const authHeader = "Basic " + Buffer.from(apiKey + ":").toString("base64");
-    const userAgent = `${process.env.CLINIKO_APP_NAME} (${process.env.CLINIKO_APP_EMAIL})`;
-    const TIMEZONE = "Asia/Colombo";
+    // -----------------------------------
+    // 🔐 1. Get current authenticated user
+    // -----------------------------------
+    const user = await requireUser();
 
-    console.log(
-      `📅 Fetching booked slots for practitioner: ${practitionerId} (${from} → ${to})`
-    );
+    // user = { id, role, practitioner_id }
 
-    // 📌 Recursive pagination fetch
-    async function fetchAllAppointments(page = 1, allData: any[] = []): Promise<any[]> {
-      const url = `https://api.${region}.cliniko.com/v1/appointments?from=${from}&to=${to}&page=${page}&per_page=50`;
-      const res = await fetch(url, {
-        headers: {
-          Authorization: authHeader,
-          Accept: "application/json",
-          "User-Agent": userAgent,
-        },
-      });
+    // -----------------------------------
+    // 🔐 2. Enforce role rules
+    // -----------------------------------
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(`Cliniko API error: ${res.status} ${JSON.stringify(data)}`);
-      }
-
-      const combined = allData.concat(data.appointments || []);
-      if (data.total_entries > combined.length) {
-        return fetchAllAppointments(page + 1, combined);
-      }
-      return combined;
+    // Patients are NOT allowed
+    console.log("Current user:", user);
+    if (user.role === "patient") {
+      return NextResponse.json(
+        { error: "Access denied" },
+        { status: 403 }
+      );
     }
 
-    const allAppointments = await fetchAllAppointments();
+    // Practitioners can ONLY see their own bookings
+    if (user.role === "practitioner") {
+      if (user.user?.practitioner_id !== practitionerId) {
+        return NextResponse.json(
+          { error: "You cannot view another practitioner's bookings" },
+          { status: 403 }
+        );
+      }
+    }
 
-    // 🔎 Filter by practitioner + date range
-    const filtered = allAppointments.filter((a: any) => {
-      const practitionerUrl = a.practitioner?.links?.self;
-      const practitionerIdFromLink = practitionerUrl?.split("/").pop();
-      const appointmentDate = a.appointment_start.slice(0, 10);
+    // Admin has full access — no restrictions
 
-      return (
-        practitionerIdFromLink === practitionerId &&
-        appointmentDate >= from &&
-        appointmentDate <= to
-      );
-    });
+    const TIMEZONE = "Asia/Colombo";
 
-    // ⏱️ Convert UTC → Local
-    const booked = filtered.map((a: any) => {
-      const startUTC = DateTime.fromISO(a.appointment_start, { zone: "utc" });
-      const endUTC = DateTime.fromISO(a.appointment_end, { zone: "utc" });
+    // -----------------------------------
+    // 📅 3. Fetch appointments from DB
+    // -----------------------------------
+    const { data, error } = await supabaseClient
+      .from("appointments")
+      .select("id, starts_at, ends_at, appointment_type_id, status, telehealth_url")
+      .eq("practitioner_id", practitionerId)
+      .neq("status", "cancelled")
+      .gte("starts_at", `${from}T00:00:00Z`)
+      .lte("ends_at", `${to}T23:59:59Z`)
+      .order("starts_at", { ascending: true });
 
-      const startLocal = startUTC.setZone(TIMEZONE);
-      const endLocal = endUTC.setZone(TIMEZONE);
+    if (error) throw error;
+
+    // Convert UTC → Local timezone
+    const booked = data.map((a) => {
+      const startLocal = DateTime.fromISO(a.starts_at).setZone(TIMEZONE);
+      const endLocal = DateTime.fromISO(a.ends_at).setZone(TIMEZONE);
 
       return {
+        id: a.id,
         from: startLocal.toFormat("HH:mm"),
         to: endLocal.toFormat("HH:mm"),
         date: startLocal.toFormat("yyyy-MM-dd"),
-        patient_name: a.patient_name,
-        appointment_type: a.appointment_type?.links?.self?.split("/")?.pop(),
+        appointment_type: a.appointment_type_id,
+        telehealth_url: a.telehealth_url,
       };
     });
 
-    // 📅 Group by date
-    const grouped = booked.reduce((acc: any, b: any) => {
-      if (!acc[b.date]) acc[b.date] = [];
-      acc[b.date].push({
-        from: b.from,
-        to: b.to,
-        appointment_type: b.appointment_type,
-      });
-      return acc;
-    }, {});
-
-    console.log(
-      `✅ Found ${booked.length} booked slots for practitioner ${practitionerId}`
-    );
-
     return NextResponse.json({
       success: true,
-      total: booked.length,
+      role: user.role,
       practitioner_id: practitionerId,
       range: { from, to },
+      total: booked.length,
       timezone: TIMEZONE,
       booked,
-      grouped,
     });
-  } catch (error: any) {
-    console.error("❌ Cliniko Fetch Error:", error);
+  } catch (err: any) {
+    console.error("❌ Error in booked endpoint:", err);
     return NextResponse.json(
-      { success: false, message: error.message },
+      { success: false, message: err.message },
       { status: 500 }
     );
   }

@@ -8,10 +8,6 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  console.log("▶️ Starting unified signup flow (NO CLINIKO)...");
-
-
-
   try {
     const {
       email,

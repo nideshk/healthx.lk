@@ -1,62 +1,70 @@
 import { NextResponse } from "next/server";
+import { supabaseClient } from "@/lib/supabaseClient";
+import { requireUser } from "@/lib/authGuard";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
-    const apiKey = process.env.CLINIKO_API_KEY!;
-    const region = process.env.CLINIKO_REGION || "au1";
-    const userAgent = `${process.env.CLINIKO_APP_NAME || "Medx"} (${
-      process.env.CLINIKO_APP_EMAIL || "admin@medx.app"
-    })`;
+    const { authorized, response, user } = await requireUser();
+    if (!authorized) return response;
 
-    const authHeader = "Basic " + Buffer.from(apiKey + ":").toString("base64");
+    // Only admin can read ALL bookings
+    if (user?.role !== "admin") {
+      return NextResponse.json(
+        { error: "Only admin can access all bookings" },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
 
     const q = searchParams.get("q") || "";
     const perPage = Number(searchParams.get("per_page")) || 50;
     const order = searchParams.get("order") || "asc";
-    const sort = searchParams.get("sort") || "created_at:desc";
+    const sort = searchParams.get("sort") || "created_at";
+    const page = Number(searchParams.get("page")) || 1;
 
-    console.log("📡 Fetching Cliniko Bookings...");
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
 
-    async function fetchAllBookings(page = 1, allData: any[] = []): Promise<any[]> {
-      const url = `https://api.${region}.cliniko.com/v1/bookings?page=${page}&per_page=${perPage}&order=${order}&sort=${encodeURIComponent(sort)}${
-        q ? `&q[]=${encodeURIComponent(q)}` : ""
-      }`;
+    let query = supabaseClient
+      .from("appointments")
+      .select(
+        `
+        *,
+        patient:patient_id(full_name, email),
+        practitioner:practitioner_id(full_name, contact_email)
+      `,
+        { count: "exact" }
+      )
+      .order(sort, { ascending: order === "asc" })
+      .range(from, to);
 
-      const res = await fetch(url, {
-        headers: {
-          Authorization: authHeader,
-          Accept: "application/json",
-          "User-Agent": userAgent,
-        },
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(`Cliniko API error: ${res.status} ${JSON.stringify(data)}`);
-
-      const combined = allData.concat(data.bookings || []);
-
-      // Cliniko gives `total_entries` so we can stop when done
-      if (data.total_entries > combined.length) {
-        return fetchAllBookings(page + 1, combined);
-      }
-
-      return combined;
+    // Search support
+    if (q) {
+      query = query.or(`notes.ilike.%${q}%, telehealth_url.ilike.%${q}%`);
     }
 
-    const allBookings = await fetchAllBookings();
+    const { data, error, count } = await query;
 
-    console.log(`✅ Retrieved ${allBookings.length} bookings from Cliniko`);
+    if (error) {
+      console.error("DB Error:", error);
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      total: allBookings.length,
-      data: allBookings,
+      total: count,
+      per_page: perPage,
+      page,
+      data,
     });
   } catch (error: any) {
-    console.error("❌ Cliniko Bookings Fetch Error:", error);
+    console.error("❌ Appointments Fetch Error:", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }

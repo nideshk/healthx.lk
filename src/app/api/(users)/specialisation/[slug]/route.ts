@@ -21,7 +21,6 @@ export async function GET(
       .from("practitioners")
       .select("*")
       .contains("specialization", [slug])        // specialization = text[]
-      .filter("cliniko_practitioner_id", "not.ilike", null)
       .order("created_at", { ascending: false });
 
     if (error) {
