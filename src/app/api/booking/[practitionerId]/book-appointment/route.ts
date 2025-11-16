@@ -127,7 +127,6 @@ export async function POST(
 
     console.log("🎉 Successfully inserted appointment:", inserted);
 
-    // 🚀 OPTIONAL: Add Cliniko creation here
 
     console.log("✅ Booking completed successfully");
     return NextResponse.json({
