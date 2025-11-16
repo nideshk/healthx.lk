@@ -2,7 +2,26 @@ import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 
-// Helper: Slot generator
+// ------------------------
+// TIME HELPERS
+// ------------------------
+function toMinutes(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function isOverlapping(slotStart: string, duration: number, bookedSlots: any[]) {
+  const slotStartMin = toMinutes(slotStart);
+  const slotEndMin = slotStartMin + duration;
+
+  return bookedSlots.some((b) => {
+    const bStart = toMinutes(b.start);
+    const bEnd = toMinutes(b.end);
+    return slotStartMin < bEnd && slotEndMin > bStart; // Overlap logic
+  });
+}
+
+// Generate slots (for the full day window)
 function generateSlots(startTime: string, endTime: string, durationMins: number) {
   const slots: string[] = [];
 
@@ -16,39 +35,44 @@ function generateSlots(startTime: string, endTime: string, durationMins: number)
     const h = Math.floor(start / 60);
     const m = start % 60;
     slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    start += durationMins;
+    start += durationMins;  // 🔥 FIXED — increment by slot duration
   }
 
   return slots;
 }
+
 
 export async function GET(
   req: Request,
   context: { params: Promise<{ practitionerId: string }> }
 ) {
   try {
-    // Next.js 15 typed route params
     const { practitionerId } = await context.params;
 
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
 
-    // Check user session
+    // ---------------------------
+    // AUTH CHECK 
+    // ---------------------------
     const { authorized, user } = await requireUser();
+
+    console.log("👤 Authenticated user:", user);
+
     if (!authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (!date) {
       return NextResponse.json(
-        { error: "date is required. Use YYYY-MM-DD" },
+        { error: "Missing required: date (YYYY-MM-DD)" },
         { status: 400 }
       );
     }
 
-    /* ---------------------------------------------------------------------
-      STEP 1: Fetch practitioner details (including what services they offer)
-    ----------------------------------------------------------------------*/
+    // ---------------------------
+    // STEP 1: Practitioner services
+    // ---------------------------
     const { data: practitioner, error: practitionerErr } = await supabaseClient
       .from("practitioners")
       .select("available_services")
@@ -63,19 +87,18 @@ export async function GET(
     }
 
     const offeredTypes = practitioner.available_services || [];
-
     if (offeredTypes.length === 0) {
       return NextResponse.json({
         practitioner_id: practitionerId,
         date,
         available: false,
-        reason: "No services offered by practitioner",
+        reason: "Practitioner has no services configured",
       });
     }
 
-    /* ---------------------------------------------------------------------
-      STEP 2: Fetch availability block
-    ----------------------------------------------------------------------*/
+    // ---------------------------
+    // STEP 2: Fetch availability
+    // ---------------------------
     const { data: availability, error: avErr } = await supabaseClient
       .from("practitioner_availability")
       .select("starts_at, ends_at, days_unavailable")
@@ -84,7 +107,7 @@ export async function GET(
 
     if (avErr || !availability) {
       return NextResponse.json(
-        { error: "Availability not found" },
+        { error: "Availability not configured" },
         { status: 404 }
       );
     }
@@ -96,17 +119,16 @@ export async function GET(
         practitioner_id: practitionerId,
         date,
         available: false,
-        reason: "Practitioner unavailable on this day",
+        reason: `Unavailable on ${dayName}`,
       });
     }
 
-    // Extract HH:mm
     const start_time = availability.starts_at.split("T")[1].substring(0, 5);
     const end_time = availability.ends_at.split("T")[1].substring(0, 5);
 
-    /* ---------------------------------------------------------------------
-      STEP 3: Fetch appointment types for offered services only
-    ----------------------------------------------------------------------*/
+    // ---------------------------
+    // STEP 3: Fetch appointment types offered
+    // ---------------------------
     const { data: appointmentTypes, error: typeErr } = await supabaseClient
       .from("appointment_type")
       .select("id, name, duration_mins")
@@ -114,53 +136,68 @@ export async function GET(
 
     if (typeErr) {
       return NextResponse.json(
-        { error: "Failed to fetch appointment types" },
+        { error: "Failed to load appointment types" },
         { status: 500 }
       );
     }
 
-    /* ---------------------------------------------------------------------
-      STEP 4: Fetch booked appointments for that day
-    ----------------------------------------------------------------------*/
+    // ---------------------------
+    // STEP 4: Fetch booked appointments (intervals)
+    // ---------------------------
     const { data: booked } = await supabaseClient
       .from("appointments")
-      .select("starts_at")
+      .select("starts_at, ends_at")
       .eq("practitioner_id", practitionerId)
       .gte("starts_at", `${date}T00:00:00`)
       .lte("starts_at", `${date}T23:59:59`)
       .neq("status", "cancelled");
 
-    const bookedTimes =
-      booked?.map((a) => a.starts_at.split("T")[1].substring(0, 5)) || [];
+    const bookedIntervals =
+      booked?.map((appt) => ({
+        start: appt.starts_at.split("T")[1].substring(0, 5),
+        end: appt.ends_at.split("T")[1].substring(0, 5),
+      })) || [];
 
-    /* ---------------------------------------------------------------------
-      STEP 5: Generate available slots for each appointment type
-    ----------------------------------------------------------------------*/
+    // ---------------------------
+    // STEP 5: Generate slots by type
+    // ---------------------------
     const slots_by_type: Record<string, string[]> = {};
 
-    appointmentTypes?.forEach((type) => {
-      const generated = generateSlots(start_time, end_time, type.duration_mins);
-      const filtered = generated.filter((t) => !bookedTimes.includes(t));
-      slots_by_type[type.name] = filtered; // keyed by appointment type ID
-    });
+    for (const type of appointmentTypes) {
+      const generated = generateSlots(
+        start_time,
+        end_time,
+        type.duration_mins
+      );
 
-    /* ---------------------------------------------------------------------
-      RESPONSE
-    ----------------------------------------------------------------------*/
+      const filtered = generated.filter(
+        (slot) => !isOverlapping(slot, type.duration_mins, bookedIntervals)
+      );
+
+      slots_by_type[type.name] = filtered;
+    }
+
+    // ---------------------------
+    // RESPOND
+    // ---------------------------
     return NextResponse.json({
       practitioner_id: practitionerId,
       date,
       start_time,
       end_time,
-      offered_types: appointmentTypes, // return type details too
+      offered_types: appointmentTypes,
+      booked_intervals: bookedIntervals,
       slots_by_type,
-      requestedby: {
-        user_email: user.email,
-        user_id: user.user_metadata.sub,
+      requested_by: {
+        patient_id: user?.patient_id,
+        role: user?.role,
       },
     });
   } catch (err: any) {
-    console.error("❌ Unexpected error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("❌ Availability API Error:", err);
+    return NextResponse.json(
+      { error: err.message || "Server error" },
+      { status: 500 }
+    );
   }
 }

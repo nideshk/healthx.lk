@@ -19,6 +19,10 @@ export async function POST(
     console.log("🔐 Checking user authentication…");
     const { authorized, user } = await requireUser();
 
+    // if (!authorized) {
+    //   console.warn("⛔ Unauthorized booking attempt");
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
    
 
     // 2️⃣ Parse Body
@@ -101,7 +105,7 @@ export async function POST(
       .from("appointments")
       .insert({
         practitioner_id: practitionerId,
-        patient_id: "9a309cf5-e0c0-47da-8cb1-f56a4ac18d08",
+        patient_id: "a7c55cef-78e7-48db-9326-a454b06e7157",
         appointment_type_id,
         starts_at,
         ends_at,
