@@ -48,10 +48,13 @@ const DoctorSelectionStep = forwardRef(
   const fetchDoctors = async () => {
     setLoading(true);
     try {
+      
       const res = await axios.get(`/api/specialisation/${bookingData.selectedService.slug}`);
+      console.log("fetching doctors for", bookingData);
       console.log("data from api", res.data);
+      console.log("practitioners:", res.data.practitioners);
       const mapped = res.data.practitioners.map((p: any) => ({
-        id: p.cliniko_practioner_id,
+        id: p.id,
         name: p.full_name,
         registration: p.license_number,
         email: p.contact_email,
@@ -125,7 +128,7 @@ const DoctorSelectionStep = forwardRef(
 
                 return (
                   <div
-                    key={doctor.id}
+                    key={doctor.id+""+doctor.email}
                     className={`rounded-2xl shadow-sm border transition-transform duration-200 cursor-pointer ${
                       isSelected
                         ? 'border-blue-600 ring-2 ring-blue-300 scale-[1.02]'

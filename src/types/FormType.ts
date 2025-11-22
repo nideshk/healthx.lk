@@ -24,8 +24,10 @@ export interface AppointmentTime {
 export interface AppointmentType{
     id: string;
     name : string;
-    duration : number;
+    starts_at : Date;
+    ends_at : Date;
     max_attendees : number;
+    duration_mins : number;
 }
 
 export interface Doctor {
@@ -34,6 +36,8 @@ export interface Doctor {
   name: string;
   full_name : string;
   registration: string;
+  qualification: string;  
+  profileImage: string;
   fee: number;
   currency: string;
   rating: { advice: number; punctuality: number; overall: number };

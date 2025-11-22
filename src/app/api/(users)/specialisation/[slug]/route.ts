@@ -40,7 +40,9 @@ export async function GET(
       count: data?.length || 0,
       specialization: slug,
       practitioners: (data || []).map((p) => ({
+        id: p.id,
         full_name: p.full_name,
+        profile_bio: p.profile_bio,
         qualification: p.qualification,
         cliniko_practitioner_id: p.cliniko_practitioner_id,
         license_number: p.license_number,
