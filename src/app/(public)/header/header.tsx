@@ -91,7 +91,7 @@ export default function Header() {
           </Link>
 
           <nav className="hidden md:flex space-x-6">
-            <Link href="/" className="nav-link">Home</Link>
+            <Link href="/dashboard" className="nav-link">Home</Link>
             <Link href="/about" className="nav-link">Our Story</Link>
             <Link href="/how-to" className="nav-link">How To</Link>
             <Link href="/help" className="nav-link">Help</Link>
