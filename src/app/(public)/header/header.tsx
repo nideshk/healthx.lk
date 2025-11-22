@@ -2,14 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useModalStore } from "@/store/useModalStore";
 import { supabaseClient } from "@/lib/supabaseClient";
 import Modal from "@/components/atom/Modal/Modal";
 import SignupForm from "@/components/form/SignupForm";
 
 export default function Header() {
-  const router = useRouter();
   const {
     isLoginModalOpen,
     isSignupModalOpen,
@@ -40,26 +38,21 @@ export default function Header() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // LOGIN FUNCTION
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement)
       .value;
-
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-
       await supabaseClient.auth.getSession();
-
       setUser(data.user);
       closeLoginModal();
     } catch (err: any) {
@@ -68,16 +61,17 @@ export default function Header() {
   };
 
   // LOGOUT FUNCTION
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      await supabaseClient.auth.signOut();
-      setUser(null);
-      router.push("/");
-    } catch (err) {
-      console.error("Logout error:", err);
-    }
-  };
+ const handleLogout = async () => {
+  console.log("Logging out...");
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+    localStorage.removeItem("user_role"); // Remove cached role if any
+    window.location.reload();
+  } catch (err) {
+    console.error("Logout error:", err);
+  }
+};
+
 
   if (loading) return null;
 
