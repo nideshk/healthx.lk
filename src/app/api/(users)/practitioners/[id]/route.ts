@@ -4,7 +4,7 @@ import { supabaseClient } from "@/lib/supabaseClient";
 
 export async function GET(
   req: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const { authorized, response, user } = await requireUser();
   if (!authorized) return response;

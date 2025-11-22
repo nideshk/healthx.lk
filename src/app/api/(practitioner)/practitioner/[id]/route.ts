@@ -16,13 +16,13 @@ function getDateRange() {
 
 export async function GET(
   req: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const { authorized, user, response } = await requireUser();
   if (!authorized) return response;
 
   const supabase = supabaseClient;
-  const practitionerId = context.params.id;
+  const { id: practitionerId } = await context.params;
 
   if (!practitionerId) {
     return NextResponse.json(
