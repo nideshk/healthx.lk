@@ -2,6 +2,12 @@
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { toast } from 'sonner';
 import { AppointmentFormInputs } from '@/types/FormType';
+import {
+  CheckCircle2,
+  Calendar,
+  User,
+  ClipboardList,
+} from 'lucide-react';
 
 interface Props {
   prevStep: () => void;
@@ -9,65 +15,239 @@ interface Props {
   bookingData: AppointmentFormInputs;
 }
 
-const PaymentStep = forwardRef(({ prevStep, updateData, bookingData }: Props, ref) => {
-  const [paymentDone, setPaymentDone] = useState(false);
+const PaymentStep = forwardRef(
+  ({ prevStep, updateData, bookingData }: Props, ref) => {
+    const [paymentDone, setPaymentDone] = useState(false);
 
-  useImperativeHandle(ref, () => ({
-    validateStep: () => {
-      if (!paymentDone) {
-        toast.error('Please complete your payment before proceeding.');
-        return false;
-      }
-      return true;
-    },
-  }));
+    useImperativeHandle(ref, () => ({
+      validateStep: () => {
+        if (!paymentDone) {
+          toast.error('Please complete the payment to finalize.');
+          return false;
+        }
+        return true;
+      },
+    }));
 
-  const handlePayment = () => {
-    setTimeout(() => {
-      setPaymentDone(true);
-      toast.success('Payment successful!');
-      updateData({ payment_status: 'completed' });
-    }, 1000);
-  };
+    const handlePayment = () => {
+      setTimeout(() => {
+        setPaymentDone(true);
+        updateData({ payment_status: 'completed' });
+        toast.success('Payment successful!');
+      }, 1000);
+    };
 
-  const total = bookingData?.selectedDoctor?.fee || 1450;
+    // Pricing breakdown
+    const consultationFee = bookingData?.selectedDoctor?.fee || 1450;
+    const serviceFee = Math.round(consultationFee * 0.05);
+    const tax = Math.round((consultationFee + serviceFee) * 0.08);
+    const totalAmount = consultationFee + serviceFee + tax;
 
-  return (
-    <div className=" h-fit py-12 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 border border-gray-100 text-center">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Payment</h2>
-        <p className="text-gray-600 mb-8">
-          Please confirm your payment to finalize the booking.
-        </p>
+    const doctor = bookingData.selectedDoctor;
+    const type = bookingData.appointmentType;
+    const service = bookingData.selectedService;
+    const pre = bookingData.pre_consultation || {};
+    const consent = bookingData.consent || {};
 
-        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
-          <p className="text-lg font-semibold text-gray-800">
-            Amount Due: <span className="text-blue-700">LKR {total}</span>
-          </p>
+    return (
+      <div className="min-h-screen py-10 px-4 bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="max-w-7xl mx-auto">
+
+          {/* ---------------- PAGE TITLE ---------------- */}
+          <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-10">
+            Review & Complete Payment
+          </h1>
+
+          {/* ---------------- TWO COLUMN LAYOUT ---------------- */}
+          <div className="grid lg:grid-cols-3 gap-10">
+
+            {/* LEFT COLUMN – REVIEW SECTIONS */}
+            <div className="lg:col-span-2 space-y-6">
+
+              {/* ---- GLASS CARD STYLE ---- */}
+              {/** Doctor Card */}
+              <div className="
+                p-6 rounded-2xl 
+                bg-white/60 backdrop-blur-md 
+                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
+                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)] 
+                transition-all
+              ">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-blue-600" /> Doctor Details
+                </h3>
+
+                <div className="flex items-center gap-4">
+                  <img
+                    src={doctor?.profileImage || '/images/default-doctor.png'}
+                    className="w-16 h-16 rounded-xl object-cover border"
+                  />
+                  <div>
+                    <p className="text-lg font-semibold">{doctor?.name}</p>
+                    <p className="text-sm text-gray-600">{doctor?.qualification}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Reg: {doctor?.registration}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/** Appointment Details */}
+              <div className="
+                p-6 rounded-2xl 
+                bg-white/60 backdrop-blur-md 
+                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
+                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)]
+                transition-all
+              ">
+                <h3 className="text-xl font-semibold flex items-center gap-2 text-gray-800 mb-4">
+                  <Calendar className="w-5 h-5 text-blue-600" /> Appointment Details
+                </h3>
+
+                <p><strong>Type:</strong> {type?.name}</p>
+                <p><strong>Duration:</strong> {type?.duration_mins} mins</p>
+                <p><strong>Date:</strong> {bookingData.starts_at ? new Date(bookingData.starts_at).toLocaleDateString() : '—'}</p>
+                <p>
+                  <strong>Time:</strong>{' '}
+                  {bookingData.starts_at ? new Date(bookingData.starts_at).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }) : '—'}
+                </p>
+              </div>
+
+              {/** Service */}
+              <div className="
+                p-6 rounded-2xl 
+                bg-white/60 backdrop-blur-md 
+                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
+                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)]
+                transition-all
+              ">
+                <h3 className="text-xl font-semibold flex items-center gap-2 text-gray-800 mb-4">
+                  <ClipboardList className="w-5 h-5 text-blue-600" /> Service
+                </h3>
+                <p className="font-medium">{service?.name}</p>
+                <p className="text-sm text-gray-600">{service?.description}</p>
+              </div>
+
+              {/** Pre-Consultation */}
+              <div className="
+                p-6 rounded-2xl 
+                bg-white/60 backdrop-blur-md 
+                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
+                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)]
+                transition-all
+              ">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                  Pre-Consultation
+                </h3>
+
+                <p><strong>Main Concern:</strong> {pre?.note?.concern || '—'}</p>
+                <p><strong>Expected Outcome:</strong> {pre?.note?.outcome || '—'}</p>
+                <p><strong>Referral:</strong> {pre?.referral || '—'}</p>
+              </div>
+
+              {/** Consents */}
+              <div className="
+                p-6 rounded-2xl 
+                bg-white/60 backdrop-blur-md 
+                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
+                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)]
+                transition-all
+              ">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                  Consents
+                </h3>
+
+                <p className="flex items-center gap-2">
+                  Telehealth Consent:
+                  {consent.telehealth ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <span className="text-red-600">✗ Not Accepted</span>
+                  )}
+                </p>
+
+                <p className="flex items-center gap-2 mt-2">
+                  Terms & Conditions:
+                  {consent.terms ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <span className="text-red-600">✗ Not Accepted</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* ---------------- RIGHT COLUMN — STICKY PAYMENT SUMMARY ---------------- */}
+            <div className="lg:col-span-1">
+              <div
+                className="
+                p-6 rounded-2xl 
+                bg-white/70 backdrop-blur-lg 
+                shadow-[0_8px_30px_rgba(0,0,0,0.12)]
+                ring-1 ring-white/40
+                sticky top-24
+              "
+              >
+                <h3 className="text-xl font-bold text-gray-900 mb-5">
+                  Pricing Summary
+                </h3>
+
+                <div className="space-y-3 text-gray-800">
+                  <div className="flex justify-between">
+                    <span>Consultation Fee</span>
+                    <span>LKR {consultationFee}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span>Platform Fee (5%)</span>
+                    <span>LKR {serviceFee}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span>VAT (8%)</span>
+                    <span>LKR {tax}</span>
+                  </div>
+
+                  <hr className="my-4" />
+
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total Amount</span>
+                    <span className="text-blue-700">LKR {totalAmount}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handlePayment}
+                  disabled={paymentDone}
+                  className="
+                    w-full mt-6 py-3 rounded-lg
+                    text-lg font-semibold
+                    transition-all shadow-md
+                    bg-blue-600 hover:bg-blue-700 text-white
+                    disabled:bg-green-600 disabled:cursor-not-allowed
+                  "
+                >
+                  {paymentDone ? 'Payment Completed ✓' : 'Pay Now →'}
+                </button>
+
+                <button
+                  onClick={prevStep}
+                  className="mt-4 w-full text-sm text-gray-600 underline hover:text-gray-800"
+                >
+                  ← Back to Previous Step
+                </button>
+              </div>
+            </div>
+
+          </div>
         </div>
-
-        <button
-          onClick={handlePayment}
-          disabled={paymentDone}
-          className={`w-full py-3 rounded-lg font-semibold transition ${
-            paymentDone
-              ? 'bg-green-600 text-white cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
-          }`}
-        >
-          {paymentDone ? 'Payment Completed ✓' : 'Pay Now'}
-        </button>
-
-        <button
-          onClick={prevStep}
-          className="mt-6 text-sm text-gray-500 underline hover:text-gray-700"
-        >
-          Back to previous step
-        </button>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 PaymentStep.displayName = 'PaymentStep';
 export default PaymentStep;

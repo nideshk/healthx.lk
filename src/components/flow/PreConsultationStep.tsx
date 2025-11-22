@@ -1,334 +1,289 @@
-'use client';
+"use client";
+
 import React, {
-    forwardRef,
-    useImperativeHandle,
-    useRef,
-    useState,
-} from 'react';
-import axios from 'axios';
-import { toast } from 'sonner';
-import { Search, User, Phone, Mail, Loader2, Paperclip, X } from 'lucide-react';
-import { AppointmentFormInputs } from '@/types/FormType';
+  forwardRef,
+  useImperativeHandle,
+  useState,
+} from "react";
+import { toast } from "sonner";
+import { Paperclip, X } from "lucide-react";
+import { AppointmentFormInputs } from "@/types/FormType";
 
 interface Props {
-    nextStep: () => void;
-    prevStep: () => void;
-    updateData: (data: Partial<AppointmentFormInputs>) => void;
-    bookingData: AppointmentFormInputs;
+  nextStep: () => void;
+  prevStep: () => void;
+  updateData: (data: Partial<AppointmentFormInputs>) => void;
+  bookingData: AppointmentFormInputs;
 }
 
 const PreConsultationStep = forwardRef(
-    ({ nextStep, prevStep, updateData, bookingData }: Props, ref) => {
-        // 🔍 Search state
-        const [searchQuery, setSearchQuery] = useState('');
-        const [searchResults, setSearchResults] = useState<any[]>([]);
-        const [loading, setLoading] = useState(false);
-        const [attachment, setAttachment] = useState<File | null>(null);
-        const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  ({ nextStep, prevStep, updateData, bookingData }: Props, ref) => {
+    // Extract initial form data
+    const pre = bookingData?.pre_consultation || {};
+    const note = pre.note || {};
+    const selectedAttendees = bookingData?.selectedAttendees || [];
 
-        // 🧠 Extract current data
-        const pre = bookingData?.pre_consultation || {};
-        const note = pre.note || {};
-        const selectedAttendees = bookingData?.selectedAttendees || [];
+    const [emailInput, setEmailInput] = useState("");
+    const [attachment, setAttachment] = useState<File | null>(null);
 
-        // 🔍 Search patients (by name/email/phone)
-        const handleSearch = (query: string) => {
-            setSearchQuery(query);
+    // Update "concern" or "outcome"
+    const handleChange = (field: "concern" | "outcome", value: string) => {
+      updateData({
+        pre_consultation: {
+          ...pre,
+          note: { ...note, [field]: value },
+        },
+      });
+    };
 
-            if (searchTimeout.current) clearTimeout(searchTimeout.current);
-            if (!query.trim()) {
-                setSearchResults([]);
-                return;
-            }
+    // Referral source
+    const handleReferralChange = (value: string) => {
+      updateData({
+        pre_consultation: {
+          ...pre,
+          referral: value,
+        },
+      });
+    };
 
-            searchTimeout.current = setTimeout(async () => {
-                try {
-                    setLoading(true);
-                    const res = await axios.get(`/api/patient?search=${query}`);
-                    setSearchResults(res.data.data || []);
-                } catch (err) {
-                    console.error('❌ Search failed:', err);
-                    toast.error('Error searching patients.');
-                } finally {
-                    setLoading(false);
-                }
-            }, 400);
-        };
+    // Add attendee email
+    const addAttendee = () => {
+      if (!emailInput.trim() || !emailInput.includes("@")) {
+        toast.error("Enter a valid email.");
+        return;
+      }
 
-        // 🧾 Field handlers
-        const handleChange = (field: 'concern' | 'outcome', value: string) => {
-            const updatedNote = { ...note, [field]: value };
-            updateData({
-                pre_consultation: {
-                    ...pre,
-                    note: updatedNote,
-                },
-            });
-        };
+      if (selectedAttendees.includes(emailInput)) {
+        toast.error("Email already added.");
+        return;
+      }
 
-        const handleReferralChange = (value: string) => {
-            updateData({
-                pre_consultation: {
-                    ...pre,
-                    referral: value,
-                },
-            });
-        };
+      updateData({
+        selectedAttendees: [...selectedAttendees, emailInput],
+      });
 
-        // 👥 Toggle attendees (store email only)
-        const toggleAttendee = (email: string) => {
-            const updated = selectedAttendees.includes(email)
-                ? selectedAttendees.filter((a) => a !== email)
-                : [...selectedAttendees, email];
+      setEmailInput("");
+    };
 
-            updateData({ selectedAttendees: updated });
-        };
+    // Remove attendee
+    const removeAttendee = (email: string) => {
+      updateData({
+        selectedAttendees: selectedAttendees.filter((e) => e !== email),
+      });
+    };
 
-        // 📎 Handle file upload
-        const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const file = e.target.files?.[0];
-            if (file) {
-                setAttachment(file);
-                updateData({
-                    pre_consultation: {
-                        ...pre,
-                        attachment: file.name, // Store file name in draft for reference
-                    },
-                });
-            }
-        };
+    // File upload
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setAttachment(file);
+        updateData({
+          pre_consultation: {
+            ...pre,
+            attachment: file.name,
+          },
+        });
+      }
+    };
 
-        const removeAttachment = () => {
-            setAttachment(null);
-            updateData({
-                pre_consultation: {
-                    ...pre,
-                    attachment: null,
-                },
-            });
-        };
+    const removeAttachment = () => {
+      setAttachment(null);
+      updateData({
+        pre_consultation: {
+          ...pre,
+          attachment: null,
+        },
+      });
+    };
 
-        // ✅ Validation for parent
-        useImperativeHandle(ref, () => ({
-            validateStep: () => {
-                const c = note.concern?.trim();
-                const o = note.outcome?.trim();
-                const r = pre.referral?.trim();
-                if (!c || !o || !r) {
-                    toast.error('Please fill all pre-consultation fields.');
-                    return false;
-                }
-                if (!selectedAttendees.length) {
-                    toast.error('Please select at least one attendee.');
-                    return false;
-                }
-                return true;
-            },
-        }));
+    // Validation
+    useImperativeHandle(ref, () => ({
+      validateStep: () => {
+        if (!note.concern?.trim()) {
+          toast.error("Please enter your main concern.");
+          return false;
+        }
+        if (!note.outcome?.trim()) {
+          toast.error("Please enter your desired outcome.");
+          return false;
+        }
+        if (!pre.referral?.trim()) {
+          toast.error("Please provide referral source.");
+          return false;
+        }
+        if (selectedAttendees.length === 0) {
+          toast.error("Please add at least one attendee email.");
+          return false;
+        }
+        return true;
+      },
+    }));
 
-        // 👉 Handle Next
-        const handleNext = () => {
-            const c = note.concern?.trim();
-            const o = note.outcome?.trim();
-            const r = pre.referral?.trim();
-            if (!c || !o || !r) {
-                toast.error('Please fill all pre-consultation fields.');
-                return;
-            }
-            if (!selectedAttendees.length) {
-                toast.error('Please select at least one attendee.');
-                return;
-            }
-            nextStep();
-        };
+    // Handle Next
+    const handleNext = () => {
+      if (!note.concern?.trim() || !note.outcome?.trim() || !pre.referral?.trim()) {
+        toast.error("Please complete all fields.");
+        return;
+      }
+      if (selectedAttendees.length === 0) {
+        toast.error("Please add at least one attendee.");
+        return;
+      }
+      nextStep();
+    };
 
-        return (
-            <div className="py-12 px-6">
-                <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
-                    <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">
-                        Pre-Consultation Details
-                    </h2>
-                    <p className="text-gray-600 text-center mb-10">
-                        Provide pre-consultation details, attach a document (if needed), and add attendees for this appointment.
-                    </p>
+    return (
+      <div className="py-12 px-6">
+        <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
+          <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">
+            Pre-Consultation Details
+          </h2>
+          <p className="text-gray-600 text-center mb-10">
+            Provide key details, optional attachments, and attendee email(s).
+          </p>
 
-                    {/* --- FORM SECTION --- */}
-                    <div className="grid md:grid-cols-2 gap-6 mb-10">
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                Main Concern
-                            </label>
-                            <textarea
-                                value={note.concern || ''}
-                                onChange={(e) => handleChange('concern', e.target.value)}
-                                className="w-full border rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                                rows={3}
-                                placeholder="Describe your concern"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                Desired Outcome
-                            </label>
-                            <textarea
-                                value={note.outcome || ''}
-                                onChange={(e) => handleChange('outcome', e.target.value)}
-                                className="w-full border rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                                rows={3}
-                                placeholder="What do you hope to achieve?"
-                            />
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                How did you hear about us?
-                            </label>
-                            <input
-                                type="text"
-                                value={pre.referral || ''}
-                                onChange={(e) => handleReferralChange(e.target.value)}
-                                className="w-full border rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Friend / Google / Social Media / Other"
-                            />
-                        </div>
-
-                        {/* --- File Attachment --- */}
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Attachment (optional)
-                            </label>
-                            <div className="flex items-center gap-3">
-                                <label
-                                    htmlFor="attachment-upload"
-                                    className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 border border-blue-300 text-blue-700 hover:bg-blue-100 text-sm font-medium"
-                                >
-                                    <Paperclip className="w-4 h-4" />
-                                    {attachment ? 'Replace File' : 'Upload File'}
-                                </label>
-                                <input
-                                    id="attachment-upload"
-                                    type="file"
-                                    accept=".pdf,.jpg,.png,.jpeg"
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                />
-                                {attachment && (
-                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                                        <span>{attachment.name}</span>
-                                        <button
-                                            type="button"
-                                            onClick={removeAttachment}
-                                            className="text-red-500 hover:text-red-700"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* --- SIMPLE SEARCHABLE DROPDOWN (Display Name, Store Email) --- */}
-                    <div className="mb-10 relative">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                            Select Attendee
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-3">
-                            Search and select an attendee by name or email.
-                        </p>
-
-                        <div className="relative">
-                            {/* Search Input */}
-                            <div className="relative">
-                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Type name or email..."
-                                    value={searchQuery}
-                                    onChange={(e) => handleSearch(e.target.value)}
-                                    className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
-                                />
-
-                                {/* Search Results Dropdown */}
-                                {searchQuery && !loading && searchResults.length > 0 && (
-                                    <ul className="absolute z-20 bg-white border border-gray-200 rounded-lg shadow-md mt-1 w-full max-h-60 overflow-y-auto">
-                                        {searchResults.map((p) => (
-                                            <li
-                                                key={p.email}
-                                                onClick={() => {
-                                                    // ✅ store only email, display name
-                                                    updateData({
-                                                        selectedAttendees: [p.email],
-                                                        pre_consultation: {
-                                                            ...bookingData.pre_consultation,
-                                                            selectedAttendeeName: `${p.first_name} ${p.last_name}`,
-                                                        },
-                                                    });
-                                                    setSearchQuery('');
-                                                    setSearchResults([]);
-                                                }}
-                                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-800"
-                                            >
-                                                <span className="font-medium">
-                                                    {p.first_name} {p.last_name}
-                                                </span>
-                                                <span className="text-gray-500 text-xs ml-1">({p.email})</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-
-                                {/* Loading indicator */}
-                                {loading && (
-                                    <div className="absolute top-2 right-3 text-gray-400 text-sm flex items-center gap-1">
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    </div>
-                                )}
-
-                                {/* No Results */}
-                                {searchQuery && !loading && searchResults.length === 0 && (
-                                    <div className="absolute z-10 bg-white border border-gray-200 rounded-lg mt-1 w-full p-3 text-sm text-gray-500 italic">
-                                        No results found
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Selected Attendee Display */}
-                        {bookingData.selectedAttendees?.length > 0 && (
-                            <div className="mt-3">
-                                <p className="text-sm text-gray-600">Selected Attendee:</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
-                                        {/* ✅ Display name, fallback to email */}
-                                        {bookingData?.pre_consultation?.selectedAttendeeName ||
-                                            bookingData.selectedAttendees[0]}
-                                    </span>
-                                    <button
-                                        onClick={() =>
-                                            updateData({
-                                                selectedAttendees: [],
-                                                pre_consultation: {
-                                                    ...bookingData.pre_consultation,
-                                                    selectedAttendeeName: '',
-                                                },
-                                            })
-                                        }
-                                        className="text-gray-500 hover:text-red-600 text-xs font-medium"
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                </div>
+          {/* FORM */}
+          <div className="grid md:grid-cols-2 gap-6 mb-10">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Main Concern
+              </label>
+              <textarea
+                value={note.concern || ""}
+                onChange={(e) => handleChange("concern", e.target.value)}
+                className="w-full border rounded-lg p-3 text-sm focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+                placeholder="Describe your concern"
+              />
             </div>
-        );
-    }
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Desired Outcome
+              </label>
+              <textarea
+                value={note.outcome || ""}
+                onChange={(e) => handleChange("outcome", e.target.value)}
+                className="w-full border rounded-lg p-3 text-sm focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+                placeholder="What do you hope to achieve?"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                How did you hear about us?
+              </label>
+              <input
+                type="text"
+                value={pre.referral || ""}
+                onChange={(e) => handleReferralChange(e.target.value)}
+                className="w-full border rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Friend / Google / Social Media / Other"
+              />
+            </div>
+
+            {/* ATTACHMENT */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Attachment (optional)
+              </label>
+              <div className="flex items-center gap-3">
+                <label
+                  htmlFor="attachment-upload"
+                  className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 border border-blue-300 text-blue-700 hover:bg-blue-100 text-sm font-medium"
+                >
+                  <Paperclip className="w-4 h-4" />
+                  {attachment ? "Replace File" : "Upload File"}
+                </label>
+                <input
+                  id="attachment-upload"
+                  type="file"
+                  accept=".pdf,.jpg,.png,.jpeg"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+
+                {attachment && (
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span>{attachment.name}</span>
+                    <button
+                      onClick={removeAttachment}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* EMAIL ENTRY */}
+          <div className="mb-10">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">Attendees</h3>
+            <p className="text-sm text-gray-500 mb-3">
+              Add email addresses of people who should receive the meeting link.
+            </p>
+
+            <div className="flex gap-3">
+              <input
+                type="email"
+                placeholder="Enter attendee email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="w-full border rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+              />
+              <button
+                onClick={addAttendee}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+              >
+                Add
+              </button>
+            </div>
+
+            {/* Existing attendees */}
+            {selectedAttendees.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {selectedAttendees.map((email) => (
+                  <div
+                    key={email}
+                    className="flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg text-sm"
+                  >
+                    <span>{email}</span>
+                    <button
+                      onClick={() => removeAttendee(email)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ACTIONS */}
+          <div className="flex justify-between mt-6">
+            <button
+              onClick={prevStep}
+              className="px-6 py-2 border rounded-lg text-gray-600 hover:bg-gray-100"
+            >
+              Back
+            </button>
+
+            <button
+              onClick={handleNext}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 );
 
-PreConsultationStep.displayName = 'PreConsultationStep';
+PreConsultationStep.displayName = "PreConsultationStep";
 export default PreConsultationStep;
