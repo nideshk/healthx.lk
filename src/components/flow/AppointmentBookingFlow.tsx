@@ -30,6 +30,7 @@ export default function AppointmentBookingFlow() {
     selectedServiceId: "",
     selectedServiceTitle: "",
     attendeeCount: 1,
+    appointment_id: "",
     selectedDoctor: null,
     starts_at: new Date().toISOString(),
     ends_at: new Date().toISOString(),

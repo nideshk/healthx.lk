@@ -1,6 +1,7 @@
 export interface AppointmentFormInputs {
   selectedServiceId: string;
   selectedServiceTitle: string;
+  appointment_id : string;
   attendeeCount: number;
   selectedDoctor: Doctor | null;
   starts_at: string|null;

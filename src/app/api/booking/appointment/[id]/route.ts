@@ -72,12 +72,21 @@ export async function GET(
         telehealth_url,
         cancellation_reason,
         cancelled_at,
+        currency,
+        fee_charged,
+        payment_status,
 
         appointment_type:appointment_type_id (
           id,
           name,
           duration_mins
         ),
+
+        preconsult_responses:preconsult_responses (
+      id,
+      raw_payload,
+      created_at
+    ),
 
         practitioner:practitioner_id (
           id,
@@ -98,6 +107,7 @@ export async function GET(
       .maybeSingle();
 
     if (error || !appointment) {
+      console.log("Appointment fetch error:", error);
       return NextResponse.json(
         { error: "Appointment not found" },
         { status: 404 }
@@ -126,6 +136,11 @@ export async function GET(
           specialization: practitioner?.specialization,
           profile_picture_url: practitioner?.profile_picture_url,
         },
+        notes : appointment.preconsult_responses,
+        telehealth_url: appointment.telehealth_url,
+        fee_charged: appointment.fee_charged,
+        currency: appointment.currency,
+        payment_status: appointment.payment_status,
         cancellation:
           appointment.cancellation_reason && {
             reason: appointment.cancellation_reason,
@@ -156,114 +171,7 @@ export async function GET(
   }
 }
 
-/* -------------------------------------------------------------
-   PUT: Reschedule appointment (update start+end)
---------------------------------------------------------------*/
-export async function PUT(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await context.params;
-
-    const { authorized, user } = await requireUser();
-    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const body = await req.json();
-    const { date, time, appointment_type_id } = body;
-
-    if (!date || !time || !appointment_type_id) {
-      return NextResponse.json(
-        { error: "Required: date, time, appointment_type_id" },
-        { status: 400 }
-      );
-    }
-
-    // Fetch appointment type duration
-    const { data: type } = await supabaseClient
-      .from("appointment_type")
-      .select("duration_mins")
-      .eq("id", appointment_type_id)
-      .maybeSingle();
-
-    if (!type) {
-      return NextResponse.json({ error: "Invalid appointment type" }, { status: 400 });
-    }
-
-    const { duration_mins } = type;
-
-    // Build new start/end timestamps
-    const starts_at = `${date}T${time}:00`;
-    const [h, m] = time.split(":").map(Number);
-
-    const endMinutes = h * 60 + m + duration_mins;
-    const endH = String(Math.floor(endMinutes / 60)).padStart(2, "0");
-    const endM = String(endMinutes % 60).padStart(2, "0");
-    const ends_at = `${date}T${endH}:${endM}:00`;
-
-    // Fetch existing appointment
-    const { data: appt } = await supabaseAdmin
-      .from("appointments")
-      .select("id, practitioner_id")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (!appt) {
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
-    }
-
-    // CHECK for conflict
-    const conflict = await hasConflict({
-      practitionerId: appt.practitioner_id,
-      newStartsAtISO: starts_at,
-      newEndsAtISO: ends_at,
-      excludeAppointmentId: id,
-    });
-
-    if (conflict) {
-      return NextResponse.json(
-        { error: "This time conflicts with another booking" },
-        { status: 409 }
-      );
-    }
-
-    // Update appointment
-    const { data: updated, error: updateErr } = await supabaseAdmin
-      .from("appointments")
-      .update({
-        starts_at,
-        ends_at,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .maybeSingle();
-
-    if (updateErr) {
-      return NextResponse.json(
-        { error: "Failed to reschedule", details: updateErr.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "Appointment rescheduled",
-      appointment: updated,
-    });
-  } catch (err: any) {
-    console.error("❌ PUT Reschedule Error:", err);
-    return NextResponse.json(
-      { error: err.message || "Unexpected error" },
-      { status: 500 }
-    );
-  }
-}
-
-/* -------------------------------------------------------------
-   DELETE: Cancel Appointment
---------------------------------------------------------------*/
-export async function DELETE(
+export async function PATCH(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
@@ -271,34 +179,131 @@ export async function DELETE(
     const { id } = await context.params;
 
     const { authorized } = await requireUser();
-    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const body = await req.json().catch(() => ({}));
-    const { reason } = body;
-
-    const { error } = await supabaseAdmin
-      .from("appointments")
-      .update({
-        status: "cancelled",
-        cancellation_reason: reason || null,
-        cancelled_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) {
-      return NextResponse.json(
-        { error: "Failed to cancel", details: error.message },
-        { status: 500 }
-      );
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Appointment cancelled",
-    });
+    const body = await req.json();
+    const { action } = body;
+
+    if (!action) {
+      return NextResponse.json({ error: "Missing action" }, { status: 400 });
+    }
+
+    /* -------------------------------------------------------------
+       LOAD EXISTING APPOINTMENT
+    --------------------------------------------------------------*/
+    const { data: appt } = await supabaseAdmin
+      .from("appointments")
+      .select("id, status")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!appt) {
+      return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
+    }
+
+    /* -------------------------------------------------------------
+       ACTION: CANCEL
+    --------------------------------------------------------------*/
+    if (action === "cancel") {
+      const reason = body.reason || null;
+
+      const { error } = await supabaseAdmin
+        .from("appointments")
+        .update({
+          status: "cancelled",
+          cancellation_reason: reason,
+          cancelled_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) {
+        return NextResponse.json(
+          { error: "Cancellation failed", details: error.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Appointment cancelled",
+      });
+    }
+
+    /* -------------------------------------------------------------
+       ACTION: DELETE (soft delete)
+       Marks as deleted without losing record
+    --------------------------------------------------------------*/
+    if (action === "delete") {
+      const { error } = await supabaseAdmin
+        .from("appointments")
+        .update({
+          status: "deleted",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) {
+        return NextResponse.json(
+          { error: "Delete failed", details: error.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Appointment deleted",
+      });
+    }
+
+    /* -------------------------------------------------------------
+       ACTION: UPDATE (generic fields)
+       Example:
+       {
+          "action": "update",
+          "data": { "notes": "...", "telehealth_url": "..." }
+       }
+    --------------------------------------------------------------*/
+    if (action === "update") {
+      const updateData = body.data;
+
+      if (!updateData || typeof updateData !== "object") {
+        return NextResponse.json({ error: "Missing 'data' payload" }, { status: 400 });
+      }
+
+      const { data: updated, error } = await supabaseAdmin
+        .from("appointments")
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        return NextResponse.json(
+          { error: "Update failed", details: error.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Appointment updated",
+        appointment: updated,
+      });
+    }
+
+    /* -------------------------------------------------------------
+       INVALID ACTION
+    --------------------------------------------------------------*/
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+
   } catch (err: any) {
-    console.error("❌ Cancel Error:", err);
+    console.error("❌ Update Appointment Error:", err);
     return NextResponse.json(
       { error: err.message || "Unexpected server error" },
       { status: 500 }
