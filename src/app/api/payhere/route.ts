@@ -17,18 +17,18 @@ export async function POST(request: Request) {
     }
 
     let patient_id = null;
-    let cliniko_patient_id = null;
+    console.log(user);
+    
 
     if (user) {
-        patient_id = user.id;
-        cliniko_patient_id = user.cliniko_patient_id;
+        patient_id = user.patient_id;
     }
 
-    console.log("*******User patient_id:", patient_id, " ********cliniko_patient_id:", cliniko_patient_id);
+    console.log("*******User patient_id:", patient_id);
 
 
-    if (!patient_id || !cliniko_patient_id) {
-        console.log("User missing patient_id or cliniko_patient_id");
+    if (!patient_id) {
+        console.log("User missing patient_id");
         return NextResponse.json({ error: "User profile incomplete for payment processing." }, { status: 400 });
     }
 
@@ -83,7 +83,6 @@ export async function POST(request: Request) {
             customer_city: city,
             customer_country: country,
             patient_id: patient_id,
-            cliniko_patient_id: cliniko_patient_id,
             appointment_id: appointment_id,
             practitioner_id: practitioner_id
         });
