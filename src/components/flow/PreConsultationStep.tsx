@@ -18,10 +18,12 @@ interface Props {
 
 const PreConsultationStep = forwardRef(
   ({ nextStep, prevStep, updateData, bookingData }: Props, ref) => {
-    // Extract initial form data
+
     const pre = bookingData?.pre_consultation || {};
     const note = pre.note || {};
     const selectedAttendees = bookingData?.selectedAttendees || [];
+
+    const maxAttendees = bookingData?.appointmentType?.max_attendees || 1;
 
     const [emailInput, setEmailInput] = useState("");
     const [attachment, setAttachment] = useState<File | null>(null);
@@ -96,7 +98,7 @@ const PreConsultationStep = forwardRef(
       });
     };
 
-    // Validation
+    // Validation exposed to parent
     useImperativeHandle(ref, () => ({
       validateStep: () => {
         if (!note.concern?.trim()) {
@@ -111,24 +113,29 @@ const PreConsultationStep = forwardRef(
           toast.error("Please provide referral source.");
           return false;
         }
-        if (selectedAttendees.length === 0) {
+
+        // Only validate attendees IF more than 1 allowed
+        if (maxAttendees > 1 && selectedAttendees.length === 0) {
           toast.error("Please add at least one attendee email.");
           return false;
         }
+
         return true;
       },
     }));
 
-    // Handle Next
+    // Handle Next Step
     const handleNext = () => {
       if (!note.concern?.trim() || !note.outcome?.trim() || !pre.referral?.trim()) {
         toast.error("Please complete all fields.");
         return;
       }
-      if (selectedAttendees.length === 0) {
+
+      if (maxAttendees > 1 && selectedAttendees.length === 0) {
         toast.error("Please add at least one attendee.");
         return;
       }
+
       nextStep();
     };
 
@@ -139,7 +146,7 @@ const PreConsultationStep = forwardRef(
             Pre-Consultation Details
           </h2>
           <p className="text-gray-600 text-center mb-10">
-            Provide key details, optional attachments, and attendee email(s).
+            Provide key details, optional attachments, and (if applicable) attendee email(s).
           </p>
 
           {/* FORM */}
@@ -219,49 +226,50 @@ const PreConsultationStep = forwardRef(
             </div>
           </div>
 
-          {/* EMAIL ENTRY */}
-          <div className="mb-10">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Attendees</h3>
-            <p className="text-sm text-gray-500 mb-3">
-              Add email addresses of people who should receive the meeting link.
-            </p>
+          {/* ONLY SHOW IF MORE THAN 1 ATTENDEE IS ALLOWED */}
+          {maxAttendees > 1 && (
+            <div className="mb-10">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Attendees</h3>
+              <p className="text-sm text-gray-500 mb-3">
+                Add email addresses of people who should receive the meeting link.
+              </p>
 
-            <div className="flex gap-3">
-              <input
-                type="email"
-                placeholder="Enter attendee email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-              <button
-                onClick={addAttendee}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
-              >
-                Add
-              </button>
-            </div>
-
-            {/* Existing attendees */}
-            {selectedAttendees.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {selectedAttendees.map((email) => (
-                  <div
-                    key={email}
-                    className="flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg text-sm"
-                  >
-                    <span>{email}</span>
-                    <button
-                      onClick={() => removeAttendee(email)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+              <div className="flex gap-3">
+                <input
+                  type="email"
+                  placeholder="Enter attendee email"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  className="w-full border rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={addAttendee}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                >
+                  Add
+                </button>
               </div>
-            )}
-          </div>
+
+              {selectedAttendees.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {selectedAttendees.map((email) => (
+                    <div
+                      key={email}
+                      className="flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg text-sm"
+                    >
+                      <span>{email}</span>
+                      <button
+                        onClick={() => removeAttendee(email)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ACTIONS */}
           <div className="flex justify-between mt-6">

@@ -1,6 +1,5 @@
 'use client';
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
-import { toast } from 'sonner';
 import { AppointmentFormInputs } from '@/types/FormType';
 import {
   CheckCircle2,
@@ -8,17 +7,20 @@ import {
   User,
   ClipboardList,
 } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { useRouter } from 'next/navigation';
 
 interface Props {
   prevStep: () => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
+  goToStep : (step:number)=> void;
 }
 
 const PaymentStep = forwardRef(
-  ({ prevStep, updateData, bookingData }: Props, ref) => {
+  ({ prevStep, updateData, bookingData, goToStep }: Props, ref) => {
     const [paymentDone, setPaymentDone] = useState(false);
-
+    const router = useRouter();
     useImperativeHandle(ref, () => ({
       validateStep: () => {
         if (!paymentDone) {
@@ -31,7 +33,6 @@ const PaymentStep = forwardRef(
 
   const handlePayment = async () => {
   try {
-    toast.loading("Booking your appointment...");
 
     const practitionerId = bookingData.selectedDoctor?.id;
     const date = bookingData.starts_at?.split("T")[0];
@@ -57,7 +58,10 @@ const PaymentStep = forwardRef(
     const data = await res.json();
 
     if (!res.ok) {
-      toast.error(data.error || "Booking failed");
+      if(res.status=== 409){
+        toast.error(data.error || "Booking failed");
+        goToStep(2);
+      }
       return;
     }
 
@@ -68,12 +72,10 @@ const PaymentStep = forwardRef(
       payment_status: "completed",
       appointment_id: data?.appointment?.id,
     });
-
+    router.push("/dashboard/appointment");
   } catch (err) {
     console.error(err);
     toast.error("Unexpected error while booking");
-  } finally {
-    toast.dismiss();
   }
 };
 
