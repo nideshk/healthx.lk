@@ -48,6 +48,7 @@ export async function POST(
       pre_consultation,
       selectedDoctor,
       attendeeCount,
+      consent
     } = draftData;
 
     // 3️⃣ Validate
@@ -116,6 +117,15 @@ export async function POST(
         patient_id,
         raw_payload: pre_consultation,
       });
+    }
+
+    if(consent){
+      await supabaseClient.from("consents").insert({
+        appointment_id: appointment.id,
+        terms: consent?.terms,
+        telehealth: consent?.telehealth,
+        accepted_at : new Date().toISOString()
+      })
     }
 
     // 7️⃣ Mark Draft as Used
