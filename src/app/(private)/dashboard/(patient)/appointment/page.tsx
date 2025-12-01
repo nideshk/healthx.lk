@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { Calendar, Clock, Stethoscope, AlertCircle } from "lucide-react";
+import Loader from "@/components/atom/Loader/Loader";
 
 /* ------------------------------------------------------ */
 /* MAIN PAGE */
@@ -32,7 +33,7 @@ export default function AllAppointmentsPage() {
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center text-lg text-gray-600">
-        Loading…
+        <Loader size="lg"></Loader>
       </div>
     );
 

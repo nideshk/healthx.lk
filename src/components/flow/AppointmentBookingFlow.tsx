@@ -43,6 +43,9 @@ export default function AppointmentBookingFlow() {
     last_visited_step: 0,
   });
 
+  const goToStep = (stepNumber: number) => {
+  setCurrentStep(stepNumber);
+};
   // Hydrate draft on mount
   useEffect(() => {
     async function fetchDraft() {
@@ -165,6 +168,7 @@ export default function AppointmentBookingFlow() {
             updateData={updateData}
             bookingData={bookingData}
             draftData={draftData}
+            goToStep={goToStep}
           />
         )}
 

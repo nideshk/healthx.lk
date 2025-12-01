@@ -88,7 +88,8 @@ export default function AppointmentDetailsPage() {
 
     toast.success("Appointment cancelled");
     setShowCancelModal(false);
-    router.push("/dashboard/appointments");
+    toast.error("Appointment cancelled");
+    router.push("/dashboard/appointment");
   } catch (err: any) {
     toast.error(
       err?.response?.data?.error || "Failed to cancel appointment"

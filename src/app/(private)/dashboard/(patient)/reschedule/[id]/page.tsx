@@ -97,7 +97,7 @@ function ReschedulePage() {
       toast.success("Appointment rescheduled successfully ✨");
 
       setTimeout(() => {
-        router.push("/dashboard/appointments");
+        router.push("/dashboard/appointment");
       }, 1000);
     } catch (err: any) {
       toast.error(err?.response?.data?.error || "Failed to reschedule");
