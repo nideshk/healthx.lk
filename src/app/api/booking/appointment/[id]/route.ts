@@ -60,7 +60,7 @@ export async function GET(
 
 
     // Fetch appointment + linked relations
-    const { data: appointment, error } = await supabaseClient
+    const { data: appointment, error } = await supabaseAdmin
       .from("appointments")
       .select(
         `
@@ -99,7 +99,10 @@ export async function GET(
           id,
           full_name,
           email,
-          contact_number
+          contact_number,
+          dob,
+          allergies,
+          blood_type
         )
       `
       )
@@ -121,6 +124,8 @@ export async function GET(
     const patient = Array.isArray(appointment.patient)
       ? appointment.patient[0]
       : appointment.patient;
+    console.log(appointment)
+    console.log(patient)
 
     if (role === "patient") {
       // Patient sees limited details

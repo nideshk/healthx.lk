@@ -109,7 +109,7 @@ export async function GET(
     const timezone = availability.timezone || "UTC";
 
     const dayName = DateTime.fromISO(date).setZone(timezone).toFormat("EEEE");
-
+    
     if (availability.days_unavailable?.includes(dayName)) {
       return NextResponse.json({
         practitioner_id: practitionerId,
@@ -167,15 +167,61 @@ export async function GET(
         };
       }) || [];
 
+     // ---------------------------
+    // STEP 5b: Fetch practitioner leaves that cover this date
     // ---------------------------
-    // STEP 6: Build slots per type
+    // Find leaves where start_date <= date AND end_date >= date
+    const { data: leaves } = await supabaseClient
+      .from("practitioner_leaves")
+      .select("id, leave_type, start_date, end_date, applied_windows")
+      .eq("practitioner_id", practitionerId)
+      .lte("start_date", date)
+      .gte("end_date", date);
+
+    // Convert leave windows (UTC stored) → local HH:mm intervals for this date
+    const leaveIntervals: Array<{ start: string; end: string }> = [];
+
+    if (leaves && Array.isArray(leaves)) {
+      for (const lv of leaves) {
+        // applied_windows is expected to be an array like:
+        // [{ date: "2025-12-05", windows: [{ from: "2025-12-05T03:30:00Z", to: "2025-12-05T08:00:00Z" }] }, ...]
+        if (!lv.applied_windows || !Array.isArray(lv.applied_windows)) continue;
+
+        const forDate = lv.applied_windows.find((w: any) => w.date === date);
+        if (!forDate || !Array.isArray(forDate.windows)) continue;
+
+        for (const win of forDate.windows) {
+          // win.from / win.to are UTC ISO strings — convert to practitioner's local time
+          try {
+            const localStart = DateTime.fromISO(win.from, { zone: "utc" }).setZone(timezone).toFormat("HH:mm");
+            const localEnd = DateTime.fromISO(win.to, { zone: "utc" }).setZone(timezone).toFormat("HH:mm");
+            // ensure sane window
+            if (localStart && localEnd) {
+              leaveIntervals.push({ start: localStart, end: localEnd });
+            }
+          } catch (e) {
+            // ignore malformed window
+            continue;
+          }
+        }
+      }
+    }
+
     // ---------------------------
+    // STEP 6: Merge blocked intervals (booked + leave)
+    // ---------------------------
+    const blockedIntervals = [...bookedIntervals, ...leaveIntervals];
+
+    // ---------------------------
+    // STEP 7: Build slots per type (respecting blocked intervals)
+    // ---------------------------
+
     const slots_by_type: Record<string, string[]> = {};
 
     for (const type of appointmentTypes) {
       const generated = generateSlots(start_time, end_time, type.duration_mins);
       const filtered = generated.filter(
-        (slot) => !isOverlapping(slot, type.duration_mins, bookedIntervals)
+        (slot) => !isOverlapping(slot, type.duration_mins, blockedIntervals)
       );
       slots_by_type[type.name] = filtered;
     }
