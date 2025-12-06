@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 
@@ -100,9 +100,9 @@ function weekdayNameForDate(dateYmd: string, timeZone: string) {
 /* -----------------------------------------------------------
    GET handler
 ------------------------------------------------------------- */
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const practitionerId = params?.id;
+    const { id: practitionerId } = await context.params;
     if (!practitionerId) return NextResponse.json({ error: "Practitioner identifier is required." }, { status: 400 });
 
     const { authorized, user, role } = await requireUser();
@@ -130,9 +130,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
    POST handler
    Body: { start_date, end_date, leave_type, reason, force }
 ------------------------------------------------------------- */
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id: practitionerId } = await params;
+    const { id: practitionerId } = await context.params;
     if (!practitionerId) return NextResponse.json({ error: "Practitioner identifier is required." }, { status: 400 });
 
     const body = await request.json().catch(() => null);
@@ -307,9 +307,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
    DELETE handler
    Expects ?leave_id=... query param
 ------------------------------------------------------------- */
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> })  {
   try {
-    const practitionerId = params?.id;
+    const { id: practitionerId } = await context.params;
     if (!practitionerId) return NextResponse.json({ error: "Practitioner identifier is required." }, { status: 400 });
 
     const url = new URL(request.url);

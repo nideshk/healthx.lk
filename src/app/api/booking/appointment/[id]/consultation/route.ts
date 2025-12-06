@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 
@@ -10,8 +10,8 @@ type PostBody = {
 };
 
 // GET: return preconsult + encounter for an appointment
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const { id: appointmentId } = await params;
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }){
+  const { id: appointmentId } = await context.params;
 
     if (!appointmentId) {
       return NextResponse.json({ error: 'Missing appointment id' }, { status: 400 });
@@ -78,11 +78,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // POST: create or update encounter for the appointment
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
 //   const appointmentId = params?.id;
 //   if (!appointmentId) return NextResponse.json({ error: "Missing appointment id" }, { status: 400 });
 
-    const { id: appointmentId } = await params;
+    const { id: appointmentId } = await context.params;
 
     if (!appointmentId) {
       return NextResponse.json({ error: 'Missing appointment id' }, { status: 400 });
