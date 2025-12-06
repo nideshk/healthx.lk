@@ -8,12 +8,12 @@ import Toaster from "./Toaster";
 import { logAuditEvent } from "@/lib/logAuditEvent";
 
 export default function VideoCallContainer({ appointmentId, localUserId } : any) {
-  const [toasts, setToasts] = useState<any>([]);
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string }>>([]);
 
   const addToast = useCallback((message: string, ttl = 4000) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    setToasts((s:any) => [...s, { id, message }]);
-    setTimeout(() => setToasts((s:any) => s.filter((t:any) => t.id !== id)), ttl);
+    setToasts((s) => [...s, { id, message }]);
+    setTimeout(() => setToasts((s) => s.filter((t) => t.id !== id)), ttl);
     return id;
   }, []);
 
@@ -54,6 +54,7 @@ export default function VideoCallContainer({ appointmentId, localUserId } : any)
         metadata: { timestamp: Date.now() },
       });
     },
+    localAppUserId: localUserId,
   });
 
   // Log when LOCAL user joins

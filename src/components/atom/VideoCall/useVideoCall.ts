@@ -26,6 +26,7 @@ export type UseVideoCallReturn = {
 export type UseVideoCallOptions = {
   onUserJoin?: (id: string) => void;
   onUserLeave?: (id: string) => void;
+  localAppUserId?: string;
 };
 
 export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
@@ -64,7 +65,7 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
   const setupLocalStream = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1280, height: 720 },
+        video: false, // start with camera off by default (if desired)
         audio: true,
       });
 
@@ -76,10 +77,13 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
       }
 
       setLocalStream(stream);
+      // camera is off because we requested video: false
+      setIsCameraOff(true);
+
       return stream;
     } catch (err) {
       console.error("Camera/mic error:", err);
-      alert("Please allow camera and microphone access.");
+      alert("Please allow microphone access.");
       return null;
     }
   };
@@ -98,7 +102,15 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
   const createPeerConnection = (targetId: string, stream: MediaStream) => {
     const pc = new RTCPeerConnection({ iceServers: getIceServers() });
 
-    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    // Add audio tracks (video may be absent initially)
+    stream.getTracks().forEach((t) => {
+      // only add if kind exists on the track
+      try {
+        pc.addTrack(t, stream);
+      } catch (e) {
+        // ignore if adding track fails for some reason
+      }
+    });
 
     pc.ontrack = (event) => {
       const [remoteStream] = event.streams;
@@ -149,11 +161,27 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
   // --- Send Signal ---
   const sendSignal = async (data: any) => {
     if (!channelRef.current) return;
+    const payload = { ...data, appUserId: opts?.localAppUserId || null };
     await channelRef.current.send({
       type: "broadcast",
       event: "signal",
-      payload: JSON.stringify(data),
+      payload: JSON.stringify(payload),
     });
+  };
+
+  // Best-effort synchronous leave sender (used for beforeunload only)
+  const sendLeaveNow = () => {
+    try {
+      if (channelRef.current?.send) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "signal",
+          payload: JSON.stringify({ type: "leave", from: peerId.current }),
+        });
+      }
+    } catch (e) {
+      // ignore — best-effort
+    }
   };
 
   // --- Join Room ---
@@ -175,13 +203,14 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
       const msg = JSON.parse(payload);
       if (!msg || msg.from === peerId.current) return;
       if (msg.to && msg.to !== peerId.current) return;
+      const appUserId = msg.appUserId || null;
 
       switch (msg.type) {
         case "join": {
           const pc = createPeerConnection(msg.from, stream);
           await negotiate(pc, msg.from);
           try {
-            opts?.onUserJoin?.(msg.from);
+            opts?.onUserJoin?.(appUserId || msg.from);
           } catch (e) {
             console.warn("onUserJoin handler error", e);
           }
@@ -240,7 +269,7 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
             return updated;
           });
           try {
-            opts?.onUserLeave?.(msg.from);
+            opts?.onUserLeave?.(appUserId || msg.from);
           } catch (e) {
             console.warn("onUserLeave handler error", e);
           }
@@ -259,6 +288,8 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
         setJoined(true);
         await wait(100);
         await sendSignal({ type: "join", from: peerId.current });
+        // announce initial camera state to others (false since we started with no video)
+        await sendSignal({ type: "camera-state", from: peerId.current, cameraOn: !isCameraOff });
       }
     });
   };
@@ -276,7 +307,11 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
     localStream?.getTracks().forEach((t) => t.stop());
     Object.values(peerConnections.current).forEach((pc) => pc.close());
     peerConnections.current = {};
-    await sendSignal({ type: "leave", from: peerId.current });
+    try {
+      await sendSignal({ type: "leave", from: peerId.current });
+    } catch (e) {
+      // ignore send errors
+    }
     await channelRef.current?.unsubscribe();
     setJoined(false);
     setPeers({});
@@ -400,51 +435,39 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
     return () => clearInterval(interval);
   }, [localStream]);
 
-  // Cleanup
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      localStream?.getTracks().forEach((t) => t.stop());
-      Object.values(peerConnections.current).forEach((pc) => pc.close());
-      channelRef.current?.unsubscribe?.();
+      try {
+        localStream?.getTracks().forEach((t) => t.stop());
+      } catch (e) {
+        // ignore
+      }
+      try {
+        Object.values(peerConnections.current).forEach((pc) => pc.close());
+      } catch (e) {
+        // ignore
+      }
+      try {
+        channelRef.current?.unsubscribe?.();
+      } catch (e) {
+        // ignore
+      }
     };
   }, []);
 
-  // Notify peers on tab close / unload / hide so they can remove this user quickly
+  // Only send a "best-effort" leave on real unload/close.
   useEffect(() => {
-    const sendLeaveNow = () => {
-      try {
-        // best-effort synchronous send via the channel object if available
-        if (channelRef.current?.send) {
-          channelRef.current.send({
-            type: "broadcast",
-            event: "signal",
-            payload: JSON.stringify({ type: "leave", from: peerId.current }),
-          });
-        }
-      } catch (e) {
-        // ignore — we're in unload path
-      }
-    };
-
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+    const onBeforeUnload = (e?: BeforeUnloadEvent) => {
+      // best-effort synchronous send to notify peers of a leave
       sendLeaveNow();
-      // allow default behavior; not preventing unload
-    };
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        sendLeaveNow();
-      }
+      // no preventDefault; we don't block unload
     };
 
     window.addEventListener("beforeunload", onBeforeUnload);
-    window.addEventListener("pagehide", sendLeaveNow as any);
-    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       window.removeEventListener("beforeunload", onBeforeUnload);
-      window.removeEventListener("pagehide", sendLeaveNow as any);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 

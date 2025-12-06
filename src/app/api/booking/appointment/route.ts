@@ -12,7 +12,6 @@ export async function GET() {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Base fetch (all appointments related to user)
     let query = supabaseAdmin
       .from("appointments")
       .select(
@@ -24,6 +23,7 @@ export async function GET() {
         notes,
         cancellation_reason,
         cancelled_at,
+        telehealth_url,
 
         appointment_type:appointment_type_id (
           id, name, duration_mins
@@ -40,19 +40,11 @@ export async function GET() {
       )
       .order("starts_at", { ascending: true });
 
-    /* ------------------------------------------------------
-       Role-based filtering
-    --------------------------------------------------------*/
-    if (role === "patient") {
-      query = query.eq("patient_id", user?.patient_id);
-    }
-
-    if (role === "practitioner") {
-      query = query.eq("practitioner_id", user?.practitioner_id);
-    }
+    // role filters
+    if (role === "patient") query.eq("patient_id", user?.patient_id);
+    if (role === "practitioner") query.eq("practitioner_id", user?.practitioner_id);
 
     const { data: rawAppointments, error } = await query;
-
     if (error) {
       return NextResponse.json(
         { error: "Failed to fetch appointments", details: error.message },
@@ -60,11 +52,9 @@ export async function GET() {
       );
     }
 
-    /* ------------------------------------------------------
-       Normalize role-based view
-    --------------------------------------------------------*/
     const now = new Date();
 
+    // Normalize view
     const normalized = rawAppointments.map((appt: any) => {
       const practitioner = Array.isArray(appt.practitioner)
         ? appt.practitioner[0]
@@ -81,6 +71,7 @@ export async function GET() {
         status: appt.status,
         cancellation_reason: appt.cancellation_reason,
         appointment_type: appt.appointment_type,
+        telehealth_url: appt.telehealth_url,
       };
 
       if (role === "patient") {
@@ -107,39 +98,78 @@ export async function GET() {
         };
       }
 
-      return appt; // admin
+      return appt;
     });
 
-    /* ------------------------------------------------------
-       Categorization
-    --------------------------------------------------------*/
+    /* -------------------------------------------
+       Correct Categorization with Ongoing
+    -------------------------------------------- */
 
-    const upcoming = normalized.filter(
-      (a) =>
-        new Date(a.starts_at) > now && a.status !== "cancelled"
-    );
+    const ongoing: any[] = [];
+    const upcoming: any[] = [];
+    const past: any[] = [];
+    const cancelled: any[] = [];
 
-    const past = normalized.filter(
-      (a) =>
-        new Date(a.starts_at) < now && a.status !== "cancelled"
-    );
+   for (const a of normalized) {
+  const start = new Date(a.starts_at);
 
-    const cancelled = normalized.filter(
-      (a) => a.status === "cancelled" || a.cancellation_reason
-    );
+  const end = a.ends_at
+    ? new Date(a.ends_at)
+    : new Date(start.getTime() + (a.appointment_type?.duration_mins ?? 15) * 60000);
+
+  console.log("----- APPOINTMENT DEBUG -----");
+  console.log("ID:", a.id);
+  console.log("Start:", start.toISOString());
+  console.log("End:", end.toISOString());
+  console.log("Now:", now.toISOString());
+  console.log("Status:", a.status);
+
+  // Cancelled
+  if (a.status === "cancelled" || a.cancellation_reason) {
+    console.log("⛔ → CANCELLED\n");
+    cancelled.push(a);
+    continue;
+  }
+
+  // Ongoing
+  if (start <= now && now <= end) {
+    console.log("🟢 → ONGOING\n");
+    ongoing.push(a);
+    continue;
+  }
+
+  // Upcoming
+  if (start > now) {
+    console.log("🔵 → UPCOMING\n");
+    upcoming.push(a);
+    continue;
+  }
+
+  // Past
+  if (end < now) {
+    console.log("⚪ → PAST\n");
+    past.push(a);
+    continue;
+  }
+
+  console.log("❓ → UNKNOWN CASE\n");
+}
 
     return NextResponse.json({
       success: true,
       role,
       count: {
+        ongoing: ongoing.length,
         upcoming: upcoming.length,
         past: past.length,
         cancelled: cancelled.length,
       },
+      ongoing,
       upcoming,
       past,
       cancelled,
     });
+
   } catch (err: any) {
     console.error("❌ Error fetching appointments:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
