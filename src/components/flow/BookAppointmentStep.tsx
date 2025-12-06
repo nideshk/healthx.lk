@@ -8,13 +8,14 @@ import React, {
   useImperativeHandle,
   useRef,
 } from "react";
+import { DateTime } from "luxon";
 import axios from "axios";
 import { toast } from "sonner";
 import { ChevronLeft, Clock, Mail, Phone, RotateCcw } from "lucide-react";
 import Calendar from "../atom/Calendar/Calendar";
 import { AppointmentFormInputs } from "@/types/FormType";
 
-interface BookAppointmentStepProps {
+interface Props {
   nextStep: () => void;
   prevStep: () => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
@@ -23,10 +24,7 @@ interface BookAppointmentStepProps {
 }
 
 const BookAppointmentStep = forwardRef(
-  (
-    { nextStep, prevStep, updateData, bookingData, draftData }: BookAppointmentStepProps,
-    ref
-  ) => {
+  ({ prevStep, updateData, bookingData }: Props, ref) => {
     const practitionerId = bookingData?.selectedDoctor?.id;
 
     if (!practitionerId) {
@@ -37,38 +35,30 @@ const BookAppointmentStep = forwardRef(
       );
     }
 
-    // -------------------------------
-    // Local State
-    // -------------------------------
+    /* -------------------- STATE -------------------- */
     const [practitioner, setPractitioner] = useState<any>(null);
-    const [availability, setAvailability] = useState<any>(null);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<any>(null);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
+    const [availability, setAvailability] = useState<any>(null);
     const [loadingInfo, setLoadingInfo] = useState(true);
     const [loadingAvailability, setLoadingAvailability] = useState(false);
 
-    // -------------------------------
-    // SHORT-LIVED AVAILABILITY CACHE (30 seconds)
-    // -------------------------------
-    const availabilityCache = useRef<{
-      [key: string]: { data: any; ts: number };
-    }>({});
+    const availabilityCache = useRef<{ [key: string]: { ts: number; data: any } }>({});
 
-    // -------------------------------
-    // Fetch practitioner info
-    // -------------------------------
+    /* -------------------- FETCH PRACTITIONER -------------------- */
     useEffect(() => {
       async function load() {
         try {
-          setLoadingInfo(true);
           const res = await axios.get(`/api/practitioners/${practitionerId}`);
           setPractitioner(res.data.practitioner);
 
           const types = res.data?.appointment_types || [];
-          if (types.length > 0) setSelectedType(types[0]);
-        } catch (err) {
+          if (types.length > 0) {
+            // DON'T preselect — user must choose manually
+          }
+        } catch (e) {
           toast.error("Failed to load practitioner details");
         } finally {
           setLoadingInfo(false);
@@ -78,22 +68,17 @@ const BookAppointmentStep = forwardRef(
       load();
     }, [practitionerId]);
 
-    // -------------------------------
-    // Fetch availability (with short caching)
-    // -------------------------------
-    async function loadAvail(force = false) {
-      if (!selectedDate) return;
+    /* -------------------- FETCH AVAILABILITY -------------------- */
+    async function fetchAvailability(force = false) {
+      if (!selectedDate || !selectedType) return;
 
       const key = `${practitionerId}-${selectedDate}-${selectedType?.id}`;
+      const cached = availabilityCache.current[key];
       const now = Date.now();
-      const maxAge = 30 * 1000; // 30 seconds
 
-      if (!force && availabilityCache.current[key]) {
-        const cached = availabilityCache.current[key];
-        if (now - cached.ts < maxAge) {
-          setAvailability(cached.data);
-          return;
-        }
+      if (!force && cached && now - cached.ts < 30000) {
+        setAvailability(cached.data);
+        return;
       }
 
       setLoadingAvailability(true);
@@ -102,73 +87,34 @@ const BookAppointmentStep = forwardRef(
           `/api/booking/${practitionerId}/availability?date=${selectedDate}`
         );
 
-        availabilityCache.current[key] = {
-          data: res.data,
-          ts: now,
-        };
-
+        availabilityCache.current[key] = { ts: now, data: res.data };
         setAvailability(res.data);
-      } catch (err) {
-        console.error("Availability error:", err);
       } finally {
         setLoadingAvailability(false);
       }
     }
 
-    // -------------------------------
-    // Auto fetch availability when date changes
-    // -------------------------------
     useEffect(() => {
-      if (selectedDate) loadAvail();
+      if (selectedDate && selectedType) fetchAvailability();
     }, [selectedDate, selectedType]);
 
-    // -------------------------------
-    // Build slots for selected type
-    // -------------------------------
     const slots = useMemo(() => {
       if (!availability || !selectedType) return [];
       return availability.slots_by_type?.[selectedType.name] || [];
     }, [availability, selectedType]);
 
-    // -------------------------------
-    // Expose validation to parent flow
-    // -------------------------------
+    /* -------------------- VALIDATION -------------------- */
     useImperativeHandle(ref, () => ({
       validateStep: () => {
-        if (!selectedType) {
-          toast.error("Select appointment type");
-          return false;
-        }
-        if (!selectedDate) {
-          toast.error("Select a date");
-          return false;
-        }
-        if (!selectedTime) {
-          toast.error("Select a time slot");
-          return false;
-        }
+        if (!selectedType) return toast.error("Select appointment type"), false;
+        if (!selectedDate) return toast.error("Select a date"), false;
+        if (!selectedTime) return toast.error("Select a slot"), false;
         return true;
       },
     }));
 
-    // -------------------------------
-    // Render UI
-    // -------------------------------
-    if (loadingInfo) {
-      return (
-        <div className="p-8 text-center text-gray-500">
-          Loading practitioner…
-        </div>
-      );
-    }
-
-    if (!practitioner) {
-      return (
-        <div className="p-8 text-center text-red-500">
-          Unable to load practitioner.
-        </div>
-      );
-    }
+    /* -------------------- RENDER -------------------- */
+    if (loadingInfo) return <div className="p-10">Loading...</div>;
 
     return (
       <div className="min-h-screen py-10 bg-gradient-to-b from-blue-50 via-white to-blue-50">
@@ -186,12 +132,11 @@ const BookAppointmentStep = forwardRef(
           </p>
 
           <div className="grid md:grid-cols-2 gap-8 mt-8">
-            {/* LEFT SIDE */}
+            {/* LEFT: Practitioner Info */}
             <div className="bg-white rounded-xl shadow-md p-6">
               <div className="flex gap-4">
                 <img
                   src={practitioner.profile_image || "/images/default-doctor.png"}
-                  alt={practitioner.full_name}
                   className="w-20 h-20 rounded-full object-cover border"
                 />
                 <div>
@@ -201,37 +146,24 @@ const BookAppointmentStep = forwardRef(
                   </p>
                 </div>
               </div>
-
-              <div className="mt-4 space-y-1 text-sm">
-                {practitioner.contact_email && (
-                  <p className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-blue-600" /> {practitioner.contact_email}
-                  </p>
-                )}
-                {practitioner.contact_number && (
-                  <p className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-blue-600" /> {practitioner.contact_number}
-                  </p>
-                )}
-              </div>
             </div>
 
-            {/* RIGHT SIDE */}
+            {/* RIGHT: Booking Form */}
             <div className="bg-white rounded-xl shadow-md p-6">
-
-              {/* Appointment Types */}
+              {/* ------- Appointment Type ------- */}
               <h3 className="font-semibold mb-2">Appointment Type</h3>
               <div className="flex flex-wrap gap-2 mb-6">
                 {practitioner.appointment_types?.map((type: any) => (
                   <button
                     key={type.id}
-                    className={`px-3 py-1.5 text-sm rounded-md border ${
+                    className={`px-3 py-1.5 rounded-md border text-sm ${
                       selectedType?.id === type.id
                         ? "bg-blue-600 text-white border-blue-600"
                         : "bg-white text-gray-700 border-gray-300"
                     }`}
                     onClick={() => {
                       setSelectedType(type);
+                      setSelectedDate(null);
                       setSelectedTime(null);
                       updateData({ appointmentType: type });
                     }}
@@ -241,84 +173,92 @@ const BookAppointmentStep = forwardRef(
                 ))}
               </div>
 
-              {/* Calendar */}
-              <h3 className="font-semibold mb-2">Select Date</h3>
+              {/* ------- DATE PICKER ------- */}
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                Select Date
+                {!selectedType && (
+                  <span className="text-xs text-red-500">(Select type first)</span>
+                )}
+              </h3>
 
-              <Calendar
-                value={selectedDate ? new Date(selectedDate) : undefined}
-                minDate={new Date()}
-                onChange={(date) => {
-                  if (!date) return;
+              <div className={`${!selectedType ? "opacity-40 pointer-events-none" : ""}`}>
+                <Calendar
+                  value={selectedDate ? new Date(selectedDate) : undefined}
+                  minDate={new Date()}
+                  onChange={(date) => {
+                    if (!date) return;
+                    const yr = date.getFullYear();
+                    const mo = String(date.getMonth() + 1).padStart(2, "0");
+                    const da = String(date.getDate()).padStart(2, "0");
+                    setSelectedDate(`${yr}-${mo}-${da}`);
+                    setSelectedTime(null);
+                  }}
+                  theme="light"
+                />
+              </div>
 
-                  // No timezone shifting
-                  const yr = date.getFullYear();
-                  const mo = String(date.getMonth() + 1).padStart(2, "0");
-                  const da = String(date.getDate()).padStart(2, "0");
+              {/* ------- TIME SLOTS ------- */}
+              <h3 className="font-semibold mt-6 mb-2 flex items-center gap-1">
+                <Clock className="w-4 h-4 text-blue-600" />
+                Select Time
+                {!selectedDate && selectedType && (
+                  <span className="text-xs text-red-500">(Select date first)</span>
+                )}
+              </h3>
 
-                  const dateStr = `${yr}-${mo}-${da}`;
-                  setSelectedDate(dateStr);
-                  setSelectedTime(null);
-                }}
-                theme="light"
-              />
+              <div
+                className={`${
+                  !selectedType || !selectedDate
+                    ? "opacity-40 pointer-events-none"
+                    : ""
+                }`}
+              >
+                {loadingAvailability ? (
+                  <p className="text-gray-500">Loading slots…</p>
+                ) : slots.length === 0 ? (
+                  <p className="text-gray-500">No slots available.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {slots.map((time: string) => (
+                      <button
+                        key={time}
+                        className={`px-3 py-1.5 rounded-md border text-sm ${
+                          selectedTime === time
+                            ? "bg-green-600 text-white border-green-600"
+                            : "bg-white text-gray-700 border-gray-300"
+                        }`}
+                       onClick={() => {
+  const [H, M] = time.split(":").map(Number);
+  const [yr, mo, da] = selectedDate!.split("-").map(Number);
 
-              {/* Slots */}
-              {selectedDate && (
-                <div className="mt-6">
+  const practitionerTZ =
+    availability?.timezone ||
+    practitioner?.timezone ||
+    "UTC"; // fallback
 
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-semibold flex items-center gap-1">
-                      <Clock className="w-4 h-4 text-blue-600" />
-                      Available Slots
-                    </h3>
+  const startLocal = DateTime.fromObject(
+    { year: yr, month: mo, day: da, hour: H, minute: M },
+    { zone: practitionerTZ }
+  );
 
-                    <button
-                      onClick={() => loadAvail(true)}
-                      className="text-xs px-2 py-1 border rounded-md hover:bg-gray-100 flex items-center gap-1"
-                    >
-                      <RotateCcw className="w-3 h-3" /> Refresh
-                    </button>
+  const startUTC = startLocal.toUTC();
+  const endUTC = startUTC.plus({ minutes: selectedType.duration_mins });
+
+  setSelectedTime(time);
+
+  updateData({
+    starts_at: startUTC.toISO(),
+    ends_at: endUTC.toISO(),
+  });
+}}
+
+                      >
+                        {time}
+                      </button>
+                    ))}
                   </div>
-
-                  {loadingAvailability ? (
-                    <p className="text-gray-500">Loading slots…</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {slots.length === 0 && (
-                        <p className="text-gray-500">No slots available.</p>
-                      )}
-
-                      {slots.map((time: string) => (
-                        <button
-                          key={time}
-                          className={`px-3 py-1.5 rounded-md border text-sm ${
-                            selectedTime === time
-                              ? "bg-green-600 text-white border-green-600"
-                              : "bg-white text-gray-700 border-gray-300"
-                          }`}
-                          onClick={() => {
-                            setSelectedTime(time);
-
-                            const [H, M] = time.split(":").map(Number);
-                            const [yr, mo, da] = selectedDate.split("-").map(Number);
-
-                            const start = new Date(Date.UTC(yr, mo - 1, da, H, M));
-                            const duration = selectedType.duration_mins;
-                            const end = new Date(start.getTime() + duration * 60 * 1000);
-
-                            updateData({
-                              starts_at: start.toISOString(),
-                              ends_at: end.toISOString(),
-                            });
-                          }}
-                        >
-                          {time}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>

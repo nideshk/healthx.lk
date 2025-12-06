@@ -13,7 +13,6 @@ const ConsultationStep = forwardRef(
   (
     {
       updateData,
-      bookingData,
       draftData,
     }: {
       updateData: any;
@@ -47,6 +46,7 @@ const ConsultationStep = forwardRef(
           setServices(res.data.services || []);
         } catch (err) {
           console.error('Failed to fetch services:', err);
+          toast.error('Failed to load services. Please try again later.');
         } finally {
           setLoading(false);
         }

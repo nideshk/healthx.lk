@@ -71,6 +71,19 @@ export async function GET(
 
     if (error) throw error;
 
+    // -----------------------------------
+    // ✅ 4. Compute scheduled / completed counts from raw rows
+    // -----------------------------------
+    const scheduledCount = data.filter((r) => {
+      const status = (r.status ?? "").toString().toLowerCase();
+      return status === "scheduled" || status === "confirmed";
+    }).length;
+
+    const completedCount = data.filter((r) => {
+      const status = (r.status ?? "").toString().toLowerCase();
+      return status === "completed";
+    }).length;
+
     // Convert UTC → Local timezone
     const booked = data.map((a) => {
       const startLocal = DateTime.fromISO(a.starts_at).setZone(TIMEZONE);
@@ -83,6 +96,7 @@ export async function GET(
         date: startLocal.toFormat("yyyy-MM-dd"),
         appointment_type: a.appointment_type_id,
         telehealth_url: a.telehealth_url,
+        status : a.status
       };
     });
 
@@ -94,6 +108,8 @@ export async function GET(
       total: booked.length,
       timezone: TIMEZONE,
       booked,
+      scheduled_count: scheduledCount, // scheduled for that range (dashboard left)
+      completed_count: completedCount,
     });
   } catch (err: any) {
     console.error("❌ Error in booked endpoint:", err);

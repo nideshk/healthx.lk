@@ -30,6 +30,7 @@ export default function AppointmentBookingFlow() {
     selectedServiceId: "",
     selectedServiceTitle: "",
     attendeeCount: 1,
+    appointment_id: "",
     selectedDoctor: null,
     starts_at: new Date().toISOString(),
     ends_at: new Date().toISOString(),
@@ -42,6 +43,9 @@ export default function AppointmentBookingFlow() {
     last_visited_step: 0,
   });
 
+  const goToStep = (stepNumber: number) => {
+  setCurrentStep(stepNumber);
+};
   // Hydrate draft on mount
   useEffect(() => {
     async function fetchDraft() {
@@ -164,6 +168,7 @@ export default function AppointmentBookingFlow() {
             updateData={updateData}
             bookingData={bookingData}
             draftData={draftData}
+            goToStep={goToStep}
           />
         )}
 

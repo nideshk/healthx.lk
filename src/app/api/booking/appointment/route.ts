@@ -1,18 +1,32 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireUser} from "@/lib/authGuard";
+import { requireUser } from "@/lib/authGuard";
 
 export const runtime = "nodejs";
 
+function calculateAge(dob: string | Date | null | undefined): number | null {
+  if (!dob) return null;
+  const birth = typeof dob === "string" ? new Date(dob) : new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export async function GET() {
   try {
-    // 1️⃣ Auth → includes supabase_user?_id + patient_id / practitioner_id
     const { authorized, user, role } = await requireUser();
 
     if (!authorized) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-    
+
+    // Base fetch (all appointments related to user)
     let query = supabaseAdmin
       .from("appointments")
       .select(
@@ -34,50 +48,38 @@ export async function GET() {
         ),
 
         patient:patient_id (
-          id, full_name, email, contact_number
+          id, full_name, email, contact_number, allergies, dob, blood_type, gender
         )
       `
       )
       .order("starts_at", { ascending: true });
 
     /* ------------------------------------------------------
-      2️⃣ Filter by role
+       Role-based filtering
     --------------------------------------------------------*/
-
     if (role === "patient") {
-      if (!user?.patient_id) {
-        return NextResponse.json({ error: "Patient record missing" }, { status: 400 });
-      }
       query = query.eq("patient_id", user?.patient_id);
     }
 
     if (role === "practitioner") {
-      if (!user?.practitioner_id) {
-        return NextResponse.json({ error: "Practitioner record missing" }, { status: 400 });
-      }
       query = query.eq("practitioner_id", user?.practitioner_id);
     }
 
-    if (role !== "admin") {
-      query = query.neq("status", "cancelled");
-    }
+    const { data: rawAppointments, error } = await query;
 
-    /* ------------------------------------------------------
-      3️⃣ Execute query
-    --------------------------------------------------------*/
-    const { data: appointments, error: err } = await query;
-
-    if (err) {
+    if (error) {
       return NextResponse.json(
-        { error: "Failed to fetch appointments", details: err.message },
+        { error: "Failed to fetch appointments", details: error.message },
         { status: 500 }
       );
     }
 
     /* ------------------------------------------------------
-      4️⃣ Shape data by role
+       Normalize role-based view
     --------------------------------------------------------*/
-    const formatted = appointments.map((appt: any) => {
+    const now = new Date();
+
+    const normalized = rawAppointments.map((appt: any) => {
       const practitioner = Array.isArray(appt.practitioner)
         ? appt.practitioner[0]
         : appt.practitioner;
@@ -86,13 +88,18 @@ export async function GET() {
         ? appt.patient[0]
         : appt.patient;
 
+      let base = {
+        id: appt.id,
+        starts_at: appt.starts_at,
+        ends_at: appt.ends_at,
+        status: appt.status,
+        cancellation_reason: appt.cancellation_reason,
+        appointment_type: appt.appointment_type,
+      };
+
       if (role === "patient") {
         return {
-          id: appt.id,
-          starts_at: appt.starts_at,
-          ends_at: appt.ends_at,
-          status: appt.status,
-          appointment_type: appt.appointment_type,
+          ...base,
           practitioner: {
             id: practitioner?.id,
             full_name: practitioner?.full_name,
@@ -104,29 +111,53 @@ export async function GET() {
 
       if (role === "practitioner") {
         return {
-          id: appt.id,
-          starts_at: appt.starts_at,
-          ends_at: appt.ends_at,
-          status: appt.status,
-          appointment_type: appt.appointment_type,
+          ...base,
           patient: {
             id: patient?.id,
             full_name: patient?.full_name,
             email: patient?.email,
             contact_number: patient?.contact_number,
+            blood_type: patient?.blood_type,
+            dob: patient?.dob,
+            age: calculateAge(patient?.dob),
+            allergies: patient?.allergies,
+            gender: patient?.gender
           },
         };
       }
 
-      // Admin sees all details
-      return appt;
+      return appt; // admin
     });
+
+    /* ------------------------------------------------------
+       Categorization
+    --------------------------------------------------------*/
+
+    const upcoming = normalized.filter(
+      (a) =>
+        new Date(a.starts_at) > now && a.status !== "cancelled"
+    );
+
+    const past = normalized.filter(
+      (a) =>
+        new Date(a.starts_at) < now && a.status !== "cancelled"
+    );
+
+    const cancelled = normalized.filter(
+      (a) => a.status === "cancelled" || a.cancellation_reason
+    );
 
     return NextResponse.json({
       success: true,
       role,
-      count: formatted.length,
-      appointments: formatted,
+      count: {
+        upcoming: upcoming.length,
+        past: past.length,
+        cancelled: cancelled.length,
+      },
+      upcoming,
+      past,
+      cancelled,
     });
   } catch (err: any) {
     console.error("❌ Error fetching appointments:", err);

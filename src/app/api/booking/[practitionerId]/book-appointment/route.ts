@@ -8,79 +8,66 @@ export async function POST(
   req: Request,
   context: { params: Promise<{ practitionerId: string }> }
 ) {
-  console.log("▶️ [Booking] Incoming request…");
-
   try {
-    // 0️⃣ Typed Routes params
     const { practitionerId } = await context.params;
-    console.log("📌 Practitioner ID:", practitionerId);
 
-    // 1️⃣ User Authentication
-    console.log("🔐 Checking user authentication…");
+    // 1️⃣ Auth
     const { authorized, user } = await requireUser();
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    // if (!authorized) {
-    //   console.warn("⛔ Unauthorized booking attempt");
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // }
-   
+    const patient_id = user?.patient_id;
+    if (!patient_id) {
+      return NextResponse.json(
+        { error: "No patient record linked to this account" },
+        { status: 400 }
+      );
+    }
 
-    // 2️⃣ Parse Body
-    console.log("📥 Parsing request body…");
-    const body = await req.json();
-    const { date, time, appointment_type_id } = body;
+    // 2️⃣ Load Draft
+    const { data: draft, error: draftError } = await supabaseClient
+      .from("appointment_draft")
+      .select("data")
+      .eq("patient_id", patient_id)
+      .single();
 
-    console.log("📌 Inputs received:", { date, time, appointment_type_id });
+    if (draftError || !draft?.data) {
+      return NextResponse.json(
+        { error: "No appointment draft found" },
+        { status: 404 }
+      );
+    }
 
-    if (!date || !time || !appointment_type_id) {
-      console.warn("⚠️ Missing required appointment fields");
+    const draftData = draft.data;
+
+    const {
+      starts_at,
+      ends_at,
+      appointmentType,
+      pre_consultation,
+      selectedDoctor,
+      attendeeCount,
+      consent
+    } = draftData;
+
+    // 3️⃣ Validate
+    if (!starts_at || !ends_at || !appointmentType?.id || !selectedDoctor?.id) {
       return NextResponse.json(
         {
-          error:
-            "Missing fields. Required: date, time, appointment_type_id",
+          error: "Draft is incomplete",
+          missing: {
+            starts_at,
+            ends_at,
+            appointmentType,
+            selectedDoctor,
+          },
         },
         { status: 400 }
       );
     }
 
-    const starts_at = `${date}T${time}:00`;
-    console.log("🕒 Calculated starts_at:", starts_at);
-
-    // 3️⃣ Fetch appointment type
-    console.log("📘 Fetching appointment type:", appointment_type_id);
-    const { data: appointmentType, error: typeError } =
-      await supabaseClient
-        .from("appointment_type")
-        .select("duration_mins, name")
-        .eq("id", appointment_type_id)
-        .single();
-
-    if (typeError || !appointmentType) {
-      console.error("❌ Appointment type lookup failed:", typeError);
-      return NextResponse.json(
-        { error: "Invalid appointment type" },
-        { status: 400 }
-      );
-    }
-
-    console.log("🧩 Appointment type:", appointmentType);
-
-    const { duration_mins } = appointmentType;
-
-    // 4️⃣ Calculate end time
-    console.log("⏱️ Calculating end time…");
-    const [h, m] = time.split(":").map(Number);
-    const startMinutes = h * 60 + m;
-    const endMinutes = startMinutes + duration_mins;
-
-    const endH = String(Math.floor(endMinutes / 60)).padStart(2, "0");
-    const endM = String(endMinutes % 60).padStart(2, "0");
-    const ends_at = `${date}T${endH}:${endM}:00`;
-
-    console.log("🕒 End time:", ends_at);
-
-    // 5️⃣ Check if slot is already booked
-    console.log("🔍 Checking if slot is already booked…");
+    // 4️⃣ Check Conflicts
     const { data: existing } = await supabaseClient
       .from("appointments")
       .select("id")
@@ -90,54 +77,72 @@ export async function POST(
       .maybeSingle();
 
     if (existing) {
-      console.warn("⛔ Slot already booked:", starts_at);
       return NextResponse.json(
-        { error: "Time slot already booked" },
+        { error: "This time slot is already booked" },
         { status: 409 }
       );
     }
 
-    console.log("✔️ Slot is free");
-
-    // 6️⃣ Create appointment in Supabase
-    console.log("📝 Creating appointment record…");
-    const { data: inserted, error: insertError } = await supabaseClient
+    // 5️⃣ Insert Appointment
+    const { data: appointment, error: insertError } = await supabaseClient
       .from("appointments")
       .insert({
         practitioner_id: practitionerId,
-        patient_id: "a7c55cef-78e7-48db-9326-a454b06e7157",
-        appointment_type_id,
+        patient_id,
+        appointment_type_id: appointmentType.id,
         starts_at,
         ends_at,
         status: "confirmed",
+        notes: pre_consultation?.note?.concern || null,
+        source: "web",
+
+        // 🟦 NEW — STORE HISTORICAL PRICING
+        fee_charged: selectedDoctor.fee ?? null,
+        currency: selectedDoctor.currency ?? "LKR",
       })
       .select()
       .single();
 
     if (insertError) {
-      console.error("❌ Insert failed:", insertError.message);
       return NextResponse.json(
-        {
-          error: "Database insert failed",
-          details: insertError.message,
-        },
+        { error: "Database insert failed", details: insertError.message },
         { status: 500 }
       );
     }
 
-    console.log("🎉 Successfully inserted appointment:", inserted);
+    // 6️⃣ Save Pre-Consultation Responses
+    if (pre_consultation) {
+      await supabaseClient.from("preconsult_responses").insert({
+        appointment_id: appointment.id,
+        patient_id,
+        raw_payload: pre_consultation,
+      });
+    }
 
+    if(consent){
+      await supabaseClient.from("consents").insert({
+        appointment_id: appointment.id,
+        terms: consent?.terms,
+        telehealth: consent?.telehealth,
+        accepted_at : new Date().toISOString()
+      })
+    }
 
-    console.log("✅ Booking completed successfully");
+    // 7️⃣ Mark Draft as Used
+    await supabaseClient
+      .from("appointment_draft")
+      .update({ status: "USED", updated_at: new Date().toISOString() })
+      .eq("patient_id", patient_id);
+
     return NextResponse.json({
       success: true,
       message: "Appointment booked successfully",
-      appointment: inserted,
+      appointment,
     });
   } catch (err: any) {
-    console.error("❌ Booking API Error:", err);
+    console.error("❌ Booking Error:", err);
     return NextResponse.json(
-      { error: err.message || "Unexpected server error" },
+      { error: err.message || "Internal server error" },
       { status: 500 }
     );
   }

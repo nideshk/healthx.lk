@@ -1,6 +1,5 @@
 'use client';
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
-import { toast } from 'sonner';
 import { AppointmentFormInputs } from '@/types/FormType';
 import {
   CheckCircle2,
@@ -8,17 +7,20 @@ import {
   User,
   ClipboardList,
 } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { useRouter } from 'next/navigation';
 
 interface Props {
   prevStep: () => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
+  goToStep : (step:number)=> void;
 }
 
 const PaymentStep = forwardRef(
-  ({ prevStep, updateData, bookingData }: Props, ref) => {
+  ({ prevStep, updateData, bookingData, goToStep }: Props, ref) => {
     const [paymentDone, setPaymentDone] = useState(false);
-
+    const router = useRouter();
     useImperativeHandle(ref, () => ({
       validateStep: () => {
         if (!paymentDone) {
@@ -29,20 +31,61 @@ const PaymentStep = forwardRef(
       },
     }));
 
-    const handlePayment = () => {
-      setTimeout(() => {
-        setPaymentDone(true);
-        updateData({ payment_status: 'completed' });
-        toast.success('Payment successful!');
-      }, 1000);
-    };
+  const handlePayment = async () => {
+  try {
+
+    const practitionerId = bookingData.selectedDoctor?.id;
+    const date = bookingData.starts_at?.split("T")[0];
+    const time = new Date(bookingData.starts_at || "")
+      .toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+    const appointment_type_id = bookingData?.appointmentType?.id;
+
+    if (!practitionerId || !date || !time || !appointment_type_id) {
+      toast.error("Missing booking details. Please go back and review.");
+      return;
+    }
+
+    const res = await fetch(
+      `/api/booking/${practitionerId}/book-appointment`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, time, appointment_type_id }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      if(res.status=== 409){
+        toast.error(data.error || "Booking failed");
+        goToStep(2);
+      }
+      return;
+    }
+
+    toast.success("Appointment booked successfully!");
+    setPaymentDone(true);
+
+    updateData({
+      payment_status: "completed",
+      appointment_id: data?.appointment?.id,
+    });
+    router.push("/dashboard/appointment");
+  } catch (err) {
+    console.error(err);
+    toast.error("Unexpected error while booking");
+  }
+};
 
     // Pricing breakdown
     const consultationFee = bookingData?.selectedDoctor?.fee || 1450;
     const serviceFee = Math.round(consultationFee * 0.05);
     const tax = Math.round((consultationFee + serviceFee) * 0.08);
     const totalAmount = consultationFee + serviceFee + tax;
-
+    const attendeeCount = bookingData?.selectedAttendees?.length || 1;  
+    const attendeeList = bookingData?.selectedAttendees || [];
     const doctor = bookingData.selectedDoctor;
     const type = bookingData.appointmentType;
     const service = bookingData.selectedService;
@@ -147,7 +190,22 @@ const PaymentStep = forwardRef(
                 <p><strong>Expected Outcome:</strong> {pre?.note?.outcome || '—'}</p>
                 <p><strong>Referral:</strong> {pre?.referral || '—'}</p>
               </div>
-
+              <div className='shadow-sm p-4 rounded-lg bg-white/60 backdrop-blur-md'>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                 Additional Attendees ({attendeeCount})
+                </h3>
+                <ul className="list-disc list-inside space-y-1">
+                  {attendeeList.length > 0 ? (
+                    attendeeList.map((attendee, index) => (
+                      <li key={index}>
+                        {attendee}
+                      </li>
+                    ))
+                  ) : (
+                    <li>No additional attendees.</li>
+                  )}
+                </ul>
+              </div>
               {/** Consents */}
               <div className="
                 p-6 rounded-2xl 

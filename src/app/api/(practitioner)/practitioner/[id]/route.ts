@@ -24,6 +24,8 @@ export async function GET(
   const supabase = supabaseClient;
   const { id: practitionerId } = await context.params;
 
+
+
   if (!practitionerId) {
     return NextResponse.json(
       { error: "Practitioner ID required" },
