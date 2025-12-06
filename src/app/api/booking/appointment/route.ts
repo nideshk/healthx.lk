@@ -4,6 +4,20 @@ import { requireUser } from "@/lib/authGuard";
 
 export const runtime = "nodejs";
 
+function calculateAge(dob: string | Date | null | undefined): number | null {
+  if (!dob) return null;
+  const birth = typeof dob === "string" ? new Date(dob) : new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export async function GET() {
   try {
     const { authorized, user, role } = await requireUser();
@@ -34,7 +48,7 @@ export async function GET() {
         ),
 
         patient:patient_id (
-          id, full_name, email, contact_number
+          id, full_name, email, contact_number, allergies, dob, blood_type, gender
         )
       `
       )
@@ -103,6 +117,11 @@ export async function GET() {
             full_name: patient?.full_name,
             email: patient?.email,
             contact_number: patient?.contact_number,
+            blood_type: patient?.blood_type,
+            dob: patient?.dob,
+            age: calculateAge(patient?.dob),
+            allergies: patient?.allergies,
+            gender: patient?.gender
           },
         };
       }
