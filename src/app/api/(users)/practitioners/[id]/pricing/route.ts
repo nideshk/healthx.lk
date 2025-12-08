@@ -14,11 +14,17 @@ import { requireUser } from "@/lib/authGuard";
  * }
  *
  * PATCH body:
- * {
- *   solo_consultation_fee?: number|string|null,
- *   family_consultation_fee?: number|string|null
+ *{
+ *   "fees": {
+ *     "c6f80f6b-e66f-4adb-b423-42b034fc568c": { "fee": 1500, "type": "Standard Consultation", "duration_mins": 30, "max_attendees": 1 }
+ *   },
+ *   "available_services": ["c6f80f6b-e66f-4adb-b423-42b034fc568c"]
  * }
  */
+
+function isUuidLike(s: any) {
+  return typeof s === "string" && s.length > 0;
+}
 
 function validateFee(value: any) {
   if (value === null || value === undefined || value === "") return true; // allow clearing with null
@@ -47,7 +53,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
 
     const { data, error } = await supabaseAdmin
       .from("practitioners")
-      .select("id, solo_consultation_fee, family_consultation_fee")
+      .select("id, fees")
       .eq("id", practitionerId)
       .limit(1)
       .maybeSingle();
@@ -57,8 +63,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
 
     return NextResponse.json({
       practitioner_id: data.id,
-      solo_consultation_fee: data.solo_consultation_fee === null ? null : String(data.solo_consultation_fee),
-      family_consultation_fee: data.family_consultation_fee === null ? null : String(data.family_consultation_fee),
+      fees: data.fees ?? {}      
     });
   } catch (err: any) {
     console.error("GET /pricing error:", err);
@@ -86,31 +91,26 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
       return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
     }
 
-    const { solo_consultation_fee, family_consultation_fee } = body ?? {};
-
-    if (solo_consultation_fee === undefined && family_consultation_fee === undefined) {
+    const { fees, available_services } = body ?? {};
+    if (fees  === undefined && available_services === undefined) {
       return NextResponse.json({ error: "Nothing to update. Provide at least one fee field." }, { status: 400 });
     }
 
     // Validate
-    if (solo_consultation_fee !== undefined && !validateFee(solo_consultation_fee)) {
-      return NextResponse.json({ error: "solo_consultation_fee must be a non-negative number with up to 2 decimal places." }, { status: 400 });
-    }
-    if (family_consultation_fee !== undefined && !validateFee(family_consultation_fee)) {
-      return NextResponse.json({ error: "family_consultation_fee must be a non-negative number with up to 2 decimal places." }, { status: 400 });
+    if (available_services !== undefined && !Array.isArray(available_services)) {
+      return NextResponse.json({ error: "available_services must be an array." }, { status: 400 });
     }
 
     // Build update payload: convert empty string to null; keep numeric as-is (supabase will accept numeric strings)
-    const payload: any = {};
-    if (solo_consultation_fee !== undefined) payload.solo_consultation_fee = solo_consultation_fee === "" ? null : solo_consultation_fee;
-    if (family_consultation_fee !== undefined) payload.family_consultation_fee = family_consultation_fee === "" ? null : family_consultation_fee;
-    payload.updated_at = new Date().toISOString();
+    const payload: any = { updated_at: new Date().toISOString() };
+    if (fees !== undefined) payload.fees = fees;
+    if (available_services !== undefined) payload.available_services = available_services;
 
     const { data: updated, error } = await supabaseAdmin
       .from("practitioners")
       .update(payload)
       .eq("id", practitionerId)
-      .select("id, solo_consultation_fee, family_consultation_fee")
+      .select("id, fees, available_services")
       .limit(1)
       .maybeSingle();
 
@@ -119,9 +119,9 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
 
     return NextResponse.json({
       practitioner_id: updated.id,
-      solo_consultation_fee: updated.solo_consultation_fee === null ? null : String(updated.solo_consultation_fee),
-      family_consultation_fee: updated.family_consultation_fee === null ? null : String(updated.family_consultation_fee),
-    });
+      fees: updated.fees ?? null,
+      available_services: updated.available_services ?? []
+    }, { status: 200 });
   } catch (err: any) {
     console.error("PATCH /pricing error:", err);
     return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });
