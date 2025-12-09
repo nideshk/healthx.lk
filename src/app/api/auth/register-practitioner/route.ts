@@ -20,8 +20,8 @@ export async function POST(req: Request) {
       contact_email,
       contact_number,
       profile_bio,
-      solo_consultation_fee,
-      family_consultation_fee,
+      fees,
+      available_services,
       profile_picture_url,
       availability
     } = body;
@@ -84,8 +84,8 @@ export async function POST(req: Request) {
           contact_email,
           contact_number,
           profile_bio,
-          solo_consultation_fee,
-          family_consultation_fee,
+          available_services,
+          fees,
           profile_picture_url,
         })
         .select("id")
