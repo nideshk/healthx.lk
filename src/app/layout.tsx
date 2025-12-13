@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "./(public)/header/header";
+import Script from "next/script";
 import ToastProvider from "./toast-provider";
 
 const geistSans = Geist({
@@ -31,6 +32,11 @@ export default function RootLayout({
       >
         <Header></Header>
         {children} 
+        {/* render page.tsx here */}
+        <Script
+          src="https://www.payhere.lk/lib/payhere.js"
+          strategy="afterInteractive"
+        />
          <ToastProvider />
       </body>
     </html>

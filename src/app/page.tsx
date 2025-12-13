@@ -1,4 +1,9 @@
 "use client";
+import React from "react";
+// FIX: Changed import aliases (@/components/...) to relative paths (../components/...)
+import Body from "../app/(public)/body/body"; // Server Component
+import Footer from "../app/(public)/footer/footer"; // Server Component (New Dark Style)
+import { useModalStore } from "../store/useModalStore";
 
 import React, { useEffect } from "react";
 import Body from "../app/(public)/body/body";
