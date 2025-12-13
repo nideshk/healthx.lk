@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const { authorized, user } = await requireUser();
 
     if (authorized && user?.auth_user_id) {
-      actorUserId = user.auth_user_id;
+      actorUserId = user.patient_id || user.practitioner_id || user.auth_user_id;
       actorRole = user.role; // patient / practitioner / admin
     }
 

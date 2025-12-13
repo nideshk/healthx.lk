@@ -21,7 +21,7 @@ type Props = {
   toggleScreenShare: () => Promise<void>;
   leaveRoom: () => Promise<void>;
 
-  onLogEvent?: (eventType: string) => void; // ✅ ADDED
+  onLogEvent?: (eventType: string) => void; // optional callback hook
 };
 
 export default function ControlsBar({
@@ -48,6 +48,7 @@ export default function ControlsBar({
     window.addEventListener("click", handleActivity);
     window.addEventListener("keydown", handleActivity);
 
+    // initial show
     handleActivity();
 
     return () => {
@@ -68,7 +69,6 @@ export default function ControlsBar({
       transition-all duration-500 ease-in-out
       ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
     >
-
       {/* Mic */}
       <button
         onClick={() => {
@@ -122,7 +122,6 @@ export default function ControlsBar({
       >
         <PhoneOff size={20} />
       </button>
-
     </div>
   );
 }

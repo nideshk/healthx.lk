@@ -1,32 +1,39 @@
-// VideoCallContainer.tsx
-"use client"
+"use client";
+
 import React, { useCallback, useState, useEffect } from "react";
 import VideoGrid from "./VideoGrid";
 import ControlsBar from "./ControlsBar";
 import { useVideoCall } from "./useVideoCall";
 import Toaster from "./Toaster";
-import { logAuditEvent } from "@/lib/logAuditEvent";
 
-export default function VideoCallContainer({ appointmentId, localUserId } : any) {
-  const [toasts, setToasts] = useState<Array<{ id: string; message: string }>>([]);
+export default function VideoCallContainer({
+  appointmentId,
+  roomKey,
+  token,
+  localUserId,
+  role,
+  iceServers,
+}: any) {
+  /* -------------------- TOASTS ---------------------- */
+  const [toasts, setToasts] = useState<
+    Array<{ id: string; message: string }>
+  >([]);
 
   const addToast = useCallback((message: string, ttl = 4000) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     setToasts((s) => [...s, { id, message }]);
     setTimeout(() => setToasts((s) => s.filter((t) => t.id !== id)), ttl);
-    return id;
   }, []);
 
-  const removeToast = useCallback((id: string) => {
-    setToasts((s:any) => s.filter((t:any) => t.id !== id));
-  }, []);
+  const removeToast = (id: string) =>
+    setToasts((s) => s.filter((t) => t.id !== id));
 
+  /* -------------------- VIDEO CALL HOOK ---------------------- */
   const {
     localVideoRef,
     peers,
     peerCameras,
     joined,
-    roomId,
     isMuted,
     isCameraOff,
     isScreenSharing,
@@ -36,102 +43,111 @@ export default function VideoCallContainer({ appointmentId, localUserId } : any)
     toggleCamera,
     toggleScreenShare,
   } = useVideoCall({
-    onUserJoin: async (id) => {
-      addToast(`User ${id.slice(0, 5)} joined`);
-      await logAuditEvent({
-        appointmentId,
-        userId: id,
-        eventType: "JOIN",
-        metadata: { timestamp: Date.now() },
-      });
-    },
-    onUserLeave: async (id) => {
-      addToast(`User ${id.slice(0, 5)} left`);
-      await logAuditEvent({
-        appointmentId,
-        userId: id,
-        eventType: "LEAVE",
-        metadata: { timestamp: Date.now() },
-      });
-    },
-    localAppUserId: localUserId,
+    appointmentId,
+    roomKey,
+    localUserId,
+    token,
+    role,
+    iceServers,
+
+    onUserJoin: (id: string) => addToast(`User ${id.slice(0, 5)} joined`),
+    onUserLeave: (id: string) => addToast(`User ${id.slice(0, 5)} left`),
   });
 
-  // Log when LOCAL user joins
-  useEffect(() => {
-    if (joined) {
-      addToast("You joined the room");
-      logAuditEvent({
-        appointmentId,
-        userId: localUserId,
-        eventType: "LOCAL_JOIN",
-      });
-    }
-  }, [joined]);
+  const isPractitioner = role === "practitioner";
 
-  // Log when LOCAL user leaves
+  /* -------------------- LEAVE ---------------------- */
   const handleLeave = async () => {
-    await logAuditEvent({
-      appointmentId,
-      userId: localUserId,
-      eventType: "LOCAL_LEAVE",
-    });
     await leaveRoom();
   };
 
+  /* -------------------- MAIN LAYOUT ---------------------- */
   return (
-    <div className="h-screen w-screen bg-gradient-to-br from-[#1b1c1e] to-[#2a2d31] text-white flex flex-col items-center justify-center overflow-hidden">
-      {!joined ? (
-        <div className="flex flex-col items-center gap-6 p-6 text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">🎥 Group Video Call</h1>
-          <p className="text-gray-400 text-sm sm:text-base">Joining room: <span className="text-white font-medium">{roomId || "..."}</span></p>
-          <button
-            onClick={joinRoom}
-            className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-full text-lg font-semibold shadow-lg"
-          >
-            Join Room
-          </button>
-        </div>
-      ) : (
-        <div className="relative flex flex-col h-full w-full overflow-hidden">
-          <VideoGrid
-            localVideoRef={localVideoRef}
-            peers={peers}
-            peerCameras={peerCameras}
-            isCameraOff={isCameraOff}
-          />
-          <ControlsBar
-            isMuted={isMuted}
-            isCameraOff={isCameraOff}
-            isScreenSharing={isScreenSharing}
-            toggleCamera={async () => {
-              await logAuditEvent({
-                appointmentId,
-                userId: localUserId,
-                eventType: isCameraOff ? "CAMERA_ON" : "CAMERA_OFF",
-              });
-              return toggleCamera();
-            }}
-            toggleScreenShare={async () => {
-              await logAuditEvent({
-                appointmentId,
-                userId: localUserId,
-                eventType: isScreenSharing ? "SCREEN_SHARE_STOP" : "SCREEN_SHARE_START",
-              });
-              return toggleScreenShare();
-            }}
-            toggleMic={async () => {
-              await logAuditEvent({
-                appointmentId,
-                userId: localUserId,
-                eventType: isMuted ? "MIC_ON" : "MIC_OFF",
-              });
-              return toggleMic();
-            }}
-            leaveRoom={handleLeave}
-          />
-        </div>
-      )}
+    <div className="h-screen w-screen bg-[#1b1c1e] text-white overflow-hidden flex">
+
+      {/* LEFT SIDE — FULL VIDEO AREA */}
+      <div
+        className={`flex flex-col h-full ${
+          isPractitioner ? "w-[70%]" : "w-full"
+        } border-r border-white/10`}
+      >
+        {!joined ? (
+          <div className="flex flex-col items-center justify-center h-full gap-6 p-6 text-center">
+            <h1 className="text-3xl sm:text-4xl font-bold">
+              🎥 Telehealth Consultation
+            </h1>
+            <button
+              onClick={joinRoom}
+              className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-full text-lg font-semibold"
+            >
+              Join Consultation
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Video grid fills all available vertical space */}
+            <div className="flex-1 overflow-hidden">
+              <VideoGrid
+                localVideoRef={localVideoRef}
+                peers={peers}
+                peerCameras={peerCameras}
+                isCameraOff={isCameraOff}
+              />
+            </div>
+
+            {/* Controls aligned bottom center */}
+            <div className="pb-4">
+              <ControlsBar
+                isMuted={isMuted}
+                isCameraOff={isCameraOff}
+                isScreenSharing={isScreenSharing}
+                toggleCamera={toggleCamera}
+                toggleScreenShare={toggleScreenShare}
+                toggleMic={toggleMic}
+                leaveRoom={handleLeave}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* RIGHT SIDE — PRACTITIONER PANEL */}
+     {isPractitioner && (
+  <div
+    className="w-[30%] bg-[#f9fafb] h-full p-6 flex flex-col overflow-y-auto border-l border-gray-200"
+    style={{ minWidth: 340, maxWidth: 420 }}
+  >
+    <h2 className="text-xl font-semibold text-gray-800 mb-6">
+      Consultation Tools
+    </h2>
+
+    {/* APPOINTMENT DETAILS */}
+    <div className="mb-6 p-4 rounded-xl bg-white shadow-sm border border-gray-100">
+      <h3 className="text-sm font-medium text-gray-600">Appointment ID</h3>
+      <p className="text-gray-900 mt-1 text-sm font-semibold tracking-wide">
+        {appointmentId}
+      </p>
+    </div>
+
+    {/* NOTES */}
+    <div className="flex flex-col p-4 rounded-xl bg-white shadow-sm border border-gray-100">
+      <h3 className="text-sm font-medium text-gray-700 mb-2">Notes</h3>
+
+      <textarea
+        className="w-full min-h-[200px] p-3 rounded-lg bg-gray-50 border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+        placeholder="Write practitioner notes here..."
+      />
+
+      <button
+        className="mt-3 inline-flex justify-center rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 transition shadow-sm"
+      >
+        Save Notes
+      </button>
+    </div>
+
+  </div>
+)}
+
 
       <Toaster toasts={toasts} removeToast={removeToast} />
     </div>

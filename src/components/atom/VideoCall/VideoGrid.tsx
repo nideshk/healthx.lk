@@ -10,7 +10,12 @@ type Props = {
   isCameraOff: boolean;
 };
 
-export default function VideoGrid({ localVideoRef, peers, peerCameras, isCameraOff }: Props) {
+export default function VideoGrid({
+  localVideoRef,
+  peers,
+  peerCameras,
+  isCameraOff,
+}: Props) {
   return (
     <div
       className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-6 transition-all duration-300 flex-1 items-center justify-center place-items-center`}
@@ -54,8 +59,7 @@ export default function VideoGrid({ localVideoRef, peers, peerCameras, isCameraO
                 autoPlay
                 playsInline
                 ref={(v) => {
-                  if (v && stream && v.srcObject !== stream)
-                    v.srcObject = stream;
+                  if (v && stream && v.srcObject !== stream) v.srcObject = stream;
                 }}
                 className="object-cover w-full h-full rounded-2xl"
               />

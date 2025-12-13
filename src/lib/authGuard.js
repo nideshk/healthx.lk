@@ -56,6 +56,7 @@ export async function requireUser() {
     auth_user_id,                    // ALWAYS THE AUTH ID
     role: profile.role,              // patient/practitioner/admin
     profile,
+    user,
     patient_id: patient?.id || null,
     practitioner_id: practitioner?.id || null,
   };

@@ -19,7 +19,12 @@ export default function Toaster({ toasts, removeToast }: Props) {
         >
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm">{t.message}</div>
-            <button className="text-xs opacity-70 hover:opacity-100" onClick={() => removeToast(t.id)}>✕</button>
+            <button
+              className="text-xs opacity-70 hover:opacity-100"
+              onClick={() => removeToast(t.id)}
+            >
+              ✕
+            </button>
           </div>
         </div>
       ))}

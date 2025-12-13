@@ -24,9 +24,16 @@ export type UseVideoCallReturn = {
 };
 
 export type UseVideoCallOptions = {
+  appointmentId?: string;
+  roomKey ?: string;
   onUserJoin?: (id: string) => void;
   onUserLeave?: (id: string) => void;
   localAppUserId?: string;
+  roomkey?: string;
+  localUserId ?: string;
+  token ?: string;
+  role ?: string;
+    iceServers  ?: any[];
 };
 
 export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {

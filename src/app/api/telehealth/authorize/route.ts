@@ -1,198 +1,144 @@
+// src/app/api/telehealth/authorize/route.ts
 import { NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireUser } from "@/lib/authGuard"; // <-- your updated version
-import { signTelehealthToken } from "@/lib/telehealthToken";
+import { requireUser } from "@/lib/authGuard";
 
-export const runtime = "nodejs";
+const JWT_SECRET = process.env.TELEHEALTH_JWT_SECRET!;
+const TOKEN_TTL_SECONDS = 60 * 30; // 30 minutes
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { room, guestEmail } = body as {
-      room?: string;
-      guestEmail?: string | null;
+    const { roomKey, guestEmail } = body as {
+      roomKey?: string;
+      guestEmail?: string;
     };
 
-    if (!room) {
+    if (!roomKey) {
       return NextResponse.json(
-        { authorized: false, error: "Missing room" },
+        { authorized: false, error: "Missing roomKey" },
         { status: 400 }
       );
     }
 
-    // ---------------------------------------------------------
-    // 1. Fetch appointment & participants
-    // ---------------------------------------------------------
-    const { data: appt, error } = await supabaseAdmin
+    // Fetch appointment + linked patient/practitioner + attendees
+    const { data: appt, error } : any = await supabaseAdmin
       .from("appointments")
-      .select(`
-        id,
-        room_key,
-        telehealth_url,
-        starts_at,
-        ends_at,
-        status,
-        additional_attendees,
-        appointment_type:appointment_type_id ( duration_mins ),
-        patient:patient_id ( id, email ),
-        practitioner:practitioner_id ( id, contact_email )
-      `)
-      .eq("room_key", room)
+      .select(
+        "*"
+      )
+      .eq("room_key", roomKey)
       .single();
 
     if (error || !appt) {
+      console.error("Authorize: appointment not found", error);
       return NextResponse.json(
         { authorized: false, error: "Appointment not found" },
         { status: 404 }
       );
     }
 
-    // ---------------------------------------------------------
-    // 2. TIME WINDOW LOGIC
-    // ---------------------------------------------------------
+    // Time window: allow from start-15m to end+15m
     const now = new Date();
-    const start = appt.starts_at ? new Date(appt.starts_at) : now;
+    console.log("Authorize: now =", now.toISOString());
+    const start = new Date(appt.starts_at);
+    console.log("Authorize: appointment starts_at =", start.toISOString());
+    const end =
+      appt.ends_at ||
+      new Date(
+        start.getTime() +
+          (appt.appointment_type?.duration_mins ?? 30) * 60 * 1000
+      );
+    // console.log("Authorize: appointment ends_at =", end.toISOString());
 
-    const end = appt.ends_at
-      ? new Date(appt.ends_at)
-      : new Date(
-          start.getTime() +
-            (appt.appointment_type?.duration_mins ?? 30) * 60_000
-        );
+    // const windowStart = new Date(start.getTime() - 15 * 60 * 1000);
+    // const windowEnd = new Date(end.getTime() + 15 * 60 * 1000);
 
-    const windowStart = new Date(start.getTime() - 15 * 60_000);
-    const windowEnd = new Date(end.getTime() + 15 * 60_000);
+    // if (now < windowStart || now > windowEnd) {
+    //   console.warn("Authorize: outside time window");
+    // }
 
-    const isWithinWindow = now >= windowStart && now <= windowEnd;
-
-    // ---------------------------------------------------------
-    // 3. Resolve logged-in user identity (optional)
-    // ---------------------------------------------------------
-    const session = await requireUser();
-    const isLoggedIn = session.authorized;
-
-    let allowed = false;
-    let resolvedRole: "patient" | "practitioner" | "attendee" | "guest" =
-      "guest";
-    let subject: string | null = null; // user id or guest email
-
-    const additionalAttendees: string[] =
-      Array.isArray(appt.additional_attendees)
-        ? appt.additional_attendees
-        : [];
-
-    const lowerAdditional = additionalAttendees.map((e) =>
-      e.toLowerCase()
-    );
-    const patientEmail = appt.patient?.email?.toLowerCase() || null;
+    // Normalize emails
+    const patientEmail = appt.patient?.email?.toLowerCase() ?? null;
     const practitionerEmail =
-      appt.practitioner?.contact_email?.toLowerCase() || null;
+      appt.practitioner?.contact_email?.toLowerCase() ?? null;
+    const attendees: string[] = (appt.additional_attendees ?? []).map(
+      (e: string) => e.toLowerCase()
+    );
 
-    // ---------------------------------------------------------
-    // 4. LOGGED-IN USER AUTHORIZATION
-    // ---------------------------------------------------------
-    if (isLoggedIn && session.user) {
-      const { user } = session;
-      const email = user.profile.email?.toLowerCase() || null;
+    // Base result
+    let allowed = false;
+    let role: "patient" | "practitioner" | "attendee" | "guest" = "guest";
+    let subjectId: string | null = null;
+    let subjectEmail: string | null = null;
 
+    // First: try logged-in user
+    const session = await requireUser();
+    if (session.authorized) {
+      const user = session.user;
+      const email = session.user?.user.email?.toLowerCase() || null;
+      console.log("Authorize: logged in user email =", email);
+      console.log("Authorize: practitionerEmail =", user?.practitioner_id);
+      console.log("Practitioner _ id", appt.practitioner_id);
       if (email && email === patientEmail) {
         allowed = true;
-        resolvedRole = "patient";
-        subject = user.auth_user_id;
-      } else if (email && email === practitionerEmail) {
+        role = "patient";
+        subjectId = user?.auth_user_id  || null;
+        subjectEmail = email;
+      } else if (user?.practitioner_id === appt.practitioner_id) {
         allowed = true;
-        resolvedRole = "practitioner";
-        subject = user.auth_user_id;
-      } else if (email && lowerAdditional.includes(email)) {
+        role = "practitioner";
+        subjectId = user?.auth_user_id || null;
+        subjectEmail = email;
+      } else if (email && attendees.includes(email)) {
         allowed = true;
-        resolvedRole = "attendee";
-        subject = user.auth_user_id;
-      } else {
-        allowed = false;
+        role = "attendee";
+        subjectId = user?.auth_user_id || null;
+        subjectEmail = email;
       }
-
-      // Enforce time window for non-practitioners
-      if (allowed && resolvedRole !== "practitioner" && !isWithinWindow) {
-        return NextResponse.json(
-          { authorized: false, error: "Outside allowed join time" },
-          { status: 403 }
-        );
-      }
-    }
-
-    // ---------------------------------------------------------
-    // 5. GUEST FLOW (Not logged in)
-    // ---------------------------------------------------------
-    else if (guestEmail) {
-      const guestLower = guestEmail.toLowerCase();
-
+    } else if (guestEmail) {
+      // Not logged in: guest path with email
+      const lower = guestEmail.toLowerCase();
       if (
-        guestLower === patientEmail ||
-        guestLower === practitionerEmail ||
-        lowerAdditional.includes(guestLower)
+        lower === patientEmail ||
+        lower === practitionerEmail ||
+        attendees.includes(lower)
       ) {
         allowed = true;
-        resolvedRole = "guest";
-        subject = guestLower;
-      }
-
-      if (allowed && !isWithinWindow) {
-        return NextResponse.json(
-          { authorized: false, error: "Outside allowed time" },
-          { status: 403 }
-        );
+        role = "guest";
+        subjectEmail = lower;
       }
     }
 
-    // ---------------------------------------------------------
-    // 6. Not logged in AND no guest email → client must ask for email
-    // ---------------------------------------------------------
-    else {
+    if (!allowed) {
       return NextResponse.json(
-        { authorized: false, requireEmail: true },
-        { status: 401 }
-      );
-    }
-
-    // ---------------------------------------------------------
-    // 7. Deny unauthorized access
-    // ---------------------------------------------------------
-    if (!allowed || !subject) {
-      return NextResponse.json(
-        { authorized: false, error: "Not allowed for this appointment" },
+        { authorized: false, error: "Not allowed" },
         { status: 403 }
       );
     }
 
-    // ---------------------------------------------------------
-    // 8. Generate the Telehealth Join Token (JWT)
-    // ---------------------------------------------------------
-    const token = signTelehealthToken({
+    const payload = {
       appointmentId: appt.id,
       roomKey: appt.room_key,
-      role: resolvedRole,
-      sub: subject,
-    });
+      role,
+      sub: subjectId ?? subjectEmail,
+    };
 
-    // ---------------------------------------------------------
-    // 9. Write audit log
-    // ---------------------------------------------------------
-    await supabaseAdmin.from("consultation_audit_log").insert({
-      appointment_id: appt.id,
-      user_id: subject,
-      event_type: "AUTHORIZE",
-      metadata: { role: resolvedRole, guest: !isLoggedIn },
+    const token = jwt.sign(payload, JWT_SECRET, {
+      expiresIn: TOKEN_TTL_SECONDS,
     });
 
     return NextResponse.json({
       authorized: true,
       token,
-      role: resolvedRole,
+      role,
       appointmentId: appt.id,
-      telehealth_url: appt.telehealth_url,
+      roomKey: appt.room_key,
+      telehealthUrl: appt.telehealth_url,
     });
-  } catch (err: any) {
-    console.error("❌ Telehealth authorization error:", err);
+  } catch (e) {
+    console.error("Authorize error", e);
     return NextResponse.json(
       { authorized: false, error: "Server error" },
       { status: 500 }
