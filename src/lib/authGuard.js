@@ -2,61 +2,69 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "./supabaseAdmin";
 
-
 async function getSupabase() {
-  const cookieStore = await cookies(); 
+  const cookieStore = await cookies();
   return createRouteHandlerClient({ cookies: () => cookieStore });
 }
-
 export async function requireUser() {
   const supabase = await getSupabase();
 
+  // 1) Auth user
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
+  if (!user) {
     return {
       authorized: false,
       response: Response.json({ error: "Unauthorized" }, { status: 401 }),
     };
   }
 
-  // ✅ Use supabaseAdmin to bypass RLS when reading profiles
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from("patients")
+  const auth_user_id = user.id;
+
+  // 2) Fetch profile
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
     .select("*")
-    .eq("supabase_user_id", user.id)
+    .eq("id", auth_user_id)
     .single();
 
-  if (profileError || !profile) {
+  if (!profile) {
     return {
       authorized: false,
-      response: Response.json(
-        { error: "Profile not found" },
-        { status: 403 }
-      ),
+      response: Response.json({ error: "Profile not found" }, { status: 403 }),
     };
   }
 
-  return { authorized: true, user : {...user, ...profile}, role: profile.role, supabase };
-}
+  // 3) map patient row
+  const { data: patient } = await supabaseAdmin
+    .from("patients")
+    .select("id")
+    .eq("supabase_user_id", auth_user_id)
+    .maybeSingle();
 
-/**
- * Enforce that the logged-in Supabase user has an admin role.
- */
-export async function requireAdmin() {
-  const { authorized, response, user, role } = await requireUser();
+  // 4) map practitioner row
+  const { data: practitioner } = await supabaseAdmin
+    .from("practitioners")
+    .select("id")
+    .eq("supabase_user_id", auth_user_id)
+    .maybeSingle();
 
-  if (!authorized) return { authorized, response };
+  // 5) final unified user
+  const sessionUser = {
+    auth_user_id,                    // ALWAYS THE AUTH ID
+    role: profile.role,              // patient/practitioner/admin
+    profile,
+    user,
+    patient_id: patient?.id || null,
+    practitioner_id: practitioner?.id || null,
+  };
 
-  if (role !== "admin") {
-    return {
-      authorized: false,
-      response: Response.json({ error: "Forbidden" }, { status: 403 }),
-    };
-  }
-
-  return { authorized: true, user, role };
+  return {
+    authorized: true,
+    user: sessionUser,
+    role: sessionUser.role,
+    supabase,
+  };
 }

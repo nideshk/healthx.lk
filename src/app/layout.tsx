@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "./(public)/header/header";
 import Script from "next/script";
+import ToastProvider from "./toast-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
           src="https://www.payhere.lk/lib/payhere.js"
           strategy="afterInteractive"
         />
+         <ToastProvider />
       </body>
     </html>
   );

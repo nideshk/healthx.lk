@@ -1,11 +1,10 @@
-import { clinikoFetch } from "@/lib/cliniko";
 import { requireUser } from "@/lib/authGuard";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export async function GET(_, { params }) {
   try {
-      const { authorized, response, user } = await requireUser();
-
-  if (!authorized) return response;
+    const { authorized, response, user } = await requireUser();
+    if (!authorized) return response;
 
     const { serviceId } = params;
 
@@ -13,54 +12,40 @@ export async function GET(_, { params }) {
       return Response.json({ error: "Service ID is required" }, { status: 400 });
     }
 
-    // Fetch practitioners for this appointment type (service)
-    const raw = await clinikoFetch(
-      `appointment_types/${serviceId}/practitioners?page=1&per_page=50`
-    );
+    // Fetch practitioners who offer this appointment type
+    const { data: practitioners, error } = await supabaseClient
+      .from("practitioners")
+      .select("*")
+      .contains("available_services", [serviceId]);
 
-    // Clean up the data
-    const practitioners = await Promise.all(
-      raw.practitioners.map(async (doc) => {
-        try {
-          const full = await clinikoFetch(
-            `practitioners/${doc.id}`
-          );
+    if (error) {
+      console.error("DB Error:", error);
+      return Response.json({ error: error.message }, { status: 500 });
+    }
 
-          return {
-            id: full.id,
-            first_name: full.first_name,
-            last_name: full.last_name,
-            email: full.email,
-            phone: full.phone,
-            bio: full.bio || "",
-            active: full.active,
-            business_links: full.businesses?.map(
-              (b) => b.links?.self || ""
-            ),
-            links: {
-              self: `https://api.au4.cliniko.com/v1/practitioners/${full.id}`,
-            },
-          };
-        } catch (err) {
-          console.error("Error fetching practitioner details:", err);
-          return null;
-        }
-      })
-    );
-
-    console.log(practitioners)
+    const formatted = practitioners.map((p) => ({
+      id: p.id,
+      full_name: p.full_name,
+      contact_number: p.contact_number,
+      contact_email: p.contact_email,
+      qualification: p.qualification,
+      specialization: p.specialization,
+      bio: p.profile_bio,
+      active: true, // or p.active if you add that column later
+      profile_image: p.profile_picture_url,
+    }));
 
     return Response.json(
       {
         service_id: serviceId,
-        practitioners: practitioners.filter(Boolean),
-        total: raw.total_entries || practitioners.length,
-        user : user.email,
+        practitioners: formatted,
+        total: formatted.length,
+        user: user.email,
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Cliniko practitioners error:", error);
+    console.error("Practitioner by service error:", error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 }

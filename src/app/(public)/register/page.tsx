@@ -1,254 +1,425 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Trash2 } from "lucide-react";
 
-// --- Configuration ---
-const PROFILE_UPDATE_API_URL = 'http://localhost:5000/api/profile/update';
 
-// --- Data for Dropdowns ---
-const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
-
-// --- Initial Form Data ---
-const initialFormData = {
-  firstName: '',
-  lastName: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
-  gender: '',
-  dob: '',
-  phone: '',
-  address: '',
-  city: '',
-  state: '',
-  zipCode: '',
+type AppointmentType = {
+  id: string;
+  name: string;
+  duration_mins: number;
+  base_fee: number | string;   // number from API, becomes string when edited
+  max_attendee: number;        // note: from API it's "max_attendee"
 };
 
-// --- Reusable Input Component ---
-type FormFieldProps = {
-  label: string;
-  name: keyof typeof initialFormData;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
-  placeholder?: string;
-  type?: string;
-  children?: React.ReactNode;
-  error?: string;
-};
+export default function PractitionerRegisterPage() {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-const FormField = ({ label, name, value, onChange, placeholder, type = 'text', children, error }: FormFieldProps) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-    <div className="relative">
-      {type === 'select' ? (
-        <select
-          name={name}
-          value={value}
-          onChange={onChange as React.ChangeEventHandler<HTMLSelectElement>}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 transition duration-150 bg-[antiquewhite]"
-        >
-          {children}
-        </select>
-      ) : (
-        <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange as React.ChangeEventHandler<HTMLInputElement>}
-          placeholder={placeholder}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 transition duration-150 bg-[antiquewhite]"
-        />
-      )}
-      {type === 'select' && (
-        <ChevronDown
-          size={20}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none"
-        />
-      )}
-    </div>
-    {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-  </div>
-);
-
-// --- Main Component ---
-const DetailedRegistrationPage = () => {
-  const router = useRouter();
-  const [formData, setFormData] = useState(initialFormData);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof initialFormData, string>>>({});
-  const [apiError, setApiError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleChange = (
-  e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-) => {
-  const { name, value } = e.target;
-  setFormData(prev => ({ ...prev, [name]: value }));
-};
-
-  // --- Validation ---
-  const validate = () => {
-    const errors: typeof fieldErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^[0-9]{10}$/;
-
-    if (!formData.firstName.trim()) errors.firstName = 'First Name is required.';
-    if (!formData.lastName.trim()) errors.lastName = 'Last Name is required.';
-    if (!formData.email.trim()) errors.email = 'Email is required.';
-    else if (!emailRegex.test(formData.email)) errors.email = 'Invalid email format.';
-
-    if (!formData.password.trim()) errors.password = 'Password is required.';
-    else if (formData.password.length < 6)
-      errors.password = 'Password must be at least 6 characters.';
-    else if (!/[A-Z]/.test(formData.password))
-      errors.password = 'Password must contain at least one uppercase letter.';
-    else if (!/[0-9]/.test(formData.password))
-      errors.password = 'Password must contain at least one number.';
-
-    if (formData.password !== formData.confirmPassword)
-      errors.confirmPassword = 'Passwords do not match.';
-
-    if (!formData.dob.trim()) errors.dob = 'Date of Birth is required.';
-    if (!formData.phone.trim()) errors.phone = 'Phone Number is required.';
-    else if (!phoneRegex.test(formData.phone))
-      errors.phone = 'Phone number must be 10 digits.';
-    if (!formData.address.trim()) errors.address = 'Address is required.';
-    if (!formData.city.trim()) errors.city = 'City is required.';
-    if (!formData.state.trim()) errors.state = 'State is required.';
-    if (!formData.zipCode.trim()) errors.zipCode = 'Zip Code is required.';
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    full_name: "",
+    qualification: "",
+    specialization: "",
+    license_number: "",
+    experience_years: "",
+    contact_email: "",
+    contact_number: "",
+    profile_bio: "",
+    available_services: "",
+    fees: "",
+    profile_picture_url: "",
+    availability: {
+      start_time: "09:00",
+      end_time: "18:00",
+      days_unavailable: ["Sunday"],
+      timezone: "Asia/Kolkata",
+    },
+  });
+  // NEW: selected appointment types & editable fees
+  const [selectedAppointments, setSelectedAppointments] = useState<AppointmentType[]>([]);
+  const [appointmentTypes, setAppointmentTypes] = useState<AppointmentType[]>([]);
+  const handleChange = (e: any) => {
+    const { name, value } = e.target;
+    setForm((prev: any) => ({ ...prev, [name]: value }));
   };
 
-  // --- Handle Submit with JWT Auth ---
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setApiError('');
-    if (!validate()) return;
-
-    setIsLoading(true);
-
-    // 1️⃣ Get JWT
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      setApiError('Authentication token missing. Please log in again.');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(PROFILE_UPDATE_API_URL, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setApiError('Session expired. Please log in again.');
-          localStorage.removeItem('authToken');
-          setTimeout(() => router.push('/login'), 2000);
+  useEffect(() => {
+    const fetchAppointmentTypes = async () => {
+      try {
+        const res = await fetch("/api/appointment/appointment_type");
+        if (!res.ok) {
+          console.error("Failed to fetch appointment types");
           return;
         }
-        throw new Error(data.message || 'Profile update failed.');
-      }
 
-      // ✅ Success
-      console.log('Profile updated successfully:', data);
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error('API Error:', error);
-      setApiError(error.message || 'Network error. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+        const data = await res.json();
+
+        // data.appointment_types comes in as base_fee: number, max_attendee: number
+        setAppointmentTypes(
+          (data.appointment_types || []).map((t: any) => ({
+            ...t,
+            base_fee: t.base_fee ?? 0, // ensure it's defined
+          }))
+        );
+      } catch (err) {
+        console.error("Error fetching appointment types", err);
+      }
+    };
+
+    fetchAppointmentTypes();
+  }, []);
+
+
+  const handleAvailabilityChange = (e: any) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      availability: { ...prev.availability, [name]: value },
+    }));
   };
 
+  const toggleDayUnavailable = (day: string) => {
+    setForm((prev: any) => {
+      const exists = prev.availability.days_unavailable.includes(day);
+      return {
+        ...prev,
+        availability: {
+          ...prev.availability,
+          days_unavailable: exists
+            ? prev.availability.days_unavailable.filter((d: string) => d !== day)
+            : [...prev.availability.days_unavailable, day],
+        },
+      };
+    });
+  };
+
+  // NEW: when doctor chooses an appointment type from dropdown
+  const handleAppointmentSelect = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const id = e.target.value;
+    if (!id) return;
+
+    const type = appointmentTypes.find((t) => t.id === id);
+    if (!type) return;
+
+    setSelectedAppointments((prev) => {
+      if (prev.some((p) => p.id === type.id)) return prev; // avoid duplicates
+      return [...prev, { ...type }]; // clone so fee is editable
+    });
+
+    // reset dropdown to placeholder
+    e.target.value = "";
+  };
+
+  // NEW: edit fee in table
+  const handleAppointmentFeeChange = (id: string, value: string) => {
+    setSelectedAppointments((prev) =>
+      prev.map((appt) =>
+        appt.id === id ? { ...appt, base_fee: value } : appt
+      )
+    );
+  };
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const payload = {
+        ...form,
+        specialization: form.specialization.split(",").map((s) => s.trim()),
+        experience_years: Number(form.experience_years),
+        available_services: selectedAppointments.map(a => a.id),
+        fees: selectedAppointments.reduce((acc: any, appt) => ({
+        ...acc,
+        [appt.id]: {
+          type: appt.name,
+          duration_mins: appt.duration_mins,
+          max_attendees: appt.max_attendee,
+          fee: Number(appt.base_fee || 0)
+        }
+      }), {} as any)
+      };
+
+      const res = await fetch("/api/auth/register-practitioner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Registration failed");
+
+      setMessage("🎉 Practitioner registered successfully!");
+    } catch (err: any) {
+      console.log(err)
+      setError(err.message);
+    }
+
+    setLoading(false);
+  };
+
+  const weekdays = [
+    "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"
+  ];
+
   return (
-    <div
-      className="min-h-screen py-16"
-      style={{
-        background: 'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)',
-      }}
-    >
-      <div className="max-w-4xl mx-auto px-4">
-        <h1 className="text-4xl font-extrabold text-gray-800 text-center mb-4">
-          Complete Your Profile
+    <div className="min-h-screen bg-gray-50 py-12 px-5 flex justify-center">
+      <div className="w-full max-w-3xl">
+        
+        {/* HEADER */}
+        <h1 className="text-4xl font-bold text-gray-900 text-center mb-10">
+          Register as <span className="text-teal-600">Practitioner</span>
         </h1>
-        <p className="text-lg text-gray-600 text-center mb-10">
-          Please provide your details to continue securely.
-        </p>
 
-        {apiError && (
-          <div
-            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
-            role="alert"
-          >
-            <span className="block sm:inline">{apiError}</span>
-          </div>
-        )}
+        {/* CARD */}
+        <div className="bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white p-8 md:p-12 rounded-3xl text-gray-500 shadow-2xl border border-gray-100 space-y-8"
-        >
-          {/* Section 1: Personal Details */}
-          <h2 className="text-2xl font-bold text-cyan-700 border-b pb-2">
-            1. Personal Details
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField label="First Name" name="firstName" value={formData.firstName} onChange={handleChange} placeholder="Enter first name" error={fieldErrors.firstName} />
-            <FormField label="Last Name" name="lastName" value={formData.lastName} onChange={handleChange} placeholder="Enter last name" error={fieldErrors.lastName} />
-            <FormField label="Email" name="email" value={formData.email} onChange={handleChange} placeholder="Enter email" type="email" error={fieldErrors.email} />
-            <FormField label="Date of Birth" name="dob" value={formData.dob} onChange={handleChange} type="date" error={fieldErrors.dob} />
-            <FormField label="Gender" name="gender" value={formData.gender} onChange={handleChange} type="select" error={fieldErrors.gender}>
-              <option value="">Select Gender</option>
-              {GENDER_OPTIONS.map(option => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </FormField>
-            <FormField label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} placeholder="Enter phone number" type="tel" error={fieldErrors.phone} />
-            <FormField label="Password" name="password" value={formData.password} onChange={handleChange} placeholder="Enter password" type="password" error={fieldErrors.password} />
-            <FormField label="Confirm Password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Re-enter password" type="password" error={fieldErrors.confirmPassword} />
-          </div>
-
-          {/* Section 2: Address */}
-          <h2 className="text-2xl font-bold text-cyan-700 border-b pb-2 pt-6">2. Address</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <FormField label="Address" name="address" value={formData.address} onChange={handleChange} placeholder="Enter address" error={fieldErrors.address} />
+          {/* STATUS MESSAGES */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg">
+              {error}
             </div>
-            <FormField label="City" name="city" value={formData.city} onChange={handleChange} placeholder="Enter city" error={fieldErrors.city} />
-            <FormField label="State" name="state" value={formData.state} onChange={handleChange} placeholder="Enter state" error={fieldErrors.state} />
-            <div className="md:col-span-2">
-              <FormField label="Zip Code" name="zipCode" value={formData.zipCode} onChange={handleChange} placeholder="Enter zip code" error={fieldErrors.zipCode} />
+          )}
+          {message && (
+            <div className="mb-4 p-3 bg-green-100 border border-green-300 text-green-700 rounded-lg">
+              {message}
             </div>
-          </div>
+          )}
 
-          {/* Submit Button */}
-          <div className="pt-4 text-center">
+          {/* FORM */}
+          <form onSubmit={handleSubmit} className="space-y-10">
+
+            {/* SECTION: BASIC INFO */}
+            <div>
+              <h2 className="section-title">Basic Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                <Input name="full_name" value={form.full_name} onChange={handleChange} placeholder="Full Name" required/>
+                <Input name="email" value={form.email} onChange={handleChange} placeholder="Email Address" required/>
+              </div>
+
+              <Input 
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Password"
+                required
+                className="mt-4"
+              />
+            </div>
+
+            {/* SECTION: PROFESSIONAL INFO */}
+            <div>
+              <h2 className="section-title">Professional Information</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                <Input name="qualification" placeholder="Qualification" value={form.qualification} onChange={handleChange}/>
+                <Input name="license_number" placeholder="License Number" value={form.license_number} onChange={handleChange}/>
+              </div>
+
+              <Input
+                className="mt-4"
+                name="specialization"
+                placeholder="Specializations (comma separated)"
+                value={form.specialization}
+                onChange={handleChange}
+              />
+
+              <Input
+                className="mt-4"
+                type="number"
+                name="experience_years"
+                placeholder="Experience (years)"
+                value={form.experience_years}
+                onChange={handleChange}
+              />
+
+              <Textarea
+                className="mt-4"
+                name="profile_bio"
+                placeholder="Short professional bio"
+                value={form.profile_bio}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* SECTION: CONTACT */}
+            <div>
+              <h2 className="section-title">Contact Details</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                <Input name="contact_email" placeholder="Professional Email" value={form.contact_email} onChange={handleChange}/>
+                <Input name="contact_number" placeholder="Phone Number" value={form.contact_number} onChange={handleChange}/>
+              </div>
+            </div>
+
+            {/* SECTION: FEES – REPLACED WITH DROPDOWN + TABLE */}
+            <div>
+              <h2 className="section-title">Consultation Fees</h2>
+
+              {/* Dropdown to select appointment type */}
+              <div className="mt-4">
+                <select
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none"
+                  onChange={handleAppointmentSelect}
+                >
+                  <option value="" disabled>
+                    Choose appointment type
+                  </option>
+                  {appointmentTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Table of selected appointment types */}
+              {selectedAppointments.length > 0 && (
+                <div className="mt-6 overflow-x-auto">
+                  <table className="min-w-full border border-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200">
+                          Appointment Type
+                        </th>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200">
+                          Duration
+                        </th>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200">Fee</th>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200">
+                          Max attendees
+                        </th>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedAppointments.map((appt) => (
+                        <tr key={appt.id}>
+                          <td className="px-4 py-2 border-b  border-gray-200">{appt.name}</td>
+                          <td className="px-4 py-2 border-b  border-gray-200">
+                            {appt.duration_mins} min
+                          </td>
+                          <td className="px-4 py-2 border-b  border-gray-200">
+                            <input
+                              type="number"
+                              className="w-24 px-2 py-1 rounded border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none"
+                              value={appt.base_fee}
+                              onChange={(e) =>
+                                handleAppointmentFeeChange(
+                                  appt.id,
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="px-4 py-2 border-b  border-gray-200">
+                            {appt.max_attendee}
+                          </td>
+                          <td className="px-4 py-2 border-b  border-gray-200">
+                            <button
+                            type="button"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() =>
+                              setSelectedAppointments(prev =>
+                                prev.filter(item => item.id !== appt.id)
+                              )
+                            }
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* SECTION: AVAILABILITY */}
+            <div>
+              <h2 className="section-title">Availability</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                <Input
+                  type="time"
+                  name="start_time"
+                  value={form.availability.start_time}
+                  onChange={handleAvailabilityChange}
+                  label="Start Time"
+                />
+                <Input
+                  type="time"
+                  name="end_time"
+                  value={form.availability.end_time}
+                  onChange={handleAvailabilityChange}
+                  label="End Time"
+                />
+              </div>
+
+              <p className="font-medium text-gray-700 mt-4 mb-2">Days Unavailable</p>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {weekdays.map((day) => (
+                  <label key={day} className="flex gap-2 items-center">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={form.availability.days_unavailable.includes(day)}
+                      onChange={() => toggleDayUnavailable(day)}
+                    />
+                    <span className="text-gray-700">{day}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* SUBMIT */}
             <button
               type="submit"
-              disabled={isLoading}
-              className="px-10 py-3 text-white font-extrabold text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.03] active:scale-[0.99] w-full md:w-auto disabled:opacity-50"
-              style={{ background: 'rgba(0, 139, 181, 0.89)' }}
+              disabled={loading}
+              className="w-full bg-teal-600 text-white py-3 rounded-xl text-lg font-semibold hover:bg-teal-700 transition"
             >
-              {isLoading ? 'Saving...' : 'Complete Profile & Continue'}
+              {loading ? "Registering…" : "Register Practitioner"}
             </button>
-          </div>
-        </form>
+
+          </form>
+        </div>
       </div>
     </div>
   );
-};
+}
 
-export default DetailedRegistrationPage;
+/* ---------------- REUSABLE COMPONENTS ---------------- */
+
+function Input({ label, className = "", ...props }: any) {
+  return (
+    <div className={className}>
+      {label && <label className="text-gray-700 font-medium mb-1 block">{label}</label>}
+      <input
+        {...props}
+        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none text-gray-800"
+      />
+    </div>
+  );
+}
+
+function Textarea({ label, className = "", ...props }: any) {
+  return (
+    <div className={className}>
+      {label && <label className="text-gray-700 font-medium mb-1 block">{label}</label>}
+      <textarea
+        {...props}
+        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none text-gray-800 h-28"
+      />
+    </div>
+  );
+}

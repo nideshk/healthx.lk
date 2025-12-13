@@ -6,3 +6,12 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: (string | undefined | null | boolean)[]) {
   return twMerge(clsx(inputs));
 }
+
+export const formatLocalDateTime = (utcString: string) =>
+  new Date(utcString).toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+
+  
