@@ -6,9 +6,7 @@ export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { authorized, response, user } = await requireUser();
-  if (!authorized) return response;
-
+ 
   try {
     const id = (await context.params).id;
 
@@ -18,10 +16,6 @@ export async function GET(
         { status: 400 }
       );
     }
-
-    console.log(
-      `🔍 Fetching practitioner ID: ${id} for user: ${user?.auth_user_id} (${user?.role})`
-    );
 
     // ------------------------------------------------
     // FETCH PRACTITIONER
@@ -62,41 +56,6 @@ export async function GET(
       }));
     }
 
-    // ----------------------------------------------------------
-    // ROLE-BASED RESPONSES
-    // ----------------------------------------------------------
-
-    //
-    // 👉 PATIENT — PUBLIC SAFE VIEW
-    //
-    if (user?.role === "patient") {
-      return NextResponse.json({
-        success: true,
-        practitioner: {
-          id: practitioner.id,
-          full_name: practitioner.full_name,
-          specialization: practitioner.specialization,
-          profile_bio: practitioner.profile_bio,
-          experience_years: practitioner.experience_years,
-          profile_image: practitioner.profile_picture_url,
-          appointment_types: appointmentTypes,
-        },
-      });
-    }
-
-    //
-    // 👉 PRACTITIONER — SELF ONLY
-    //
-    if (user?.role === "practitioner" && user?.practitioner_id !== id) {
-      return NextResponse.json(
-        { error: "You cannot view another practitioner's profile" },
-        { status: 403 }
-      );
-    }
-
-    //
-    // 👉 PRACTITIONER (self) OR ADMIN → full details
-    //
     return NextResponse.json({
       success: true,
       practitioner: {
@@ -116,7 +75,6 @@ export async function GET(
         available_services: practitioner.available_services,
         appointment_types: appointmentTypes,
       },
-      requested_by: user?.auth_user_id,
     });
   } catch (error: any) {
     console.error("❌ Practitioner fetch failed:", error);

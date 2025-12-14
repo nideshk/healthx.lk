@@ -2,12 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useModalStore } from "@/store/useModalStore";
 import { supabaseClient } from "@/lib/supabaseClient";
 import Modal from "@/components/atom/Modal/Modal";
 import SignupForm from "@/components/form/SignupForm";
 
+/* ===================================================== */
+
 export default function Header() {
+  const router = useRouter();
+
   const {
     isLoginModalOpen,
     isSignupModalOpen,
@@ -20,7 +25,7 @@ export default function Header() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load session
+  /* ---------------- Load session ---------------- */
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabaseClient.auth.getUser();
@@ -38,40 +43,71 @@ export default function Header() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  /* ---------------- LOGIN ---------------- */
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     const form = e.currentTarget;
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement)
       .value;
+
     try {
+      // 1️⃣ Authenticate
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
+
+      // 2️⃣ Ensure session is available
       await supabaseClient.auth.getSession();
       setUser(data.user);
+
+      // 3️⃣ CHECK FOR BOOKING DRAFT (GUEST → AUTH TRANSFER)
+      const draftRaw = localStorage.getItem("bookingDraft");
+
+      if (draftRaw) {
+        const draftData = JSON.parse(draftRaw);
+
+        // Upload to backend
+        await fetch("/api/booking/appointment/draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: draftData }),
+        });
+
+        // Clean guest storage
+        localStorage.removeItem("bookingDraft");
+
+        closeLoginModal();
+
+        // 🚀 Resume booking → Step 3
+        router.push("/book");
+        return;
+      }
+
+      // 4️⃣ No draft → normal flow
       closeLoginModal();
+      router.push("/dashboard");
     } catch (err: any) {
       alert(err.message);
     }
   };
 
-  // LOGOUT FUNCTION
- const handleLogout = async () => {
-  console.log("Logging out...");
-  try {
-    await fetch("/api/auth/logout", { method: "POST" });
-    localStorage.removeItem("user_role"); // Remove cached role if any
-    window.location.reload();
-  } catch (err) {
-    console.error("Logout error:", err);
-  }
-};
-
+  /* ---------------- LOGOUT ---------------- */
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      localStorage.removeItem("user_role");
+      window.location.reload();
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+  };
 
   if (loading) return null;
 
@@ -149,7 +185,6 @@ export default function Header() {
           </div>
         </form>
 
-        {/* switch to signup */}
         <p className="text-sm text-center mt-4">
           Don’t have an account?{" "}
           <button
