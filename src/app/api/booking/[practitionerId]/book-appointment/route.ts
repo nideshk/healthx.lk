@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { sendNotification } from "@/lib/notifications/sendNotification";
 
 export const runtime = "nodejs";
 
@@ -231,6 +232,23 @@ export async function POST(
         .from("appointment_draft")
       .update({ status: "USED", updated_at: new Date().toISOString() })
         .eq("patient_id", patient_id);
+
+    // 8️⃣ Send appointment confirmation notification
+await sendNotification({
+  userId: user.auth_user_id, // auth.users.id
+  role: "patient",
+  eventType: "appointment_confirmed",
+  title: "Appointment Confirmed",
+  message: `Your appointment is confirmed on ${new Date(starts_at).toLocaleString()}`,
+  payload: {
+    email: user.user.email,                // for email
+    phone: "+917899416499",       // for SMS
+    appointment_id: appointment.id,
+    practitioner_id: practitionerId,
+    starts_at,
+    ends_at,
+  },
+});
 
     return NextResponse.json({
       success: true,

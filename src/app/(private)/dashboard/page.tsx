@@ -11,7 +11,7 @@ import Loader from "@/components/atom/Loader/Loader";
 export default function DashboardPage() {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => {
     async function loadRole() {
       // 1️⃣ Check localStorage cache
@@ -26,9 +26,16 @@ export default function DashboardPage() {
       try {
         const res = await axios.get("/api/auth/me");
         const r = res.data?.user?.role;
-
+        let userid ;
+        if(role === "patient"){
+         userid = res.data?.user?.patient_id;
+        }
+        else if(role === "practitioner"){
+         userid = res.data?.user?.practitioner_id;
+        }
         if (r) {
           localStorage.setItem("user_role", r); // Cache role
+          localStorage.setItem("user_id", userid); // Cache user id
           setRole(r);
         }
       } catch (err) {
