@@ -23,7 +23,8 @@ export async function POST(req: Request) {
       fees,
       available_services,
       profile_picture_url,
-      availability
+      availability,
+      bank_details
     } = body;
 
     if (!email || !password || !full_name) {
@@ -99,6 +100,29 @@ export async function POST(req: Request) {
     }
 
     const practitioner_id = practitionerRow.id;
+
+    if (bank_details) {
+      const { error: bankErr } = await supabaseAdmin
+        .from("practitioner_bank_details")
+        .insert({
+          practitioner_id,
+          account_holder_name: bank_details.account_name,
+          bank_name: bank_details.bank_name,
+          account_number: bank_details.account_number,
+          branch_name: bank_details.branch_location ?? null,
+          branch_address: bank_details.branch_address ?? null, // ✅
+          ifsc_code: bank_details.ifsc_code ?? null,
+          swift_code: bank_details.swift_code ?? null,
+          is_default: true, 
+        });
+
+      if (bankErr) {
+        return NextResponse.json(
+          { error:  bankErr },
+          { status: 500 }
+        );
+      }
+    }
 
     // 5️⃣ Insert availability
     if (availability) {

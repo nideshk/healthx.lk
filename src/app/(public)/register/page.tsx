@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChevronDown, X } from "lucide-react";
+
 
 
 type AppointmentType = {
@@ -10,6 +11,14 @@ type AppointmentType = {
   duration_mins: number;
   base_fee: number | string;   // number from API, becomes string when edited
   max_attendee: number;        // note: from API it's "max_attendee"
+  platform_fee: number;
+  extra_fee_per_attendee: number;
+};
+
+type Specialization = {
+  id: string;
+  name: string;
+  active: boolean;
 };
 
 export default function PractitionerRegisterPage() {
@@ -22,7 +31,7 @@ export default function PractitionerRegisterPage() {
     password: "",
     full_name: "",
     qualification: "",
-    specialization: "",
+    specialization: [] as string[],
     license_number: "",
     experience_years: "",
     contact_email: "",
@@ -31,6 +40,15 @@ export default function PractitionerRegisterPage() {
     available_services: "",
     fees: "",
     profile_picture_url: "",
+    bank_details: {
+    bank_name: "",
+    account_name: "",
+    branch_location: "",
+    account_number: "",
+    ifsc_code: "",  
+    swift_code: "",
+    branch_address: ""
+    },
     availability: {
       start_time: "09:00",
       end_time: "18:00",
@@ -41,12 +59,29 @@ export default function PractitionerRegisterPage() {
   // NEW: selected appointment types & editable fees
   const [selectedAppointments, setSelectedAppointments] = useState<AppointmentType[]>([]);
   const [appointmentTypes, setAppointmentTypes] = useState<AppointmentType[]>([]);
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [isSpecOpen, setIsSpecOpen] = useState(false);
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     setForm((prev: any) => ({ ...prev, [name]: value }));
   };
 
   useEffect(() => {
+    const fetchSpecializations = async () => {
+    try {
+      const res = await fetch("/api/specialisation");
+      if (!res.ok) {
+        console.error("Failed to fetch specializations");
+        return;
+      }
+
+      const data = await res.json();
+      setSpecializations(data.services || []);
+    } catch (err) {
+      console.error("Error fetching specializations", err);
+    }
+    };
+
     const fetchAppointmentTypes = async () => {
       try {
         const res = await fetch("/api/appointment/appointment_type");
@@ -69,15 +104,38 @@ export default function PractitionerRegisterPage() {
       }
     };
 
+    fetchSpecializations();
     fetchAppointmentTypes();
   }, []);
 
+  const toggleSpecialization = (name: string) => {
+    setForm(prev => {
+      const exists = prev.specialization.includes(name);
+      return {
+        ...prev,
+        specialization: exists
+          ? prev.specialization.filter(s => s !== name)
+          : [...prev.specialization, name],
+      };
+    });
+  };
 
   const handleAvailabilityChange = (e: any) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
       availability: { ...prev.availability, [name]: value },
+    }));
+  };
+
+  const handleBankChange = (e: any) => {
+  const { name, value } = e.target;
+  setForm((prev: any) => ({
+      ...prev,
+      bank_details: {
+        ...prev.bank_details,
+        [name]: value,
+      },
     }));
   };
 
@@ -124,6 +182,18 @@ export default function PractitionerRegisterPage() {
     );
   };
 
+  const handleSpecializationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedNames = Array.from(
+      e.target.selectedOptions,
+      option => option.value
+    );
+
+    setForm(prev => ({
+      ...prev,
+      specialization: selectedNames,
+    }));
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
@@ -133,7 +203,7 @@ export default function PractitionerRegisterPage() {
     try {
       const payload = {
         ...form,
-        specialization: form.specialization.split(",").map((s) => s.trim()),
+        specialization: form.specialization,
         experience_years: Number(form.experience_years),
         available_services: selectedAppointments.map(a => a.id),
         fees: selectedAppointments.reduce((acc: any, appt) => ({
@@ -142,9 +212,20 @@ export default function PractitionerRegisterPage() {
           type: appt.name,
           duration_mins: appt.duration_mins,
           max_attendees: appt.max_attendee,
-          fee: Number(appt.base_fee || 0)
+          fee: Number(appt.base_fee || 0),
+          platform_fee: Number(appt.platform_fee || 0),
+          extra_fee_per_attendee: Number(appt.extra_fee_per_attendee || 0)
         }
-      }), {} as any)
+      }), {} as any),
+      bank_details: {
+          bank_name: form.bank_details.bank_name,
+          account_name: form.bank_details.account_name,
+          branch_location: form.bank_details.branch_location,
+          account_number: form.bank_details.account_number,
+          ifsc_code: form.bank_details.ifsc_code || null,
+          swift_code: form.bank_details.swift_code || null,
+          branch_address: form.bank_details.branch_address || null
+        }
       };
 
       const res = await fetch("/api/auth/register-practitioner", {
@@ -224,13 +305,62 @@ export default function PractitionerRegisterPage() {
                 <Input name="license_number" placeholder="License Number" value={form.license_number} onChange={handleChange}/>
               </div>
 
-              <Input
-                className="mt-4"
-                name="specialization"
-                placeholder="Specializations (comma separated)"
-                value={form.specialization}
-                onChange={handleChange}
-              />
+              {/* MULTI SELECT DROP DOWN */}
+              <div className="mt-4 relative">
+                <label className="text-gray-700 font-medium mb-1 block">
+                  Specializations
+                </label>
+
+                {/* Input box */}
+                <div className="w-full min-h-[44px] px-3 py-2 rounded-lg border border-gray-300 bg-white flex items-center justify-between focus-within:ring-2 focus-within:ring-teal-500">
+                  
+                  {/* Selected chips */}
+                  <div className="flex flex-wrap gap-2">
+                    {form.specialization.length === 0 ? (
+                      <span className="text-gray-400">Select specializations</span>
+                    ) : (
+                      form.specialization.map(name => (
+                        <span
+                          key={name}
+                          className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm"
+                        >
+                          {name}
+                        </span>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Toggle button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsSpecOpen(prev => !prev)}
+                    className="ml-2 text-gray-500 hover:text-gray-700"
+                  >
+                    {isSpecOpen ? <X size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                </div>
+
+                {/* Dropdown */}
+                {isSpecOpen && (
+                  <div className="absolute z-20 mt-2 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg">
+                    {specializations
+                      .filter(spec => spec.active)
+                      .map(spec => (
+                        <label
+                          key={spec.id}
+                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={form.specialization.includes(spec.name)}
+                            onChange={() => toggleSpecialization(spec.name)}
+                          />
+                          <span className="text-gray-700">{spec.name}</span>
+                        </label>
+                      ))}
+                  </div>
+                )}
+              </div>
 
               <Input
                 className="mt-4"
@@ -247,6 +377,7 @@ export default function PractitionerRegisterPage() {
                 placeholder="Short professional bio"
                 value={form.profile_bio}
                 onChange={handleChange}
+                textareaClassName = "h-28"
               />
             </div>
 
@@ -344,6 +475,69 @@ export default function PractitionerRegisterPage() {
               )}
             </div>
 
+            {/* SECTION: BANK DETAILS */}
+            <div>
+              <h2 className="section-title">Bank Details</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Payment information for consultation fees
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                <Input
+                  name="bank_name"
+                  placeholder="Bank Name"
+                  value={form.bank_details.bank_name}
+                  onChange={handleBankChange}
+                  required
+                />
+
+                <Input
+                  name="account_name"
+                  placeholder="Account Name"
+                  value={form.bank_details.account_name}
+                  onChange={handleBankChange}
+                  required
+                />
+
+                <Input
+                  name="branch_location"
+                  placeholder="Branch Location"
+                  value={form.bank_details.branch_location}
+                  onChange={handleBankChange}
+                />
+
+                <Input
+                  name="account_number"
+                  placeholder="Account Number"
+                  value={form.bank_details.account_number}
+                  onChange={handleBankChange}
+                  required
+                />
+
+                <Input
+                  name="ifsc_code"
+                  placeholder="IFSC Code"
+                  value={form.bank_details.ifsc_code}
+                  onChange={handleBankChange}
+                />
+
+                <Input
+                  name="swift_code"
+                  placeholder="SWIFT Code (optional)"
+                  value={form.bank_details.swift_code}
+                  onChange={handleBankChange}
+                />
+              </div>
+              <Textarea
+                  name="branch_address"
+                  placeholder="Branch Address"
+                  value={form.bank_details.branch_address}
+                  onChange={handleBankChange}
+                  className = "mt-4"
+                  textareaClassName="h-20"
+                />
+            </div>
+
             {/* SECTION: AVAILABILITY */}
             <div>
               <h2 className="section-title">Availability</h2>
@@ -412,13 +606,13 @@ function Input({ label, className = "", ...props }: any) {
   );
 }
 
-function Textarea({ label, className = "", ...props }: any) {
+function Textarea({ label, className = "", textareaClassName = "", ...props }: any) {
   return (
     <div className={className}>
       {label && <label className="text-gray-700 font-medium mb-1 block">{label}</label>}
       <textarea
         {...props}
-        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none text-gray-800 h-28"
+        className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none text-gray-800 ${textareaClassName}`}
       />
     </div>
   );
