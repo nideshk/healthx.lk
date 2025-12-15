@@ -56,7 +56,7 @@ const DoctorSelectionStep = forwardRef(
       const mapped = res.data.practitioners.map((p: any) => ({
         id: p.id,
         name: p.full_name,
-        registration: p.license_number,
+        license_number: p.license_number,
         email: p.contact_email,
         qualification: p.qualification,
         profileImage: p.profile_picture_url || '/images/default-doctor.png',

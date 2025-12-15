@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/authGuard";
 import { supabaseClient } from "@/lib/supabaseClient";
 
 export async function GET(
@@ -60,11 +59,13 @@ export async function GET(
       success: true,
       practitioner: {
         id: practitioner.id,
+        gender: practitioner.gender,
+        license_number : practitioner.license_number,
+        contact_number : practitioner.contact_number,
+        contact_email : practitioner.contact_email,
         full_name: practitioner.full_name,
         first_name: practitioner.first_name || null,
-        last_name: practitioner.last_name || null,
-        contact_number: practitioner.contact_number,
-        contact_email: practitioner.contact_email,
+        last_name: practitioner.last_name || null,        
         profile_bio: practitioner.profile_bio,
         specialization: practitioner.specialization,
         qualifications: practitioner.qualification,
