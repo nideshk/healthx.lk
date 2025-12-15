@@ -115,7 +115,7 @@ function ReschedulePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ---------------- HEADER ---------------- */}
-      <div className="bg-white border-b p-6">
+      <div className="bg-white shadow-xl rounded-b-2xl p-6">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1 text-gray-600 hover:text-black mb-3"
@@ -142,7 +142,7 @@ function ReschedulePage() {
 
       {/* ---------------- ORIGINAL APPT SUMMARY ---------------- */}
       <div className="mx-auto max-w-4xl p-6">
-        <div className="bg-white shadow-sm rounded-xl p-5 border">
+        <div className="bg-white shadow-sm rounded-xl p-5 ">
           <h2 className="font-semibold text-lg mb-3">Current Appointment</h2>
 
           <div className="flex items-center gap-4">
@@ -180,7 +180,7 @@ function ReschedulePage() {
         </div>
 
         {/* ---------------- RESELECTION UI ---------------- */}
-        <div className="mt-6 bg-white border rounded-xl shadow-sm">
+        <div className="mt-6 bg-white rounded-xl shadow-sm">
           <BookAppointmentStep
             ref={stepRef}
             bookingData={bookingData}

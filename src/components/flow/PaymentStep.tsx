@@ -91,7 +91,7 @@ const PaymentStep = forwardRef(
     const service = bookingData.selectedService;
     const pre = bookingData.pre_consultation || {};
     const consent = bookingData.consent || {};
-
+    console.log("Rendering PaymentStep with bookingData:", doctor);
     return (
       <div className="min-h-screen py-10 px-4 bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="max-w-7xl mx-auto">
@@ -126,11 +126,8 @@ const PaymentStep = forwardRef(
                     className="w-16 h-16 rounded-xl object-cover border"
                   />
                   <div>
-                    <p className="text-lg font-semibold">{doctor?.name}</p>
-                    <p className="text-sm text-gray-600">{doctor?.qualification}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Reg: {doctor?.registration}
-                    </p>
+                    <p className="text-lg font-semibold">{doctor?.full_name}</p>
+                    <p className="text-sm text-gray-600">{doctor?.profile_bio}</p>
                   </div>
                 </div>
               </div>
@@ -192,7 +189,7 @@ const PaymentStep = forwardRef(
               </div>
               <div className='shadow-sm p-4 rounded-lg bg-white/60 backdrop-blur-md'>
                 <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                 Additional Attendees ({attendeeCount})
+                 Additional Attendees ({attendeeCount > 1 ? attendeeCount - 1 : 0})
                 </h3>
                 <ul className="list-disc list-inside space-y-1">
                   {attendeeList.length > 0 ? (
