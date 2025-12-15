@@ -57,6 +57,7 @@ export default function Header() {
     const toastId = toast.loading("Signing you in...");
 
     try {
+      // 1️⃣ Authenticate
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,12 +67,33 @@ export default function Header() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
 
-      // Ensure session is synced
+      // 2️⃣ Ensure session is synced
       await supabaseClient.auth.getSession();
       setUser(data.user);
 
+      // 3️⃣ Check for guest booking draft
+      let hasDraft = false;
+      const draftRaw = localStorage.getItem("bookingDraft");
+
+      if (draftRaw) {
+        try {
+          await fetch("/api/booking/appointment/draft", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: JSON.parse(draftRaw) }),
+          });
+
+          localStorage.removeItem("bookingDraft");
+          hasDraft = true;
+        } catch (err) {
+          console.error("Failed to restore booking draft", err);
+        }
+      }
+
       toast.update(toastId, {
-        render: "Welcome back 👋",
+        render: hasDraft
+          ? "Welcome back! Resuming your booking…"
+          : "Welcome back 👋",
         type: "success",
         isLoading: false,
         autoClose: 2000,
@@ -79,10 +101,10 @@ export default function Header() {
 
       closeLoginModal();
 
-      // Small delay so modal closes smoothly
+      // 4️⃣ Redirect
       setTimeout(() => {
-        router.push("/dashboard");
-      }, 500);
+        router.push(hasDraft ? "/appointment" : "/dashboard");
+      }, 600);
     } catch (err: any) {
       toast.update(toastId, {
         render: err.message || "Login failed",
@@ -99,7 +121,7 @@ export default function Header() {
       await fetch("/api/auth/logout", { method: "POST" });
       localStorage.removeItem("user_role");
       window.location.reload();
-    } catch (err) {
+    } catch {
       toast.error("Logout failed");
     }
   };
@@ -119,18 +141,10 @@ export default function Header() {
 
           {/* DESKTOP NAV */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/dashboard" className="nav-link">
-              Home
-            </Link>
-            <Link href="/about" className="nav-link">
-              Our Story
-            </Link>
-            <Link href="/how-to" className="nav-link">
-              How To
-            </Link>
-            <Link href="/help" className="nav-link">
-              Help
-            </Link>
+            <Link href="/dashboard" className="nav-link">Home</Link>
+            <Link href="/about" className="nav-link">Our Story</Link>
+            <Link href="/how-to" className="nav-link">How To</Link>
+            <Link href="/help" className="nav-link">Help</Link>
           </nav>
 
           {/* DESKTOP AUTH */}
@@ -171,18 +185,10 @@ export default function Header() {
         {mobileOpen && (
           <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-4">
             <nav className="flex flex-col gap-3">
-              <Link onClick={() => setMobileOpen(false)} href="/dashboard">
-                Home
-              </Link>
-              <Link onClick={() => setMobileOpen(false)} href="/about">
-                Our Story
-              </Link>
-              <Link onClick={() => setMobileOpen(false)} href="/how-to">
-                How To
-              </Link>
-              <Link onClick={() => setMobileOpen(false)} href="/help">
-                Help
-              </Link>
+              <Link onClick={() => setMobileOpen(false)} href="/dashboard">Home</Link>
+              <Link onClick={() => setMobileOpen(false)} href="/about">Our Story</Link>
+              <Link onClick={() => setMobileOpen(false)} href="/how-to">How To</Link>
+              <Link onClick={() => setMobileOpen(false)} href="/help">Help</Link>
             </nav>
 
             <div className="pt-3 border-t border-gray-100">
