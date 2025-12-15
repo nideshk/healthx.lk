@@ -34,6 +34,11 @@ export interface AppointmentType{
 export interface Doctor {
   id: string;
   price : number;
+  profile_bio: string;
+  contact_email : string;
+  contact_number : string;
+  specialization : string;
+  license_number : string;
   name: string;
   full_name : string;
   registration: string;
