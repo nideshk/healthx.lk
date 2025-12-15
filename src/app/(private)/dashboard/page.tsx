@@ -7,11 +7,12 @@ import AdminDashboard from "@/components/dashboard/admin/AdminDashboard";
 import PatientDashboard from "@/components/dashboard/patient/PatientDashboard";
 import PractitionerDashboard from "@/components/dashboard/practitioner/PractitionerDashboard";
 import Loader from "@/components/atom/Loader/Loader";
+import { redirect } from "next/navigation";
+import { toast } from "react-toastify";
 
 export default function DashboardPage() {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     async function loadRole() {
       // 1️⃣ Check localStorage cache
@@ -26,13 +27,20 @@ export default function DashboardPage() {
       try {
         const res = await axios.get("/api/auth/me");
         const r = res.data?.user?.role;
-
+        let userid ;
+        if(role === "patient"){
+         userid = res.data?.user?.patient_id;
+        }
+        else if(role === "practitioner"){
+         userid = res.data?.user?.practitioner_id;
+        }
         if (r) {
           localStorage.setItem("user_role", r); // Cache role
+          localStorage.setItem("user_id", userid); // Cache user id
           setRole(r);
         }
       } catch (err) {
-        console.error("Error fetching user role", err);
+        toast.error("Please login to access the dashboard.");
         setRole(null);
       } finally {
         setLoading(false);
@@ -52,13 +60,15 @@ export default function DashboardPage() {
   }
 
   // 4️⃣ Role-Based Rendering
-  if (role === "patient") return <PatientDashboard />;
-  if (role === "practitioner") return <PractitionerDashboard />;
-  if (role === "admin") return <AdminDashboard />;
-
-  return (
-    <div className="p-10 text-red-600 text-center">
-      Unable to determine user role.
-    </div>
-  );
+  if (role === "patient") {
+    return <PatientDashboard />;}
+  if (role === "practitioner"){ 
+    return <PractitionerDashboard />;
+  }
+  if  (role === "admin") {
+    return <AdminDashboard />;
+  }
+  else{
+    redirect("/")
+  }
 }

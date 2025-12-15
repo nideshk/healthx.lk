@@ -11,12 +11,12 @@ type Appointment = {
   starts_at: string;
   ends_at?: string;
   status: string;
+  telehealth_url: string;
   cancellation_reason?: string | null;
   appointment_type?: { id?: string; name?: string; duration_mins?: number };
   practitioner?: {
     id?: string;
     full_name?: string;
-    profile_picture_url?: string;
     specialization?: string[];
   };
 };
@@ -26,10 +26,9 @@ function formatTimeLeft(targetIso: string) {
   const now = Date.now();
   const then = new Date(targetIso).getTime();
   const diff = then - now;
-
   if (diff <= 0) return "Now";
 
-  const mins = Math.floor(diff / (1000 * 60));
+  const mins = Math.floor(diff / 60000);
   if (mins < 60) return `${mins}m`;
 
   const hours = Math.floor(mins / 60);
@@ -40,13 +39,13 @@ function formatTimeLeft(targetIso: string) {
 }
 
 export default function PatientDashboardApple() {
+  const [ongoing, setOngoing] = useState<Appointment[]>([]);
   const [upcoming, setUpcoming] = useState<Appointment[]>([]);
   const [past, setPast] = useState<Appointment[]>([]);
   const [cancelled, setCancelled] = useState<Appointment[]>([]);
   const [draft, setDraft] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  /* Refresh countdown */
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setTick((t) => t + 1), 30000);
@@ -61,6 +60,7 @@ export default function PatientDashboardApple() {
         const res = await fetch("/api/booking/appointment");
         const json = await res.json();
 
+        setOngoing(json.ongoing || []);
         setUpcoming(json.upcoming || []);
         setPast(json.past || []);
         setCancelled(json.cancelled || []);
@@ -81,19 +81,17 @@ export default function PatientDashboardApple() {
     });
   }, []);
 
-  const next = upcoming[0] ?? null;
+  const next = ongoing[0] ?? upcoming[0] ?? null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f2f7ff] via-white to-[#fff7fb] py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto">
 
         {/* HEADER */}
         <header className="flex items-center justify-between mb-10">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900">Welcome back 👋</h1>
-            <p className="text-gray-600 mt-1">
-              Your schedule and quick actions at a glance.
-            </p>
+            <p className="text-gray-600 mt-1">Your schedule and quick actions at a glance.</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -112,13 +110,12 @@ export default function PatientDashboardApple() {
           </div>
         </header>
 
-        {/* GRID LAYOUT */}
+        {/* GRID */}
         <div className="grid lg:grid-cols-3 gap-6">
 
           {/* SIDEBAR */}
           <aside className="lg:col-span-1 space-y-6">
 
-            {/* NEXT APPOINTMENT BLOCK */}
             <div className="sticky top-6 p-6 rounded-2xl bg-white/70 backdrop-blur-md shadow-lg ring-1 ring-white/50">
               <h3 className="text-sm font-semibold text-gray-600">Next Appointment</h3>
 
@@ -130,11 +127,30 @@ export default function PatientDashboardApple() {
               )}
             </div>
 
-            <QuickActions upcoming={upcoming.length} past={past.length} cancelled={cancelled.length} />
+            <QuickActions
+              upcoming={upcoming.length}
+              past={past.length}
+              cancelled={cancelled.length}
+              ongoing={ongoing.length}
+            />
           </aside>
 
           {/* MAIN CONTENT */}
           <main className="lg:col-span-2 space-y-10">
+
+            {/* ONGOING */}
+            <Section title="Ongoing" count={ongoing.length}>
+              {loading ? <LoadingList /> :
+                ongoing.length === 0 ? (
+                  <p className="text-gray-600">No ongoing appointments.</p>
+                ) : (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {ongoing.map((appt) => (
+                      <AppointmentCard key={appt.id} appt={appt} isOngoing />
+                    ))}
+                  </div>
+                )}
+            </Section>
 
             {/* UPCOMING */}
             <Section title="Upcoming" count={upcoming.length}>
@@ -143,6 +159,7 @@ export default function PatientDashboardApple() {
                   <p className="text-gray-600">No upcoming appointments.</p>
                 ) : (
                   <div className="grid sm:grid-cols-2 gap-4">
+                    
                     {upcoming.map((appt) => (
                       <AppointmentCard key={appt.id} appt={appt} />
                     ))}
@@ -177,7 +194,6 @@ export default function PatientDashboardApple() {
                   </div>
                 )}
             </Section>
-
           </main>
         </div>
       </div>
@@ -185,7 +201,7 @@ export default function PatientDashboardApple() {
   );
 }
 
-/* COMPONENTS */
+/* Supporting Components */
 
 function Section({ title, count, children }: any) {
   return (
@@ -226,8 +242,7 @@ function LoadingList() {
   );
 }
 
-/* Quick Actions */
-function QuickActions({ upcoming, past, cancelled }: any) {
+function QuickActions({ upcoming, past, cancelled , ongoing }: any) {
   return (
     <>
       <div className="p-4 rounded-2xl bg-white/70 backdrop-blur-md shadow ring-1 ring-white/50">
@@ -248,7 +263,8 @@ function QuickActions({ upcoming, past, cancelled }: any) {
       <div className="p-4 rounded-2xl bg-white/60 backdrop-blur-md shadow ring-1 ring-white/40">
         <h5 className="text-sm font-medium text-gray-700">This week</h5>
         <div className="mt-3 text-sm text-gray-800">
-          <p>{upcoming} upcoming appointments</p>
+          <p>{ongoing} ongoing appointments</p>
+          <p className="mt-1">{upcoming} upcoming appointments</p>
           <p className="mt-1">{past} past appointments</p>
           <p className="mt-1">{cancelled} cancelled appointments</p>
         </div>
@@ -257,7 +273,6 @@ function QuickActions({ upcoming, past, cancelled }: any) {
   );
 }
 
-/* Draft */
 function DraftCard() {
   return (
     <div className="mt-4 p-4 rounded-2xl bg-blue-50/70 border border-blue-100 backdrop-blur-lg shadow-sm">
@@ -279,11 +294,11 @@ function DraftCard() {
   );
 }
 
-/* Next appointment widget */
 function NextAppointmentCard({ appt }: { appt: Appointment }) {
   const start = new Date(appt.starts_at);
   const doctor = appt.practitioner || {};
 
+  console.log("Next appointment:", appt);
   return (
     <div className="mt-4">
       <div className="flex items-start gap-4">
@@ -309,19 +324,19 @@ function NextAppointmentCard({ appt }: { appt: Appointment }) {
   );
 }
 
-/* Appointment card */
-function AppointmentCard({ appt, isPast = false, isCancelled = false }: any) {
+function AppointmentCard({ appt, isPast = false, isCancelled = false, isOngoing = false }: any) {
   const start = new Date(appt.starts_at);
   const doc = appt.practitioner || {};
 
+  console.log("ongoing appointment:", appt);
+  const style = isCancelled
+    ? "bg-red-50 border border-red-200"
+    : isOngoing
+    ? "bg-green-50 border border-green-300 animate-pulse"
+    : "bg-white/60 ring-white/40 hover:shadow-lg";
+
   return (
-    <article
-      className={`p-4 rounded-2xl backdrop-blur-sm shadow ring-1 transition ${
-        isCancelled
-          ? "bg-red-50 border border-red-200"
-          : "bg-white/60 ring-white/40 hover:shadow-lg"
-      }`}
-    >
+    <article className={`p-4 rounded-2xl backdrop-blur-sm shadow ring-1 transition ${style}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -346,10 +361,15 @@ function AppointmentCard({ appt, isPast = false, isCancelled = false }: any) {
                 Reason: {appt.cancellation_reason || "No reason provided"}
               </p>
             )}
+
+            {isOngoing && (
+              <p className="text-xs text-green-700 mt-1 font-medium">
+                In progress now
+              </p>
+            )}
           </div>
         </div>
 
-        {/* DATE/TIME */}
         <div className="text-right text-sm">
           <p className="font-semibold text-gray-800">
             {start.toLocaleDateString()}
@@ -360,8 +380,22 @@ function AppointmentCard({ appt, isPast = false, isCancelled = false }: any) {
         </div>
       </div>
 
-      {/* CTA Buttons */}
-      {!isPast && !isCancelled && (
+      {/* JOIN BUTTON FOR ONGOING APPOINTMENT */}
+      {isOngoing && (
+        <div className="mt-4">
+          <Link
+            href={`/appointment/meeting?room=${appt.telehealth_url}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 w-full block text-center rounded-lg bg-green-600 text-white font-semibold shadow hover:bg-green-700 transition"
+          >
+            Join Appointment
+          </Link>
+        </div>
+      )}
+
+      {/* Only show reschedule/details when not ongoing/past/cancelled */}
+      {!isPast && !isCancelled && !isOngoing && (
         <div className="mt-3 flex items-center gap-2 text-sm">
           <Link
             href={`/dashboard/reschedule/${appt.id}`}

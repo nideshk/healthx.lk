@@ -1,6 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Trash2 } from "lucide-react";
+
+
+type AppointmentType = {
+  id: string;
+  name: string;
+  duration_mins: number;
+  base_fee: number | string;   // number from API, becomes string when edited
+  max_attendee: number;        // note: from API it's "max_attendee"
+};
 
 export default function PractitionerRegisterPage() {
   const [loading, setLoading] = useState(false);
@@ -18,8 +28,8 @@ export default function PractitionerRegisterPage() {
     contact_email: "",
     contact_number: "",
     profile_bio: "",
-    solo_consultation_fee: "",
-    family_consultation_fee: "",
+    available_services: "",
+    fees: "",
     profile_picture_url: "",
     availability: {
       start_time: "09:00",
@@ -28,11 +38,40 @@ export default function PractitionerRegisterPage() {
       timezone: "Asia/Kolkata",
     },
   });
-
+  // NEW: selected appointment types & editable fees
+  const [selectedAppointments, setSelectedAppointments] = useState<AppointmentType[]>([]);
+  const [appointmentTypes, setAppointmentTypes] = useState<AppointmentType[]>([]);
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     setForm((prev: any) => ({ ...prev, [name]: value }));
   };
+
+  useEffect(() => {
+    const fetchAppointmentTypes = async () => {
+      try {
+        const res = await fetch("/api/appointment/appointment_type");
+        if (!res.ok) {
+          console.error("Failed to fetch appointment types");
+          return;
+        }
+
+        const data = await res.json();
+
+        // data.appointment_types comes in as base_fee: number, max_attendee: number
+        setAppointmentTypes(
+          (data.appointment_types || []).map((t: any) => ({
+            ...t,
+            base_fee: t.base_fee ?? 0, // ensure it's defined
+          }))
+        );
+      } catch (err) {
+        console.error("Error fetching appointment types", err);
+      }
+    };
+
+    fetchAppointmentTypes();
+  }, []);
+
 
   const handleAvailabilityChange = (e: any) => {
     const { name, value } = e.target;
@@ -57,6 +96,34 @@ export default function PractitionerRegisterPage() {
     });
   };
 
+  // NEW: when doctor chooses an appointment type from dropdown
+  const handleAppointmentSelect = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const id = e.target.value;
+    if (!id) return;
+
+    const type = appointmentTypes.find((t) => t.id === id);
+    if (!type) return;
+
+    setSelectedAppointments((prev) => {
+      if (prev.some((p) => p.id === type.id)) return prev; // avoid duplicates
+      return [...prev, { ...type }]; // clone so fee is editable
+    });
+
+    // reset dropdown to placeholder
+    e.target.value = "";
+  };
+
+  // NEW: edit fee in table
+  const handleAppointmentFeeChange = (id: string, value: string) => {
+    setSelectedAppointments((prev) =>
+      prev.map((appt) =>
+        appt.id === id ? { ...appt, base_fee: value } : appt
+      )
+    );
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
@@ -68,8 +135,16 @@ export default function PractitionerRegisterPage() {
         ...form,
         specialization: form.specialization.split(",").map((s) => s.trim()),
         experience_years: Number(form.experience_years),
-        solo_consultation_fee: Number(form.solo_consultation_fee),
-        family_consultation_fee: Number(form.family_consultation_fee),
+        available_services: selectedAppointments.map(a => a.id),
+        fees: selectedAppointments.reduce((acc: any, appt) => ({
+        ...acc,
+        [appt.id]: {
+          type: appt.name,
+          duration_mins: appt.duration_mins,
+          max_attendees: appt.max_attendee,
+          fee: Number(appt.base_fee || 0)
+        }
+      }), {} as any)
       };
 
       const res = await fetch("/api/auth/register-practitioner", {
@@ -185,13 +260,88 @@ export default function PractitionerRegisterPage() {
               </div>
             </div>
 
-            {/* SECTION: FEES */}
+            {/* SECTION: FEES – REPLACED WITH DROPDOWN + TABLE */}
             <div>
               <h2 className="section-title">Consultation Fees</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-                <Input name="solo_consultation_fee" type="number" placeholder="Solo Consultation Fee" value={form.solo_consultation_fee} onChange={handleChange}/>
-                <Input name="family_consultation_fee" type="number" placeholder="Family Consultation Fee" value={form.family_consultation_fee} onChange={handleChange}/>
+
+              {/* Dropdown to select appointment type */}
+              <div className="mt-4">
+                <select
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none"
+                  onChange={handleAppointmentSelect}
+                >
+                  <option value="" disabled>
+                    Choose appointment type
+                  </option>
+                  {appointmentTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {/* Table of selected appointment types */}
+              {selectedAppointments.length > 0 && (
+                <div className="mt-6 overflow-x-auto">
+                  <table className="min-w-full border border-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200">
+                          Appointment Type
+                        </th>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200">
+                          Duration
+                        </th>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200">Fee</th>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200">
+                          Max attendees
+                        </th>
+                        <th className="px-4 py-2 border-b text-left  border-gray-200"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedAppointments.map((appt) => (
+                        <tr key={appt.id}>
+                          <td className="px-4 py-2 border-b  border-gray-200">{appt.name}</td>
+                          <td className="px-4 py-2 border-b  border-gray-200">
+                            {appt.duration_mins} min
+                          </td>
+                          <td className="px-4 py-2 border-b  border-gray-200">
+                            <input
+                              type="number"
+                              className="w-24 px-2 py-1 rounded border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none"
+                              value={appt.base_fee}
+                              onChange={(e) =>
+                                handleAppointmentFeeChange(
+                                  appt.id,
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="px-4 py-2 border-b  border-gray-200">
+                            {appt.max_attendee}
+                          </td>
+                          <td className="px-4 py-2 border-b  border-gray-200">
+                            <button
+                            type="button"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() =>
+                              setSelectedAppointments(prev =>
+                                prev.filter(item => item.id !== appt.id)
+                              )
+                            }
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* SECTION: AVAILABILITY */}

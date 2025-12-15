@@ -1,0 +1,76 @@
+import { NextResponse } from "next/server";
+import { supabaseClient } from "@/lib/supabaseClient";
+import { requireUser } from "@/lib/authGuard";
+
+export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching)
+
+// Endpoint: /api/analytics/transactions/practitioner/[transaction_id]
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+    const { authorized, response, user } = await requireUser();
+    if (!authorized) return response;
+
+    // Check if the user has the 'practitioner' role
+    if (user?.profile?.role !== 'practitioner') {
+        return NextResponse.json(
+            { message: 'Access denied.' },
+            { status: 403 }
+        );
+    }
+
+    const { id: transactionId } = await context.params;
+    const practionerId = user?.practitioner_id;
+
+
+    if (!practionerId) {
+        return NextResponse.json({ error: "Practitioner ID not found for the user" }, { status: 403 });
+    }
+
+    console.log(`🔍 Fetching transactions for practitioner ID: ${practionerId} (User: ${user?.auth_user_id}, Role: ${user?.role})`);
+
+    try {
+        // Fetch the transaction by ID
+        const { data: transaction, error } = await supabaseClient
+            .from("transactions")
+            .select("*")
+            .eq("id", transactionId)
+            .single();
+
+        if (error) {
+            console.error('Database Error:', error);
+            if (error.code === 'PGRST116') {
+                return NextResponse.json({ message: 'Transaction not found.' }, { status: 404 });
+            }
+            return NextResponse.json(
+                { message: 'Failed to fetch practitioner transactions.' },
+                { status: 500 }
+            );
+        }
+
+        if (!transaction) {
+            return NextResponse.json({ message: 'Transaction not found.' }, { status: 404 });
+        }
+
+        if (String(transaction.practitioner_id) !== String(practionerId)) {
+            console.warn(`SECURITY ALERT: Practitioner ${user.auth_user_id} attempted to access transaction ${transactionId} not associated with them.`);
+
+            return NextResponse.json(
+                { message: 'Transaction not found.' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({
+            message: `Transaction fetched successfully.`,
+            count: 1,
+            data: transaction
+        })
+
+    } catch (error) {
+        console.error('API Handler Error:', error);
+        return NextResponse.json(
+            { message: 'An internal server error occurred.' },
+            { status: 500 }
+        );
+    }
+}
+

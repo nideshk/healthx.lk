@@ -74,12 +74,14 @@ export async function GET(
         success: true,
         practitioner: {
           id: practitioner.id,
+          license_number: practitioner.license_number,
           full_name: practitioner.full_name,
           specialization: practitioner.specialization,
           profile_bio: practitioner.profile_bio,
           experience_years: practitioner.experience_years,
           profile_image: practitioner.profile_picture_url,
           appointment_types: appointmentTypes,
+          gender: practitioner.gender,
         },
       });
     }
@@ -101,10 +103,12 @@ export async function GET(
       success: true,
       practitioner: {
         id: practitioner.id,
+        gender: practitioner.gender,
         full_name: practitioner.full_name,
         first_name: practitioner.first_name || null,
         last_name: practitioner.last_name || null,
         contact_number: practitioner.contact_number,
+        license_number: practitioner.license_number,
         contact_email: practitioner.contact_email,
         profile_bio: practitioner.profile_bio,
         specialization: practitioner.specialization,
