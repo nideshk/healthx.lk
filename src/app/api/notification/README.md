@@ -1,10 +1,14 @@
 # 📣 Using the Notification Module
 
-This document explains **how to use the notification system** inside the application.
+This document explains **how to correctly use the notification system** inside the application.
 
-> ⚠️ **Important:**
-> Application code must **never send emails or SMS directly**.
-> All notifications must be created using the `notify()` helper.
+> ⚠️ **Important**
+> Application code must **never**:
+>
+> * send emails or SMS directly
+> * choose notification channels manually
+>
+> All notifications must be sent using **`sendNotification()`**.
 
 ---
 
@@ -16,12 +20,18 @@ The notification system supports three delivery channels:
 * 📱 **SMS** (Twilio)
 * 🧠 **In-app notifications** (Supabase Realtime)
 
-All notifications follow this flow:
+Notifications are delivered asynchronously and respect:
+
+* notification type
+* user preferences
+* system-level rules
 
 ```
 Application Event
    ↓
-notify()
+sendNotification()
+   ↓
+notify() (internal)
    ↓
 notifications table
    ↓
@@ -32,58 +42,87 @@ Email / SMS / In-app
 
 ---
 
-## 2️⃣ The `notify()` function
+## 2️⃣ Public API: `sendNotification()`
 
 ### Location
 
 ```
-/lib/notify.ts
+/lib/notifications/sendNotification.ts
 ```
 
 ### Signature
 
 ```ts
-notify({
+sendNotification({
   userId,
   role,
   eventType,
   title,
   message,
-  channels,
   payload,
-  scheduledAt,
 });
 ```
 
 ### Parameters
 
-| Field         | Type                                             | Required | Description                       |
-| ------------- | ------------------------------------------------ | -------- | --------------------------------- |
-| `userId`      | `string`                                         | ✅        | Supabase `auth.users.id`          |
-| `role`        | `patient \| practitioner \| admin \| superadmin` | ✅        | Recipient role                    |
-| `eventType`   | `string`                                         | ✅        | Logical event identifier          |
-| `title`       | `string`                                         | ❌        | Notification title (email/in-app) |
-| `message`     | `string`                                         | ✅        | Main notification content         |
-| `channels`    | `Array<'email' \| 'sms' \| 'in_app'>`            | ✅        | Delivery channels                 |
-| `payload`     | `object`                                         | ❌        | Metadata (email, phone, IDs)      |
-| `scheduledAt` | `ISO string`                                     | ❌        | Future delivery time              |
+| Field       | Type                                             | Required | Description                  |
+| ----------- | ------------------------------------------------ | -------- | ---------------------------- |
+| `userId`    | `string`                                         | ✅        | Supabase `auth.users.id`     |
+| `role`      | `patient \| practitioner \| admin \| superadmin` | ✅        | Recipient role               |
+| `eventType` | `keyof EVENT_CATEGORY_MAP`                       | ✅        | Notification event           |
+| `title`     | `string`                                         | ❌        | Title (email / in-app)       |
+| `message`   | `string`                                         | ✅        | Notification content         |
+| `payload`   | `object`                                         | ❌        | Metadata (email, phone, IDs) |
 
 ---
 
-## 3️⃣ Basic usage examples
+## 3️⃣ Notification categories & preferences
+
+Each `eventType` maps to a **system-defined category**:
+
+* `transactional`
+* `reminder`
+* `info`
+* `marketing`
+
+Example mapping:
+
+```ts
+appointment_confirmed → transactional
+appointment_reminder  → reminder
+prescription_uploaded → info
+```
+
+### Channel selection rules
+
+Final delivery channels are determined by:
+
+```
+(notification category)
+∩
+(user preferences)
++
+(system overrides)
+```
+
+Application code **never** selects channels manually.
+
+---
+
+## 4️⃣ Usage examples (CORRECT)
 
 ### Appointment confirmed (Patient)
 
 ```ts
-await notify({
+await sendNotification({
   userId: patient.supabase_user_id,
   role: "patient",
   eventType: "appointment_confirmed",
   title: "Appointment Confirmed",
   message: "Your appointment has been confirmed.",
-  channels: ["email", "in_app"],
   payload: {
     email: patient.email,
+    phone: patient.contact_number,
     appointment_id: appointment.id,
   },
 });
@@ -94,31 +133,30 @@ await notify({
 ### Appointment reminder (30 minutes before)
 
 ```ts
-await notify({
+await sendNotification({
   userId: patient.supabase_user_id,
   role: "patient",
   eventType: "appointment_reminder",
   message: "Reminder: your appointment starts in 30 minutes.",
-  channels: ["sms", "in_app"],
   payload: {
     phone: patient.contact_number,
     appointment_id: appointment.id,
   },
-  scheduledAt: reminderTimeISO,
 });
 ```
+
+> ⏱ Reminder delivery timing is controlled by `scheduled_at` internally.
 
 ---
 
 ### New appointment (Practitioner)
 
 ```ts
-await notify({
+await sendNotification({
   userId: practitioner.supabase_user_id,
   role: "practitioner",
-  eventType: "new_appointment",
+  eventType: "appointment_created",
   message: "You have a new appointment scheduled.",
-  channels: ["in_app", "email"],
   payload: {
     email: practitioner.contact_email,
     appointment_id: appointment.id,
@@ -131,13 +169,12 @@ await notify({
 ### System alert (Admin)
 
 ```ts
-await notify({
+await sendNotification({
   userId: adminUserId,
   role: "admin",
   eventType: "doctor_no_show",
   title: "Doctor No-Show",
   message: "A practitioner did not join the scheduled consultation.",
-  channels: ["in_app"],
   payload: {
     appointment_id: appointment.id,
   },
@@ -146,11 +183,30 @@ await notify({
 
 ---
 
-## 4️⃣ In-app notifications (frontend)
+## 5️⃣ Internal helper: `notify()` (DO NOT USE DIRECTLY)
+
+### Location
+
+```
+/lib/notify.ts
+```
+
+### Purpose
+
+* Inserts rows into `notifications`
+* Assumes channels are already resolved
+* Used **only internally**
+
+❌ Must not be used in application code
+✅ Used by `sendNotification()`
+
+---
+
+## 6️⃣ In-app notifications (frontend)
 
 ### Fetch unread notifications
 
-```ts
+```sql
 SELECT *
 FROM notifications
 WHERE user_id = auth.uid()
@@ -163,7 +219,7 @@ ORDER BY created_at DESC;
 
 ### Mark notification as read
 
-```ts
+```sql
 UPDATE notifications
 SET read_at = now(), status = 'read'
 WHERE id = :notification_id;
@@ -171,32 +227,31 @@ WHERE id = :notification_id;
 
 ---
 
-## 5️⃣ Background delivery (Email & SMS)
+## 7️⃣ Background delivery (Email & SMS)
 
-* Email and SMS are sent by a **background worker**
-* The worker runs periodically via **cron**
-* Only notifications with:
+* Email and SMS are delivered by a background worker
+* The worker runs via cron
+* Application code does not interact with it
 
-  * `status = 'pending'`
-  * `scheduled_at <= now()`
-  * `channel IN ('email','sms')`
-    are processed
+Processed notifications must have:
 
-Application code **does not interact with the worker**.
+* `status = 'pending'`
+* `scheduled_at <= now()`
+* `channel IN ('email','sms')`
 
 ---
 
-## 6️⃣ Best practices
+## 8️⃣ Best practices
 
-✅ Always use `notify()`
+✅ Always use `sendNotification()`
 ✅ Include contact details in `payload`
-✅ Use `scheduledAt` for reminders
-❌ Do not send notifications directly
-❌ Do not block user requests on delivery
+✅ Let preferences decide channels
+❌ Never call `notify()` directly
+❌ Never send SMS/email synchronously
 
 ---
 
-## 7️⃣ Supported roles
+## 9️⃣ Supported roles
 
 | Role         | Typical Notifications        |
 | ------------ | ---------------------------- |
@@ -207,24 +262,17 @@ Application code **does not interact with the worker**.
 
 ---
 
-## 8️⃣ Extensibility
+## ✅ Summary
 
-The system is designed to easily support:
-
-* Push notifications
-* WhatsApp
-* Retry & backoff
-* User notification preferences
-
-Without changing application logic.
+* `sendNotification()` is the **only public API**
+* User preferences are always respected
+* Channel logic is centralized and safe
+* Delivery is asynchronous and reliable
 
 ---
 
-## ✅ Summary
+## 🔒 Final recommendation
 
-* `notify()` is the **single entry point**
-* Notifications are **asynchronous & reliable**
-* Delivery channels are **decoupled**
-* In-app notifications are **real-time**
-
+**Reject any PR that calls `notify()` directly.**
+This rule keeps your notification system correct long-term.
 
