@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useModalStore } from "@/store/useModalStore";
 import { supabaseClient } from "@/lib/supabaseClient";
 import Modal from "@/components/atom/Modal/Modal";
 import SignupForm from "@/components/form/SignupForm";
 import { toast } from "react-toastify";
-import { redirect, useRouter } from "next/navigation";
 
 export default function Header() {
+  const router = useRouter();
+
   const {
     isLoginModalOpen,
     isSignupModalOpen,
@@ -19,18 +21,19 @@ export default function Header() {
     openSignupModal,
     closeSignupModal,
   } = useModalStore();
-  const router = useRouter();
+
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  /* ---------------- AUTH ---------------- */
+  /* ---------------- AUTH STATE ---------------- */
   useEffect(() => {
     const loadUser = async () => {
       const { data } = await supabaseClient.auth.getUser();
       setUser(data.user);
       setLoading(false);
     };
+
     loadUser();
 
     const { data: listener } = supabaseClient.auth.onAuthStateChange(
@@ -42,16 +45,19 @@ export default function Header() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  /* ---------------- LOGIN ---------------- */
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const form = e.currentTarget;
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
-    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+    const password = (form.elements.namedItem("password") as HTMLInputElement)
+      .value;
 
     const toastId = toast.loading("Signing you in...");
 
     try {
+      // 1️⃣ Authenticate
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,19 +67,44 @@ export default function Header() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
 
+      // 2️⃣ Ensure session is synced
       await supabaseClient.auth.getSession();
       setUser(data.user);
 
+      // 3️⃣ Check for guest booking draft
+      let hasDraft = false;
+      const draftRaw = localStorage.getItem("bookingDraft");
+
+      if (draftRaw) {
+        try {
+          await fetch("/api/booking/appointment/draft", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: JSON.parse(draftRaw) }),
+          });
+
+          localStorage.removeItem("bookingDraft");
+          hasDraft = true;
+        } catch (err) {
+          console.error("Failed to restore booking draft", err);
+        }
+      }
+
       toast.update(toastId, {
-        render: "Welcome back 👋",
+        render: hasDraft
+          ? "Welcome back! Resuming your booking…"
+          : "Welcome back 👋",
         type: "success",
         isLoading: false,
         autoClose: 2000,
       });
+
       closeLoginModal();
+
+      // 4️⃣ Redirect
       setTimeout(() => {
-  router.push("/dashboard");
-}, 800);
+        router.push(hasDraft ? "/appointment" : "/dashboard");
+      }, 600);
     } catch (err: any) {
       toast.update(toastId, {
         render: err.message || "Login failed",
@@ -84,11 +115,15 @@ export default function Header() {
     }
   };
 
-
+  /* ---------------- LOGOUT ---------------- */
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    localStorage.removeItem("user_role");
-    window.location.reload();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      localStorage.removeItem("user_role");
+      window.location.reload();
+    } catch {
+      toast.error("Logout failed");
+    }
   };
 
   if (loading) return null;
