@@ -26,21 +26,45 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h1 className="text-xl font-semibold">Forgot Password</h1>
+  <form
+    onSubmit={handleSubmit}
+    className="max-w-md mx-auto mt-16 p-6 border rounded-2xl shadow-sm space-y-5"
+  >
+    <div className="text-center space-y-1">
+      <h1 className="text-2xl font-semibold text-gray-900">
+        Forgot your password?
+      </h1>
+      <p className="text-sm text-gray-600">
+        Enter your email address and we’ll send you a reset link.
+      </p>
+    </div>
 
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-gray-700">
+        Email address
+      </label>
       <input
         type="email"
         required
-        placeholder="Enter your email"
+        placeholder="you@example.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="border p-2 w-full"
+        className="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
       />
+    </div>
 
-      <button disabled={loading} className="btn-primary w-full">
-        {loading ? "Sending..." : "Send reset link"}
-      </button>
-    </form>
-  );
+    <button
+      disabled={loading}
+      className="w-full bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition"
+    >
+      {loading ? "Sending reset link…" : "Send reset link"}
+    </button>
+
+    <p className="text-xs text-gray-500 text-center">
+      If an account exists for this email, you’ll receive a link within a few
+      minutes.
+    </p>
+  </form>
+);
+
 }
