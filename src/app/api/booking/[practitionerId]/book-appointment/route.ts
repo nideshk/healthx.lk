@@ -145,10 +145,13 @@ await sendNotification({
   payload: {
     email: user.user.email,                // for email
     phone: "+917899416499",       // for SMS
+    recipientName: user.profile?.full_name || user.user.user_metadata?.full_name,
     appointment_id: appointment.id,
     practitioner_id: practitionerId,
     starts_at,
     ends_at,
+    actionUrl: `https://medx-rho.vercel.app/consultation/meeting?room=${appointment.room_key}`,
+    actionText: "Join Meeting",
   },
 });
 
