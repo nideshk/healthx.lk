@@ -12,6 +12,7 @@ type InputProps = {
   error?: string;
   errorStatus?: boolean;
   className?: string;
+   readOnly?: boolean;     
   icon?: React.ReactNode;          
   iconPosition?: "left" | "right"; 
   required?: boolean;              
@@ -28,6 +29,7 @@ export default function Input({
   errorStatus,
   className,
   icon,
+  readOnly = false,
   iconPosition = "left",
   required = false,
 }: InputProps) {
@@ -61,6 +63,7 @@ export default function Input({
           onChange={onChange}
           placeholder={placeholder}
           disabled={disabled}
+          readOnly={readOnly}
           onBlur={() => setTouched(true)}
           className={cn(
             baseStyles,

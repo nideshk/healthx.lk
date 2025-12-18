@@ -5,6 +5,7 @@ import React, { useMemo, useState } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import { Appointment } from "@/types/Dashboard";
+import ManageAppointmentModal from "./ManageAppointmentModal";
 
 type ViewMode = "weekly" | "daily";
 
@@ -25,6 +26,8 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   const [confirmAppt, setConfirmAppt] = useState<CalendarAppointment | null>(
     null
   );
+  const [showManage, setShowManage] = useState(false);
+
 
   const parsedAppointments = useMemo<CalendarAppointment[]>(() => {
     return appointments.map((a) => ({
@@ -216,6 +219,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
           appointment={selectedAppt}
           onClose={() => setSelectedAppt(null)}
           onMarkCompleted={() => setConfirmAppt(selectedAppt)}
+          onManage={() => setShowManage(true)}
         />
       )}
 
@@ -232,6 +236,15 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
           }}
         />
       )}
+
+      {/* Manage appointment modal */}
+      {showManage && selectedAppt && (
+      <ManageAppointmentModal
+        open={showManage}
+        appointment={selectedAppt}
+        onClose={() => setShowManage(false)}
+      />
+    )}
     </>
   );
 };
@@ -321,12 +334,14 @@ interface DetailsModalProps {
   appointment: CalendarAppointment;
   onClose: () => void;
   onMarkCompleted: () => void;
+  onManage: () => void;
 }
 
 const DetailsModal: React.FC<DetailsModalProps> = ({
   appointment,
   onClose,
   onMarkCompleted,
+  onManage,
 }) => {
   const isCompleted = appointment.status === "completed";
 
@@ -371,9 +386,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
             variant="outline"
             size="sm"
             className="text-xs"
-            onClick={() =>
-              console.log("Navigate to manage appointment", appointment.id)
-            }
+           onClick={onManage}
           >
             Manage Appointment
           </Button>

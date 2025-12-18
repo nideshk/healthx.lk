@@ -6,7 +6,10 @@ import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 
 export type DashboardMenuItemId =
   | "home"
-  | "search"
+  | "searchClinician"
+  | "searchPatient"
+  | "addClinician"
+  | "manageAdmins"
   | "analytics"
   | "settings";
 
