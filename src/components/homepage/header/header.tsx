@@ -1,14 +1,64 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
+import { toast } from "react-toastify";
+
 import { useModalStore } from "@/store/useModalStore";
 import { supabaseClient } from "@/lib/supabaseClient";
 import Modal from "@/components/atom/Modal/Modal";
 import SignupForm from "@/components/form/SignupForm";
-import { toast } from "react-toastify";
+
+/* ---------------- FORGOT PASSWORD FORM ---------------- */
+
+function ForgotPasswordForm({ onDone }: { onDone: () => void }) {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+
+    const { error } =
+      await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+    setLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Check your email for the reset link");
+    onDone();
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <input
+        type="email"
+        required
+        placeholder="Enter your email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="border rounded-lg p-2 w-full"
+      />
+
+      <button
+        disabled={loading}
+        className="w-full bg-teal-500 hover:bg-teal-600 text-white py-2 rounded-lg font-medium"
+      >
+        {loading ? "Sending..." : "Send reset link"}
+      </button>
+    </form>
+  );
+}
+
+/* ---------------- HEADER ---------------- */
 
 export default function Header() {
   const router = useRouter();
@@ -25,8 +75,10 @@ export default function Header() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   /* ---------------- AUTH STATE ---------------- */
+
   useEffect(() => {
     const loadUser = async () => {
       const { data } = await supabaseClient.auth.getUser();
@@ -36,16 +88,16 @@ export default function Header() {
 
     loadUser();
 
-    const { data: listener } = supabaseClient.auth.onAuthStateChange(
-      (_event, session) => {
+    const { data: listener } =
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
         setUser(session?.user ?? null);
-      }
-    );
+      });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
   /* ---------------- LOGIN ---------------- */
+
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -57,7 +109,6 @@ export default function Header() {
     const toastId = toast.loading("Signing you in...");
 
     try {
-      // 1️⃣ Authenticate
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,44 +118,18 @@ export default function Header() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
 
-      // 2️⃣ Ensure session is synced
       await supabaseClient.auth.getSession();
       setUser(data.user);
 
-      // 3️⃣ Check for guest booking draft
-      let hasDraft = false;
-      const draftRaw = localStorage.getItem("bookingDraft");
-
-      if (draftRaw) {
-        try {
-          await fetch("/api/booking/appointment/draft", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ data: JSON.parse(draftRaw) }),
-          });
-
-          localStorage.removeItem("bookingDraft");
-          hasDraft = true;
-        } catch (err) {
-          console.error("Failed to restore booking draft", err);
-        }
-      }
-
       toast.update(toastId, {
-        render: hasDraft
-          ? "Welcome back! Resuming your booking…"
-          : "Welcome back 👋",
+        render: "Welcome back 👋",
         type: "success",
         isLoading: false,
         autoClose: 2000,
       });
 
       closeLoginModal();
-
-      // 4️⃣ Redirect
-      setTimeout(() => {
-        router.push(hasDraft ? "/appointment" : "/dashboard");
-      }, 600);
+      router.push("/dashboard");
     } catch (err: any) {
       toast.update(toastId, {
         render: err.message || "Login failed",
@@ -116,54 +141,50 @@ export default function Header() {
   };
 
   /* ---------------- LOGOUT ---------------- */
+
   const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      localStorage.removeItem("user_role");
-      window.location.reload();
-    } catch {
-      toast.error("Logout failed");
-    }
+    await fetch("/api/auth/logout", { method: "POST" });
+    localStorage.removeItem("user_role");
+    window.location.reload();
   };
 
   if (loading) return null;
 
   /* ---------------- UI ---------------- */
+
   return (
     <>
       {/* HEADER */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* LOGO */}
-          <Link href="/" className="text-2xl font-bold text-gray-800">
+          <Link href="/" className="text-2xl font-bold">
             <span className="text-teal-500">MedX</span>
           </Link>
 
           {/* DESKTOP NAV */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="/dashboard" className="nav-link">Home</Link>
-            <Link href="/about" className="nav-link">Our Story</Link>
-            <Link href="/how-to" className="nav-link">How To</Link>
-            <Link href="/help" className="nav-link">Help</Link>
+          <nav className="hidden md:flex gap-6">
+            <Link href="/dashboard">Home</Link>
+            <Link href="/about">Our Story</Link>
+            <Link href="/how-to">How To</Link>
+            <Link href="/help">Help</Link>
           </nav>
 
-          {/* DESKTOP AUTH */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* AUTH */}
+          <div className="hidden md:flex gap-3">
             {!user ? (
               <button
                 onClick={openLoginModal}
-                className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 font-medium"
+                className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200"
               >
                 Login
               </button>
             ) : (
               <>
-                <span className="text-sm font-medium text-gray-700">
-                  Hi, {user.email?.split("@")[0]}
-                </span>
+                <span className="text-sm">Hi, {user.email?.split("@")[0]}</span>
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium"
+                  className="px-4 py-2 rounded-full bg-gray-100"
                 >
                   Logout
                 </button>
@@ -171,95 +192,78 @@ export default function Header() {
             )}
           </div>
 
-          {/* MOBILE TOGGLE */}
+          {/* MOBILE */}
           <button
             onClick={() => setMobileOpen((o) => !o)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100"
-            aria-label="Toggle menu"
+            className="md:hidden p-2"
           >
             {mobileOpen ? <X /> : <Menu />}
           </button>
         </div>
-
-        {/* MOBILE MENU */}
-        {mobileOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-4">
-            <nav className="flex flex-col gap-3">
-              <Link onClick={() => setMobileOpen(false)} href="/dashboard">Home</Link>
-              <Link onClick={() => setMobileOpen(false)} href="/about">Our Story</Link>
-              <Link onClick={() => setMobileOpen(false)} href="/how-to">How To</Link>
-              <Link onClick={() => setMobileOpen(false)} href="/help">Help</Link>
-            </nav>
-
-            <div className="pt-3 border-t border-gray-100">
-              {!user ? (
-                <button
-                  onClick={() => {
-                    setMobileOpen(false);
-                    openLoginModal();
-                  }}
-                  className="w-full px-4 py-2 rounded-xl bg-teal-500 text-white font-medium"
-                >
-                  Login
-                </button>
-              ) : (
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 font-medium"
-                >
-                  Logout
-                </button>
-              )}
-            </div>
-          </div>
-        )}
       </header>
 
       {/* LOGIN MODAL */}
       <Modal
         isOpen={isLoginModalOpen}
-        onClose={closeLoginModal}
-        title="Login"
+        onClose={() => {
+          setShowForgot(false);
+          closeLoginModal();
+        }}
+        title={showForgot ? "Reset Password" : "Login"}
         theme="light"
         footer={
-          <button
-            type="submit"
-            form="loginForm"
-            className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-medium"
-          >
-            Login
-          </button>
+          !showForgot && (
+            <button
+              type="submit"
+              form="loginForm"
+              className="bg-teal-500 text-white px-4 py-2 rounded-lg"
+            >
+              Login
+            </button>
+          )
         }
       >
-        <form id="loginForm" onSubmit={handleLogin} className="space-y-3">
-          <input
-            name="email"
-            type="email"
-            placeholder="Email"
-            required
-            className="border rounded-lg p-2 w-full"
-          />
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            required
-            className="border rounded-lg p-2 w-full"
-          />
-        </form>
+        {!showForgot ? (
+          <>
+            <form id="loginForm" onSubmit={handleLogin} className="space-y-3">
+              <input
+                name="email"
+                type="email"
+                placeholder="Email"
+                required
+                className="border rounded-lg p-2 w-full"
+              />
+              <input
+                name="password"
+                type="password"
+                placeholder="Password"
+                required
+                className="border rounded-lg p-2 w-full"
+              />
+            </form>
 
-        <p className="text-sm text-center mt-4">
-          Don’t have an account?{" "}
-          <button
-            onClick={() => {
-              closeLoginModal();
-              openSignupModal();
-            }}
-            className="text-teal-500 font-medium hover:underline"
-          >
-            Sign Up
-          </button>
-        </p>
+            <div className="flex justify-between text-sm mt-4">
+              <button
+                onClick={() => setShowForgot(true)}
+                className="text-teal-500 hover:underline"
+              >
+                Forgot password?
+              </button>
+
+              <button
+                onClick={() => {
+                  closeLoginModal();
+                  openSignupModal();
+                }}
+                className="text-teal-500 hover:underline"
+              >
+                Sign up
+              </button>
+            </div>
+          </>
+        ) : (
+          <ForgotPasswordForm onDone={() => setShowForgot(false)} />
+        )}
       </Modal>
 
       {/* SIGNUP MODAL */}
