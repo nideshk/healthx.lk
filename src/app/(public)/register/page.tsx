@@ -1,16 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { Trash2, ChevronDown, X } from "lucide-react";
-
+import Input from "@/components/atom/Input/Input";
+import Textarea from "@/components/atom/Textarea/Textarea";
 
 
 type AppointmentType = {
   id: string;
   name: string;
   duration_mins: number;
-  base_fee: number | string;   // number from API, becomes string when edited
-  max_attendee: number;        // note: from API it's "max_attendee"
+  base_fee: number | string;
+  max_attendee: number;
   platform_fee: number;
   extra_fee_per_attendee: number;
 };
@@ -21,181 +23,168 @@ type Specialization = {
   active: boolean;
 };
 
+type FormValues = {
+  email: string;
+  password: string;
+  full_name: string;
+  qualification: string;
+  specialization: string[];
+  license_number: string;
+  experience_years: string;
+  contact_email: string;
+  contact_number: string;
+  profile_bio: string;
+  available_services: string;
+  fees: string;
+  profile_picture_url: string;
+  bank_details: {
+    bank_name: string;
+    account_name: string;
+    branch_location: string;
+    account_number: string;
+    ifsc_code?: string;
+    swift_code?: string;
+    branch_address?: string;
+  };
+  availability: {
+    start_time: string;
+    end_time: string;
+    days_unavailable: string[];
+    timezone: string;
+  };
+};
+
 export default function PractitionerRegisterPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-    full_name: "",
-    qualification: "",
-    specialization: [] as string[],
-    license_number: "",
-    experience_years: "",
-    contact_email: "",
-    contact_number: "",
-    profile_bio: "",
-    available_services: "",
-    fees: "",
-    profile_picture_url: "",
-    bank_details: {
-    bank_name: "",
-    account_name: "",
-    branch_location: "",
-    account_number: "",
-    ifsc_code: "",  
-    swift_code: "",
-    branch_address: ""
-    },
-    availability: {
-      start_time: "09:00",
-      end_time: "18:00",
-      days_unavailable: ["Sunday"],
-      timezone: "Asia/Kolkata",
-    },
-  });
-  // NEW: selected appointment types & editable fees
   const [selectedAppointments, setSelectedAppointments] = useState<AppointmentType[]>([]);
   const [appointmentTypes, setAppointmentTypes] = useState<AppointmentType[]>([]);
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
   const [isSpecOpen, setIsSpecOpen] = useState(false);
-  const handleChange = (e: any) => {
-    const { name, value } = e.target;
-    setForm((prev: any) => ({ ...prev, [name]: value }));
-  };
+
+  /* ---------------- RHF ---------------- */
+
+  const {
+    control,
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+  } = useForm<FormValues>({
+    mode: "onBlur",
+    reValidateMode: "onBlur",
+    defaultValues: {
+      email: "",
+      password: "",
+      full_name: "",
+      qualification: "",
+      specialization: [],
+      license_number: "",
+      experience_years: "",
+      contact_email: "",
+      contact_number: "",
+      profile_bio: "",
+      available_services: "",
+      fees: "",
+      profile_picture_url: "",
+      bank_details: {
+        bank_name: "",
+        account_name: "",
+        branch_location: "",
+        account_number: "",
+        ifsc_code: "",
+        swift_code: "",
+        branch_address: "",
+      },
+      availability: {
+        start_time: "09:00",
+        end_time: "18:00",
+        days_unavailable: ["Sunday"],
+        timezone: "Asia/Kolkata",
+      },
+    },
+  });
+
+  const specialization = watch("specialization");
+  const daysUnavailable = watch("availability.days_unavailable");
+
+  /* ---------------- EFFECTS ---------------- */
 
   useEffect(() => {
-    const fetchSpecializations = async () => {
-    try {
-      const res = await fetch("/api/specialisation");
-      if (!res.ok) {
-        console.error("Failed to fetch specializations");
-        return;
-      }
-
-      const data = await res.json();
-      setSpecializations(data.services || []);
-    } catch (err) {
-      console.error("Error fetching specializations", err);
-    }
-    };
-
-    const fetchAppointmentTypes = async () => {
+    const fetchFormConfig = async () => {
       try {
-        const res = await fetch("/api/appointment/appointment_type");
+        const res = await fetch("/api/form-data/appointment-config");
+
         if (!res.ok) {
-          console.error("Failed to fetch appointment types");
-          return;
+          throw new Error("Failed to fetch appointment config");
         }
 
         const data = await res.json();
 
-        // data.appointment_types comes in as base_fee: number, max_attendee: number
+        // 🔹 Services → Specializations
+        setSpecializations(data.services || []);
+
+        // 🔹 Appointment types
         setAppointmentTypes(
           (data.appointment_types || []).map((t: any) => ({
             ...t,
-            base_fee: t.base_fee ?? 0, // ensure it's defined
+            base_fee: t.base_fee ?? 0,
           }))
         );
       } catch (err) {
-        console.error("Error fetching appointment types", err);
+        console.error("Error loading appointment config", err);
       }
     };
 
-    fetchSpecializations();
-    fetchAppointmentTypes();
+    fetchFormConfig();
   }, []);
 
+  /* ---------------- SPECIALIZATION ---------------- */
   const toggleSpecialization = (name: string) => {
-    setForm(prev => {
-      const exists = prev.specialization.includes(name);
-      return {
-        ...prev,
-        specialization: exists
-          ? prev.specialization.filter(s => s !== name)
-          : [...prev.specialization, name],
-      };
-    });
+    setValue(
+      "specialization",
+      specialization.includes(name)
+        ? specialization.filter(s => s !== name)
+        : [...specialization, name]
+    );
   };
 
-  const handleAvailabilityChange = (e: any) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      availability: { ...prev.availability, [name]: value },
-    }));
-  };
-
-  const handleBankChange = (e: any) => {
-  const { name, value } = e.target;
-  setForm((prev: any) => ({
-      ...prev,
-      bank_details: {
-        ...prev.bank_details,
-        [name]: value,
-      },
-    }));
-  };
+  /* ---------------- AVAILABILITY ---------------- */
 
   const toggleDayUnavailable = (day: string) => {
-    setForm((prev: any) => {
-      const exists = prev.availability.days_unavailable.includes(day);
-      return {
-        ...prev,
-        availability: {
-          ...prev.availability,
-          days_unavailable: exists
-            ? prev.availability.days_unavailable.filter((d: string) => d !== day)
-            : [...prev.availability.days_unavailable, day],
-        },
-      };
-    });
+    setValue(
+      "availability.days_unavailable",
+      daysUnavailable.includes(day)
+        ? daysUnavailable.filter(d => d !== day)
+        : [...daysUnavailable, day]
+    );
   };
 
-  // NEW: when doctor chooses an appointment type from dropdown
-  const handleAppointmentSelect = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  /* ---------------- APPOINTMENTS ---------------- */
+  const handleAppointmentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
     if (!id) return;
 
-    const type = appointmentTypes.find((t) => t.id === id);
+    const type = appointmentTypes.find(t => t.id === id);
     if (!type) return;
 
-    setSelectedAppointments((prev) => {
-      if (prev.some((p) => p.id === type.id)) return prev; // avoid duplicates
-      return [...prev, { ...type }]; // clone so fee is editable
-    });
+    setSelectedAppointments(prev =>
+      prev.some(p => p.id === id) ? prev : [...prev, { ...type }]
+    );
 
-    // reset dropdown to placeholder
     e.target.value = "";
   };
 
-  // NEW: edit fee in table
   const handleAppointmentFeeChange = (id: string, value: string) => {
-    setSelectedAppointments((prev) =>
-      prev.map((appt) =>
-        appt.id === id ? { ...appt, base_fee: value } : appt
-      )
+    setSelectedAppointments(prev =>
+      prev.map(a => (a.id === id ? { ...a, base_fee: value } : a))
     );
   };
 
-  const handleSpecializationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedNames = Array.from(
-      e.target.selectedOptions,
-      option => option.value
-    );
-
-    setForm(prev => ({
-      ...prev,
-      specialization: selectedNames,
-    }));
-  };
-
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
+  /* ---------------- SUBMIT ---------------- */
+  const onSubmit = async (form: FormValues) => {
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -203,29 +192,19 @@ export default function PractitionerRegisterPage() {
     try {
       const payload = {
         ...form,
-        specialization: form.specialization,
         experience_years: Number(form.experience_years),
         available_services: selectedAppointments.map(a => a.id),
-        fees: selectedAppointments.reduce((acc: any, appt) => ({
-        ...acc,
-        [appt.id]: {
-          type: appt.name,
-          duration_mins: appt.duration_mins,
-          max_attendees: appt.max_attendee,
-          fee: Number(appt.base_fee || 0),
-          platform_fee: Number(appt.platform_fee || 0),
-          extra_fee_per_attendee: Number(appt.extra_fee_per_attendee || 0)
-        }
-      }), {} as any),
-      bank_details: {
-          bank_name: form.bank_details.bank_name,
-          account_name: form.bank_details.account_name,
-          branch_location: form.bank_details.branch_location,
-          account_number: form.bank_details.account_number,
-          ifsc_code: form.bank_details.ifsc_code || null,
-          swift_code: form.bank_details.swift_code || null,
-          branch_address: form.bank_details.branch_address || null
-        }
+        fees: selectedAppointments.reduce((acc: any, appt) => {
+          acc[appt.id] = {
+            type: appt.name,
+            duration_mins: appt.duration_mins,
+            max_attendees: appt.max_attendee,
+            fee: Number(appt.base_fee || 0),
+            platform_fee: Number(appt.platform_fee || 0),
+            extra_fee_per_attendee: Number(appt.extra_fee_per_attendee || 0),
+          };
+          return acc;
+        }, {}),
       };
 
       const res = await fetch("/api/auth/register-practitioner", {
@@ -239,7 +218,6 @@ export default function PractitionerRegisterPage() {
 
       setMessage("🎉 Practitioner registered successfully!");
     } catch (err: any) {
-      console.log(err)
       setError(err.message);
     }
 
@@ -250,19 +228,16 @@ export default function PractitionerRegisterPage() {
     "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"
   ];
 
+  /* ---------------- JSX (UNCHANGED) ---------------- */
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-5 flex justify-center">
       <div className="w-full max-w-3xl">
-        
-        {/* HEADER */}
         <h1 className="text-4xl font-bold text-gray-900 text-center mb-10">
           Register as <span className="text-teal-600">Practitioner</span>
         </h1>
 
-        {/* CARD */}
         <div className="bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
-
-          {/* STATUS MESSAGES */}
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg">
               {error}
@@ -274,52 +249,107 @@ export default function PractitionerRegisterPage() {
             </div>
           )}
 
-          {/* FORM */}
-          <form onSubmit={handleSubmit} className="space-y-10">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
 
-            {/* SECTION: BASIC INFO */}
+            {/* BASIC INFO */}
             <div>
               <h2 className="section-title">Basic Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-                <Input name="full_name" value={form.full_name} onChange={handleChange} placeholder="Full Name" required/>
-                <Input name="email" value={form.email} onChange={handleChange} placeholder="Email Address" required/>
+                <Controller
+                  name="full_name"
+                  control={control}
+                  rules={{ required: "Full Name is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      placeholder="Full Name"
+                      required
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
+                />
+                <Controller
+                  name="email"
+                  control={control}
+                  rules={{ required: "Email is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      placeholder="Email Address"
+                      required
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
+                />
+
               </div>
 
-              <Input 
-                type="password"
+              <Controller
                 name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Password"
-                required
-                className="mt-4"
+                control={control}
+                rules={{ required: "Password is required" }}
+                render={({ field, fieldState }) => (
+                  <Input
+                    type="password"
+                    className="mt-4"
+                    placeholder="Password"
+                    required
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    error={fieldState.error?.message}
+                    errorStatus={!!fieldState.error}
+                  />
+                )}
               />
+
             </div>
 
-            {/* SECTION: PROFESSIONAL INFO */}
+            {/* PROFESSIONAL */}
             <div>
               <h2 className="section-title">Professional Information</h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-                <Input name="qualification" placeholder="Qualification" value={form.qualification} onChange={handleChange}/>
-                <Input name="license_number" placeholder="License Number" value={form.license_number} onChange={handleChange}/>
+                <Controller
+                  name="qualification"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      placeholder="Qualification"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />                
+                <Controller
+                  name="license_number"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      placeholder="License Number"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+
               </div>
 
-              {/* MULTI SELECT DROP DOWN */}
+              {/* SPECIALIZATION — MARKUP UNCHANGED */}
               <div className="mt-4 relative">
                 <label className="text-gray-700 font-medium mb-1 block">
                   Specializations
                 </label>
 
-                {/* Input box */}
                 <div className="w-full min-h-[44px] px-3 py-2 rounded-lg border border-gray-300 bg-white flex items-center justify-between focus-within:ring-2 focus-within:ring-teal-500">
-                  
-                  {/* Selected chips */}
                   <div className="flex flex-wrap gap-2">
-                    {form.specialization.length === 0 ? (
+                    {specialization.length === 0 ? (
                       <span className="text-gray-400">Select specializations</span>
                     ) : (
-                      form.specialization.map(name => (
+                      specialization.map(name => (
                         <span
                           key={name}
                           className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm"
@@ -330,7 +360,6 @@ export default function PractitionerRegisterPage() {
                     )}
                   </div>
 
-                  {/* Toggle button */}
                   <button
                     type="button"
                     onClick={() => setIsSpecOpen(prev => !prev)}
@@ -340,7 +369,6 @@ export default function PractitionerRegisterPage() {
                   </button>
                 </div>
 
-                {/* Dropdown */}
                 {isSpecOpen && (
                   <div className="absolute z-20 mt-2 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg">
                     {specializations
@@ -352,7 +380,8 @@ export default function PractitionerRegisterPage() {
                         >
                           <input
                             type="checkbox"
-                            checked={form.specialization.includes(spec.name)}
+                            className="rounded accent-teal-600"
+                            checked={specialization.includes(spec.name)}
                             onChange={() => toggleSpecialization(spec.name)}
                           />
                           <span className="text-gray-700">{spec.name}</span>
@@ -362,32 +391,61 @@ export default function PractitionerRegisterPage() {
                 )}
               </div>
 
-              <Input
-                className="mt-4"
-                type="number"
-                name="experience_years"
-                placeholder="Experience (years)"
-                value={form.experience_years}
-                onChange={handleChange}
-              />
+              <Controller
+                  name="experience_years"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      className="mt-4"
+                      type="number"
+                      placeholder="Experience (years)"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
 
-              <Textarea
-                className="mt-4"
+              <Controller
                 name="profile_bio"
-                placeholder="Short professional bio"
-                value={form.profile_bio}
-                onChange={handleChange}
-                textareaClassName = "h-28"
+                control={control}
+                render={({ field }) => (
+                  <Textarea
+                    className="mt-4 h-28"
+                    placeholder="Short professional bio"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </div>
 
-            {/* SECTION: CONTACT */}
+            {/* CONTACT */}
             <div>
               <h2 className="section-title">Contact Details</h2>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-                <Input name="contact_email" placeholder="Professional Email" value={form.contact_email} onChange={handleChange}/>
-                <Input name="contact_number" placeholder="Phone Number" value={form.contact_number} onChange={handleChange}/>
+                <Controller
+                  name="contact_email"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      placeholder="Professional Email"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+                <Controller
+                  name="contact_number"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      placeholder="Phone Number"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+
               </div>
             </div>
 
@@ -418,54 +476,55 @@ export default function PractitionerRegisterPage() {
                   <table className="min-w-full border border-gray-200 text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-2 border-b text-left  border-gray-200">
+                        <th className="px-4 py-2 border-b text-left border-gray-200">
                           Appointment Type
                         </th>
-                        <th className="px-4 py-2 border-b text-left  border-gray-200">
+                        <th className="px-4 py-2 border-b text-left border-gray-200">
                           Duration
                         </th>
-                        <th className="px-4 py-2 border-b text-left  border-gray-200">Fee</th>
-                        <th className="px-4 py-2 border-b text-left  border-gray-200">
+                        <th className="px-4 py-2 border-b text-left border-gray-200">
+                          Fee
+                        </th>
+                        <th className="px-4 py-2 border-b text-left border-gray-200">
                           Max attendees
                         </th>
-                        <th className="px-4 py-2 border-b text-left  border-gray-200"></th>
+                        <th className="px-4 py-2 border-b text-left border-gray-200"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedAppointments.map((appt) => (
                         <tr key={appt.id}>
-                          <td className="px-4 py-2 border-b  border-gray-200">{appt.name}</td>
-                          <td className="px-4 py-2 border-b  border-gray-200">
+                          <td className="px-4 py-2 border-b border-gray-200">
+                            {appt.name}
+                          </td>
+                          <td className="px-4 py-2 border-b border-gray-200">
                             {appt.duration_mins} min
                           </td>
-                          <td className="px-4 py-2 border-b  border-gray-200">
+                          <td className="px-4 py-2 border-b border-gray-200">
                             <input
                               type="number"
                               className="w-24 px-2 py-1 rounded border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none"
                               value={appt.base_fee}
                               onChange={(e) =>
-                                handleAppointmentFeeChange(
-                                  appt.id,
-                                  e.target.value
-                                )
+                                handleAppointmentFeeChange(appt.id, e.target.value)
                               }
                             />
                           </td>
-                          <td className="px-4 py-2 border-b  border-gray-200">
+                          <td className="px-4 py-2 border-b border-gray-200">
                             {appt.max_attendee}
                           </td>
-                          <td className="px-4 py-2 border-b  border-gray-200">
+                          <td className="px-4 py-2 border-b border-gray-200">
                             <button
-                            type="button"
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() =>
-                              setSelectedAppointments(prev =>
-                                prev.filter(item => item.id !== appt.id)
-                              )
-                            }
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                              type="button"
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() =>
+                                setSelectedAppointments((prev) =>
+                                  prev.filter((item) => item.id !== appt.id)
+                                )
+                              }
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -483,59 +542,103 @@ export default function PractitionerRegisterPage() {
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-                <Input
-                  name="bank_name"
-                  placeholder="Bank Name"
-                  value={form.bank_details.bank_name}
-                  onChange={handleBankChange}
-                  required
+                <Controller
+                  name="bank_details.bank_name"
+                  control={control}
+                  rules={{ required: "Bank Name is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      placeholder="Bank Name"
+                      required
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
                 />
 
-                <Input
-                  name="account_name"
-                  placeholder="Account Name"
-                  value={form.bank_details.account_name}
-                  onChange={handleBankChange}
-                  required
+                <Controller
+                  name="bank_details.account_name"
+                  control={control}
+                  rules={{ required: "Account Name is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      placeholder="Account Name"
+                      required
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
                 />
 
-                <Input
-                  name="branch_location"
-                  placeholder="Branch Location"
-                  value={form.bank_details.branch_location}
-                  onChange={handleBankChange}
+                <Controller
+                  name="bank_details.branch_location"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      placeholder="Branch Location"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
                 />
 
-                <Input
-                  name="account_number"
-                  placeholder="Account Number"
-                  value={form.bank_details.account_number}
-                  onChange={handleBankChange}
-                  required
+
+                <Controller
+                  name="bank_details.account_number"
+                  control={control}
+                  rules={{ required: "Account Number is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      placeholder="Account Number"
+                      required
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
                 />
 
-                <Input
-                  name="ifsc_code"
-                  placeholder="IFSC Code"
-                  value={form.bank_details.ifsc_code}
-                  onChange={handleBankChange}
+                <Controller
+                  name="bank_details.ifsc_code"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      placeholder="IFSC Code"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
                 />
 
-                <Input
-                  name="swift_code"
-                  placeholder="SWIFT Code (optional)"
-                  value={form.bank_details.swift_code}
-                  onChange={handleBankChange}
+                <Controller
+                  name="bank_details.swift_code"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      placeholder="SWIFT Code (optional)"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
                 />
               </div>
-              <Textarea
-                  name="branch_address"
-                  placeholder="Branch Address"
-                  value={form.bank_details.branch_address}
-                  onChange={handleBankChange}
-                  className = "mt-4"
-                  textareaClassName="h-20"
-                />
+              <Controller
+                name="bank_details.branch_address"
+                control={control}
+                render={({ field }) => (
+                  <Textarea
+                    className = "mt-4 h-20"
+                    placeholder="Branch Address"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
             </div>
 
             {/* SECTION: AVAILABILITY */}
@@ -545,29 +648,27 @@ export default function PractitionerRegisterPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                 <Input
                   type="time"
-                  name="start_time"
-                  value={form.availability.start_time}
-                  onChange={handleAvailabilityChange}
                   label="Start Time"
+                  {...register("availability.start_time")}
                 />
                 <Input
                   type="time"
-                  name="end_time"
-                  value={form.availability.end_time}
-                  onChange={handleAvailabilityChange}
                   label="End Time"
+                  {...register("availability.end_time")}
                 />
               </div>
 
-              <p className="font-medium text-gray-700 mt-4 mb-2">Days Unavailable</p>
+              <p className="font-medium text-gray-700 mt-4 mb-2">
+                Days Unavailable
+              </p>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {weekdays.map((day) => (
                   <label key={day} className="flex gap-2 items-center">
                     <input
                       type="checkbox"
-                      className="rounded"
-                      checked={form.availability.days_unavailable.includes(day)}
+                      className="rounded accent-teal-600"
+                      checked={daysUnavailable.includes(day)}
                       onChange={() => toggleDayUnavailable(day)}
                     />
                     <span className="text-gray-700">{day}</span>
@@ -576,7 +677,6 @@ export default function PractitionerRegisterPage() {
               </div>
             </div>
 
-            {/* SUBMIT */}
             <button
               type="submit"
               disabled={loading}
@@ -592,28 +692,3 @@ export default function PractitionerRegisterPage() {
   );
 }
 
-/* ---------------- REUSABLE COMPONENTS ---------------- */
-
-function Input({ label, className = "", ...props }: any) {
-  return (
-    <div className={className}>
-      {label && <label className="text-gray-700 font-medium mb-1 block">{label}</label>}
-      <input
-        {...props}
-        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none text-gray-800"
-      />
-    </div>
-  );
-}
-
-function Textarea({ label, className = "", textareaClassName = "", ...props }: any) {
-  return (
-    <div className={className}>
-      {label && <label className="text-gray-700 font-medium mb-1 block">{label}</label>}
-      <textarea
-        {...props}
-        className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none text-gray-800 ${textareaClassName}`}
-      />
-    </div>
-  );
-}
