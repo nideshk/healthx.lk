@@ -85,7 +85,7 @@ export default function PatientDashboardApple() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f2f7ff] via-white to-[#fff7fb] py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto">
 
         {/* HEADER */}
         <header className="flex items-center justify-between mb-10">

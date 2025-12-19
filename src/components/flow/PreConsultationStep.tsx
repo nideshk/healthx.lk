@@ -270,23 +270,6 @@ const PreConsultationStep = forwardRef(
               )}
             </div>
           )}
-
-          {/* ACTIONS */}
-          <div className="flex justify-between mt-6">
-            <button
-              onClick={prevStep}
-              className="px-6 py-2 border rounded-lg text-gray-600 hover:bg-gray-100"
-            >
-              Back
-            </button>
-
-            <button
-              onClick={handleNext}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Continue
-            </button>
-          </div>
         </div>
       </div>
     );

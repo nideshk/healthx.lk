@@ -53,12 +53,6 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
 
-    const { authorized, user } = await requireUser();
-
-    if (!authorized) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     if (!date) {
       return NextResponse.json(
         { error: "Missing required: date (YYYY-MM-DD)" },
@@ -238,11 +232,6 @@ export async function GET(
       offered_types: appointmentTypes,
       booked_intervals: bookedIntervals,
       slots_by_type,
-      requested_by: {
-        id: user?.auth_user_id,
-        role: user?.role,
-        patient_id: user?.patient_id,
-      },
     });
   } catch (err: any) {
     console.error("❌ Availability API Error:", err);

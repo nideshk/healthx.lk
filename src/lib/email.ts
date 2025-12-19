@@ -1,26 +1,35 @@
 import nodemailer from "nodemailer";
 
-export const mailer = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false,
+const transporter = nodemailer.createTransport({
+  service: "Gmail",
   auth: {
-    user: process.env.SMTP_USER!,
-    pass: process.env.SMTP_PASS!,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
 });
 
-export async function sendEmail({
-  to,
-  subject,
-  html,
-}: {
+// Optional but useful during dev
+transporter.verify((err, success) => {
+  if (err) {
+    console.error("❌ SMTP connection failed:", err);
+  } else {
+    console.log("📨 SMTP server is ready to send emails");
+  }
+});
+
+type SendEmailParams = {
   to: string;
   subject: string;
   html: string;
-}) {
-  await mailer.sendMail({
-    from: process.env.SMTP_FROM,
+};
+
+export async function sendEmail({ to, subject, html }: SendEmailParams) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    throw new Error("SMTP credentials are missing");
+  }
+
+  return transporter.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
     subject,
     html,
