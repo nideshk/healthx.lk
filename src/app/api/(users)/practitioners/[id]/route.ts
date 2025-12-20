@@ -39,15 +39,21 @@ export async function GET(
      // ------------------------------------------------
     // BUILD APPOINTMENT TYPES FROM FEES JSON ✅
     // ------------------------------------------------
+    console.log(practitioner)
     const appointmentTypes =
-      practitioner.fees && typeof practitioner.fees === "object"
-        ? Object.values<any>(practitioner.fees).map((f) => ({
-            name: f.type,
-            fee: f.fee,
-            duration_mins: f.duration_mins,
-            max_attendees: f.max_attendees,
-          }))
-        : [];
+  practitioner.fees && typeof practitioner.fees === "object"
+    ? Object.entries<any>(practitioner.fees).map(
+        ([appointment_type_id, f]) => ({
+          id: appointment_type_id,          // ✅ appointment_type_id
+          name: f.type,
+          fee: f.fee,
+          duration_mins: f.duration_mins,
+          max_attendees: f.max_attendees,
+          extra_fee_per_attendee: f.extra_fee_per_attendee ?? 0,
+        })
+      )
+    : [];
+
 
     // ------------------------------------------------
     // FETCH BANK DETAILS (ADMIN / SUPER ADMIN ONLY) ✅

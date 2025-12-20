@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
+import { uploadAttachmentAfterBooking } from '@/lib/s3/uploadAttachmentAfterBooking';
 
 interface Props {
   prevStep: () => void;
@@ -20,6 +21,7 @@ interface Props {
 const PaymentStep = forwardRef(
   ({ prevStep, updateData, bookingData, goToStep }: Props, ref) => {
     const [paymentDone, setPaymentDone] = useState(false);
+    console.log(bookingData)
     const router = useRouter();
     useImperativeHandle(ref, () => ({
       validateStep: () => {
@@ -42,7 +44,8 @@ const PaymentStep = forwardRef(
     const appointment_type_id = bookingData?.appointmentType?.id;
 
     if (!practitionerId || !date || !time || !appointment_type_id) {
-      toast.error("Missing booking details. Please go back and review.");
+      toast.error(`Missing booking details. Please go back and review, ${practitionerId + " " +  date  + " "+  time  + " "+ appointment_type_id}` 
+      );
       return;
     }
 
@@ -65,14 +68,29 @@ const PaymentStep = forwardRef(
       return;
     }
 
-    toast.success("Appointment booked successfully!");
-    setPaymentDone(true);
+   toast.success("Appointment booked successfully!");
+setPaymentDone(true);
 
-    updateData({
-      payment_status: "completed",
-      appointment_id: data?.appointment?.id,
-    });
-    router.push("/dashboard/appointment");
+const appointmentId = data?.appointment?.id;
+
+// 🔑 Upload attachment AFTER booking
+if (pre?.attachment instanceof File && appointmentId) {
+  try {
+    await uploadAttachmentAfterBooking(pre.attachment, appointmentId);
+  } catch (err) {
+    console.error(err);
+    toast.warn(
+      "Appointment booked, but attachment upload failed. You can re-upload later."
+    );
+  }
+}
+
+updateData({
+  payment_status: "completed",
+  appointment_id: appointmentId,
+});
+
+router.push("/dashboard/appointment");
   } catch (err) {
     console.error(err);
     toast.error("Unexpected error while booking");
