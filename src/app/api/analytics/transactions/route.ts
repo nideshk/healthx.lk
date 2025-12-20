@@ -44,7 +44,7 @@ export async function GET(req: Request) {
 
     try {
         // Create base query
-        let query = supabaseClient.from("transactions").select("*, count()", { count: 'exact' });
+        let query = supabaseClient.from("transactions").select("*", { count: 'exact' });
 
         const dateColumn = 'created_at';
 
