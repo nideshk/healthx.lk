@@ -25,6 +25,7 @@ export interface AppointmentTime {
 export interface AppointmentType{
     id: string;
     name : string;
+    fee : number;
     starts_at : Date;
     ends_at : Date;
     max_attendees : number;

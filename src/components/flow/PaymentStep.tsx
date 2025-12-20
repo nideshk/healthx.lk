@@ -1,5 +1,10 @@
 'use client';
-import React, { forwardRef, useImperativeHandle, useState } from 'react';
+
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+} from 'react';
 import { AppointmentFormInputs } from '@/types/FormType';
 import {
   CheckCircle2,
@@ -9,19 +14,48 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
+import { uploadAttachmentAfterBooking } from '@/lib/s3/uploadAttachmentAfterBooking';
 
+interface StepRefHandle {
+  validateStep?: () => boolean;
+}
 interface Props {
   prevStep: () => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
-  goToStep : (step:number)=> void;
+  goToStep: (step: number) => void;
+
+  // ✅ SINGLE SOURCE OF TRUTH
+  bookingControllerRef: React.MutableRefObject<{
+    validateStep?: () => boolean;
+    getAttachment?: () => File | null;
+  }>;
 }
 
-const PaymentStep = forwardRef(
-  ({ prevStep, updateData, bookingData, goToStep }: Props, ref) => {
+const PaymentStep = forwardRef<StepRefHandle, Props>(
+  ({ prevStep, updateData, bookingData, goToStep, bookingControllerRef }, stepRef) => {
     const [paymentDone, setPaymentDone] = useState(false);
     const router = useRouter();
-    useImperativeHandle(ref, () => ({
+
+    /* ---------------------------
+     * DERIVED DATA (SAFE)
+     * -------------------------- */
+    const doctor = bookingData.selectedDoctor;
+    const type = bookingData.appointmentType;
+    const service = bookingData.selectedService;
+    const consent = bookingData.consent || {};
+    const attendeeList = bookingData.selectedAttendees || [];
+    const attendeeCount = attendeeList.length || 1;
+
+    /* ---------------------------
+     * PRICING (FROM APPOINTMENT TYPE)
+     * -------------------------- */
+    const consultationFee = type?.fee ?? 1450;
+    const serviceFee = Math.round(consultationFee * 0.05);
+    const tax = Math.round((consultationFee + serviceFee) * 0.08);
+    const totalAmount = consultationFee + serviceFee + tax;
+
+    useImperativeHandle(stepRef, () => ({
       validateStep: () => {
         if (!paymentDone) {
           toast.error('Please complete the payment to finalize.');
@@ -31,268 +65,191 @@ const PaymentStep = forwardRef(
       },
     }));
 
-  const handlePayment = async () => {
-  try {
+    /* ---------------------------
+     * HANDLE PAYMENT
+     * -------------------------- */
+    const handlePayment = async () => {
+      try {
+        const practitionerId = doctor?.id;
+        const appointment_type_id = type?.id;
 
-    const practitionerId = bookingData.selectedDoctor?.id;
-    const date = bookingData.starts_at?.split("T")[0];
-    const time = new Date(bookingData.starts_at || "")
-      .toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+        const date = bookingData.starts_at?.split('T')[0];
+        const time = new Date(bookingData.starts_at || '')
+          .toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
 
-    const appointment_type_id = bookingData?.appointmentType?.id;
+        if (!practitionerId || !appointment_type_id || !date || !time) {
+          toast.error('Missing booking details. Please review.');
+          return;
+        }
 
-    if (!practitionerId || !date || !time || !appointment_type_id) {
-      toast.error("Missing booking details. Please go back and review.");
-      return;
-    }
+        // 1️⃣ Create appointment (uncomment and use real API in production)
+        const res = await fetch(
+          `/api/booking/${practitionerId}/book-appointment`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              date,
+              time,
+              appointment_type_id,
+            }),
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          if (res.status === 409) {
+            toast.error(data.error || 'Slot no longer available');
+            goToStep(2);
+          }
+          return;
+        }
 
-    const res = await fetch(
-      `/api/booking/${practitionerId}/book-appointment`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, time, appointment_type_id }),
+        toast.success('Appointment booked successfully!');
+        setPaymentDone(true);
+
+        const appointmentId = data.appointment.id; // Replace with real ID from API
+
+        // 2️⃣ Upload attachment via preConsultRef (NOT bookingData)
+        let file: File | null = null;
+        if (
+          bookingControllerRef?.current?.getAttachment &&
+          typeof bookingControllerRef.current.getAttachment === 'function'
+        ) {
+          file = bookingControllerRef.current.getAttachment();
+        }
+        console.log(file); // true
+        if (file instanceof File && appointmentId) {
+          try {
+            await uploadAttachmentAfterBooking(file, appointmentId);
+          } catch (err) {
+            console.error(err);
+            toast.warn(
+              'Appointment booked, but attachment upload failed. You can re-upload later.'
+            );
+          }
+        }
+
+        updateData({
+          payment_status: 'completed',
+          appointment_id: appointmentId,
+        });
+
+        router.push('/dashboard/appointment');
+      } catch (err) {
+        console.error(err);
+        toast.error('Unexpected error while booking');
       }
-    );
+    };
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      if(res.status=== 409){
-        toast.error(data.error || "Booking failed");
-        goToStep(2);
-      }
-      return;
-    }
-
-    toast.success("Appointment booked successfully!");
-    setPaymentDone(true);
-
-    updateData({
-      payment_status: "completed",
-      appointment_id: data?.appointment?.id,
-    });
-    router.push("/dashboard/appointment");
-  } catch (err) {
-    console.error(err);
-    toast.error("Unexpected error while booking");
-  }
-};
-
-    // Pricing breakdown
-    const consultationFee = bookingData?.selectedDoctor?.fee || 1450;
-    const serviceFee = Math.round(consultationFee * 0.05);
-    const tax = Math.round((consultationFee + serviceFee) * 0.08);
-    const totalAmount = consultationFee + serviceFee + tax;
-    const attendeeCount = bookingData?.selectedAttendees?.length || 1;  
-    const attendeeList = bookingData?.selectedAttendees || [];
-    const doctor = bookingData.selectedDoctor;
-    const type = bookingData.appointmentType;
-    const service = bookingData.selectedService;
-    const pre = bookingData.pre_consultation || {};
-    const consent = bookingData.consent || {};
-    console.log("Rendering PaymentStep with bookingData:", doctor);
+    /* ---------------------------
+     * RENDER
+     * -------------------------- */
     return (
       <div className="min-h-screen py-10 px-4 bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="max-w-7xl mx-auto">
 
-          {/* ---------------- PAGE TITLE ---------------- */}
           <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-10">
             Review & Complete Payment
           </h1>
 
-          {/* ---------------- TWO COLUMN LAYOUT ---------------- */}
           <div className="grid lg:grid-cols-3 gap-10">
 
-            {/* LEFT COLUMN – REVIEW SECTIONS */}
+            {/* LEFT COLUMN */}
             <div className="lg:col-span-2 space-y-6">
 
-              {/* ---- GLASS CARD STYLE ---- */}
-              {/** Doctor Card */}
-              <div className="
-                p-6 rounded-2xl 
-                bg-white/60 backdrop-blur-md 
-                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
-                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)] 
-                transition-all
-              ">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <User className="w-5 h-5 text-blue-600" /> Doctor Details
+              <div className="p-6 rounded-2xl bg-white shadow">
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-blue-600" />
+                  Doctor Details
                 </h3>
-
-                <div className="flex items-center gap-4">
-                  <img
-                    src={doctor?.profileImage || '/images/default-doctor.png'}
-                    className="w-16 h-16 rounded-xl object-cover border"
-                  />
-                  <div>
-                    <p className="text-lg font-semibold">{doctor?.full_name}</p>
-                    <p className="text-sm text-gray-600">{doctor?.profile_bio}</p>
-                  </div>
-                </div>
+                <p className="text-lg font-semibold">{doctor?.full_name}</p>
+                <p className="text-sm text-gray-600">{doctor?.profile_bio}</p>
               </div>
 
-              {/** Appointment Details */}
-              <div className="
-                p-6 rounded-2xl 
-                bg-white/60 backdrop-blur-md 
-                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
-                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)]
-                transition-all
-              ">
-                <h3 className="text-xl font-semibold flex items-center gap-2 text-gray-800 mb-4">
-                  <Calendar className="w-5 h-5 text-blue-600" /> Appointment Details
+              <div className="p-6 rounded-2xl bg-white shadow">
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  Appointment Details
                 </h3>
-
                 <p><strong>Type:</strong> {type?.name}</p>
                 <p><strong>Duration:</strong> {type?.duration_mins} mins</p>
                 <p><strong>Date:</strong> {bookingData.starts_at ? new Date(bookingData.starts_at).toLocaleDateString() : '—'}</p>
-                <p>
-                  <strong>Time:</strong>{' '}
-                  {bookingData.starts_at ? new Date(bookingData.starts_at).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }) : '—'}
-                </p>
+                <p><strong>Time:</strong> {bookingData.starts_at ? new Date(bookingData.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</p>
               </div>
 
-              {/** Service */}
-              <div className="
-                p-6 rounded-2xl 
-                bg-white/60 backdrop-blur-md 
-                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
-                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)]
-                transition-all
-              ">
-                <h3 className="text-xl font-semibold flex items-center gap-2 text-gray-800 mb-4">
-                  <ClipboardList className="w-5 h-5 text-blue-600" /> Service
+              <div className="p-6 rounded-2xl bg-white shadow">
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                  Service
                 </h3>
-                <p className="font-medium">{service?.name}</p>
-                <p className="text-sm text-gray-600">{service?.description}</p>
+                <p>{service?.name}</p>
               </div>
 
-              {/** Pre-Consultation */}
-              <div className="
-                p-6 rounded-2xl 
-                bg-white/60 backdrop-blur-md 
-                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
-                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)]
-                transition-all
-              ">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                  Pre-Consultation
-                </h3>
-
-                <p><strong>Main Concern:</strong> {pre?.note?.concern || '—'}</p>
-                <p><strong>Expected Outcome:</strong> {pre?.note?.outcome || '—'}</p>
-                <p><strong>Referral:</strong> {pre?.referral || '—'}</p>
-              </div>
-              <div className='shadow-sm p-4 rounded-lg bg-white/60 backdrop-blur-md'>
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                 Additional Attendees ({attendeeCount > 1 ? attendeeCount - 1 : 0})
-                </h3>
-                <ul className="list-disc list-inside space-y-1">
-                  {attendeeList.length > 0 ? (
-                    attendeeList.map((attendee, index) => (
-                      <li key={index}>
-                        {attendee}
-                      </li>
-                    ))
-                  ) : (
-                    <li>No additional attendees.</li>
-                  )}
-                </ul>
-              </div>
-              {/** Consents */}
-              <div className="
-                p-6 rounded-2xl 
-                bg-white/60 backdrop-blur-md 
-                shadow-[0_4px_12px_rgba(0,0,0,0.08)] 
-                hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)]
-                transition-all
-              ">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                  Consents
-                </h3>
-
+              <div className="p-6 rounded-2xl bg-white shadow">
+                <h3 className="text-xl font-semibold mb-4">Consents</h3>
                 <p className="flex items-center gap-2">
-                  Telehealth Consent:
+                  Telehealth:
                   {consent.telehealth ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <CheckCircle2 className="text-green-600" />
                   ) : (
-                    <span className="text-red-600">✗ Not Accepted</span>
+                    <span className="text-red-600">✗</span>
                   )}
                 </p>
-
                 <p className="flex items-center gap-2 mt-2">
-                  Terms & Conditions:
+                  Terms:
                   {consent.terms ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <CheckCircle2 className="text-green-600" />
                   ) : (
-                    <span className="text-red-600">✗ Not Accepted</span>
+                    <span className="text-red-600">✗</span>
                   )}
                 </p>
               </div>
+
             </div>
 
-            {/* ---------------- RIGHT COLUMN — STICKY PAYMENT SUMMARY ---------------- */}
+            {/* RIGHT COLUMN */}
             <div className="lg:col-span-1">
-              <div
-                className="
-                p-6 rounded-2xl 
-                bg-white/70 backdrop-blur-lg 
-                shadow-[0_8px_30px_rgba(0,0,0,0.12)]
-                ring-1 ring-white/40
-                sticky top-24
-              "
-              >
-                <h3 className="text-xl font-bold text-gray-900 mb-5">
-                  Pricing Summary
-                </h3>
+              <div className="p-6 rounded-2xl bg-white shadow sticky top-24">
+                <h3 className="text-xl font-bold mb-5">Pricing Summary</h3>
 
-                <div className="space-y-3 text-gray-800">
+                <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span>Consultation Fee</span>
+                    <span>Consultation</span>
                     <span>LKR {consultationFee}</span>
                   </div>
-
                   <div className="flex justify-between">
-                    <span>Platform Fee (5%)</span>
+                    <span>Platform Fee</span>
                     <span>LKR {serviceFee}</span>
                   </div>
-
                   <div className="flex justify-between">
-                    <span>VAT (8%)</span>
+                    <span>VAT</span>
                     <span>LKR {tax}</span>
                   </div>
 
-                  <hr className="my-4" />
+                  <hr />
 
                   <div className="flex justify-between text-lg font-bold">
-                    <span>Total Amount</span>
+                    <span>Total</span>
                     <span className="text-blue-700">LKR {totalAmount}</span>
                   </div>
                 </div>
 
                 <button
                   onClick={handlePayment}
-                  disabled={paymentDone}
-                  className="
-                    w-full mt-6 py-3 rounded-lg
-                    text-lg font-semibold
-                    transition-all shadow-md
-                    bg-blue-600 hover:bg-blue-700 text-white
-                    disabled:bg-green-600 disabled:cursor-not-allowed
-                  "
+                  // disabled={paymentDone}
+                  className="w-full mt-6 py-3 rounded-lg text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:bg-green-600"
                 >
-                  {paymentDone ? 'Payment Completed ✓' : 'Pay Now →'}
+                  {'Pay Now →'}
                 </button>
 
                 <button
                   onClick={prevStep}
-                  className="mt-4 w-full text-sm text-gray-600 underline hover:text-gray-800"
+                  className="mt-4 w-full text-sm text-gray-600 underline"
                 >
-                  ← Back to Previous Step
+                  ← Back
                 </button>
               </div>
             </div>

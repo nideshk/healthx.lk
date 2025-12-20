@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/authGuard";
 
 export async function DELETE(
   _req: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   // 1️⃣ Auth
   const { authorized, user, response } = await requireUser();
