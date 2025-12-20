@@ -11,6 +11,8 @@ export async function uploadAttachmentAfterBooking(
       body: JSON.stringify({
         fileName: file.name,
         fileType: file.type,
+              fileSize: file.size, // 🔑 THIS WAS MISSING
+
       }),
     }
   );
@@ -19,7 +21,7 @@ export async function uploadAttachmentAfterBooking(
     throw new Error("Failed to get upload URL");
   }
 
-  const { uploadUrl, key } = await res.json();
+  const { uploadUrl, fileKey } = await res.json();
 
   // 2️⃣ Upload to S3
   await fetch(uploadUrl, {
@@ -35,7 +37,7 @@ export async function uploadAttachmentAfterBooking(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      file_key: key,
+      file_key: fileKey,
       file_name: file.name,
       file_type: file.type,
       file_size: file.size,

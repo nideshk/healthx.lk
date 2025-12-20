@@ -26,6 +26,12 @@ export default function AppointmentBookingFlow() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const stepRef = useRef<{ validateStep?: () => boolean }>(null);
 
+  const bookingControllerRef = useRef<{
+  validatePreConsult?: () => boolean;
+  validatePayment?: () => boolean;
+  getAttachment?: () => File | null;
+}>({});
+
   const [bookingData, setBookingData] = useState<AppointmentFormInputs>({
     selectedServiceId: "",
     selectedServiceTitle: "",
@@ -162,7 +168,7 @@ export default function AppointmentBookingFlow() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {CurrentComponent && (
           <CurrentComponent
-            ref={stepRef}
+            bookingControllerRef={bookingControllerRef}
             nextStep={(override?: any) => nextStep({ override })}
             prevStep={(override?: any) => prevStep({ override })}
             updateData={updateData}

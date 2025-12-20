@@ -57,6 +57,7 @@ const BookAppointmentStep = forwardRef(
       async function load() {
         try {
           const res = await axios.get(`/api/practitioners/${practitionerId}`);
+          console.log(res.data.practitioner)
           setPractitioner(res.data.practitioner);
         } catch {
           toast.error("Failed to load practitioner details");

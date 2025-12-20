@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       console.log("Authorize: logged in user email =", email);
       console.log("Authorize: practitionerEmail =", user?.practitioner_id);
       console.log("Practitioner _ id", appt.practitioner_id);
-      if (email && email === patientEmail) {
+      if (appt.patient_id === user?.patient_id) {
         allowed = true;
         role = "patient";
         subjectId = user?.auth_user_id  || null;
