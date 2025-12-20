@@ -88,27 +88,53 @@ export default function PatientDashboardApple() {
       <div className="mx-auto">
 
         {/* HEADER */}
-        <header className="flex items-center justify-between mb-10">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900">Welcome back 👋</h1>
-            <p className="text-gray-600 mt-1">Your schedule and quick actions at a glance.</p>
-          </div>
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-12">
+  {/* LEFT */}
+  <div>
+    <h1 className="text-3xl font-bold text-gray-900 leading-tight">
+      Welcome back
+    </h1>
+    <p className="text-sm text-gray-600 mt-1 max-w-md">
+      Here’s a quick overview of your upcoming appointments and actions.
+    </p>
+  </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/appointment"
-              className="px-4 py-2 rounded-xl bg-blue-600 text-white font-medium flex items-center gap-2 hover:bg-blue-700 shadow-md"
-            >
-              <Plus className="w-4 h-4" /> Book
-            </Link>
-            <Link
-              href="/reports"
-              className="px-3 py-2 rounded-xl bg-white shadow ring-1 ring-black/5 text-gray-700 flex items-center gap-2 hover:bg-gray-50"
-            >
-              <FilePlus className="w-4 h-4" /> Reports
-            </Link>
-          </div>
-        </header>
+  {/* RIGHT ACTIONS */}
+  <div className="flex items-center gap-3">
+    {/* Primary Action */}
+    <Link
+      href="/appointment"
+      className="
+        inline-flex items-center gap-2
+        px-5 py-2.5 rounded-xl
+        bg-blue-600 text-white font-semibold
+        hover:bg-blue-700
+        shadow-md shadow-blue-600/20
+        transition
+      "
+    >
+      <Plus className="w-4 h-4" />
+      Book Appointment
+    </Link>
+
+    {/* Secondary Action */}
+    <Link
+      href="/reports"
+      className="
+        inline-flex items-center gap-2
+        px-4 py-2.5 rounded-xl
+        bg-white text-gray-700 font-medium
+        ring-1 ring-gray-200
+        hover:bg-gray-50
+        transition
+      "
+    >
+      <FilePlus className="w-4 h-4" />
+      View Reports
+    </Link>
+  </div>
+</header>
+
 
         {/* GRID */}
         <div className="grid lg:grid-cols-3 gap-6">
@@ -250,9 +276,6 @@ function QuickActions({ upcoming, past, cancelled , ongoing }: any) {
         <div className="flex flex-col gap-2 text-sm">
           <Link href="/dashboard/appointment" className="px-3 py-2 rounded-lg bg-white/60 ring-1 ring-black/5 text-gray-700 hover:bg-gray-50">
             All appointments
-          </Link>
-          <Link href="/chat" className="px-3 py-2 rounded-lg bg-white/60 ring-1 ring-black/5 text-gray-700 hover:bg-gray-50">
-            Message doctor
           </Link>
           <Link href="/reports" className="px-3 py-2 rounded-lg bg-white/60 ring-1 ring-black/5 text-gray-700 hover:bg-gray-50">
             My reports

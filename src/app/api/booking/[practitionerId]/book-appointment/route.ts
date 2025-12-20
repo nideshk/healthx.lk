@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { sendNotification } from "@/lib/notifications/sendNotification";
+import { notify } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -234,24 +235,38 @@ export async function POST(
         .eq("patient_id", patient_id);
 
     // 8️⃣ Send appointment confirmation notification
-await sendNotification({
+await notify({
   userId: user.auth_user_id, // auth.users.id
   role: "patient",
   eventType: "appointment_confirmed",
+
   title: "Appointment Confirmed",
   message: `Your appointment is confirmed on ${new Date(starts_at).toLocaleString()}`,
+
+  channels: ["in_app", "email", "sms"],
+
   payload: {
-    email: user.user.email,                // for email
-    phone: "+917899416499",       // for SMS
-    recipientName: user.profile?.full_name || user.user.user_metadata?.full_name,
+    // -------- Common --------
     appointment_id: appointment.id,
     practitioner_id: practitionerId,
     starts_at,
     ends_at,
+
+    // -------- Email --------
+    email: user.user.email,
+    recipientName:
+      user.profile?.full_name ||
+      user.user.user_metadata?.full_name,
+
+    subject: "Your appointment is confirmed",
     actionUrl: `https://medx-rho.vercel.app/consultation/meeting?room=${appointment.room_key}`,
     actionText: "Join Meeting",
+
+    // -------- SMS --------
+    phone: "+917899416499",
   },
 });
+
 
     return NextResponse.json({
       success: true,
