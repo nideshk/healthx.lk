@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { s3 } from "@/lib/s3/s3";
 
 /* -------------------------------------------------------------
    CONFLICT CHECKER → prevents overlapping appointments
@@ -40,6 +43,16 @@ async function hasConflict({
   return !!data;
 }
 
+async function signViewUrl(s3Key: string) {
+  const command = new GetObjectCommand({
+    Bucket: process.env.AWS_S3_BUCKET,
+    Key: s3Key,
+  });
+
+  return getSignedUrl(s3, command, {
+    expiresIn: 60 * 60, // 60 minutes
+  });
+}
 /* -------------------------------------------------------------
    GET: Fetch appointment details depending on role
 --------------------------------------------------------------*/
@@ -47,20 +60,34 @@ export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await context.params;
+  const requestId = crypto.randomUUID();
 
-    const { authorized, user , role } = await requireUser();
-    if (!authorized) {
+  try {
+    /* ------------------------------------------------
+     * PARAMS
+     * ------------------------------------------------ */
+    const { id: appointmentId } = await context.params;
+
+    if (!appointmentId) {
+      return NextResponse.json(
+        { error: "Appointment ID missing" },
+        { status: 400 }
+      );
+    }
+
+    /* ------------------------------------------------
+     * AUTH
+     * ------------------------------------------------ */
+    const { authorized, user, role } = await requireUser();
+
+    if (!authorized || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = user?.auth_user_id;
-
-
-
-    // Fetch appointment + linked relations
-    const { data: appointment, error } = await supabaseAdmin
+    /* ------------------------------------------------
+     * FETCH APPOINTMENT (BASE)
+     * ------------------------------------------------ */
+    const { data: appointment, error: apptErr } = await supabaseAdmin
       .from("appointments")
       .select(
         `
@@ -70,11 +97,11 @@ export async function GET(
         status,
         notes,
         telehealth_url,
-        cancellation_reason,
-        cancelled_at,
         currency,
         fee_charged,
         payment_status,
+        cancellation_reason,
+        cancelled_at,
 
         appointment_type:appointment_type_id (
           id,
@@ -83,16 +110,16 @@ export async function GET(
         ),
 
         preconsult_responses:preconsult_responses (
-      id,
-      raw_payload,
-      created_at
-    ),
+          id,
+          raw_payload,
+          created_at
+        ),
 
         practitioner:practitioner_id (
           id,
           full_name,
-          profile_picture_url,
-          specialization
+          specialization,
+          profile_picture_url
         ),
 
         patient:patient_id (
@@ -106,11 +133,10 @@ export async function GET(
         )
       `
       )
-      .eq("id", id)
+      .eq("id", appointmentId)
       .maybeSingle();
 
-    if (error || !appointment) {
-      console.log("Appointment fetch error:", error);
+    if (apptErr || !appointment) {
       return NextResponse.json(
         { error: "Appointment not found" },
         { status: 404 }
@@ -124,24 +150,102 @@ export async function GET(
     const patient = Array.isArray(appointment.patient)
       ? appointment.patient[0]
       : appointment.patient;
-    console.log(appointment)
-    console.log(patient)
 
+    /* ------------------------------------------------
+     * RBAC — APPOINTMENT ACCESS
+     * ------------------------------------------------ */
+    if (
+      role === "patient" &&
+      patient?.id !== user.patient_id
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (
+      role === "practitioner" &&
+      practitioner?.id !== user.practitioner_id
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    /* ------------------------------------------------
+     * FETCH ATTACHMENTS (STRICT OWNERSHIP)
+     * ------------------------------------------------ */
+    let attachments: any[] = [];
+
+    // PATIENT → only their attachments
     if (role === "patient") {
-      // Patient sees limited details
+      const { data, error } = await supabaseAdmin
+        .from("attachments")
+        .select(
+          `
+          *
+        `
+        )
+        .eq("appointment_id", appointmentId)
+        .eq("patient_id", user.patient_id);
+
+      attachments = data ?? [];
+      console.log("error", error)
+    }
+
+    // PRACTITIONER → only attachments assigned to them
+    if (role === "practitioner") {
+      const { data } = await supabaseAdmin
+        .from("attachments")
+        .select(
+          `
+          *
+        `
+        )
+        .eq("appointment_id", appointmentId)
+        .eq("practitioner_id", user.practitioner_id);
+
+      attachments = data ?? [];
+    }
+
+    // ADMIN → everything
+    if (role === "admin" || role === "superadmin") {
+      const { data } = await supabaseAdmin
+        .from("attachments")
+        .select(
+          `
+          id,
+          file_name,
+          file_type,
+          file_size,
+          created_at,
+          patient_id,
+          practitioner_id
+        `
+        )
+        .eq("appointment_id", appointmentId);
+
+      attachments = data ?? [];
+    }
+
+    /* ------------------------------------------------
+     * RESPONSE SHAPING
+     * ------------------------------------------------ */
+    if (role === "patient") {
+      const signedAttachments = await Promise.all(
+    attachments.map(async (atc) => ({
+      id: atc.id,
+      file_name: atc.file_name,
+      file_type: atc.file_type,
+      file_size: atc.file_size,
+      created_at: atc.created_at,
+      view_url: await signViewUrl(atc.file_url),
+    }))
+  );
       return NextResponse.json({
         id: appointment.id,
         starts_at: appointment.starts_at,
         ends_at: appointment.ends_at,
         status: appointment.status,
         appointment_type: appointment.appointment_type,
-        practitioner: {
-          id: practitioner?.id,
-          full_name: practitioner?.full_name,
-          specialization: practitioner?.specialization,
-          profile_picture_url: practitioner?.profile_picture_url,
-        },
-        notes : appointment.preconsult_responses,
+        practitioner,
+        notes: appointment.preconsult_responses,
         telehealth_url: appointment.telehealth_url,
         fee_charged: appointment.fee_charged,
         currency: appointment.currency,
@@ -151,26 +255,26 @@ export async function GET(
             reason: appointment.cancellation_reason,
             cancelled_at: appointment.cancelled_at,
           },
+        attachments :signedAttachments
       });
     }
 
-    if (role === "practitioner") {
-      // Practitioner sees everything
-      return NextResponse.json({
-        ...appointment,
-        patient,
-      });
-    }
-
+    // Practitioner / Admin
     return NextResponse.json({
       ...appointment,
       patient,
       practitioner,
+      attachments,
     });
   } catch (err: any) {
-    console.error("❌ GET Appointment Error:", err);
+    console.error("❌ GET Appointment Error", {
+      requestId,
+      message: err?.message,
+      stack: err?.stack,
+    });
+
     return NextResponse.json(
-      { error: err.message || "Unexpected server error" },
+      { error: "Unexpected server error" },
       { status: 500 }
     );
   }

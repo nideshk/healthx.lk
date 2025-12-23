@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/authGuard";
 import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireUser } from "@/lib/authGuard";
 
 export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { authorized, response, user } = await requireUser();
-  if (!authorized) return response;
-
+ 
   try {
     const id = (await context.params).id;
 
@@ -18,10 +17,8 @@ export async function GET(
         { status: 400 }
       );
     }
+    const { authorized, response, user } = await requireUser();
 
-    console.log(
-      `🔍 Fetching practitioner ID: ${id} for user: ${user?.auth_user_id} (${user?.role})`
-    );
 
     // ------------------------------------------------
     // FETCH PRACTITIONER
@@ -39,28 +36,50 @@ export async function GET(
       );
     }
 
+     // ------------------------------------------------
+    // BUILD APPOINTMENT TYPES FROM FEES JSON ✅
     // ------------------------------------------------
-    // FETCH APPOINTMENT TYPES
+    console.log(practitioner)
+    const appointmentTypes =
+  practitioner.fees && typeof practitioner.fees === "object"
+    ? Object.entries<any>(practitioner.fees).map(
+        ([appointment_type_id, f]) => ({
+          id: appointment_type_id,          // ✅ appointment_type_id
+          name: f.type,
+          fee: f.fee,
+          duration_mins: f.duration_mins,
+          max_attendees: f.max_attendees,
+          extra_fee_per_attendee: f.extra_fee_per_attendee ?? 0,
+        })
+      )
+    : [];
+
+
     // ------------------------------------------------
-    let appointmentTypes: any[] = [];
+    // FETCH BANK DETAILS (ADMIN / SUPER ADMIN ONLY) ✅
+    // ------------------------------------------------
+    let bankDetails: any[] | null = null;
+    console.log(user?.role)
+    if (["admin", "superadmin"].includes(user?.role)) {
+      console.log("enterd here")
+      console.log(id)
+      const { data: bank, error: bank_error} = await supabaseAdmin
+        .from("practitioner_bank_details")
+        .select(
+          `account_holder_name,
+          bank_name,
+          account_number,
+          branch_name
+        `
+        )
+        .eq("practitioner_id", id);
 
-    const serviceIds = practitioner.available_services || [];
-
-    if (Array.isArray(serviceIds) && serviceIds.length > 0) {
-      const { data: types } = await supabaseClient
-        .from("appointment_type")
-        .select("*")
-        .in("id", serviceIds);
-
-      appointmentTypes = (types || []).map((t) => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        duration_mins: t.duration_mins,
-        max_attendee: t.max_attendee,
-        base_fee: t.base_fee,
-      }));
+      bankDetails = bank ?? [];
+      if (bank_error){
+        console.log(bank_error)
+      }
     }
+
 
     // ----------------------------------------------------------
     // ROLE-BASED RESPONSES
@@ -74,14 +93,12 @@ export async function GET(
         success: true,
         practitioner: {
           id: practitioner.id,
-          license_number: practitioner.license_number,
           full_name: practitioner.full_name,
           specialization: practitioner.specialization,
           profile_bio: practitioner.profile_bio,
           experience_years: practitioner.experience_years,
           profile_image: practitioner.profile_picture_url,
           appointment_types: appointmentTypes,
-          gender: practitioner.gender,
         },
       });
     }
@@ -104,12 +121,12 @@ export async function GET(
       practitioner: {
         id: practitioner.id,
         gender: practitioner.gender,
+        license_number : practitioner.license_number,
+        contact_number : practitioner.contact_number,
+        contact_email : practitioner.contact_email,
         full_name: practitioner.full_name,
         first_name: practitioner.first_name || null,
-        last_name: practitioner.last_name || null,
-        contact_number: practitioner.contact_number,
-        license_number: practitioner.license_number,
-        contact_email: practitioner.contact_email,
+        last_name: practitioner.last_name || null,        
         profile_bio: practitioner.profile_bio,
         specialization: practitioner.specialization,
         qualifications: practitioner.qualification,
@@ -120,6 +137,7 @@ export async function GET(
         available_services: practitioner.available_services,
         appointment_types: appointmentTypes,
       },
+      bank_details: bankDetails,
       requested_by: user?.auth_user_id,
     });
   } catch (error: any) {
@@ -134,3 +152,90 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: practitionerId } = await context.params;
+
+    if (!practitionerId) {
+      return NextResponse.json(
+        { error: "Practitioner identifier is required." },
+        { status: 400 }
+      );
+    }
+
+    const { authorized, role } = await requireUser();
+
+    if (!authorized) {
+      return NextResponse.json(
+        { error: "You are not authorized to perform this action." },
+        { status: 401 }
+      );
+    }
+
+    const isAdmin = ["admin", "superadmin"].includes(role);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Only administrators can delete practitioners." },
+        { status: 403 }
+      );
+    }
+
+    /** Fetch practitioner (includes supabase_id) */
+    const { data: practitioner, error: fetchError } = await supabaseAdmin
+      .from("practitioners")
+      .select("id, supabase_user_id, is_active, deleted_at")
+      .eq("id", practitionerId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    if (!practitioner || practitioner.deleted_at) {
+      return NextResponse.json(
+        { error: "Practitioner already deleted or does not exist." },
+        { status: 404 }
+      );
+    }
+
+    const deletedAt = new Date().toISOString();
+
+    /** 1️⃣ Soft delete practitioner */
+    const { error: practitionerError } = await supabaseAdmin
+      .from("practitioners")
+      .update({
+        is_active: false,
+        deleted_at: deletedAt,
+      })
+      .eq("id", practitionerId);
+
+    if (practitionerError) throw practitionerError;
+
+    /** 2️⃣ Soft delete linked profile (by supabase_id) */
+    if (practitioner.supabase_user_id) {
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          is_active: false,
+          deleted_at: deletedAt,
+        })
+        .eq("id", practitioner.supabase_user_id);
+
+      if (profileError) throw profileError;
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Practitioner and profile soft-deleted successfully.",
+    });
+  } catch (err: any) {
+    console.error("DELETE /practitioner error:", err);
+    return NextResponse.json(
+      { error: err?.message ?? "Unable to delete practitioner." },
+      { status: 500 }
+    );
+  }
+}
+

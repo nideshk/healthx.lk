@@ -51,12 +51,35 @@ export async function requireUser() {
     .eq("supabase_user_id", auth_user_id)
     .maybeSingle();
 
+  const { data: adminUser} = await supabaseAdmin
+    .from("admin_users")
+    .select("id, role")
+    .eq("supabase_user_id", auth_user_id)
+    .maybeSingle();
+
+  let admin = null;
+
+  if (adminUser) {
+    // 6️⃣ admin policies
+    const { data: policyRows } = await supabaseAdmin
+      .from("admin_policy_map")
+      .select("policy_code")
+      .eq("admin_id", adminUser.id);
+
+    admin = {
+      id: adminUser.id,
+      role: adminUser.role, // "admin" | "superadmin"
+      policies: policyRows?.map(p => p.policy_code) ?? [],
+    };
+  }
+
   // 5) final unified user
   const sessionUser = {
     auth_user_id,                    // ALWAYS THE AUTH ID
     role: profile.role,              // patient/practitioner/admin
     profile,
     user,
+    admin,
     patient_id: patient?.id || null,
     practitioner_id: practitioner?.id || null,
   };

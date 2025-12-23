@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { sendNotification } from "@/lib/notifications/sendNotification";
+import { notify } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -84,7 +85,80 @@ export async function POST(
       );
     }
 
-    // 5️⃣ Insert Appointment
+    let resolvedFee: number | null = null;
+    let consultationFee!: number;
+    let platformFee!: number;
+
+    // 1️⃣ Fetch practitioner fees JSON
+    const { data: practitionerRow, error: feeErr } = await supabaseClient
+      .from("practitioners")
+      .select("fees")
+      .eq("id", practitionerId)
+      .single();
+
+    if (feeErr || !practitionerRow) {
+      return NextResponse.json(
+        { error: "Unable to fetch practitioner's pricing details." },
+        { status: 500 }
+      );
+    }
+
+    const practitionerFeeEntry =
+      practitionerRow.fees?.[appointmentType.id];
+
+    // 2️⃣ If practitioner fee exists → use it
+    if (practitionerFeeEntry) {
+      consultationFee = Number(practitionerFeeEntry.fee);
+      platformFee = Number(practitionerFeeEntry.platform_fee);
+    }
+
+    // 3️⃣ Fallback: fetch from appointment_type
+    if (
+      !Number.isFinite(consultationFee) ||
+      !Number.isFinite(platformFee)
+    ) {
+      const { data: typeRow, error: typeErr } = await supabaseClient
+        .from("appointment_type")
+        .select("base_fee, platform_fee")
+        .eq("id", appointmentType.id)
+        .single();
+
+      if (typeErr || !typeRow) {
+        return NextResponse.json(
+          {
+            error: "Fee configuration missing",
+            message:
+              "Neither practitioner nor appointment type has valid pricing configured.",
+          },
+          { status: 400 }
+        );
+      }
+
+      consultationFee = Number(typeRow.base_fee);
+      platformFee = Number(typeRow.platform_fee);
+    }
+
+    // 4️⃣ Final validation
+    if (
+      !Number.isFinite(consultationFee) ||
+      consultationFee < 0 ||
+      !Number.isFinite(platformFee) ||
+      platformFee < 0
+    ) {
+      return NextResponse.json(
+        {
+          error: "Invalid fee configuration",
+          message:
+            "Resolved fee values are invalid. Please contact support.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // 5️⃣ Final resolved fee
+    resolvedFee = consultationFee + platformFee;
+
+    // 6 Insert Appointment
     const { data: appointment, error: insertError } = await supabaseClient
       .from("appointments")
       .insert({
@@ -98,7 +172,7 @@ export async function POST(
         source: "web",
 
         // 🟦 NEW — STORE HISTORICAL PRICING
-        fee_charged: selectedDoctor.fee ?? null,
+        fee_charged: resolvedFee,
         currency: selectedDoctor.currency ?? "LKR",
       })
       .select()
@@ -111,7 +185,7 @@ export async function POST(
       );
     }
 
-    // 6️⃣ Save Pre-Consultation Responses
+    // 7 Save Pre-Consultation Responses
     if (pre_consultation) {
       await supabaseClient.from("preconsult_responses").insert({
         appointment_id: appointment.id,
@@ -129,28 +203,70 @@ export async function POST(
       })
     }
 
-    // 7️⃣ Mark Draft as Used
-    await supabaseClient
-      .from("appointment_draft")
+    // ---------------------------
+    // 8 Prepare payment payload (backend derived)
+    // ---------------------------
+    const paymentPayload = {
+      appointment_id: appointment.id,
+      patient_id,
+      practitioner_id: practitionerId,
+
+      appointment_type_id: appointmentType.id,
+
+      amount: resolvedFee,
+      consultation_fee: consultationFee,
+      platform_fee: platformFee,
+
+      currency: appointment.currency ?? "LKR",
+
+      source: "appointment_booking",
+      status: "INITIATED",
+
+      metadata: {
+        starts_at,
+        ends_at,
+      },
+    };
+
+     // 9 Mark Draft as Used
+      await supabaseClient
+        .from("appointment_draft")
       .update({ status: "USED", updated_at: new Date().toISOString() })
-      .eq("patient_id", patient_id);
+        .eq("patient_id", patient_id);
 
     // 8️⃣ Send appointment confirmation notification
-await sendNotification({
+await notify({
   userId: user.auth_user_id, // auth.users.id
   role: "patient",
   eventType: "appointment_confirmed",
+
   title: "Appointment Confirmed",
   message: `Your appointment is confirmed on ${new Date(starts_at).toLocaleString()}`,
+
+  channels: ["in_app", "email", "sms"],
+
   payload: {
-    email: user.user.email,                // for email
-    phone: "+917899416499",       // for SMS
+    // -------- Common --------
     appointment_id: appointment.id,
     practitioner_id: practitionerId,
     starts_at,
     ends_at,
+
+    // -------- Email --------
+    email: user.user.email,
+    recipientName:
+      user.profile?.full_name ||
+      user.user.user_metadata?.full_name,
+
+    subject: "Your appointment is confirmed",
+    actionUrl: `https://medx-rho.vercel.app/consultation/meeting?room=${appointment.room_key}`,
+    actionText: "Join Meeting",
+
+    // -------- SMS --------
+    phone: "+917899416499",
   },
 });
+
 
     return NextResponse.json({
       success: true,

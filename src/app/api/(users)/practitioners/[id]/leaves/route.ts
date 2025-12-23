@@ -109,14 +109,28 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     if (!authorized) return NextResponse.json({ error: "You are not authorized to access this resource." }, { status: 401 });
 
     const isSelf = user?.practitioner_id === practitionerId;
-    const isAdmin = role === "admin";
+    const isAdmin = ["admin", "superadmin"].includes(role);
     if (!isSelf && !isAdmin) return NextResponse.json({ error: "You do not have permission to view leave records for this practitioner." }, { status: 403 });
 
-    const { data, error } = await supabaseAdmin
+    /** 👉 Read query params */
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    let query = supabaseAdmin
       .from("practitioner_leaves")
       .select("*")
-      .eq("practitioner_id", practitionerId)
-      .order("start_date", { ascending: true });
+      .eq("practitioner_id", practitionerId);
+
+    if (startDate) {
+      query = query.gte("start_date", startDate);
+    }
+
+    if (endDate) {
+      query = query.lte("end_date", endDate);
+    }
+
+    const { data, error } = await query.order("start_date", { ascending: true });
 
     if (error) throw error;
     return NextResponse.json({ leaves: data ?? [] });

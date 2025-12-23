@@ -31,67 +31,74 @@ function ReschedulePage() {
     axios
       .get(`/api/booking/appointment/${params.id}`)
       .then((res) => {
-        setAppointment(res.data);
+        const data = res.data;
+        setAppointment(data);
 
-        const practitionerTZ = res.data.practitioner?.timezone || "UTC";
-
-        // Convert stored UTC → pract. local
-        const startLocal = DateTime.fromISO(res.data.starts_at, {
-          zone: "utc",
-        }).setZone(practitionerTZ);
-
-        // Build form payload
         const bookingDataObj = {
-          appointment_id: res.data.id,
-          selectedDoctor: res.data.practitioner,
-          appointmentType: res.data.appointmentType,
-          selectedService: res.data.selectedService,
-          selectedServiceId: res.data.selectedServiceId || "",
-          selectedServiceTitle: res.data.selectedServiceTitle || "",
-          attendeeCount: res.data.attendeeCount || 1,
+          appointment_id: data.id,
+          selectedDoctor: data.practitioner,
+          appointmentType: data.appointmentType,
+          selectedService: data.selectedService,
+          selectedServiceId: data.selectedServiceId || "",
+          selectedServiceTitle: data.selectedServiceTitle || "",
+          attendeeCount: data.attendeeCount || 1,
 
-          // Keep UTC timestamps — Step component converts back & forth
-          starts_at: res.data.starts_at,
-          ends_at: res.data.ends_at,
+          // keep UTC — step component handles conversions
+          starts_at: data.starts_at,
+          ends_at: data.ends_at,
 
-          selectedAttendees: res.data.selectedAttendees || [],
-          consent: res.data.consent || {},
-          pre_consultation: res.data.pre_consultation || {},
-          payment_status: res.data.payment_status,
+          selectedAttendees: data.selectedAttendees || [],
+          consent: data.consent || {},
+          pre_consultation: data.pre_consultation || {},
+          payment_status: data.payment_status,
         };
 
         setBookingData(bookingDataObj);
       })
       .catch(() => toast.error("Failed to load appointment"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [params.id]);
 
-  if (loading) return <div className="p-10">Loading…</div>;
-  if (!appointment) return <div className="p-10 text-red-500">Appointment not found</div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  if (!appointment) {
+    return <div className="p-10 text-red-500">Appointment not found</div>;
+  }
 
   /* ----------------------------------------------
-     6-HOUR RULE CHECK
+     TIMEZONE & 6-HOUR RULE
   ---------------------------------------------- */
-  const nowUTC = DateTime.utc();
-  const appointmentUTC = DateTime.fromISO(appointment.starts_at).toUTC();
-  const diffHours = appointmentUTC.diff(nowUTC, "hours").hours;
+  const practitionerTZ = appointment.practitioner?.timezone || "UTC";
+
+  const appointmentUTC = DateTime.fromISO(appointment.starts_at, {
+    zone: "utc",
+  });
+
+  const originalLocal = appointmentUTC.setZone(practitionerTZ);
+  const userLocal = appointmentUTC.toLocal();
+
+  const diffHours = appointmentUTC.diff(DateTime.utc(), "hours").hours;
   const canReschedule = diffHours >= 6;
 
   /* ----------------------------------------------
-     HANDLE RESCHEDULE SAVE
+     RESCHEDULE SAVE
   ---------------------------------------------- */
   async function handleReschedule() {
     if (!stepRef.current?.validateStep()) return;
 
     try {
-      const payload = {
-        starts_at: bookingData.starts_at,
-        ends_at: bookingData.ends_at,
-      };
-
       await axios.patch(
         `/api/booking/appointment/${appointment.id}/reschedule`,
-        payload
+        {
+          starts_at: bookingData.starts_at,
+          ends_at: bookingData.ends_at,
+        }
       );
 
       toast.success("Appointment rescheduled successfully ✨");
@@ -105,17 +112,12 @@ function ReschedulePage() {
   }
 
   /* ----------------------------------------------
-     ORIGINAL TIME (LOCAL)
+     UI
   ---------------------------------------------- */
-  const practitionerTZ = appointment.practitioner?.timezone || "UTC";
-  const originalLocal = DateTime.fromISO(appointment.starts_at, { zone: "utc" }).setZone(
-    practitionerTZ
-  );
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ---------------- HEADER ---------------- */}
-      <div className="bg-white shadow-xl rounded-b-2xl p-6">
+    <div className="min-h-screen bg-gray-50 pb-28">
+      {/* HEADER */}
+      <div className="bg-white shadow rounded-b-2xl p-6">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1 text-gray-600 hover:text-black mb-3"
@@ -127,22 +129,24 @@ function ReschedulePage() {
         <h1 className="text-3xl font-bold">Reschedule Appointment</h1>
 
         <p className="text-gray-600 mt-1">
-          Changing your appointment with{" "}
+          Changing appointment with{" "}
           <strong>{appointment.practitioner?.full_name}</strong>
         </p>
+
         {!canReschedule && (
           <div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 px-4 py-3 rounded-lg">
             <ShieldAlert size={20} />
             <span>
-              You cannot reschedule. Only allowed **6+ hours before** appointment.
+              Rescheduling allowed only{" "}
+              <strong>6+ hours before</strong> the appointment.
             </span>
           </div>
         )}
       </div>
 
-      {/* ---------------- ORIGINAL APPT SUMMARY ---------------- */}
+      {/* ORIGINAL APPOINTMENT */}
       <div className="mx-auto max-w-4xl p-6">
-        <div className="bg-white shadow-sm rounded-xl p-5 ">
+        <div className="bg-white shadow-sm rounded-xl p-5">
           <h2 className="font-semibold text-lg mb-3">Current Appointment</h2>
 
           <div className="flex items-center gap-4">
@@ -151,16 +155,24 @@ function ReschedulePage() {
             </div>
 
             <div>
+              {/* PRACTITIONER LOCAL TIME */}
               <p className="text-gray-800 font-medium">
                 {originalLocal.toFormat("cccc, dd LLL yyyy")}
               </p>
-              <p className="text-gray-600">
-                <Clock className="inline w-4 h-4 mr-1" />
-                {originalLocal.toFormat("hh:mm a")} ({practitionerTZ})
+
+              <p className="text-gray-600 flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                <span className="text-xs text-gray-500 mt-1">
+                Your time: {userLocal.toFormat("hh:mm a")} (
+                {userLocal.zoneName})
+              </span>
               </p>
+
+              {/* USER LOCAL TIME (SECONDARY) */}
+              
             </div>
 
-            {/* Countdown */}
+            {/* COUNTDOWN */}
             <div className="ml-auto">
               <span
                 className={`px-3 py-1.5 rounded-full text-sm font-medium ${
@@ -170,7 +182,7 @@ function ReschedulePage() {
                 }`}
               >
                 {diffHours < 0
-                  ? "Already Started"
+                  ? "Already started"
                   : `${Math.floor(diffHours)}h ${Math.round(
                       (diffHours % 1) * 60
                     )}m left`}
@@ -179,7 +191,7 @@ function ReschedulePage() {
           </div>
         </div>
 
-        {/* ---------------- RESELECTION UI ---------------- */}
+        {/* RESELECT SLOT */}
         <div className="mt-6 bg-white rounded-xl shadow-sm">
           <BookAppointmentStep
             ref={stepRef}
@@ -187,14 +199,14 @@ function ReschedulePage() {
             draftData={appointment}
             prevStep={() => router.back()}
             nextStep={() => {}}
-            updateData={(newData) => {
-              setBookingData((prev: any) => ({ ...prev, ...newData }));
-            }}
+            updateData={(newData) =>
+              setBookingData((prev: any) => ({ ...prev, ...newData }))
+            }
           />
         </div>
       </div>
 
-      {/* ---------------- FOOTER ACTION BAR ---------------- */}
+      {/* FOOTER ACTION BAR */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-end gap-3 shadow-lg">
         <button
           onClick={() => router.back()}
