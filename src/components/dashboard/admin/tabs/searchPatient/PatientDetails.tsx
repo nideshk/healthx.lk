@@ -57,7 +57,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
       <div className="flex gap-2 text-xs bg-slate-50 rounded-full p-1 border border-slate-200">
         {renderTab("overview", "Overview", activeTab, setActiveTab)}
         {renderTab("appointments", "Appointments", activeTab, setActiveTab)}
-        {renderTab("settings", "Settings", activeTab, setActiveTab)}
+        {/* {renderTab("settings", "Settings", activeTab, setActiveTab)} */}
         {renderTab("audit", "Audit Log", activeTab, setActiveTab)}
       </div>
 
@@ -66,7 +66,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
       {activeTab === "appointments" && (
         <AppointmentsTab appointments={appointments} patient={patient} />
       )}
-      {activeTab === "settings" && <PatientSettingsTab />}
+      {/* {activeTab === "settings" && <PatientSettingsTab />} */}
       {activeTab === "audit" && <AuditLogTab />}
     </div>
   );
@@ -751,60 +751,152 @@ const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
   );
 };
 
-const PatientSettingsTab: React.FC = () => (
-  <div className="mt-2">
-    <h2 className="text-sm font-semibold text-slate-900">Patient Settings</h2>
-
-    <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-xs text-slate-500">
-        Settings management coming soon.
-      </p>
-    </div>
-  </div>
-);
 
 interface AuditEntry {
   id: string;
-  title: string;     // Ex: "Profile Updated"
-  description: string; // Ex: "Updated by Admin"
-  date: string;       // formatted datetime
+  occurred_at: string;
+  actor_type: "admin" | "patient" | "system";
+  action: string;
+  entity_type: string;
+  source: string;
+  ip_address: string | null;
+  metadata: Record<string, any>;
 }
 
-const mockAuditData: AuditEntry[] = [
-  {
-    id: "1",
-    title: "Profile Updated",
-    description: "Updated by Admin",
-    date: "2025-09-01 14:30",
-  },
-  {
-    id: "2",
-    title: "Appointment Scheduled",
-    description: "Created by System",
-    date: "2025-08-28 10:15",
-  },
-  {
-    id: "3",
-    title: "Profile Created",
-    description: "Created by Patient",
-    date: "2025-06-01 09:00",
-  },
-];
+const formatAction = (action: string, entity: string) => {
+  switch (action) {
+    case "VIEWED":
+      return `Viewed ${entity}`;
+    case "LOGIN":
+      return "Logged in";
+    case "FAILED_ACCESS":
+      return `Unauthorized access attempt on ${entity}`;
+    default:
+      return `${action} ${entity}`;
+  }
+};
 
-const AuditLogTab: React.FC = () => (
-  <div className="mt-2 space-y-2">
-    <h2 className="text-sm font-semibold text-slate-900">Audit Log</h2>
+const formatActor = (actor: string) => {
+  if (actor === "admin") return "Admin";
+  if (actor === "patient") return "Patient";
+  return "System";
+};
 
-    <div className="mt-2 rounded-xl border border-slate-200 bg-white divide-y">
-      {mockAuditData.map((entry) => (
-        <div key={entry.id} className="p-4 text-xs">
-          <div className="font-medium text-slate-900">{entry.title}</div>
-          <div className="text-slate-500">
-            {entry.description} · {entry.date}
-          </div>
-        </div>
-      ))}
+const formatLocation = (ip?: string | null) => {
+  if (!ip) return "Unknown location";
+  if (ip === "::1" || ip === "127.0.0.1") return "Localhost";
+  return `IP ${ip}`;
+};
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleString();
+
+
+
+const AuditLogTab: React.FC = () => {
+  const auditLogs: AuditEntry[] = [
+    {
+      id: "1",
+      occurred_at: "2025-12-18T14:02:32.899Z",
+      actor_type: "admin",
+      action: "VIEWED",
+      entity_type: "appointment",
+      source: "api",
+      ip_address: "::1",
+      metadata: {
+        scope: "all_appointments",
+        perPage: 50,
+      },
+    },
+    {
+      id: "2",
+      occurred_at: "2025-12-18T13:53:50.209Z",
+      actor_type: "patient",
+      action: "FAILED_ACCESS",
+      entity_type: "appointment",
+      source: "api",
+      ip_address: null,
+      metadata: {
+        reason: "non-admin attempted to read all appointments",
+      },
+    },
+    {
+      id: "3",
+      occurred_at: "2025-12-17T04:08:57.498Z",
+      actor_type: "system",
+      action: "LOGIN",
+      entity_type: "auth",
+      source: "api",
+      ip_address: null,
+      metadata: {},
+    },
+  ];
+
+  return (
+    <div className="mt-4 rounded-xl border border-slate-200 bg-white overflow-hidden">
+      {/* TABLE WRAPPER */}
+      <div className="overflow-x-auto">
+        <table className="min-w-[1100px] w-full text-sm">
+          {/* HEADER */}
+          <thead className="bg-blue-600 text-white">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium">
+                User ID
+              </th>
+              <th className="px-4 py-3 text-left font-medium">Date & Time</th>
+              
+              <th className="px-4 py-3 text-left font-medium">
+                Changes / Updates Made
+              </th>
+              <th className="px-4 py-3 text-left font-medium">
+                Who Changed / Updated
+              </th>
+              <th className="px-4 py-3 text-left font-medium">IP Address</th>
+            </tr>
+          </thead>
+
+          {/* BODY */}
+          <tbody className="divide-y divide-slate-100">
+            {auditLogs.map((row) => (
+              <tr key={row.id} className="hover:bg-slate-50">
+                {/* DATE */}
+                
+
+                {/* PATIENT */}
+                <td className="px-4 py-4">
+                  
+                  <div className="text-xs text-blue-600">
+                    ({row.id})
+                  </div>
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap">
+                  {formatDate(row.occurred_at)}
+                </td>
+
+                {/* VIEWED */}
+                <td className="px-4 py-4 text-slate-700">
+                  {row.action}
+                </td>
+
+                {/* CHANGES */}
+               
+
+                {/* ACTOR */}
+                <td className="px-4 py-4 text-slate-700">
+                  {row.actor_type}
+                </td>
+
+                {/* IP */}
+                <td className="px-4 py-4 text-slate-700 whitespace-nowrap">
+                  {row.ip_address}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
 

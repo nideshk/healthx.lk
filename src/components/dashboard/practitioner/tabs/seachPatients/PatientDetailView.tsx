@@ -5,11 +5,7 @@ import React, { useState } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import Input from "@/components/atom/Input/Input";
-import {
-  Patient,
-  PatientDetailTab,
-  Appointment,
-} from "@/types/Dashboard";
+import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
 
 interface PatientDetailViewProps {
   patient: Patient;
@@ -113,45 +109,182 @@ const DetailLine: React.FC<{ label: string; value: string }> = ({
 );
 
 /* ---------- Overview tab ---------- */
+const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
+  const [isEditing, setIsEditing] = React.useState(false);
 
-const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {/* Patient Information */}
-    <Card>
-      <CardHeader className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-900">
-          Patient Information
-        </div>
-        <Button variant="outline" size="sm" className="text-xs px-3">
-          Edit
-        </Button>
-      </CardHeader>
-      <CardBody className="space-y-3 text-xs">
-        <InfoRow label="Full Name" value={patient.name} />
-        <InfoRow label="Date of Birth" value={patient.dob} />
-        <InfoRow label="Gender" value={patient.gender} />
-        <InfoRow label="Age" value={`${patient.age} years`} />
-        {patient.allergies && (
-          <InfoRow label="Allergies" value={patient.allergies} />
-        )}
-      </CardBody>
-    </Card>
+  const [formData, setFormData] = React.useState({
+    name: patient.name,
+    dob: patient.dob,
+    gender: patient.gender,
+    age: patient.age.toString(),
+    allergies: patient.allergies || "",
+    email: patient.email,
+    phone: patient.phone,
+    addressLine1: patient.addressLine1 || "",
+    city: patient.city || "",
+    country: patient.country || "",
+  });
 
-    {/* Contact Information */}
-    <Card>
-      <CardHeader className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-900">
-          Contact Information
-        </div>
-      </CardHeader>
-      <CardBody className="space-y-3 text-xs">
-        <InfoRow label="Email" value={patient.email} />
-        <InfoRow label="Phone" value={patient.phone} />
-        <InfoRow label="Address" value={patient.addressLine1 || "-"} />
-        <InfoRow label="City" value={patient.city || "-"} />
-        <InfoRow label="Country" value={patient.country || "-"} />
-      </CardBody>
-    </Card>
+  const handleChange = (key: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = () => {
+    // 🔹 API integration point (later)
+    console.log("Saving patient details:", formData);
+
+    // Example future API call:
+    // await fetch(`/api/patients/${patient.id}`, {
+    //   method: "PUT",
+    //   body: JSON.stringify(formData),
+    // });
+
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Patient Information */}
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-900">
+            Patient Information
+          </div>
+
+          {!isEditing ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs px-3"
+              onClick={() => setIsEditing(true)}
+            >
+              Edit
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                className="text-xs"
+                onClick={handleSave}
+              >
+                Save
+              </Button>
+            </div>
+          )}
+        </CardHeader>
+
+        <CardBody className="space-y-3 text-xs">
+          <EditableField
+            label="Full Name"
+            value={formData.name}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("name", v)}
+          />
+
+          <EditableField
+            label="Date of Birth"
+            value={formData.dob}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("dob", v)}
+          />
+
+          <EditableField
+            label="Gender"
+            value={formData.gender}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("gender", v)}
+          />
+
+          <EditableField
+            label="Age"
+            value={formData.age}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("age", v)}
+          />
+
+          <EditableField
+            label="Allergies"
+            value={formData.allergies}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("allergies", v)}
+          />
+        </CardBody>
+      </Card>
+
+      {/* Contact Information */}
+      <Card>
+        <CardHeader>
+          <div className="text-sm font-semibold text-slate-900">
+            Contact Information
+          </div>
+        </CardHeader>
+
+        <CardBody className="space-y-3 text-xs">
+          <EditableField
+            label="Email"
+            value={formData.email}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("email", v)}
+          />
+
+          <EditableField
+            label="Phone"
+            value={formData.phone}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("phone", v)}
+          />
+
+          <EditableField
+            label="Address"
+            value={formData.addressLine1}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("addressLine1", v)}
+          />
+
+          <EditableField
+            label="City"
+            value={formData.city}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("city", v)}
+          />
+
+          <EditableField
+            label="Country"
+            value={formData.country}
+            isEditing={isEditing}
+            onChange={(v) => handleChange("country", v)}
+          />
+        </CardBody>
+      </Card>
+    </div>
+  );
+};
+
+const EditableField: React.FC<{
+  label: string;
+  value: string;
+  isEditing: boolean;
+  onChange: (v: string) => void;
+}> = ({ label, value, isEditing, onChange }) => (
+  <div className="flex flex-col gap-1">
+    <span className="text-[11px] text-slate-500">{label}</span>
+
+    {isEditing ? (
+      <Input value={value} onChange={(e) => onChange(e.target.value)} />
+    ) : (
+      <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 text-slate-800">
+        {value || "-"}
+      </div>
+    )}
   </div>
 );
 
@@ -176,7 +309,7 @@ const AppointmentsTab: React.FC<{
   const upcoming = appointments.filter((a) => a.category === "upcoming");
   const previous = appointments.filter((a) => a.category === "previous");
 
-    const [showCreateModal, setShowCreateModal] = React.useState(false);
+  const [showCreateModal, setShowCreateModal] = React.useState(false);
 
   return (
     <div className="space-y-6">
@@ -185,7 +318,12 @@ const AppointmentsTab: React.FC<{
         <h3 className="text-sm font-semibold text-slate-900">
           Upcoming Appointments
         </h3>
-        <Button variant="primary" size="sm" className="text-xs px-4" onClick={() => setShowCreateModal(true)}>
+        <Button
+          variant="primary"
+          size="sm"
+          className="text-xs px-4"
+          onClick={() => setShowCreateModal(true)}
+        >
           + Create New Appointment
         </Button>
       </div>
@@ -199,7 +337,7 @@ const AppointmentsTab: React.FC<{
       </div>
 
       <AppointmentSection appointments={previous} patient={patient} />
-    
+
       {/* Create Appointment Modal */}
       <CreateAppointmentModal
         open={showCreateModal}
@@ -216,20 +354,14 @@ const AppointmentSection: React.FC<{
 }> = ({ appointments, patient }) => {
   if (!appointments.length) {
     return (
-      <p className="text-xs text-slate-500">
-        No appointments in this section.
-      </p>
+      <p className="text-xs text-slate-500">No appointments in this section.</p>
     );
   }
 
   return (
     <div className="space-y-3">
       {appointments.map((appt) => (
-        <AppointmentRow
-          key={appt.id}
-          appointment={appt}
-          patient={patient}
-        />
+        <AppointmentRow key={appt.id} appointment={appt} patient={patient} />
       ))}
     </div>
   );
@@ -243,14 +375,31 @@ const AppointmentRow: React.FC<{
   const [showEmailModal, setShowEmailModal] = React.useState(false);
   const [isEditingEmail, setIsEditingEmail] = React.useState(false);
   const [showToast, setShowToast] = React.useState(false);
-  
-  const [showSmsModal, setShowSmsModal] = React.useState(false);
-const [smsNumber, setSmsNumber] = React.useState(patient.phone);
-const [smsMessage, setSmsMessage] = React.useState(
-  `Hi  ${patient.name}, this is a reminder about your appointment on ${appointment.date} at ${appointment.time} with ${appointment.doctorName}. Thank you!`
-);
+  const [isEditingAppointment, setIsEditingAppointment] = React.useState(false);
 
-const [showSmsToast, setShowSmsToast] = React.useState(false);
+  const [appointmentForm, setAppointmentForm] = React.useState({
+    appointmentType: appointment.appointmentType || "",
+    mainConcern: appointment.mainConcern || "",
+    goal: appointment.goal || "",
+    durationOfConcern: appointment.durationOfConcern || "",
+    clinicianNotes: appointment.clinicianNotes || "",
+    followUpDate: appointment.followUpDate || "",
+  });
+
+  const updateAppointmentField = (
+    key: keyof typeof appointmentForm,
+    value: string
+  ) => {
+    setAppointmentForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const [showSmsModal, setShowSmsModal] = React.useState(false);
+  const [smsNumber, setSmsNumber] = React.useState(patient.phone);
+  const [smsMessage, setSmsMessage] = React.useState(
+    `Hi  ${patient.name}, this is a reminder about your appointment on ${appointment.date} at ${appointment.time} with ${appointment.doctorName}. Thank you!`
+  );
+
+  const [showSmsToast, setShowSmsToast] = React.useState(false);
 
   const defaultSubject = `Appointment Reminder - ${appointment.date} at ${appointment.time} with ${appointment.doctorName}`;
   const defaultBody = `Dear ${patient.name},
@@ -267,8 +416,8 @@ Reason: ${appointment.reason}
 Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
 
   const [emailTo, setEmailTo] = React.useState(patient.email);
-const [emailSubject, setEmailSubject] = React.useState(defaultSubject);
-const [emailBody, setEmailBody] = React.useState(defaultBody);
+  const [emailSubject, setEmailSubject] = React.useState(defaultSubject);
+  const [emailBody, setEmailBody] = React.useState(defaultBody);
 
   const statusClasses =
     appointment.status === "confirmed"
@@ -327,13 +476,14 @@ const [emailBody, setEmailBody] = React.useState(defaultBody);
               >
                 Re-send appointment details
               </Button>
+
               <Button
-  variant="secondary"
-  size="sm"
-  onClick={() => setShowSmsModal(true)}
->
-  SMS patient
-</Button>
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowSmsModal(true)}
+              >
+                SMS patient
+              </Button>
 
               <Button variant="primary" size="sm" className="text-xs">
                 Join meeting
@@ -361,16 +511,57 @@ const [emailBody, setEmailBody] = React.useState(defaultBody);
                 <div className="font-semibold text-slate-900">
                   Appointment Details
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs px-3"
-                  onClick={() =>
-                    console.log("Edit questionnaire for", appointment.id)
-                  }
-                >
-                  Edit
-                </Button>
+                {!isEditingAppointment ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs px-3"
+                    onClick={() => setIsEditingAppointment(true)}
+                  >
+                    Edit
+                  </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        setAppointmentForm({
+                          appointmentType: appointment.appointmentType || "",
+                          mainConcern: appointment.mainConcern || "",
+                          goal: appointment.goal || "",
+                          durationOfConcern:
+                            appointment.durationOfConcern || "",
+                          clinicianNotes: appointment.clinicianNotes || "",
+                          followUpDate: appointment.followUpDate || "",
+                        });
+                        setIsEditingAppointment(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        console.log("SAVE appointment changes", {
+                          appointmentId: appointment.id,
+                          ...appointmentForm,
+                        });
+
+                        // API later
+                        // PUT /api/appointments/:id
+
+                        setIsEditingAppointment(false);
+                      }}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Appointment Type + Terms & Conditions + Telehealth */}
@@ -379,9 +570,21 @@ const [emailBody, setEmailBody] = React.useState(defaultBody);
                   <div className="text-[11px] text-slate-500">
                     Appointment Type
                   </div>
-                  <div className="text-slate-700">
-                    {appointment.appointmentType || "-"}
-                  </div>
+                  {isEditingAppointment ? (
+                    <Input
+                      value={appointmentForm.appointmentType}
+                      onChange={(e) =>
+                        updateAppointmentField(
+                          "appointmentType",
+                          e.target.value
+                        )
+                      }
+                    />
+                  ) : (
+                    <div className="text-slate-700">
+                      {appointment.appointmentType || "-"}
+                    </div>
+                  )}
 
                   <div className="text-[11px] text-slate-500 pt-3">
                     Telehealth Consent
@@ -404,21 +607,67 @@ const [emailBody, setEmailBody] = React.useState(defaultBody);
               </div>
 
               {/* Main concern & goal */}
-              <InfoRow
-                label="What is your main concern today?"
-                value={appointment.mainConcern || "-"}
-              />
-
-              <InfoRow
-                label="What are you hoping to achieve from this consultation?"
-                value={appointment.goal || "-"}
-              />
+              {isEditingAppointment ? (
+                <div className="space-y-1">
+                  <div className="text-[11px] text-slate-500">
+                    What is your main concern today?
+                  </div>
+                  <textarea
+                    value={appointmentForm.mainConcern}
+                    onChange={(e) =>
+                      updateAppointmentField("mainConcern", e.target.value)
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                  />
+                </div>
+              ) : (
+                <InfoRow
+                  label="What is your main concern today?"
+                  value={appointment.mainConcern || "-"}
+                />
+              )}
+              {isEditingAppointment ? (
+                <div className="space-y-1">
+                  <div className="text-[11px] text-slate-500">
+                    What are you hoping to achieve from this consultation?
+                  </div>
+                  <textarea
+                    value={appointmentForm.goal}
+                    onChange={(e) =>
+                      updateAppointmentField("goal", e.target.value)
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                  />
+                </div>
+              ) : (
+                <InfoRow
+                  label="What are you hoping to achieve from this consultation?"
+                  value={appointment.goal || "-"}
+                />
+              )}
 
               {/* Duration */}
-              <InfoRow
-                label="How long have you had this concern?"
-                value={appointment.durationOfConcern || "-"}
-              />
+              {isEditingAppointment ? (
+                <div className="space-y-1">
+                  <div className="text-[11px] text-slate-500">
+                    How long have you had this concern?
+                  </div>
+                  <Input
+                    value={appointmentForm.durationOfConcern}
+                    onChange={(e) =>
+                      updateAppointmentField(
+                        "durationOfConcern",
+                        e.target.value
+                      )
+                    }
+                  />
+                </div>
+              ) : (
+                <InfoRow
+                  label="How long have you had this concern?"
+                  value={appointment.durationOfConcern || "-"}
+                />
+              )}
 
               {/* Documents Uploaded */}
               <div className="space-y-1">
@@ -448,10 +697,25 @@ const [emailBody, setEmailBody] = React.useState(defaultBody);
               </div>
 
               {/* Clinician Notes */}
-              <InfoRow
-                label="Clinician Notes"
-                value={appointment.clinicianNotes || "-"}
-              />
+              {isEditingAppointment ? (
+                <div className="space-y-1">
+                  <div className="text-[11px] text-slate-500">
+                    Clinician Notes
+                  </div>
+                  <textarea
+                    value={appointmentForm.clinicianNotes}
+                    onChange={(e) =>
+                      updateAppointmentField("clinicianNotes", e.target.value)
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                  />
+                </div>
+              ) : (
+                <InfoRow
+                  label="Clinician Notes"
+                  value={appointment.clinicianNotes || "-"}
+                />
+              )}
 
               {/* Prescriptions Provided */}
               <InfoRow
@@ -469,10 +733,6 @@ const [emailBody, setEmailBody] = React.useState(defaultBody);
                   </span>
                 </div>
 
-                <InfoRow
-                  label="Follow-up Date"
-                  value={appointment.followUpDate || "-"}
-                />
               </div>
             </div>
           )}
@@ -499,11 +759,11 @@ const [emailBody, setEmailBody] = React.useState(defaultBody);
             <div className="px-5 py-4 space-y-4 text-xs">
               <div className="space-y-1">
                 <div className="text-[11px] text-slate-500">To</div>
-                 <Input
-    value={emailTo}
-    disabled={!isEditingEmail}
-    onChange={(e) => setEmailTo(e.target.value)}
-  />
+                <Input
+                  value={emailTo}
+                  disabled={!isEditingEmail}
+                  onChange={(e) => setEmailTo(e.target.value)}
+                />
               </div>
 
               <div className="space-y-1">
@@ -554,68 +814,62 @@ const [emailBody, setEmailBody] = React.useState(defaultBody);
         </div>
       )}
 
-        {/* SMS modal for "SMS patient" */}
-        {showSmsModal && (
-  <div className="fixed inset-0 z-50 bg-black/20 flex items-center justify-center">
-    <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 space-y-4 animate-fadeIn">
+      {/* SMS modal for "SMS patient" */}
+      {showSmsModal && (
+        <div className="fixed inset-0 z-50 bg-black/20 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 space-y-4 animate-fadeIn">
+            {/* Title */}
+            <div className="text-lg font-semibold text-slate-900">
+              Send SMS to Patient
+            </div>
 
-      {/* Title */}
-      <div className="text-lg font-semibold text-slate-900">
-        Send SMS to Patient
-      </div>
+            {/* Phone Number */}
+            <div className="space-y-1">
+              <div className="text-[11px] text-slate-500">Phone Number</div>
+              <Input
+                value={smsNumber}
+                onChange={(e) => setSmsNumber(e.target.value)}
+              />
+            </div>
 
-      {/* Phone Number */}
-      <div className="space-y-1">
-        <div className="text-[11px] text-slate-500">Phone Number</div>
-        <Input
-          value={smsNumber}
-          onChange={(e) => setSmsNumber(e.target.value)}
-        />
-      </div>
+            {/* Message */}
+            <div className="space-y-1">
+              <div className="text-[11px] text-slate-500">Message</div>
+              <textarea
+                value={smsMessage}
+                onChange={(e) => setSmsMessage(e.target.value)}
+                className="w-full h-28 border border-slate-300 rounded-lg p-3 text-sm resize-none focus:ring focus:ring-blue-200"
+              />
+            </div>
 
-      {/* Message */}
-      <div className="space-y-1">
-        <div className="text-[11px] text-slate-500">Message</div>
-        <textarea
-          value={smsMessage}
-          onChange={(e) => setSmsMessage(e.target.value)}
-          className="w-full h-28 border border-slate-300 rounded-lg p-3 text-sm resize-none focus:ring focus:ring-blue-200"
-        />
-      </div>
+            {/* Buttons */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowSmsModal(false)}>
+                Cancel
+              </Button>
 
-      {/* Buttons */}
-      <div className="flex justify-end gap-2 pt-2">
-        <Button
-          variant="outline"
-          onClick={() => setShowSmsModal(false)}
-        >
-          Cancel
-        </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  console.log("SMS SENT:", smsNumber, smsMessage);
+                  setShowSmsModal(false);
+                  setShowSmsToast(true);
+                  setTimeout(() => setShowSmsToast(false), 3000);
+                }}
+              >
+                Send SMS
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            console.log("SMS SENT:", smsNumber, smsMessage);
-            setShowSmsModal(false);
-            setShowSmsToast(true);
-            setTimeout(() => setShowSmsToast(false), 3000);
-          }}
-        >
-          Send SMS
-        </Button>
-      </div>
-    </div>
-  </div>
-)}
-
-        {/* SMS Toast notification */}
-        {showSmsToast && (
-  <div className="fixed bottom-4 right-4 z-[60] bg-slate-900 text-white px-4 py-2 rounded-lg text-xs shadow-lg">
-    SMS sent successfully to {smsNumber}
-  </div>
-)}
-
-
+      {/* SMS Toast notification */}
+      {showSmsToast && (
+        <div className="fixed bottom-4 right-4 z-[60] bg-slate-900 text-white px-4 py-2 rounded-lg text-xs shadow-lg">
+          SMS sent successfully to {smsNumber}
+        </div>
+      )}
     </>
   );
 };
@@ -646,7 +900,12 @@ const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     "Telehealth Video Consult",
   ];
 
-  const attendeesOptions = ["1 attendee", "2 attendees", "Family (3+)", "Group"];
+  const attendeesOptions = [
+    "1 attendee",
+    "2 attendees",
+    "Family (3+)",
+    "Group",
+  ];
 
   const appointmentTypes = [
     "10 minute short appointment",
@@ -849,18 +1108,16 @@ const PatientSettingsTab: React.FC = () => (
     <h2 className="text-sm font-semibold text-slate-900">Patient Settings</h2>
 
     <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-xs text-slate-500">
-        Settings management coming soon.
-      </p>
+      <p className="text-xs text-slate-500">Settings management coming soon.</p>
     </div>
   </div>
 );
 
 interface AuditEntry {
   id: string;
-  title: string;     // Ex: "Profile Updated"
+  title: string; // Ex: "Profile Updated"
   description: string; // Ex: "Updated by Admin"
-  date: string;       // formatted datetime
+  date: string; // formatted datetime
 }
 
 const mockAuditData: AuditEntry[] = [
@@ -900,4 +1157,3 @@ const AuditLogTab: React.FC = () => (
     </div>
   </div>
 );
-

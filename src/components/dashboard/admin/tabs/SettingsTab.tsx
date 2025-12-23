@@ -25,6 +25,60 @@ const SettingsTab: React.FC = () => {
     confirmPassword: "",
   });
 
+  const [platformCharges, setPlatformCharges] = useState({
+    solo: {
+      quick: 1500,
+      standard: 2500,
+      extended: 3500,
+    },
+    plusOne: {
+      quick: 2000,
+      standard: 3000,
+      extended: 4000,
+    },
+    maxAttendees: {
+      quick: 1,
+      standard: 2,
+      extended: 3,
+    },
+    baseFee: 950,
+  });
+
+  /* ---------------- HELPERS ---------------- */
+
+  const updateCharge = (
+    section: string,
+    key: string,
+    value: number,
+    min = 0,
+    max?: number
+  ) => {
+    if (value < min) return;
+    if (max !== undefined && value > max) return;
+
+    setPlatformCharges((prev) => ({
+      ...prev,
+      [section]: {
+        ...(prev as any)[section],
+        [key]: value,
+      },
+    }));
+  };
+
+  const updateBaseFee = (value: number) => {
+    if (value < 0) return;
+    setPlatformCharges((prev) => ({ ...prev, baseFee: value }));
+  };
+
+  const savePlatformCharges = () => {
+    /**
+     * FUTURE API:
+     * POST /api/admin/settings/platform-charges
+     * body: platformCharges
+     */
+    console.log("Saving platform charges:", platformCharges);
+  };
+
   /* ---------------- HANDLERS ---------------- */
 
   const handleSaveAccount = () => {
@@ -164,19 +218,111 @@ const SettingsTab: React.FC = () => {
         </div>
       )}
 
+
       {/* ===================== PLATFORM CHARGES ======================= */}
-      {activeTab === "Platform" && (
-        <div className="border border-slate-200 rounded-xl p-5 bg-white">
-          <div className="text-sm font-semibold text-slate-900 mb-1">
-            Platform Charges
+    {activeTab === "Platform" && (
+        <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-6">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">
+              Appointment Fees
+            </div>
+            <div className="text-xs text-slate-500">
+              Configure pricing and platform limits
+            </div>
           </div>
-          <div className="text-xs text-slate-500">
-            Platform charge configuration will be added later.
-          </div>
+
+          {/* ROW 1 – SOLO */}
+          <Section title="Solo Appointments">
+            <ChargeRow
+              values={platformCharges.solo}
+              onChange={(k, v) => updateCharge("solo", k, v)}
+            />
+          </Section>
+
+          {/* ROW 2 – +1 */}
+          <Section title="Appointments with +1 Attendee">
+            <ChargeRow
+              values={platformCharges.plusOne}
+              onChange={(k, v) => updateCharge("plusOne", k, v)}
+            />
+          </Section>
+
+          {/* ROW 3 – MAX ATTENDEES */}
+          <Section title="Max Number of Attendees">
+            <ChargeRow
+              values={platformCharges.maxAttendees}
+              onChange={(k, v) =>
+                updateCharge("maxAttendees", k, v, 0, 3)
+              }
+              suffix="attendees"
+            />
+          </Section>
+
+          {/* ROW 4 – BASE FEE */}
+          <Section title="Platform Charges">
+            <div className="grid grid-cols-3 gap-4 max-w-sm">
+              <Input
+                label="Base Fee (LKR)"
+                type="number"
+                value={platformCharges.baseFee.toString()}
+                onChange={(e) =>
+                  updateBaseFee(Number(e.target.value))
+                }
+              />
+            </div>
+          </Section>
+
+          <Button onClick={savePlatformCharges}>
+            Save Service Charges
+          </Button>
         </div>
       )}
     </div>
   );
+};
+
+const Section = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div>
+    <div className="text-sm font-medium text-slate-800 mb-3">
+      {title}
+    </div>
+    {children}
+  </div>
+);
+
+const ChargeRow = ({
+  values,
+  onChange,
+  suffix = "LKR",
+}: {
+  values: Record<string, number>;
+  onChange: (key: string, value: number) => void;
+  suffix?: string;
+}) => (
+  <div className="grid grid-cols-3 gap-4">
+    {Object.entries(values).map(([key, value]) => (
+      <Input
+        key={key}
+        label={formatLabel(key)}
+        type="number"
+        value={value.toString()}
+        onChange={(e) => onChange(key, Number(e.target.value))}
+      />
+    ))}
+  </div>
+);
+
+const formatLabel = (key: string) => {
+  if (key === "quick") return "Quick Consultation (LKR)";
+  if (key === "standard") return "Standard Consultation (LKR)";
+  if (key === "extended") return "Extended Consultation (LKR)";
+  return key;
 };
 
 export default SettingsTab;

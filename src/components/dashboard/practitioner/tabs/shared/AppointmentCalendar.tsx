@@ -12,11 +12,14 @@ type ViewMode = "weekly" | "daily";
 interface AppointmentCalendarProps {
   appointments: Appointment[];
   onCompleteAppointment?: (id: string) => void; // easy API hook later
+   userRole?: "admin" | "superadmin" | "practitioner";
 }
+
 
 const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   appointments,
   onCompleteAppointment,
+  userRole = "practitioner",
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [anchorDate, setAnchorDate] = useState<Date>(new Date());
@@ -370,6 +373,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
             label="Status"
             value={appointment.status ? capitalize(appointment.status) : "-"}
           />
+          
         </div>
 
         <div className="flex justify-end gap-2 px-5 py-4 border-t">

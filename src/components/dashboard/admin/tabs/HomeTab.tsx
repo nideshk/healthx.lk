@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Input from "@/components/atom/Input/Input";
-import AppointmentCalendar from "@/components/dashboard/shared/AppointmentCalendar";
+import AppointmentCalendar from "@/components/dashboard/admin/tabs/shared/AppointmentCalendar";
 import { Appointment } from "@/types/Dashboard";
 
 /* -------------------------------------------------------------------------- */

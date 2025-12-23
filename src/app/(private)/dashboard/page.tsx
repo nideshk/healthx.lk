@@ -27,12 +27,11 @@ export default function DashboardPage() {
       try {
         const res = await axios.get("/api/auth/me");
         const r = res.data?.user?.role;
-        let userid ;
-        if(role === "patient"){
-         userid = res.data?.user?.patient_id;
-        }
-        else if(role === "practitioner"){
-         userid = res.data?.user?.practitioner_id;
+        let userid;
+        if (role === "patient") {
+          userid = res.data?.user?.patient_id;
+        } else if (role === "practitioner") {
+          userid = res.data?.user?.practitioner_id;
         }
         if (r) {
           localStorage.setItem("user_role", r); // Cache role
@@ -61,14 +60,14 @@ export default function DashboardPage() {
 
   // 4️⃣ Role-Based Rendering
   if (role === "patient") {
-    return <PatientDashboard />;}
-  if (role === "practitioner"){ 
+    return <PatientDashboard />;
+  }
+  if (role === "practitioner") {
     return <PractitionerDashboard />;
   }
-  if  (role === "admin") {
+  if (role === "admin" || role === "superadmin") {
     return <AdminDashboard />;
-  }
-  else{
-    redirect("/")
+  } else {
+    redirect("/");
   }
 }
