@@ -7,9 +7,10 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import axios from 'axios';
-import { toast } from 'sonner';
+
 import { ICON_MAP } from '@/lib/lucideIcons';
 import { Stethoscope } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const ConsultationStep = forwardRef(
   (
