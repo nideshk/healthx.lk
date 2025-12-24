@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppointmentCard } from "../AppointmentCard";
+import Loader from "@/components/atom/Loader/Loader";
 
 export default function AppointmentTab() {
   const [ongoing, setOngoing] = useState<any[]>([]);
@@ -22,8 +23,10 @@ export default function AppointmentTab() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return <p className="text-gray-500">Loading appointments…</p>;
+  if (loading) { 
+    return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
+        <Loader size="lg"></Loader>;
+    </div>
   }
 
   return (

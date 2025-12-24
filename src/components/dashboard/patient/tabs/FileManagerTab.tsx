@@ -1,5 +1,6 @@
 "use client";
 
+import Loader from "@/components/atom/Loader/Loader";
 import { File, FileArchiveIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -99,10 +100,11 @@ export default function FileManagerTab() {
   /* ─────────────────────────────────────────────
      UI STATES
   ───────────────────────────────────────────── */
-  if (loading) {
-    return <p className="text-gray-500">Loading files…</p>;
-  }
-
+  if (loading) { 
+      return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
+          <Loader size="lg"></Loader>;
+      </div>
+    }
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">My Files & Reports</h2>

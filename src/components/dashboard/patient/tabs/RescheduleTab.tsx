@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Loader from "@/components/atom/Loader/Loader";
 
 export default function RescheduleTab() {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -16,9 +17,11 @@ export default function RescheduleTab() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return <p className="text-gray-500">Loading…</p>;
-  }
+ if (loading) { 
+     return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
+         <Loader size="lg"></Loader>;
+     </div>
+   }
 
   return (
     <div className="space-y-4">

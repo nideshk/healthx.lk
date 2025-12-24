@@ -1,22 +1,31 @@
 import { NextResponse } from "next/server";
-import { DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import type { NextRequest } from "next/server";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { s3 } from "@/lib/s3/s3";
 
+/* ─────────────────────────────────────────────
+   GET: View file (signed URL)
+───────────────────────────────────────────── */
 export async function GET(
-  _: Request,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const { user } = await requireUser();
 
-    /* Ownership enforced here */
+    /* Ownership check */
     const { data: attachment } = await supabaseAdmin
       .from("attachments")
       .select("id, file_url")
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("patient_id", user?.patient_id)
       .single();
 
@@ -41,25 +50,30 @@ export async function GET(
       expires_in: 60,
     });
   } catch (err: any) {
+    console.error(err);
     return NextResponse.json(
-      { error: err.message },
-      { status: err.status || 401 }
+      { error: err.message || "Unauthorized" },
+      { status: 401 }
     );
   }
 }
 
+/* ─────────────────────────────────────────────
+   DELETE: Remove file
+───────────────────────────────────────────── */
 export async function DELETE(
-  _: Request,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const { user } = await requireUser();
 
-    /* 1️⃣ Fetch attachment (ownership enforced) */
+    /* 1️⃣ Ownership check */
     const { data: attachment } = await supabaseAdmin
       .from("attachments")
       .select("id, file_url")
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("patient_id", user?.patient_id)
       .single();
 
@@ -82,20 +96,20 @@ export async function DELETE(
     const { error: deleteError } = await supabaseAdmin
       .from("attachments")
       .delete()
-      .eq("id", attachment.id)
+      .eq("id", id)
       .eq("patient_id", user?.patient_id);
 
     if (deleteError) {
-      throw new Error("DB delete failed");
+      throw new Error("Database delete failed");
     }
 
-    /* 4️⃣ (Optional but recommended) Audit log */
+    /* 4️⃣ Audit log */
     await supabaseAdmin.from("hipaa_audit_log").insert({
       actor_user_id: user?.patient_id,
       actor_role: "patient",
       action: "DELETED",
       entity_type: "attachment",
-      entity_id: attachment.id,
+      entity_id: id,
       purpose: "operations",
     });
 
@@ -103,9 +117,10 @@ export async function DELETE(
       message: "File deleted successfully",
     });
   } catch (err: any) {
+    console.error(err);
     return NextResponse.json(
-      { error: err.message },
-      { status: err.status || 401 }
+      { error: err.message || "Unauthorized" },
+      { status: 401 }
     );
   }
 }
