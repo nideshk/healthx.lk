@@ -149,7 +149,7 @@ export default function Header() {
 
       await supabaseClient.auth.getSession();
       setUser(data.user);
-      setUsername(data.username?.first_name + " " +data.username?.last_name || email.split("@")[0]);
+      setUsername(data.username?.first_name || email.split("@")[0]);
 
       toast.update(toastId, {
         render: "Welcome back. Your care continues here 💙",

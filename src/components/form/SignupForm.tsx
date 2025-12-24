@@ -28,15 +28,13 @@ export default function SignupForm() {
     email: "",
     password: "",
     date_of_birth: "",
-    gender_identity: "male",
+    gender_identity: "",
     phone: "",
     emergency_contact: "",
-
     government_id_type: "passport",
     government_id_number: "",
-
     address: "",
-    country: "Sri Lanka",
+    country: "",
     state_province: "",
     city: "",
     pin_code: "",
@@ -69,6 +67,11 @@ export default function SignupForm() {
       });
 
       const data = await res.json();
+      if (data.requires_email_verification) {
+        toast.info("Check your email to verify your account");
+        router.push("/");
+        return;
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Signup failed");
