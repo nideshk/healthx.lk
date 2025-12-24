@@ -1,4 +1,5 @@
 'use client';
+
 import React, {
   useState,
   useEffect,
@@ -6,9 +7,10 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import axios from 'axios';
-import { toast } from 'sonner'; // optional: use toast for feedback
+import { toast } from 'sonner';
+import { ICON_MAP } from '@/lib/lucideIcons';
+import { Stethoscope } from 'lucide-react';
 
-// ✅ ForwardRef so parent can access validateStep()
 const ConsultationStep = forwardRef(
   (
     {
@@ -21,24 +23,26 @@ const ConsultationStep = forwardRef(
     },
     ref
   ) => {
-    console.log("draftData", draftData?.data);
     const [services, setServices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedService, setSelectedService] = useState<any>(
       draftData?.data?.selectedService?.id || null
     );
 
-    // ✅ Expose validateStep() to parent (AppointmentBookingFlow)
+    /* ───────── expose validation to parent ───────── */
     useImperativeHandle(ref, () => ({
       validateStep: () => {
         if (!selectedService) {
-          toast.error('Please select a consultation type before continuing.');
+          toast.error(
+            'Please select a consultation type before continuing.'
+          );
           return false;
         }
         return true;
       },
     }));
 
+    /* ───────── fetch services ───────── */
     useEffect(() => {
       const fetchServices = async () => {
         try {
@@ -57,16 +61,19 @@ const ConsultationStep = forwardRef(
     const handleSelectService = (service: any) => {
       setSelectedService(service.id);
       updateData({
-        selectedService : service,
+        selectedService: service,
       });
     };
 
-    if (loading)
+    if (loading) {
       return (
         <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500 text-lg">Loading services...</p>
+          <p className="text-gray-500 text-lg">
+            Loading services...
+          </p>
         </div>
       );
+    }
 
     return (
       <div className="bg-gradient-to-b from-blue-50 to-white py-12">
@@ -75,13 +82,19 @@ const ConsultationStep = forwardRef(
             Select a Consultation Type
           </h2>
           <p className="text-center text-gray-500 mb-12">
-            Connect with licensed practitioners for personalized care and
-            treatment options.
+            Connect with licensed practitioners for personalized care
+            and treatment options.
           </p>
 
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((service) => {
               const isSelected = selectedService === service.id;
+
+              // ✅ Resolve Lucide icon from DB value
+              const Icon =
+                ICON_MAP[service.icon as string] ||
+                Stethoscope;
+
               return (
                 <div
                   key={service.id}
@@ -100,13 +113,15 @@ const ConsultationStep = forwardRef(
                         : 'bg-blue-100 text-blue-600'
                     }`}
                   >
-                    <span className="text-2xl">{service.icon || '💊'}</span>
+                    <Icon className="w-8 h-8" />
                   </div>
 
                   {/* Title */}
                   <h3
                     className={`text-xl font-semibold uppercase mb-2 ${
-                      isSelected ? 'text-white' : 'text-gray-800'
+                      isSelected
+                        ? 'text-white'
+                        : 'text-gray-800'
                     }`}
                   >
                     {service.name}
@@ -115,7 +130,9 @@ const ConsultationStep = forwardRef(
                   {/* Description */}
                   <p
                     className={`text-sm mb-6 line-clamp-3 ${
-                      isSelected ? 'text-blue-100' : 'text-gray-500'
+                      isSelected
+                        ? 'text-blue-100'
+                        : 'text-gray-500'
                     }`}
                   >
                     {service.description ||
@@ -146,6 +163,5 @@ const ConsultationStep = forwardRef(
   }
 );
 
-// Required for forwardRef
 ConsultationStep.displayName = 'ConsultationStep';
 export default ConsultationStep;
