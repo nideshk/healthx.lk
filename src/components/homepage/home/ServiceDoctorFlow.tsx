@@ -11,13 +11,15 @@ import {
   Star,
 } from "lucide-react";
 import { BadgeCheck } from "lucide-react";
+import { ICON_MAP } from "@/lib/lucideIcons";
+
 /* ---------- Types ---------- */
 
 type Service = {
   id: string;
   name: string;
   slug: string;
-  icon : string | null;
+  icon: string | null;
   description: string;
 };
 
@@ -40,8 +42,10 @@ export default function ServiceDoctorFlow() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [selectedService, setSelectedService] =
+    useState<Service | null>(null);
+  const [selectedDoctor, setSelectedDoctor] =
+    useState<Doctor | null>(null);
 
   /* ---------- Fetch services ---------- */
   useEffect(() => {
@@ -109,8 +113,11 @@ export default function ServiceDoctorFlow() {
             />
           )}
 
-          {step === 3 && selectedDoctor && (
-            <HomepageSlotPicker practitionerId={selectedDoctor.id} selectedService={selectedService} />
+          {step === 3 && selectedDoctor && selectedService && (
+            <HomepageSlotPicker
+              practitionerId={selectedDoctor.id}
+              selectedService={selectedService}
+            />
           )}
         </div>
       </div>
@@ -184,54 +191,57 @@ const ServicePicker = ({
     </p>
 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-      {services.map((s) => (
-        <button
-          key={s.id}
-          onClick={() => onSelect(s)}
-          className="
-            group relative text-left rounded-2xl border border-gray-200
-            p-5 bg-white
-            hover:border-cyan-500 hover:shadow-lg
-            transition-all duration-200
-          "
-        >
-          {/* Icon */}
-          <div className="flex items-start gap-4">
-            <div
-              className="
-                w-12 h-12 rounded-xl flex items-center justify-center
-                bg-cyan-50 text-2xl
-                group-hover:bg-cyan-600 group-hover:text-white
-                transition
-              "
-            >
-              {s.icon ?? "🩺"}
+      {services.map((s) => {
+        const Icon =
+          ICON_MAP[s.icon as string] || Stethoscope;
+
+        return (
+          <button
+            key={s.id}
+            onClick={() => onSelect(s)}
+            className="
+              group relative text-left rounded-2xl border border-gray-200
+              p-5 bg-white
+              hover:border-cyan-500 hover:shadow-lg
+              transition-all duration-200
+            "
+          >
+            <div className="flex items-start gap-4">
+              {/* Icon */}
+              <div
+                className="
+                  w-12 h-12 rounded-xl flex items-center justify-center
+                  bg-cyan-50 text-cyan-600
+                  group-hover:bg-cyan-600 group-hover:text-white
+                  transition
+                "
+              >
+                <Icon className="w-6 h-6" />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {s.name}
+                </h3>
+
+                <p className="text-sm text-gray-500 mt-1 leading-snug">
+                  {s.description}
+                </p>
+              </div>
             </div>
 
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {s.name}
-              </h3>
-
-              <p className="text-sm text-gray-500 mt-1 leading-snug">
-                {s.description}
-              </p>
+            <div className="mt-4 text-sm font-medium text-cyan-600 opacity-0 group-hover:opacity-100 transition">
+              View doctors →
             </div>
-          </div>
-
-          {/* CTA hint */}
-          <div className="mt-4 text-sm font-medium text-cyan-600 opacity-0 group-hover:opacity-100 transition">
-            View doctors →
-          </div>
-        </button>
-      ))}
+          </button>
+        );
+      })}
     </div>
   </div>
 );
 
-
 /* ---------- Doctor Picker ---------- */
-
 
 const DoctorPicker = ({
   doctors,
@@ -307,7 +317,6 @@ const DoctorPicker = ({
             </div>
           </div>
 
-          {/* CTA */}
           <div className="mt-4 text-sm font-medium text-cyan-600 opacity-0 group-hover:opacity-100 transition">
             View availability →
           </div>
@@ -316,6 +325,7 @@ const DoctorPicker = ({
     </div>
   </div>
 );
+
 /* ---------- Loading ---------- */
 
 const LoadingState = () => (
