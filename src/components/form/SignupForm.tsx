@@ -1,23 +1,48 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "react-toastify";
+
+/* ─────────────────────────────────────────────
+   Sri Lanka Static Location Data
+───────────────────────────────────────────── */
+const SRI_LANKA_LOCATIONS: Record<string, string[]> = {
+  Western: ["Colombo", "Dehiwala", "Moratuwa", "Kotte", "Negombo", "Panadura"],
+  Central: ["Kandy", "Peradeniya", "Matale", "Nuwara Eliya", "Hatton"],
+  Southern: ["Galle", "Matara", "Hambantota"],
+  Northern: ["Jaffna", "Kilinochchi", "Mannar", "Vavuniya"],
+  Eastern: ["Trincomalee", "Batticaloa", "Ampara"],
+  "North Western": ["Kurunegala", "Puttalam", "Chilaw"],
+  "North Central": ["Anuradhapura", "Polonnaruwa"],
+  Uva: ["Badulla", "Monaragala"],
+  Sabaragamuwa: ["Ratnapura", "Kegalle"],
+};
 
 export default function SignupForm() {
   const [form, setForm] = useState({
-    first_name: "anirudh",
-    last_name: "kulkarni",
-    email: "anirudhkulkarni9094@gmail.com",
-    password: "Anirudh9094@123",
-    date_of_birth: "2002-01-01",
+    first_name: "",
+    last_name: "",
+    email: "",
+    password: "",
+    date_of_birth: "",
     gender_identity: "male",
-    phone: "+61412345678",
-    address_1: "abc",
-    city: "Bangalore",
-    state: "Karnataka",
-    post_code: "0000",
+    phone: "",
+
+    government_id_type: "passport",
+    government_id_number: "",
+
+    address_1: "",
+    country: "Sri Lanka",
+    state_province: "",
+    city: "",
+    pin_code: "",
+
     referral_source: "Website",
     notes: "Created from portal",
   });
+
+  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +56,9 @@ export default function SignupForm() {
   };
 
   const handleSignup = async () => {
+    setLoading(true);
     setError(null);
     setSuccess(null);
-    setLoading(true);
 
     try {
       const res = await fetch("/api/auth/signup", {
@@ -50,7 +75,7 @@ export default function SignupForm() {
         return;
       }
 
-      setSuccess("✅ Account created successfully!");
+      toast.success("Account created successfully!");
       setForm({
         first_name: "",
         last_name: "",
@@ -59,216 +84,230 @@ export default function SignupForm() {
         date_of_birth: "",
         gender_identity: "male",
         phone: "",
+        government_id_type: "passport",
+        government_id_number: "",
         address_1: "",
+        country: "Sri Lanka",
+        state_province: "",
         city: "",
-        state: "",
-        post_code: "",
+        pin_code: "",
         referral_source: "Website",
         notes: "Created from portal",
       });
-
-      console.log("Signup Success →", data);
-    } catch (err: any) {
-      console.error("Signup error:", err);
-      setError("Unexpected error occurred. Please try again.");
+      setTimeout(() => {
+  router.push("/");
+}, 1500);
+    } catch (err) {
+      console.error(err);
+      setError("Unexpected error occurred");
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex justify-center px-4 py-10">
       <form
         onSubmit={(e) => {
           e.preventDefault();
           handleSignup();
         }}
-        className="w-full max-w-lg rounded-lg bg-white p-8 shadow-lg space-y-4"
+        className="w-full max-w-xl space-y-4 rounded-lg bg-white p-8 shadow-lg"
       >
-        <h1 className="text-2xl font-bold text-gray-800 text-center">
-          Patient Signup
-        </h1>
+        <h1 className="text-center text-2xl font-bold">Patient Signup</h1>
 
         {error && (
-          <p className="text-center text-sm text-red-600 bg-red-50 rounded-md p-2">
+          <p className="rounded bg-red-50 p-2 text-center text-sm text-red-600">
             {error}
           </p>
         )}
         {success && (
-          <p className="text-center text-sm text-green-600 bg-green-50 rounded-md p-2">
+          <p className="rounded bg-green-50 p-2 text-center text-sm text-green-600">
             {success}
           </p>
         )}
 
+        {/* Name */}
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              First Name
-            </label>
-            <input
-              name="first_name"
-              type="text"
-              value={form.first_name}
-              onChange={handleChange}
-              placeholder="John"
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Last Name
-            </label>
-            <input
-              name="last_name"
-              type="text"
-              value={form.last_name}
-              onChange={handleChange}
-              placeholder="Doe"
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
           <input
-            name="email"
-            type="email"
-            value={form.email}
+            name="first_name"
+            placeholder="First Name"
+            value={form.first_name}
             onChange={handleChange}
-            placeholder="you@example.com"
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
             required
+            className="input"
+          />
+          <input
+            name="last_name"
+            placeholder="Last Name"
+            value={form.last_name}
+            onChange={handleChange}
+            required
+            className="input"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Password
-          </label>
-          <input
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder="********"
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-            required
-            minLength={8}
-          />
-        </div>
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={handleChange}
+          required
+          className="input"
+        />
 
+        {/* Password */}
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          value={form.password}
+          onChange={handleChange}
+          required
+          minLength={8}
+          className="input"
+        />
+
+        {/* DOB & Gender */}
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Date of Birth
-            </label>
-            <input
-              name="date_of_birth"
-              type="date"
-              value={form.date_of_birth}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Gender
-            </label>
-            <select
-              name="gender_identity"
-              value={form.gender_identity}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="non-binary">Non-binary</option>
-              <option value="unspecified">Prefer not to say</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Phone
-          </label>
           <input
-            name="phone"
-            type="tel"
-            value={form.phone}
+            name="date_of_birth"
+            type="date"
+            value={form.date_of_birth}
             onChange={handleChange}
-            placeholder="+61412345678"
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
             required
+            className="input"
           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Address
-          </label>
-          <input
-            name="address_1"
-            type="text"
-            value={form.address_1}
+          <select
+            name="gender_identity"
+            value={form.gender_identity}
             onChange={handleChange}
-            placeholder="123 Main Street"
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
+            className="input"
+          >
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="non-binary">Non-binary</option>
+            <option value="unspecified">Prefer not to say</option>
+          </select>
+        </div>
+
+        {/* Phone */}
+        <input
+          name="phone"
+          placeholder="+94771234567"
+          value={form.phone}
+          onChange={handleChange}
+          required
+          className="input"
+        />
+
+        {/* Government ID */}
+        <div className="grid grid-cols-2 gap-4">
+          <select
+            name="government_id_type"
+            value={form.government_id_type}
+            onChange={handleChange}
+            className="input"
+          >
+            <option value="passport">Passport</option>
+            <option value="nic">National Identity Card (NIC)</option>
+            <option value="driving_license">Driving License</option>
+          </select>
+
+          <input
+            name="government_id_number"
+            placeholder="ID Number"
+            value={form.government_id_number}
+            onChange={handleChange}
+            required
+            className="input"
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              City
-            </label>
-            <input
-              name="city"
-              value={form.city}
-              onChange={handleChange}
-              placeholder="Melbourne"
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              State
-            </label>
-            <input
-              name="state"
-              value={form.state}
-              onChange={handleChange}
-              placeholder="VIC"
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Post Code
-            </label>
-            <input
-              name="post_code"
-              value={form.post_code}
-              onChange={handleChange}
-              placeholder="3000"
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
+        {/* Address */}
+        <input
+          name="address_1"
+          placeholder="Address"
+          value={form.address_1}
+          onChange={handleChange}
+          className="input"
+        />
 
+        {/* Country */}
+        <input
+          name="country"
+          value="Sri Lanka"
+          disabled
+          className="input bg-gray-100"
+        />
+
+        {/* Province (select OR type) */}
+        <input
+          list="province-list"
+          name="state_province"
+          placeholder="State / Province"
+          value={form.state_province}
+          onChange={handleChange}
+          required
+          className="input"
+        />
+        <datalist id="province-list">
+          {Object.keys(SRI_LANKA_LOCATIONS).map((province) => (
+            <option key={province} value={province} />
+          ))}
+        </datalist>
+
+        {/* City (filtered but typable) */}
+        <input
+          list="city-list"
+          name="city"
+          placeholder="City"
+          value={form.city}
+          onChange={handleChange}
+          required
+          className="input"
+        />
+        <datalist id="city-list">
+          {(SRI_LANKA_LOCATIONS[form.state_province] || []).map((city) => (
+            <option key={city} value={city} />
+          ))}
+        </datalist>
+
+        {/* PIN */}
+        <input
+          name="pin_code"
+          placeholder="Postal Code (e.g. 00100)"
+          value={form.pin_code}
+          onChange={handleChange}
+          required
+          className="input"
+        />
+
+        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-indigo-600 py-2 text-white font-medium hover:bg-indigo-700 transition disabled:opacity-50"
+          className="w-full rounded-md bg-indigo-600 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
         >
           {loading ? "Signing up..." : "Sign Up"}
         </button>
       </form>
+
+      {/* Minimal input styles */}
+      <style jsx>{`
+        .input {
+          width: 100%;
+          border: 1px solid #d1d5db;
+          border-radius: 0.375rem;
+          padding: 0.5rem 0.75rem;
+          font-size: 0.875rem;
+        }
+        .input:focus {
+          outline: none;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+        }
+      `}</style>
     </div>
   );
 }

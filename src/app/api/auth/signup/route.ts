@@ -1,7 +1,4 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -14,88 +11,107 @@ export async function POST(req: Request) {
       password,
       first_name,
       last_name,
-      dob,
-      gender,
+      date_of_birth,
+      gender_identity,
       phone,
+
       address_1,
       city,
-      state,
-      post_code
+      state_province,
+      country,
+      pin_code,
+
+      government_id_type,
+      government_id_number,
     } = await req.json();
 
-    console.log("📥 Incoming signup request:", { email, first_name });
+    console.log("📥 Incoming signup request:", { email });
 
-    // --------------------------------------------------------------------
-    // 1️⃣ Create Supabase Auth user
-    // --------------------------------------------------------------------
+    /* ─────────────────────────────────────────────
+       1️⃣ Create Supabase Auth user
+    ───────────────────────────────────────────── */
     const { data, error } = await supabaseClient.auth.signUp({
       email,
       password,
-      options: { data: { full_name: first_name + " " + last_name } }
+      options: {
+        data: {
+          full_name: `${first_name} ${last_name}`,
+        },
+      },
     });
 
-    if (error) throw new Error("Supabase signup failed: " + error.message);
-    if (!data.user) throw new Error("Supabase returned no user");
+    if (error) throw new Error(error.message);
+    if (!data.user) throw new Error("Auth user not returned");
 
     const user = data.user;
     console.log("✅ Auth user created:", user.id);
 
-    // --------------------------------------------------------------------
-    // 2️⃣ Create profile (role: patient)
-    // --------------------------------------------------------------------
-    const { data: existingProfile } = await supabaseAdmin
+    const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
+      .insert({
+        id: user.id,
+        display_name: `${first_name} ${last_name}`,
+        role: "patient",
+        city,
+        state: state_province,
+        country: country || "Sri Lanka",
+      });
 
-    if (!existingProfile) {
-      const { error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .insert({
-          id: user.id,
-          display_name: first_name + " " + last_name,
-          role: "patient"
-        });
+    if (profileError)
+      throw new Error("Profile insert failed: " + profileError.message);
 
-      if (profileError) throw new Error("Profile insert failed: " + profileError.message);
+    console.log("✅ Profile created");
 
-      console.log("✅ Profile created:", user.id);
-    } else {
-      console.log("ℹ️ Profile already exists");
-    }
-
-    // --------------------------------------------------------------------
-    // 3️⃣ Insert patient into local patients table
-    // --------------------------------------------------------------------
-    const fullAddress = [address_1, city, state, post_code]
-      .filter(Boolean)
-      .join(", ");
-
-    const { error: patientError } = await supabaseAdmin.from("patients").upsert({
-      supabase_user_id: user.id,
-      full_name: first_name + " " + last_name,
-      email,
-      dob,
-      gender,
-      contact_number: phone,
-      address: fullAddress
-    });
+    const { error: patientError } = await supabaseAdmin
+      .from("patients")
+      .insert({
+        supabase_user_id: user.id,
+        full_name: `${first_name} ${last_name}`,
+        email,
+        dob: date_of_birth,
+        gender: gender_identity,
+        contact_number: phone,
+        address: address_1,
+        notes: `City: ${city}, State: ${state_province}, PIN: ${pin_code}`,
+      });
 
     if (patientError)
-      throw new Error("Supabase patient insert failed: " + patientError.message);
+      throw new Error("Patient insert failed: " + patientError.message);
 
-    console.log("✅ Patient stored in Supabase");
+    console.log("✅ Patient created");
 
-    // --------------------------------------------------------------------
-    // 4️⃣ Respond success
-    // --------------------------------------------------------------------
+    /* ─────────────────────────────────────────────
+       4️⃣ Store Government ID (SEPARATE TABLE)
+       ⚠️ Encrypt before storing in production
+    ───────────────────────────────────────────── */
+    const encryptedId = government_id_number; // 🔐 replace with real encryption
+
+    const { error: govIdError } = await supabaseAdmin
+      .from("user_government_ids")
+      .insert({
+        user_id: user.id,
+        id_type: government_id_type,
+        id_number_encrypted: encryptedId,
+        issued_country: "Sri Lanka",
+      });
+
+    if (govIdError)
+      throw new Error("Govt ID insert failed: " + govIdError.message);
+
+    console.log("✅ Government ID stored");
+
+    /* ─────────────────────────────────────────────
+       5️⃣ Success
+    ───────────────────────────────────────────── */
     return NextResponse.json({
       message: "Signup successful",
-      user_id: user.id
+      user_id: user.id,
     });
   } catch (err: any) {
-    console.error("❌ Fatal error:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("❌ Signup error:", err.message);
+    return NextResponse.json(
+      { error: err.message },
+      { status: 500 }
+    );
   }
 }

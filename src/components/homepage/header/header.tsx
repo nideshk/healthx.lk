@@ -70,8 +70,6 @@ export default function Header() {
     isSignupModalOpen,
     openLoginModal,
     closeLoginModal,
-    openSignupModal,
-    closeSignupModal,
   } = useModalStore();
 
   const [user, setUser] = useState<any>(null);
@@ -309,7 +307,10 @@ export default function Header() {
               <button onClick={() => setShowForgot(true)} className="text-teal-500">
                 Forgot password?
               </button>
-              <button onClick={() => { closeLoginModal(); openSignupModal(); }} className="text-teal-500">
+              <button onClick={()=>{
+                router.push("/create-account")
+                closeLoginModal()  
+                }} className="text-teal-500">
                 Sign up
               </button>
             </div>
@@ -317,15 +318,6 @@ export default function Header() {
         ) : (
           <ForgotPasswordForm onDone={() => setShowForgot(false)} />
         )}
-      </Modal>
-
-      {/* SIGNUP MODAL */}
-      <Modal
-        isOpen={isSignupModalOpen}
-        onClose={closeSignupModal}
-        title="Create Your Account"
-      >
-        <SignupForm />
       </Modal>
     </>
   );
