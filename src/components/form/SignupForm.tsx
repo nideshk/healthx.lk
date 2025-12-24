@@ -20,6 +20,8 @@ const SRI_LANKA_LOCATIONS: Record<string, string[]> = {
 };
 
 export default function SignupForm() {
+  const router = useRouter();
+
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -28,26 +30,24 @@ export default function SignupForm() {
     date_of_birth: "",
     gender_identity: "male",
     phone: "",
+    emergency_contact: "",
 
     government_id_type: "passport",
     government_id_number: "",
 
-    address_1: "",
+    address: "",
     country: "Sri Lanka",
     state_province: "",
     city: "",
     pin_code: "",
-
-    referral_source: "Website",
-    notes: "Created from portal",
   });
-
-  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
+  /* ─────────────────────────────
+     Handlers
+  ───────────────────────────── */
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -56,9 +56,10 @@ export default function SignupForm() {
   };
 
   const handleSignup = async () => {
+    if (loading) return;
+
     setLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const res = await fetch("/api/auth/signup", {
@@ -68,42 +69,27 @@ export default function SignupForm() {
       });
 
       const data = await res.json();
-      setLoading(false);
 
       if (!res.ok) {
-        setError(data.error || "Signup failed");
-        return;
+        throw new Error(data.error || "Signup failed");
       }
 
-      toast.success("Account created successfully!");
-      setForm({
-        first_name: "",
-        last_name: "",
-        email: "",
-        password: "",
-        date_of_birth: "",
-        gender_identity: "male",
-        phone: "",
-        government_id_type: "passport",
-        government_id_number: "",
-        address_1: "",
-        country: "Sri Lanka",
-        state_province: "",
-        city: "",
-        pin_code: "",
-        referral_source: "Website",
-        notes: "Created from portal",
-      });
+      toast.success("Account created successfully 🎉");
+
       setTimeout(() => {
-  router.push("/");
-}, 1500);
-    } catch (err) {
+        router.push("/");
+      }, 1200);
+    } catch (err: any) {
       console.error(err);
-      setError("Unexpected error occurred");
+      setError(err.message || "Unexpected error occurred");
+    } finally {
       setLoading(false);
     }
   };
 
+  /* ─────────────────────────────
+     Render
+  ───────────────────────────── */
   return (
     <div className="flex justify-center px-4 py-10">
       <form
@@ -113,16 +99,13 @@ export default function SignupForm() {
         }}
         className="w-full max-w-xl space-y-4 rounded-lg bg-white p-8 shadow-lg"
       >
-        <h1 className="text-center text-2xl font-bold">Patient Signup</h1>
+        <h1 className="text-center text-2xl font-bold">
+          Patient Signup
+        </h1>
 
         {error && (
           <p className="rounded bg-red-50 p-2 text-center text-sm text-red-600">
             {error}
-          </p>
-        )}
-        {success && (
-          <p className="rounded bg-green-50 p-2 text-center text-sm text-green-600">
-            {success}
           </p>
         )}
 
@@ -146,6 +129,7 @@ export default function SignupForm() {
           />
         </div>
 
+        {/* Email */}
         <input
           name="email"
           type="email"
@@ -201,6 +185,15 @@ export default function SignupForm() {
           className="input"
         />
 
+        {/* Emergency Contact */}
+        <input
+          name="emergency_contact"
+          placeholder="Emergency Contact (optional)"
+          value={form.emergency_contact}
+          onChange={handleChange}
+          className="input"
+        />
+
         {/* Government ID */}
         <div className="grid grid-cols-2 gap-4">
           <select
@@ -210,7 +203,7 @@ export default function SignupForm() {
             className="input"
           >
             <option value="passport">Passport</option>
-            <option value="nic">National Identity Card (NIC)</option>
+            <option value="nic">National Identity Card</option>
             <option value="driving_license">Driving License</option>
           </select>
 
@@ -226,22 +219,21 @@ export default function SignupForm() {
 
         {/* Address */}
         <input
-          name="address_1"
+          name="address"
           placeholder="Address"
-          value={form.address_1}
+          value={form.address}
           onChange={handleChange}
           className="input"
         />
 
         {/* Country */}
         <input
-          name="country"
           value="Sri Lanka"
           disabled
           className="input bg-gray-100"
         />
 
-        {/* Province (select OR type) */}
+        {/* Province */}
         <input
           list="province-list"
           name="state_province"
@@ -252,12 +244,12 @@ export default function SignupForm() {
           className="input"
         />
         <datalist id="province-list">
-          {Object.keys(SRI_LANKA_LOCATIONS).map((province) => (
-            <option key={province} value={province} />
+          {Object.keys(SRI_LANKA_LOCATIONS).map((p) => (
+            <option key={p} value={p} />
           ))}
         </datalist>
 
-        {/* City (filtered but typable) */}
+        {/* City */}
         <input
           list="city-list"
           name="city"
@@ -268,8 +260,8 @@ export default function SignupForm() {
           className="input"
         />
         <datalist id="city-list">
-          {(SRI_LANKA_LOCATIONS[form.state_province] || []).map((city) => (
-            <option key={city} value={city} />
+          {(SRI_LANKA_LOCATIONS[form.state_province] || []).map((c) => (
+            <option key={c} value={c} />
           ))}
         </datalist>
 
@@ -293,7 +285,7 @@ export default function SignupForm() {
         </button>
       </form>
 
-      {/* Minimal input styles */}
+      {/* Styles */}
       <style jsx>{`
         .input {
           width: 100%;

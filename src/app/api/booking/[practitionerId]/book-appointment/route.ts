@@ -194,12 +194,12 @@ export async function POST(
       });
     }
 
-    if(consent){
+    if (consent) {
       await supabaseClient.from("consents").insert({
         appointment_id: appointment.id,
         terms: consent?.terms,
         telehealth: consent?.telehealth,
-        accepted_at : new Date().toISOString()
+        accepted_at: new Date().toISOString()
       })
     }
 
@@ -210,62 +210,62 @@ export async function POST(
       appointment_id: appointment.id,
       patient_id,
       practitioner_id: practitionerId,
-
+      city: user.patient_data.city,
+      country: user.patient_data.country,
+      address: user.patient_data.address,
       appointment_type_id: appointmentType.id,
-
       amount: resolvedFee,
       consultation_fee: consultationFee,
       platform_fee: platformFee,
-
+      first_name: user.profile.first_name,
+      last_name: user.profile.last_name,
       currency: appointment.currency ?? "LKR",
-
       source: "appointment_booking",
       status: "INITIATED",
-
       metadata: {
         starts_at,
         ends_at,
       },
     };
 
-     // 9 Mark Draft as Used
-      await supabaseClient
-        .from("appointment_draft")
+    // 9 Mark Draft as Used
+    await supabaseClient
+      .from("appointment_draft")
       .update({ status: "USED", updated_at: new Date().toISOString() })
-        .eq("patient_id", patient_id);
+      .eq("patient_id", patient_id);
 
     // 8️⃣ Send appointment confirmation notification
-await notify({
-  userId: user.auth_user_id, // auth.users.id
-  role: "patient",
-  eventType: "appointment_confirmed",
+    await notify({
+      userId: user.auth_user_id, // auth.users.id
+      role: "patient",
+      eventType: "appointment_confirmed",
 
-  title: "Appointment Confirmed",
-  message: `Your appointment is confirmed on ${new Date(starts_at).toLocaleString()}`,
+      title: "Appointment Confirmed",
+      message: `Your appointment is confirmed on ${new Date(starts_at).toLocaleString()}`,
 
-  channels: ["in_app", "email", "sms"],
+      channels: ["in_app", "email", "sms"],
 
-  payload: {
-    // -------- Common --------
-    appointment_id: appointment.id,
-    practitioner_id: practitionerId,
-    starts_at,
-    ends_at,
+      payload: {
+        // -------- Common --------
+        appointment_id: appointment.id,
+        practitioner_id: practitionerId,
+        starts_at,
+        ends_at,
 
-    // -------- Email --------
-    email: user.user.email,
-    recipientName:
-      user.profile?.full_name ||
-      user.user.user_metadata?.full_name,
+        // -------- Email --------
+        email: user.user.email,
+        recipientName:
+          user.profile?.full_name ||
+          user.user.user_metadata?.full_name,
 
-    subject: "Your appointment is confirmed",
-    actionUrl: `https://medx-rho.vercel.app/consultation/meeting?room=${appointment.room_key}`,
-    actionText: "Join Meeting",
+        subject: "Your appointment is confirmed",
+        actionUrl: `https://medx-rho.vercel.app/consultation/meeting?room=${appointment.room_key}`,
+        actionText: "Join Meeting",
 
-    // -------- SMS --------
-    phone: "+917899416499",
-  },
-});
+        // -------- SMS --------
+        phone: "+917899416499",
+      },
+    });
 
 
     return NextResponse.json({
