@@ -167,6 +167,8 @@ export default function Header() {
         render: err.message || "Login failed",
         type: "error",
         isLoading: false,
+                autoClose: 2000,
+
       });
     }
   }
