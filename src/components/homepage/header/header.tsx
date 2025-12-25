@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Menu, X, Bell } from "lucide-react";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -64,6 +64,16 @@ function ForgotPasswordForm({ onDone }: { onDone: () => void }) {
 ------------------------------------------------ */
 export default function Header() {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // ✅ CRITICAL: Early detection with useMemo
+  const isRecoveryRoute = useMemo(
+    () =>
+      pathname?.includes("/reset-password") ||
+      pathname?.includes("/forgot-password") ||
+      pathname?.includes("(auth-recovery)"),
+    [pathname]
+  );
 
   const {
     isLoginModalOpen,
@@ -99,6 +109,14 @@ export default function Header() {
 
   /* ---------------- AUTH STATE ---------------- */
   useEffect(() => {
+    // ✅ Block ALL auth if recovery route
+    if (isRecoveryRoute) {
+      setLoading(false);
+      return;
+    }
+
+    let unsubscribe: (() => void) = () => {};
+
     async function init() {
       const { data } = await supabaseClient.auth.getUser();
       setUser(data.user);
@@ -112,15 +130,10 @@ export default function Header() {
 
     init();
 
-    const { data: listener } =
-      supabaseClient.auth.onAuthStateChange((_e, session) => {
-        setUser(session?.user ?? null);
-        setNotifOpen(false);
-        if (session?.user) fetchNotifications();
-      });
-
-    return () => listener.subscription.unsubscribe();
-  }, []);
+    return () => {
+      unsubscribe();
+    };
+  }, [isRecoveryRoute]); // ✅ Fast early exit
 
   /* ---------------- CLOSE NOTIFS ON ROUTE CHANGE ---------------- */
   useEffect(() => {
