@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
 import { requireUser } from "@/lib/authGuard";
-import { createPractitioner } from "@/lib/createPractitoner";
+import { createPractitioner } from "@/lib/createPractitioner";
 
 type ActionType = "approve" | "reject";
 
@@ -132,6 +132,17 @@ export async function POST(
 
   // Decrypt password from application
   const password = decrypt(app.encrypted_password);
+  
+if (!password) {
+  return NextResponse.json(
+    {
+      success: false,
+      message: "Invalid or corrupted application password",
+    },
+    { status: 500 }
+  );
+}
+
 
   /* --------------------------------------------------
    * 1️⃣ Create practitioner
@@ -139,7 +150,6 @@ export async function POST(
   const result = await createPractitioner({
     email: app.email,
     password,
-
     first_name: app.first_name,
     last_name: app.last_name,
 
@@ -156,8 +166,18 @@ export async function POST(
     bank_details: app.bank_details,
   });
 
-  createdUserId = result.userId;
-  createdPractitionerId = result.practitioner_id;
+  if (!result.success) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: result.message,
+      },
+      { status: 500 }
+    );              
+  }
+
+  createdUserId = result?.userId ?? null;
+  createdPractitionerId = result.practitioner_id ?? null;
 
   /* --------------------------------------------------
    * 2️⃣ Update application (CRITICAL)

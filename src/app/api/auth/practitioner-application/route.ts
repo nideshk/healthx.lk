@@ -2,6 +2,28 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt } from "@/lib/crypto";
 
+function validateEmail(email: string) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validatePassword(pw: string) {
+  const minLength = pw.length >= 8;
+  const lower = /[a-z]/.test(pw);
+  const upper = /[A-Z]/.test(pw);
+  const number = /[0-9]/.test(pw);
+  const special = /[!@#$%^&*(),.?":{}|<>]/.test(pw);
+
+  if (!minLength) return "Password must be at least 8 characters";
+  if (!lower) return "Password must contain a lowercase letter";
+  if (!upper) return "Password must contain an uppercase letter";
+  if (!number) return "Password must contain a number";
+  if (!special) return "Password must contain a special character";
+
+  return null;
+}
+
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -32,6 +54,29 @@ export async function POST(req: Request) {
         {
           success: false,
           message: "Email, password and first_name are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    /* Email format validation */
+    if (!validateEmail(email)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid email format",
+        },
+        { status: 400 }
+      );
+    }
+
+    /* Password strength validation */
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: passwordError,
         },
         { status: 400 }
       );

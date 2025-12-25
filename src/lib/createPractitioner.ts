@@ -1,6 +1,52 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { notify } from "@/lib/notify";
 
+/**
+ * Creates a practitioner account in a controlled, multi-step process.
+ *
+ * This function performs the following operations atomically (best-effort):
+ * 1. Creates a Supabase Auth user
+ * 2. Creates a corresponding profile with role = "practitioner"
+ * 3. Creates a practitioner record
+ * 4. Optionally inserts availability details
+ * 5. Optionally inserts bank details
+ *
+ * If any step after user creation fails, the function performs a rollback by
+ * deleting the created Auth user, profile, and practitioner records to avoid
+ * partial or inconsistent state.
+ *
+ * ⚠️ IMPORTANT:
+ * - This function does NOT throw exceptions.
+ * - All failures are returned as structured results.
+ * - Callers MUST check the returned `success` flag.
+ *
+ * @param input - Practitioner creation payload
+ * @param input.email - Practitioner email address (used for auth)
+ * @param input.password - Plain-text password used to create auth user
+ * @param input.first_name - Practitioner first name
+ * @param input.last_name - Practitioner last name
+ * @param input.qualification - Medical qualification (e.g., MBBS)
+ * @param input.specialization - List of specializations
+ * @param input.license_number - Medical license number
+ * @param input.experience_years - Years of professional experience
+ * @param input.contact_email - Public contact email
+ * @param input.contact_number - Public contact phone number
+ * @param input.profile_bio - Short professional bio
+ * @param input.available_services - List of appointment/service IDs
+ * @param input.fees - Fee configuration per service
+ * @param input.availability - Optional availability configuration
+ * @param input.bank_details - Optional bank account details
+ *
+ * @returns A result object indicating success or failure
+ *
+ * @returns success=true
+ * @returns userId - Supabase auth user ID
+ * @returns practitioner_id - Created practitioner record ID
+ *
+ * @returns success=false
+ * @returns message - Human-readable error message describing the failure
+ */
+
 type CreatePractitionerInput = {
   email: string;
   password: string;
@@ -65,16 +111,28 @@ export async function createPractitioner(
   const userId = authData.user.id;
 
   /* 2️⃣ Create profile */
-  await supabaseAdmin.from("profiles").insert({
+  const { data, error: profileErr } = await supabaseAdmin.from("profiles").insert({
     id: userId,
     display_name: full_name,
     first_name: first_name,
-    last_name:last_name,
+    last_name: last_name,
     role: "practitioner",
     is_active: true,
     state,
     city,
   });
+
+  if (profileErr) {
+    console.error("PROFILE CREATION FAILED — ROLLING BACK USER", profileErr);
+
+    // 🔥 Rollback auth user immediately
+    await supabaseAdmin.auth.admin.deleteUser(userId);
+
+    return {
+      success: false,
+      message: "Failed to create practitioner profile",
+    };
+  }
 
   /* 3️⃣ Create practitioner */
   const { data: practitioner } = await supabaseAdmin

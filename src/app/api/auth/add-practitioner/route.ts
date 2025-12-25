@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 import { requireUser } from "@/lib/authGuard";
-import { createPractitioner } from "@/lib/createPractitoner";
+import { createPractitioner } from "@/lib/createPractitioner";
+
+function validateEmail(email: string) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
 
 export async function POST(req: Request) {
   try {
@@ -47,6 +53,17 @@ export async function POST(req: Request) {
         {
           success: false,
           message: "Missing required fields: email, first_name",
+        },
+        { status: 400 }
+      );
+    }
+
+    /* Email format validation */
+    if (!validateEmail(email)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid email format",
         },
         { status: 400 }
       );
