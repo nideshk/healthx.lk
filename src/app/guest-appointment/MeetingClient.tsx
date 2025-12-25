@@ -11,8 +11,6 @@ type AuthorizeResponse =
       role: "patient" | "practitioner" | "attendee";
       appointmentId: string;
       roomKey: string;
-      roomKey1: string; 
-      telehealthUrl?: string;
     }
   | {
       authorized: false;
@@ -29,16 +27,9 @@ export default function MeetingPage() {
   const [authData, setAuthData] = useState<AuthorizeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // --------------------------------------------------
-  // 🔐 AUTHORIZE (JWT invite OR session)
-  // --------------------------------------------------
   useEffect(() => {
     async function authorize() {
-      setLoading(true);
-      setError(null);
-
       try {
-        // Prefer JWT invite
         const body = inviteToken
           ? { token: inviteToken }
           : roomKey
@@ -59,15 +50,16 @@ export default function MeetingPage() {
 
         const json = (await res.json()) as AuthorizeResponse;
 
-        console.log("Authorize response:", json);
         if (res.ok && json.authorized) {
+          // ✅ persist token for audit logging
+          localStorage.setItem("telehealth_token", json.token);
           setAuthData(json);
         } else {
-          setError( "You are not allowed to join this consultation");
+          setError("Access denied");
         }
       } catch (e) {
-        console.error("Authorize failed:", e);
-        setError("Failed to authorize consultation");
+        console.error(e);
+        setError("Authorization failed");
       } finally {
         setLoading(false);
       }
@@ -76,42 +68,30 @@ export default function MeetingPage() {
     authorize();
   }, [roomKey, inviteToken]);
 
-  // --------------------------------------------------
-  // ⏳ LOADING
-  // --------------------------------------------------
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-950 text-white">
-        <p>Preparing your consultation…</p>
+      <div className="h-screen flex items-center justify-center bg-black text-white">
+        Preparing your consultation…
       </div>
     );
   }
 
-  // --------------------------------------------------
-  // ❌ ERROR
-  // --------------------------------------------------
   if (!authData || !authData.authorized) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-950 text-white">
-        <p>{error ?? "Access denied"}</p>
+      <div className="h-screen flex items-center justify-center bg-black text-white">
+        {error ?? "You are not allowed to join this consultation"}
       </div>
     );
   }
-
-  // --------------------------------------------------
-  // ✅ AUTHORIZED → JOIN CALL
-  // --------------------------------------------------
-  const { appointmentId, token, role, roomKey1 } = authData;
-  console.log("Joining call as", authData);
 
   return (
     <VideoCallContainer
-      appointmentId={appointmentId}
+      appointmentId={authData.appointmentId}
       roomKey={authData.roomKey}
-      token={token}
-      localUserId={role} // purely cosmetic
-      role={role}
-      iceServers={[]} // add TURN/STUN later
+      token={authData.token}
+      role={authData.role}
+      localUserId={authData.role}
+      iceServers={[]}
     />
   );
 }
