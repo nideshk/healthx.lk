@@ -6,6 +6,30 @@ import { requireUser } from "@/lib/authGuard";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+function normalizeFeesToArray(
+  fees: any
+): { code: string; label: string; amount: number }[] {
+  if (!fees || typeof fees !== "object") return [];
+
+  return Object.values<any>(fees)
+    .filter(
+      (f) =>
+        f &&
+        typeof f === "object" &&
+        typeof f.type === "string" &&
+        typeof f.fee === "number"
+    )
+    .map((f) => ({
+      code: f.type
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, ""),
+      label: f.type,
+      amount: f.fee,
+    }));
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -93,34 +117,19 @@ export async function GET(req: Request) {
       }
 
       // 🔄 Normalize fees → { type: fee }
-      const practitioners = rows.map((p: any) => {
-        const fees: Record<string, number> = {};
+      const practitioners = rows.map((p: any) => ({
+        id: p.id,
+        full_name: p.full_name,
+        qualification: p.qualification,
+        specialization: p.specialization,
+        license_number: p.license_number,
+        profile_picture_url: p.profile_picture_url,
+        experience_years: p.experience_years,
+        is_active: p.is_active,
 
-        if (p.fees && typeof p.fees === "object") {
-          for (const value of Object.values<any>(p.fees)) {
-            if (
-              value &&
-              typeof value === "object" &&
-              typeof value.type === "string" &&
-              typeof value.fee === "number"
-            ) {
-              fees[value.type] = value.fee;
-            }
-          }
-        }
-
-        return {
-          id: p.id,
-          full_name: p.full_name,
-          qualification: p.qualification,
-          specialization: p.specialization,
-          license_number: p.license_number,
-          profile_picture_url: p.profile_picture_url,
-          experience_years: p.experience_years,
-          is_active: p.is_active,
-          fees,
-        };
-      });
+        // ✅ OPTION 1 FEES STRUCTURE
+        fees: normalizeFeesToArray(p.fees),
+      }));
 
       return NextResponse.json({
         success: true,
