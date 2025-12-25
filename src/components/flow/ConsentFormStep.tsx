@@ -12,8 +12,8 @@ import { AppointmentFormInputs } from "@/types/FormType";
 import { redirect } from "next/navigation";
 
 interface Props {
-  nextStep: (override?: Partial<AppointmentFormInputs>) => void;
-  prevStep: (override?: Partial<AppointmentFormInputs>) => void;
+  nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
+  prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
 }
@@ -50,7 +50,7 @@ const ConsentFormStep = forwardRef(
         return;
       }
       updateData({ consent });
-      nextStep({ consent });
+      nextStep({ override: { consent } });
     };
 
     const handleScrollCheck = (

@@ -228,12 +228,6 @@ export async function POST(
       },
     };
 
-    // 9 Mark Draft as Used
-    await supabaseClient
-      .from("appointment_draft")
-      .update({ status: "USED", updated_at: new Date().toISOString() })
-      .eq("patient_id", patient_id);
-
     // 8️⃣ Send appointment confirmation notification
     await notify({
       userId: user.auth_user_id, // auth.users.id
@@ -243,7 +237,7 @@ export async function POST(
       title: "Appointment Confirmed",
       message: `Your appointment is confirmed on ${new Date(starts_at).toLocaleString()}`,
 
-      channels: ["in_app", "email", "sms"],
+      channels: ["in_app", "email"],
 
       payload: {
         // -------- Common --------
@@ -267,6 +261,16 @@ export async function POST(
       },
     });
 
+    // 9 Mark Draft as Used (best-effort, non-critical)
+    try {
+      await supabaseClient
+        .from("appointment_draft")
+        .delete()
+        .eq("patient_id", patient_id);
+    } catch (draftErr) {
+      console.error("⚠️ Failed to delete appointment draft:", draftErr);
+      // Do not rethrow: draft cleanup failure should not break a successful booking
+    }
 
     return NextResponse.json({
       success: true,

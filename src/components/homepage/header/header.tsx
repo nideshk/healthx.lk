@@ -10,7 +10,56 @@ import axios from "axios";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { useModalStore } from "@/store/useModalStore";
 import Modal from "@/components/atom/Modal/Modal";
-import SignupForm from "@/components/form/SignupForm";
+
+/* ------------------------------------------------
+   CONSTANTS
+------------------------------------------------ */
+const LOCAL_DRAFT_KEY = "bookingDraft";
+
+/* ------------------------------------------------
+   RESTORE DRAFT AFTER LOGIN
+------------------------------------------------ */
+async function restoreBookingDraftIfExists(): Promise<boolean> {
+  try {
+    const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+    if (!raw) return false;
+
+    const parsed = JSON.parse(raw);
+    console.log("Found booking draft in localStorage:", parsed);
+
+    if (!parsed || typeof parsed !== "object") {
+      localStorage.removeItem(LOCAL_DRAFT_KEY);
+      return false;
+    }
+
+    // Optional TTL (24 hours)
+    const MAX_AGE = 1000 * 60 * 60 * 24;
+    if (parsed.created_at && Date.now() - parsed.created_at > MAX_AGE) {
+      localStorage.removeItem(LOCAL_DRAFT_KEY);
+      return false;
+    }
+
+    const res = await fetch("/api/booking/appointment/draft", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        data: parsed, // ✅ ONLY THIS
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Draft restore failed:", err);
+      return false;
+    }
+
+    localStorage.removeItem(LOCAL_DRAFT_KEY);
+    return true;
+  } catch (err) {
+    console.error("❌ Failed to restore booking draft:", err);
+    return false;
+  }
+}
 
 /* ------------------------------------------------
    FORGOT PASSWORD FORM
@@ -67,7 +116,6 @@ export default function Header() {
 
   const {
     isLoginModalOpen,
-    isSignupModalOpen,
     openLoginModal,
     closeLoginModal,
   } = useModalStore();
@@ -105,9 +153,7 @@ export default function Header() {
       setUsername(data.user?.email?.split("@")[0] ?? null);
       setLoading(false);
 
-      if (data.user) {
-        fetchNotifications();
-      }
+      if (data.user) fetchNotifications();
     }
 
     init();
@@ -121,11 +167,6 @@ export default function Header() {
 
     return () => listener.subscription.unsubscribe();
   }, []);
-
-  /* ---------------- CLOSE NOTIFS ON ROUTE CHANGE ---------------- */
-  useEffect(() => {
-    setNotifOpen(false);
-  }, [router]);
 
   /* ---------------- LOGIN ---------------- */
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -149,7 +190,12 @@ export default function Header() {
 
       await supabaseClient.auth.getSession();
       setUser(data.user);
-      setUsername(data.username?.first_name || email.split("@")[0]);
+      setUsername(
+        data.username?.first_name
+          ? `${data.username.first_name} ${data.username.last_name}`
+          : email.split("@")[0]
+      );
+
 
       toast.update(toastId, {
         render: "Welcome back. Your care continues here 💙",
@@ -159,14 +205,22 @@ export default function Header() {
       });
 
       closeLoginModal();
-      router.push("/dashboard");
+
+      // 🔁 Restore booking draft if exists
+      const restored = await restoreBookingDraftIfExists();
+
+      if (restored) {
+        toast.success("We’ve restored your appointment in progress 🩺");
+        router.push("/appointment");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       toast.update(toastId, {
         render: err.message || "Login failed",
         type: "error",
         isLoading: false,
-                autoClose: 2000,
-
+        autoClose: 2000,
       });
     }
   }
@@ -191,20 +245,16 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-
-          {/* LOGO */}
           <Link href="/" className="text-2xl font-bold text-teal-600">
             MedX
           </Link>
 
-          {/* DESKTOP NAV */}
           <nav className="hidden md:flex gap-6 text-sm font-medium">
-            <Link href="/dashboard">Home</Link>
-            <Link href="/about">Our Story</Link>
-            <Link href="/help">Help</Link>
-          </nav>
+  <Link href="/dashboard">Home</Link>
+  <Link href="/about">Our Story</Link>
+  <Link href="/help">Help</Link>
+</nav>
 
-          {/* AUTH + NOTIFICATIONS */}
           <div className="hidden md:flex items-center gap-4">
             {!user ? (
               <button
@@ -215,51 +265,110 @@ export default function Header() {
               </button>
             ) : (
               <>
-                {/* 🔔 NOTIFICATIONS */}
-                <div className="relative">
-                  <button
-                    aria-label="Notifications"
-                    aria-expanded={notifOpen}
-                    onClick={() => setNotifOpen((o) => !o)}
-                    className="relative p-2 rounded-full hover:bg-gray-100"
-                  >
-                    <Bell className="w-5 h-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 rounded-full">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {notifOpen && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow border z-50">
-                      <div className="p-3 border-b font-semibold text-sm">
-                        Notifications
-                      </div>
-
-                      <div className="max-h-80 overflow-y-auto">
-                        {notifications.length === 0 && (
-                          <p className="p-4 text-sm text-gray-500">
-                            No notifications yet
-                          </p>
-                        )}
-
-                        {notifications.map((n) => (
-                          <div
-                            key={n.id}
-                            onClick={() => markAsRead(n.id)}
-                            className={`p-3 text-sm cursor-pointer border-b hover:bg-gray-50 ${
-                              n.status === "unread" ? "bg-blue-50" : ""
-                            }`}
-                          >
-                            <p className="font-medium">{n.title}</p>
-                            <p className="text-gray-600">{n.message}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                <button
+                  onClick={() => setNotifOpen((o) => !o)}
+                  className="relative p-2 rounded-full hover:bg-gray-100"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 rounded-full">
+                      {unreadCount}
+                    </span>
                   )}
-                </div>
+                  {notifOpen && (
+  <div
+    className="
+      absolute right-0 mt-3 w-96
+      bg-white rounded-2xl shadow-xl border
+      z-50 overflow-hidden
+      animate-in fade-in slide-in-from-top-2
+    "
+  >
+    {/* Header */}
+    <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between">
+      <div>
+        <p className="text-sm font-semibold text-gray-900">
+          Notifications
+        </p>
+        <p className="text-xs text-gray-500">
+          {unreadCount > 0
+            ? `${unreadCount} unread`
+            : "You're all caught up"}
+        </p>
+      </div>
+
+      {unreadCount > 0 && (
+        <button
+          onClick={() => {
+            notifications
+              .filter((n) => n.status === "unread")
+              .forEach((n) => markAsRead(n.id));
+          }}
+          className="text-xs text-blue-600 hover:underline"
+        >
+          Mark all as read
+        </button>
+      )}
+    </div>
+
+    {/* Content */}
+    <div className="max-h-96 overflow-y-auto divide-y">
+      {notifications.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-3">
+            <Bell className="w-5 h-5 text-blue-600" />
+          </div>
+          <p className="text-sm font-medium text-gray-800">
+            No notifications
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            We’ll notify you when something important happens.
+          </p>
+        </div>
+      ) : (
+        notifications.map((n) => (
+          <div
+            key={n.id}
+            onClick={() => markAsRead(n.id)}
+            className={`
+              px-4 py-3 cursor-pointer transition
+              hover:bg-gray-50
+              ${n.status === "unread" ? "bg-blue-50/60" : ""}
+            `}
+          >
+            <div className="flex gap-3">
+              {/* Unread dot */}
+              <div className="pt-1">
+                {n.status === "unread" && (
+                  <span className="w-2 h-2 rounded-full bg-blue-600 block mt-1" />
+                )}
+              </div>
+
+              {/* Text */}
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  {n.title}
+                </p>
+                <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                  {n.message}
+                </p>
+
+                {n.created_at && (
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {new Date(n.created_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+)}
+
+                  
+                </button>
 
                 <span className="text-sm">Hi, {username}</span>
 
@@ -273,7 +382,6 @@ export default function Header() {
             )}
           </div>
 
-          {/* MOBILE */}
           <button
             onClick={() => setMobileOpen((o) => !o)}
             className="md:hidden p-2"
@@ -307,10 +415,13 @@ export default function Header() {
               <button onClick={() => setShowForgot(true)} className="text-teal-500">
                 Forgot password?
               </button>
-              <button onClick={()=>{
-                router.push("/create-account")
-                closeLoginModal()  
-                }} className="text-teal-500">
+              <button
+                onClick={() => {
+                  router.push("/create-account");
+                  closeLoginModal();
+                }}
+                className="text-teal-500"
+              >
                 Sign up
               </button>
             </div>
