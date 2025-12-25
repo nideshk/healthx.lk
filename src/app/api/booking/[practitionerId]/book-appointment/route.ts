@@ -261,11 +261,16 @@ export async function POST(
       },
     });
 
-    // 9 Mark Draft as Used
-    await supabaseClient
-      .from("appointment_draft")
-      .delete()
-      .eq("patient_id", patient_id);
+    // 9 Mark Draft as Used (best-effort, non-critical)
+    try {
+      await supabaseClient
+        .from("appointment_draft")
+        .delete()
+        .eq("patient_id", patient_id);
+    } catch (draftErr) {
+      console.error("⚠️ Failed to delete appointment draft:", draftErr);
+      // Do not rethrow: draft cleanup failure should not break a successful booking
+    }
 
     return NextResponse.json({
       success: true,
