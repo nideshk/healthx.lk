@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  let createdUserId: string | null = null;
+
   try {
     const {
       email,
@@ -15,43 +16,61 @@ export async function POST(req: Request) {
       gender_identity,
       phone,
       emergency_contact,
-
       address,
       city,
       state_province,
       country,
       pin_code,
-
       government_id_type,
       government_id_number,
     } = await req.json();
 
     /* ───────────────────────────────
-       1️⃣ Create Supabase Auth User
+       0️⃣ Validation
     ─────────────────────────────── */
-    const { data, error } = await supabaseClient.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name,
-          last_name,
-        },
-      },
-    });
-
-    if (error) throw new Error(error.message);
-    if (!data.user) throw new Error("Auth user not returned");
-
-    const user = data.user;
+    if (!email || !password || !first_name || !last_name) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
 
     /* ───────────────────────────────
-       2️⃣ Create Profile (IDENTITY)
+       1️⃣ Create Auth User (EMAIL VERIFICATION ON)
+    ─────────────────────────────── */
+    const { data, error } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true, // ✅ keep normal Supabase verification
+        user_metadata: {
+          first_name,
+          last_name,
+          role: "patient",
+        },
+      });
+
+    if (error) {
+      if (error.message.includes("already registered")) {
+        return NextResponse.json(
+          { error: "Email already registered" },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
+
+    if (!data.user) throw new Error("Auth user not created");
+
+    createdUserId = data.user.id;
+
+    /* ───────────────────────────────
+       2️⃣ Profile
     ─────────────────────────────── */
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .insert({
-        id: user.id,
+        id: createdUserId,
         role: "patient",
         first_name,
         last_name,
@@ -61,17 +80,17 @@ export async function POST(req: Request) {
       });
 
     if (profileError) {
-      throw new Error("Profile insert failed: " + profileError.message);
+      throw new Error(profileError.message);
     }
 
     /* ───────────────────────────────
-       3️⃣ Create Patient Record
+       3️⃣ Patient Record
     ─────────────────────────────── */
     const { error: patientError } = await supabaseAdmin
       .from("patients")
       .insert({
-        supabase_user_id: user.id,
-        full_name: `${first_name} ${last_name}`, // ✅ still OK for medical records
+        supabase_user_id: createdUserId,
+        full_name: `${first_name} ${last_name}`,
         email,
         dob: date_of_birth,
         gender: gender_identity,
@@ -82,38 +101,49 @@ export async function POST(req: Request) {
       });
 
     if (patientError) {
-      throw new Error("Patient insert failed: " + patientError.message);
+      throw new Error(patientError.message);
     }
 
     /* ───────────────────────────────
-       4️⃣ Store Government ID
-       ⚠️ Encrypt in production
+       4️⃣ Government ID (optional)
     ─────────────────────────────── */
     if (government_id_type && government_id_number) {
-      const encryptedId = government_id_number; // TODO: encrypt
+      const encryptedId = government_id_number; // 🔐 encrypt later
 
       const { error: govIdError } = await supabaseAdmin
         .from("user_government_ids")
         .insert({
-          user_id: user.id,
+          user_id: createdUserId,
           id_type: government_id_type,
           id_number_encrypted: encryptedId,
           issued_country: "Sri Lanka",
         });
 
       if (govIdError) {
-        throw new Error("Govt ID insert failed: " + govIdError.message);
+        throw new Error(govIdError.message);
       }
     }
 
-    return NextResponse.json({
-      message: "Signup successful",
-      user_id: user.id,
-    });
+    /* ───────────────────────────────
+       5️⃣ Success
+    ─────────────────────────────── */
+    return NextResponse.json(
+      {
+        message:
+          "Account created successfully. Please check your email to verify your account.",
+      },
+      { status: 201 }
+    );
   } catch (err: any) {
     console.error("❌ Signup error:", err.message);
+
+    /* Rollback */
+    if (createdUserId) {
+      await supabaseAdmin.auth.admin.deleteUser(createdUserId);
+    }
+
     return NextResponse.json(
-      { error: err.message },
+      { error: err.message || "Signup failed" },
       { status: 500 }
     );
   }

@@ -196,6 +196,7 @@ export default function Header() {
           : email.split("@")[0]
       );
 
+
       toast.update(toastId, {
         render: "Welcome back. Your care continues here 💙",
         type: "success",
