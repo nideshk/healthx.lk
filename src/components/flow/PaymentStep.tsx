@@ -20,7 +20,7 @@ interface StepRefHandle {
   validateStep?: () => boolean;
 }
 interface Props {
-  prevStep: () => void;
+  prevStep: (data?: Partial<AppointmentFormInputs>) => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
   goToStep: (step: number) => void;
@@ -246,7 +246,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
                 </button>
 
                 <button
-                  onClick={prevStep}
+                  onClick={() => prevStep()}
                   className="mt-4 w-full text-sm text-gray-600 underline"
                 >
                   ← Back

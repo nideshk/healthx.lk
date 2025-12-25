@@ -77,8 +77,6 @@ export default function AppointmentBookingFlow() {
   const updateData = (newData: Partial<AppointmentFormInputs>) => {
     setBookingData((prev) => {
       const merged = { ...prev, ...newData };
-      // debug log
-      // console.log("updateData merged:", merged);
       return merged;
     });
   };
@@ -94,6 +92,7 @@ export default function AppointmentBookingFlow() {
       draft_id: draftData?.id ?? null,
       data: dataToSave,
     };
+    console.log("💾 Saving draft with payload:", payload);
 
     const res = await fetch("/api/booking/appointment/draft", {
       method: "PATCH",

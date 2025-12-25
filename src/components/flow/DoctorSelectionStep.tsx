@@ -18,8 +18,8 @@ const DoctorSelectionStep = forwardRef(
       updateData,
       bookingData,
     }: {
-      nextStep: () => void;
-      prevStep: () => void;
+      nextStep: (data?: Partial<AppointmentFormInputs>) => void;
+      prevStep: (data?: Partial<AppointmentFormInputs>) => void;
       updateData: (data: Partial<AppointmentFormInputs>) => void;
       bookingData: AppointmentFormInputs;
     },
@@ -92,7 +92,7 @@ const DoctorSelectionStep = forwardRef(
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <button
-              onClick={prevStep}
+              onClick={() => prevStep()}
               className="flex items-center text-gray-600 hover:text-gray-900 transition"
             >
               <ArrowLeft className="w-4 h-4 mr-1" /> Back

@@ -230,9 +230,9 @@ export async function POST(
 
     // 9 Mark Draft as Used
     await supabaseClient
-      .from("appointment_draft")
-      .update({ status: "USED", updated_at: new Date().toISOString() })
-      .eq("patient_id", patient_id);
+  .from("appointment_draft")
+  .delete()
+  .eq("patient_id", patient_id);
 
     // 8️⃣ Send appointment confirmation notification
     await notify({
@@ -243,7 +243,7 @@ export async function POST(
       title: "Appointment Confirmed",
       message: `Your appointment is confirmed on ${new Date(starts_at).toLocaleString()}`,
 
-      channels: ["in_app", "email", "sms"],
+      channels: ["in_app", "email"],
 
       payload: {
         // -------- Common --------

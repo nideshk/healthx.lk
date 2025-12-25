@@ -17,8 +17,8 @@ import { AppointmentFormInputs } from "@/types/FormType";
 import Loader from "../atom/Loader/Loader";
 
 interface Props {
-  nextStep: () => void;
-  prevStep: () => void;
+  nextStep: (data?: Partial<AppointmentFormInputs>) => void;
+  prevStep: (data?: Partial<AppointmentFormInputs>) => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
   draftData?: any;
@@ -136,7 +136,7 @@ const BookAppointmentStep = forwardRef(
         <div className="max-w-6xl mx-auto px-4">
           {/* Back */}
           <button
-            onClick={prevStep}
+            onClick={() => prevStep()}
             className="flex items-center text-sm text-gray-500 hover:text-gray-800 mb-4"
           >
             <ChevronLeft className="w-4 h-4 mr-1" />
