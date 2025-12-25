@@ -130,24 +130,29 @@ export async function createPractitioner(
   }
 
   /* 6️⃣ Notify */
-  await notify({
-    userId,
-    role: "practitioner",
-    eventType: "practitioner_account_created",
-    title: "Your Doctor Account Has Been Created",
-    message: `
+      await notify({
+      userId, // auth.users.id
+      role: "practitioner",
+      eventType: "practitioner_account_created",
+      title: "Your Doctor Account Has Been Created",
+      message: `
 Hello ${full_name},
-
 Your doctor account has been created.
-
+Login details:
 Username: ${email}
 Password: ${password}
-
+Please keep these credentials secure.
 Regards,
 Clinico Team
-    `.trim(),
-    channels: ["email"],
-  });
+      `.trim(),
+      channels: ["email"],
+      payload: {
+        email,
+        username: email,
+        password,
+        practitioner_id,
+      },
+    });
 
   return { userId, practitioner_id };
 }
