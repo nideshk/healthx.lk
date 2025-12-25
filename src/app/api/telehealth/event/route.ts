@@ -30,26 +30,34 @@ export async function POST(req: Request) {
     // ---------------------------------------------------------
     // 2️⃣ IF NOT LOGGED IN → USE GUEST TOKEN
     // ---------------------------------------------------------
-    if (!actorUserId) {
-      if (!token) {
-        return NextResponse.json(
-          { error: "User not authenticated and no guest token provided" },
-          { status: 401 }
-        );
-      }
+   if (!actorUserId) {
+  if (!token) {
+    return NextResponse.json(
+      { error: "User not authenticated and no guest token provided" },
+      { status: 401 }
+    );
+  }
 
-      // Validate token
-      const decoded:any = verifyTelehealthToken(token);
-      if (!decoded) {
-        return NextResponse.json(
-          { error: "Invalid telehealth token" },
-          { status: 403 }
-        );
-      }
+  const decoded: any = verifyTelehealthToken(token);
 
-      actorUserId = decoded.attendeeId; // unique guest attendee id
-      actorRole = "guest";
-    }
+  if (!decoded) {
+    return NextResponse.json(
+      { error: "Invalid telehealth token" },
+      { status: 403 }
+    );
+  }
+
+  // 🔐 HARD SAFETY CHECK
+  if (decoded.appointmentId !== appointmentId) {
+    return NextResponse.json(
+      { error: "Token does not match appointment" },
+      { status: 403 }
+    );
+  }
+
+  actorUserId = `guest:${decoded.email}`;
+  actorRole = decoded.role ?? "guest";
+}
 
     // ---------------------------------------------------------
     // 3️⃣ FINAL SAFETY CHECK

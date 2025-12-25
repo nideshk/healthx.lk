@@ -19,6 +19,7 @@ export default function VideoCallContainer({
     Array<{ id: string; message: string }>
   >([]);
 
+  console.log(roomKey)
   const addToast = useCallback((message: string, ttl = 4000) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     setToasts((s) => [...s, { id, message }]);

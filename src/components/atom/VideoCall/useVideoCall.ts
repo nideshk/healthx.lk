@@ -39,7 +39,7 @@ export type UseVideoCallOptions = {
 export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
   const searchParams = useSearchParams();
   const params = useParams();
-
+  console.log(opts?.roomKey)
   const [roomId, setRoomId] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const [peers, setPeers] = useState<{ [id: string]: MediaStream }>({});
@@ -60,7 +60,7 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   useEffect(() => {
-    const fromQuery = searchParams.get("room");
+    const fromQuery = searchParams.get("room") || opts?.roomKey;
     const fromPath = (params as any)?.roomId as string | undefined;
     const id = fromQuery || fromPath;
     if (id) {
