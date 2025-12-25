@@ -69,7 +69,7 @@ export async function createPractitioner(
     id: userId,
     display_name: full_name,
     first_name: first_name,
-    last_name:last_name,
+    last_name: last_name,
     role: "practitioner",
     is_active: true,
     state,
