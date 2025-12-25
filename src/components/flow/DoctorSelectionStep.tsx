@@ -18,8 +18,8 @@ const DoctorSelectionStep = forwardRef(
       updateData,
       bookingData,
     }: {
-      nextStep: (data?: Partial<AppointmentFormInputs>) => void;
-      prevStep: (data?: Partial<AppointmentFormInputs>) => void;
+      nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
+      prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
       updateData: (data: Partial<AppointmentFormInputs>) => void;
       bookingData: AppointmentFormInputs;
     },

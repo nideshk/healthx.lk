@@ -7,10 +7,18 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import axios from 'axios';
-
 import { ICON_MAP } from '@/lib/lucideIcons';
 import { Stethoscope } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { AppointmentFormInputs } from '@/types/FormType';
+
+type Service = {
+  id: string | number;
+  name: string;
+  description?: string;
+  icon?: string;
+  [key: string]: unknown;
+};
 
 const ConsultationStep = forwardRef(
   (
@@ -18,25 +26,25 @@ const ConsultationStep = forwardRef(
       updateData,
       draftData,
     }: {
-      updateData: any;
-      bookingData: any;
-      draftData: any;
+      updateData: (data: Partial<AppointmentFormInputs>) => void;
+      bookingData: AppointmentFormInputs;
+      draftData?: { data?: Partial<AppointmentFormInputs> };
     },
     ref
   ) => {
-    const [services, setServices] = useState<any[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedService, setSelectedService] = useState<any>(
-      draftData?.data?.selectedService?.id || null
+    const [selectedService, setSelectedService] = useState<string | number | null>(
+      draftData?.data?.selectedService && 'id' in (draftData.data.selectedService as object)
+        ? (draftData.data.selectedService as { id: string | number }).id
+        : null
     );
 
     /* ───────── expose validation to parent ───────── */
     useImperativeHandle(ref, () => ({
       validateStep: () => {
         if (!selectedService) {
-          toast.error(
-            'Please select a consultation type before continuing.'
-          );
+          toast.error('Please select a consultation type before continuing.');
           return false;
         }
         return true;
@@ -48,7 +56,7 @@ const ConsultationStep = forwardRef(
       const fetchServices = async () => {
         try {
           const res = await axios.get('/api/specialisation');
-          setServices(res.data.services || []);
+          setServices((res.data.services as Service[]) || []);
         } catch (err) {
           console.error('Failed to fetch services:', err);
           toast.error('Failed to load services. Please try again later.');
@@ -59,10 +67,10 @@ const ConsultationStep = forwardRef(
       fetchServices();
     }, []);
 
-    const handleSelectService = (service: any) => {
+    const handleSelectService = (service: Service) => {
       setSelectedService(service.id);
       updateData({
-        selectedService: service,
+        selectedService: service as AppointmentFormInputs['selectedService'],
       });
     };
 

@@ -12,8 +12,8 @@ interface Props {
   }>;
   bookingData: AppointmentFormInputs;
   updateData: (d: Partial<AppointmentFormInputs>) => void;
-  nextStep: (data?: Partial<AppointmentFormInputs>) => void;
-  prevStep: (data?: Partial<AppointmentFormInputs>) => void;
+  nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
+  prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
 }
 
 export default function PreConsultationStep({

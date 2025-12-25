@@ -228,12 +228,6 @@ export async function POST(
       },
     };
 
-    // 9 Mark Draft as Used
-    await supabaseClient
-  .from("appointment_draft")
-  .delete()
-  .eq("patient_id", patient_id);
-
     // 8️⃣ Send appointment confirmation notification
     await notify({
       userId: user.auth_user_id, // auth.users.id
@@ -267,6 +261,11 @@ export async function POST(
       },
     });
 
+    // 9 Mark Draft as Used
+    await supabaseClient
+      .from("appointment_draft")
+      .delete()
+      .eq("patient_id", patient_id);
 
     return NextResponse.json({
       success: true,

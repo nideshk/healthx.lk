@@ -14,11 +14,10 @@ import { toast } from "sonner";
 import { ChevronLeft, Clock } from "lucide-react";
 import Calendar from "../atom/Calendar/Calendar";
 import { AppointmentFormInputs } from "@/types/FormType";
-import Loader from "../atom/Loader/Loader";
 
 interface Props {
-  nextStep: (data?: Partial<AppointmentFormInputs>) => void;
-  prevStep: (data?: Partial<AppointmentFormInputs>) => void;
+  nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
+  prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
   draftData?: any;

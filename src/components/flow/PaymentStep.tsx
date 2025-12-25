@@ -20,7 +20,7 @@ interface StepRefHandle {
   validateStep?: () => boolean;
 }
 interface Props {
-  prevStep: (data?: Partial<AppointmentFormInputs>) => void;
+  prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
   goToStep: (step: number) => void;
