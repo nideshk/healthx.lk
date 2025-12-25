@@ -12,8 +12,8 @@ interface Props {
   }>;
   bookingData: AppointmentFormInputs;
   updateData: (d: Partial<AppointmentFormInputs>) => void;
-  nextStep: () => void;
-  prevStep: () => void;
+  nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
+  prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
 }
 
 export default function PreConsultationStep({
@@ -254,7 +254,7 @@ export default function PreConsultationStep({
         )}
 
         <div className="flex gap-4">
-          <button onClick={prevStep} className="px-4 py-2 border rounded">
+          <button onClick={() => prevStep()} className="px-4 py-2 border rounded">
             Back
           </button>
           <button

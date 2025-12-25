@@ -14,11 +14,10 @@ import { toast } from "sonner";
 import { ChevronLeft, Clock } from "lucide-react";
 import Calendar from "../atom/Calendar/Calendar";
 import { AppointmentFormInputs } from "@/types/FormType";
-import Loader from "../atom/Loader/Loader";
 
 interface Props {
-  nextStep: () => void;
-  prevStep: () => void;
+  nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
+  prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
   draftData?: any;
@@ -136,7 +135,7 @@ const BookAppointmentStep = forwardRef(
         <div className="max-w-6xl mx-auto px-4">
           {/* Back */}
           <button
-            onClick={prevStep}
+            onClick={() => prevStep()}
             className="flex items-center text-sm text-gray-500 hover:text-gray-800 mb-4"
           >
             <ChevronLeft className="w-4 h-4 mr-1" />
