@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     const encrypted_password = encrypt(password);
 
     // ✅ Insert application
-    const { error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("practitioner_applications")
       .insert({
         email,
@@ -110,7 +110,9 @@ export async function POST(req: Request) {
 
         status: "pending",
         user_created: false,
-      });
+      })
+      .select("id")
+      .single();;
 
     if (error) {
       return NextResponse.json(
@@ -122,6 +124,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: "Application submitted successfully",
+      application_id: data?.id,
     });
   } catch (err: any) {
     return NextResponse.json(

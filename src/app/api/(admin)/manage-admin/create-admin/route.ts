@@ -96,7 +96,7 @@ export async function POST(req: Request) {
     .insert({
       id: authUserId,
       display_name: full_name,
-      role: "admin",
+      role,
       created_at: new Date().toISOString(),
     });
 
