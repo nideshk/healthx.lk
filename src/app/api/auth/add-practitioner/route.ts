@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     /* --------------------------------------------------
      * 4️⃣ Create practitioner (shared core logic)
      * -------------------------------------------------- */
-    const { practitioner_id } = await createPractitioner({
+    const result = await createPractitioner({
       email,
       password,
       first_name,
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
      * -------------------------------------------------- */
     return NextResponse.json({
       success: true,
-      practitioner_id,
+      practitioner_id: result.finalPractitionerId,
       message: "Practitioner created successfully",
     });
   } catch (err: any) {

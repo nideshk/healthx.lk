@@ -1,12 +1,28 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { s3 } from "@/lib/s3/s3";
+
+const BUCKET_NAME = process.env.AWS_S3_BUCKET!;
 
 type Params = {
   params: {
     id: string;
   };
 };
+
+async function signViewUrl(s3Key: string) {
+  const command = new GetObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: s3Key,
+  });
+
+  return getSignedUrl(s3, command, {
+    expiresIn: 60 * 10, // 10 minutes
+  });
+}
 
 export async function GET(
   _req: Request,
@@ -65,6 +81,7 @@ export async function GET(
         status,
         user_created,
         user_id,
+        documents,
         created_at,
         updated_at
       `)
@@ -92,9 +109,24 @@ export async function GET(
       );
     }
 
+    let signedDocuments: any[] = [];
+
+    if (Array.isArray(data.documents)) {
+      signedDocuments = await Promise.all(
+        data.documents.map(async (doc: any) => ({
+          ...doc,
+          view_url: await signViewUrl(doc.file_url),
+        }))
+      );
+    }
+
+
     return NextResponse.json({
       success: true,
-      data,
+      data: {
+        ...data,
+        documents: signedDocuments,
+      },
     });
   } catch (err: any) {
     return NextResponse.json(
