@@ -40,7 +40,7 @@ export async function requireUser() {
   // 3) map patient row
   const { data: patient } = await supabaseAdmin
     .from("patients")
-    .select("id")
+    .select("id, contact_number")
     .eq("supabase_user_id", auth_user_id)
     .maybeSingle();
 
@@ -75,7 +75,8 @@ export async function requireUser() {
 
   // 5) final unified user
   const sessionUser = {
-    auth_user_id,                    // ALWAYS THE AUTH ID
+    auth_user_id,       
+    phone : patient.contact_number,             // ALWAYS THE AUTH ID
     role: profile.role,              // patient/practitioner/admin
     profile,
     user,
@@ -83,10 +84,10 @@ export async function requireUser() {
     patient_id: patient?.id || null,
     practitioner_id: practitioner?.id || null,
     patient_data : {
-      city : patient?.city,
-      country : patient?.country,
-      state : patient?.state,
-      address : patient?.city+", "+patient?.state + ", " + patient?.country
+      city : profile?.city,
+      country : profile?.country,
+      state : profile?.state,
+      address : profile?.city+", "+profile?.state + ", " + profile?.country
     }
   };
 
