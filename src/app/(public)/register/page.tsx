@@ -26,7 +26,10 @@ type Specialization = {
 type FormValues = {
   email: string;
   password: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
+  city: string;
+  state: string;
   qualification: string;
   specialization: string[];
   license_number: string;
@@ -64,6 +67,12 @@ export default function PractitionerRegisterPage() {
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
   const [isSpecOpen, setIsSpecOpen] = useState(false);
 
+  const [pendingFiles, setPendingFiles] = useState<
+    { file: File; document_type: "government_id" | "supporting_document" }[]
+  >([]);
+
+  const [uploadingDocs, setUploadingDocs] = useState(false);
+
   /* ---------------- RHF ---------------- */
 
   const {
@@ -78,7 +87,10 @@ export default function PractitionerRegisterPage() {
     defaultValues: {
       email: "",
       password: "",
-      full_name: "",
+      first_name: "",
+      last_name: "",
+      city: "",
+      state: "",                
       qualification: "",
       specialization: [],
       license_number: "",
@@ -109,6 +121,14 @@ export default function PractitionerRegisterPage() {
 
   const specialization = watch("specialization");
   const daysUnavailable = watch("availability.days_unavailable");
+
+  const governmentIdCount = pendingFiles.filter(
+    f => f.document_type === "government_id"
+  ).length;
+
+  const supportingDocCount = pendingFiles.filter(
+    f => f.document_type === "supporting_document"
+  ).length;
 
   /* ---------------- EFFECTS ---------------- */
 
@@ -183,8 +203,113 @@ export default function PractitionerRegisterPage() {
     );
   };
 
+  const handleFileSelect = (
+    file: File,
+    documentType: "government_id" | "supporting_document"
+  ) => {
+    if (documentType === "government_id" && governmentIdCount >= 1) {
+      setError("Only one Government ID document is allowed.");
+      return;
+    }
+
+    if (documentType === "supporting_document" && supportingDocCount >= 2) {
+      setError("You can upload a maximum of 2 supporting documents.");
+      return;
+    }
+
+    setPendingFiles(prev => [...prev, { file, document_type: documentType }]);
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadDocumentsAfterApplication = async (applicationId: string) => {
+    // 🔐 Safety validation (never trust UI alone)
+    const governmentIdCount = pendingFiles.filter(
+      f => f.document_type === "government_id"
+    ).length;
+
+    const supportingDocCount = pendingFiles.filter(
+      f => f.document_type === "supporting_document"
+    ).length;
+
+    if (governmentIdCount !== 1) {
+      throw new Error("Exactly one Government ID document is required.");
+    }
+
+    if (supportingDocCount > 2) {
+      throw new Error("You can upload a maximum of 2 supporting documents.");
+    }
+
+    setUploadingDocs(true);
+
+    const uploadedDocs: any[] = [];
+
+    try {
+      for (const item of pendingFiles) {
+        // 1️⃣ get upload URL
+        const res = await fetch("/api/practitioner-document/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            application_id: applicationId,
+            fileName: item.file.name,
+            fileType: item.file.type,
+            fileSize: item.file.size,
+            documentType: item.document_type,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to get upload URL");
+        }
+
+        // 2️⃣ upload to S3
+        const uploadRes = await fetch(data.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": item.file.type },
+          body: item.file,
+        });
+
+        console.log("S3 UPLOAD STATUS:", uploadRes.status);
+
+        if (!uploadRes.ok) {
+          throw new Error("Failed to upload file to S3");
+        }
+
+        uploadedDocs.push(data.document);
+      }
+
+      // 3️⃣ attach documents to application (ONLY if all uploads succeeded)
+      const attachRes = await fetch(
+        `/api/auth/practitioner-application/${applicationId}/document_added`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ documents: uploadedDocs }),
+        }
+      );
+
+      if (!attachRes.ok) {
+        throw new Error("Failed to attach documents to application");
+      }
+
+      // 4️⃣ clear local state (upload is done)
+      setPendingFiles([]);
+    } finally {
+      setUploadingDocs(false);
+    }
+  };
+
   /* ---------------- SUBMIT ---------------- */
   const onSubmit = async (form: FormValues) => {
+    if (governmentIdCount !== 1) {
+      setError("Please upload exactly one Government ID document.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -207,7 +332,7 @@ export default function PractitionerRegisterPage() {
         }, {}),
       };
 
-      const res = await fetch("/api/auth/register-practitioner", {
+      const res = await fetch("/api/auth/practitioner-application", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -215,8 +340,17 @@ export default function PractitionerRegisterPage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
+      const applicationId = data.application_id;
 
-      setMessage("🎉 Practitioner registered successfully!");
+      try {
+        await uploadDocumentsAfterApplication(applicationId);
+      } catch (err) {
+        setMessage(
+          "Application submitted, but document upload failed. You can upload later."
+        );
+      }
+
+      setMessage("🎉 Practitioner application submitted successfully!");
     } catch (err: any) {
       setError(err.message);
     }
@@ -234,7 +368,7 @@ export default function PractitionerRegisterPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-5 flex justify-center">
       <div className="w-full max-w-3xl">
         <h1 className="text-4xl font-bold text-gray-900 text-center mb-10">
-          Register as <span className="text-teal-600">Practitioner</span>
+          Appliaction for <span className="text-teal-600">Practitioner</span>
         </h1>
 
         <div className="bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
@@ -256,12 +390,12 @@ export default function PractitionerRegisterPage() {
               <h2 className="section-title">Basic Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                 <Controller
-                  name="full_name"
+                  name="first_name"
                   control={control}
-                  rules={{ required: "Full Name is required" }}
+                  rules={{ required: "First name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
-                      placeholder="Full Name"
+                      placeholder="First Name"
                       required
                       value={field.value}
                       onChange={field.onChange}
@@ -270,6 +404,55 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
+                <Controller
+                  name="last_name"
+                  control={control}
+                  rules={{ required: "Last name is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      placeholder="Last Name"
+                      required
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
+                />
+                <Controller
+                  name="city"
+                  control={control}
+                  rules={{ required: "City is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      placeholder="City"
+                      required
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="state"
+                  control={control}
+                  rules={{ required: "State is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      placeholder="State"
+                      required
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
+                />
+
+              </div>
+              <div  className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                 <Controller
                   name="email"
                   control={control}
@@ -286,25 +469,24 @@ export default function PractitionerRegisterPage() {
                   )}
                 />
 
+                <Controller
+                  name="password"
+                  control={control}
+                  rules={{ required: "Password is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      type="password"
+                      className=""
+                      placeholder="Password"
+                      required
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
+                />
               </div>
-
-              <Controller
-                name="password"
-                control={control}
-                rules={{ required: "Password is required" }}
-                render={({ field, fieldState }) => (
-                  <Input
-                    type="password"
-                    className="mt-4"
-                    placeholder="Password"
-                    required
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                    error={fieldState.error?.message}
-                    errorStatus={!!fieldState.error}
-                  />
-                )}
-              />
 
             </div>
 
@@ -534,6 +716,96 @@ export default function PractitionerRegisterPage() {
               )}
             </div>
 
+            {/* DOCUMENTS */}
+            <div>
+              <h2 className="section-title">Documents</h2>
+              {/* Government ID */}
+              <div className="flex items-center justify-between mt-4">
+                <span className="font-medium text-gray-700">
+                  Passport / Government ID <span className="text-red-500">*</span>
+                </span>
+
+                <input
+                  type="file"
+                  accept=".pdf,image/*"
+                  className="hidden"
+                  id="government-id-input"
+                  onChange={(e) =>
+                    e.target.files &&
+                    handleFileSelect(e.target.files[0], "government_id")
+                  }
+                />
+                <button
+                  type="button"
+                  disabled={governmentIdCount >= 1 || uploadingDocs}
+                  onClick={() =>
+                    document.getElementById("government-id-input")?.click()
+                  }
+                  className="px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Upload
+                </button>
+              </div>
+
+              {/* Supporting Document */}
+              <div className="flex items-center justify-between mt-4">
+                <span className="font-medium text-gray-700">
+                  Supporting Document (Max 2)
+                </span>
+
+                <input
+                  type="file"
+                  accept=".pdf,image/*"
+                  className="hidden"
+                  id="supporting-doc-input"
+                  onChange={(e) =>
+                    e.target.files &&
+                    handleFileSelect(e.target.files[0], "supporting_document")
+                  }
+                />
+
+                <button
+                  type="button"
+                  disabled={supportingDocCount >= 2 || uploadingDocs}
+                  onClick={() =>
+                    document.getElementById("supporting-doc-input")?.click()
+                  }
+                  className="px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Upload
+                </button>
+              </div>
+
+              {/* Uploaded files list */}
+              {pendingFiles.length > 0 && (
+                <ul className="mt-4 space-y-2 text-sm text-gray-700">
+                  {pendingFiles.map((item, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded"
+                    >
+                      <span>
+                        {item.file.name}
+                        <span className="ml-2 text-gray-500">
+                          ({item.document_type})
+                        </span>
+                      </span>
+
+                      {/* ❌ REMOVE */}
+                      <button
+                        type="button"
+                        onClick={() => removePendingFile(idx)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Remove"
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             {/* SECTION: BANK DETAILS */}
             <div>
               <h2 className="section-title">Bank Details</h2>
@@ -679,7 +951,7 @@ export default function PractitionerRegisterPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploadingDocs}
               className="w-full bg-teal-600 text-white py-3 rounded-xl text-lg font-semibold hover:bg-teal-700 transition"
             >
               {loading ? "Registering…" : "Register Practitioner"}

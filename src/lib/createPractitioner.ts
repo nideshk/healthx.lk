@@ -48,6 +48,7 @@ import { notify } from "@/lib/notify";
  */
 
 type CreatePractitionerInput = {
+  practitioner_id?: string; // NEW (optional)
   email: string;
   password: string;
 
@@ -66,12 +67,14 @@ type CreatePractitionerInput = {
   available_services?: string[];
   availability?: any;
   bank_details?: any;
+  documents?: any[]; // 👈 optional, safe
 };
 
 export async function createPractitioner(
   input: CreatePractitionerInput
 ) {
   const {
+    practitioner_id,
     email,
     password,
     first_name,
@@ -89,6 +92,7 @@ export async function createPractitioner(
     available_services,
     availability,
     bank_details,
+    documents,
   } = input;
 
   const full_name = [first_name, last_name].filter(Boolean).join(" ");
@@ -135,9 +139,10 @@ export async function createPractitioner(
   }
 
   /* 3️⃣ Create practitioner */
-  const { data: practitioner } = await supabaseAdmin
+  const {data: practitioner, error: practitionerErr} = await supabaseAdmin
     .from("practitioners")
     .insert({
+      ...(practitioner_id ? { id: practitioner_id } : {}),
       supabase_user_id: userId,
       full_name,
       first_name,
@@ -152,39 +157,71 @@ export async function createPractitioner(
       available_services,
       fees,
       is_active: true,
+      documents: documents ?? [],
     })
     .select("id")
     .single();
 
-  const practitioner_id = practitioner?.id;
+  if (practitionerErr) {
+      console.error("PRACTITIONER CREATION FAILED — ROLLING BACK", practitionerErr);
+
+      // 🔥 Rollback
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      await supabaseAdmin.from("profiles").delete().eq("id", userId);
+
+      return {
+        success: false,
+        message: "Failed to create practitioner record",
+      };
+    }
+
+  const finalPractitionerId = practitioner.id;
 
   /* 4️⃣ Availability */
   if (availability) {
     const toISO = (t: string) =>
       new Date(`2000-01-01T${t}:00`).toISOString();
 
-    await supabaseAdmin.from("practitioner_availability").insert({
-      practitioner_id,
-      starts_at: toISO(availability.start_time),
-      ends_at: toISO(availability.end_time),
-      days_unavailable: availability.days_unavailable || [],
-      timezone: availability.timezone || "Asia/Kolkata",
-    });
+     const { error: availabilityErr } = await supabaseAdmin
+      .from("practitioner_availability")
+      .insert({
+        practitioner_id: finalPractitionerId,
+        starts_at: toISO(availability.start_time),
+        ends_at: toISO(availability.end_time),
+        days_unavailable: availability.days_unavailable || [],
+        timezone: availability.timezone || "Asia/Kolkata",
+      });
+
+    if (availabilityErr) {
+      return {
+        success: false,
+        message: "Failed to save practitioner availability",
+      };
+    }
   }
 
   /* 5️⃣ Bank details */
   if (bank_details) {
-    await supabaseAdmin.from("practitioner_bank_details").insert({
-      practitioner_id,
-      account_holder_name: bank_details.account_name,
-      bank_name: bank_details.bank_name,
-      account_number: bank_details.account_number,
-      branch_name: bank_details.branch_location ?? null,
-      branch_address: bank_details.branch_address ?? null,
-      ifsc_code: bank_details.ifsc_code ?? null,
-      swift_code: bank_details.swift_code ?? null,
-      is_default: true,
-    });
+    const { error: bankErr } = await supabaseAdmin
+      .from("practitioner_bank_details")
+      .insert({
+        practitioner_id: practitioner_id,
+        account_holder_name: bank_details.account_name,
+        bank_name: bank_details.bank_name,
+        account_number: bank_details.account_number,
+        branch_name: bank_details.branch_location ?? null,
+        branch_address: bank_details.branch_address ?? null,
+        ifsc_code: bank_details.ifsc_code ?? null,
+        swift_code: bank_details.swift_code ?? null,
+        is_default: true,
+      });
+
+    if (bankErr) {
+      return {
+        success: false,
+        message: "Failed to save practitioner bank details",
+      };
+    }
   }
 
   /* 6️⃣ Notify */
@@ -208,9 +245,9 @@ Clinico Team
         email,
         username: email,
         password,
-        practitioner_id,
+        finalPractitionerId,
       },
     });
 
-  return { userId, practitioner_id };
+  return { success: true, userId, finalPractitionerId };
 }
