@@ -232,7 +232,7 @@ export async function POST(
         source: "appointment_booking",
         status: "INITIATED",
         email: user?.user?.email,
-        phone: user?.user?.phone,
+        phone: user?.phone,
         metadata: {
           starts_at,
           ends_at,
