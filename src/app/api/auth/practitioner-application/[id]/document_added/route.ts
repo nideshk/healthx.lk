@@ -3,9 +3,9 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const applicationId = params.id;
+  const { id: applicationId } = context.params;  
   const { documents } = await req.json();
 
   if (!Array.isArray(documents)) {
