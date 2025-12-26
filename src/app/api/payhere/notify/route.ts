@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
                 eventType: "appointment_confirmed",
                 title: "Appointment Confirmed",
                 message: `Your appointment is confirmed on ${new Date(appointment.starts_at).toLocaleString('en-LK', { timeZone: 'Asia/Colombo' })}`,
-                channels: ["in_app", "email"], // Add sms later
+                channels: ["in_app", "email", "sms"], // Added sms as well, but can be disabled during testing to avoid costs.
                 payload: {
                     appointment_id: appointment.id,
                     practitioner_id: appointment.practitioner_id,
