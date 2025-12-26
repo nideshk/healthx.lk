@@ -122,6 +122,7 @@ export async function GET(
     profile_bio: practitioner.profile_bio,
     experience_years: practitioner.experience_years,
     profile_image: practitioner.profile_picture_url,
+    license_number: practitioner.license_number
   };
 
   // -------------------------------------------------------

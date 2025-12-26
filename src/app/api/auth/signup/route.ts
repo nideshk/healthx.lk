@@ -1,101 +1,150 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { createClient } from "@supabase/supabase-js";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  let createdUserId: string | null = null;
+
   try {
     const {
       email,
       password,
       first_name,
       last_name,
-      dob,
-      gender,
+      date_of_birth,
+      gender_identity,
       phone,
-      address_1,
+      emergency_contact,
+      address,
       city,
-      state,
-      post_code
+      state_province,
+      country,
+      pin_code,
+      government_id_type,
+      government_id_number,
     } = await req.json();
 
-    console.log("📥 Incoming signup request:", { email, first_name });
-
-    // --------------------------------------------------------------------
-    // 1️⃣ Create Supabase Auth user
-    // --------------------------------------------------------------------
-    const { data, error } = await supabaseClient.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: first_name + " " + last_name } }
-    });
-
-    if (error) throw new Error("Supabase signup failed: " + error.message);
-    if (!data.user) throw new Error("Supabase returned no user");
-
-    const user = data.user;
-    console.log("✅ Auth user created:", user.id);
-
-    // --------------------------------------------------------------------
-    // 2️⃣ Create profile (role: patient)
-    // --------------------------------------------------------------------
-    const { data: existingProfile } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (!existingProfile) {
-      const { error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .insert({
-          id: user.id,
-          display_name: first_name + " " + last_name,
-          role: "patient"
-        });
-
-      if (profileError) throw new Error("Profile insert failed: " + profileError.message);
-
-      console.log("✅ Profile created:", user.id);
-    } else {
-      console.log("ℹ️ Profile already exists");
+    /* ───────────────────────────────
+       0️⃣ Validation
+    ─────────────────────────────── */
+    if (!email || !password || !first_name || !last_name) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
-    // --------------------------------------------------------------------
-    // 3️⃣ Insert patient into local patients table
-    // --------------------------------------------------------------------
-    const fullAddress = [address_1, city, state, post_code]
-      .filter(Boolean)
-      .join(", ");
+    /* ───────────────────────────────
+       1️⃣ Create Auth User (EMAIL VERIFICATION ON)
+    ─────────────────────────────── */
+    const { data, error } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true, // ✅ keep normal Supabase verification
+        user_metadata: {
+          first_name,
+          last_name,
+          role: "patient",
+        },
+      });
 
-    const { error: patientError } = await supabaseAdmin.from("patients").upsert({
-      supabase_user_id: user.id,
-      full_name: first_name + " " + last_name,
-      email,
-      dob,
-      gender,
-      contact_number: phone,
-      address: fullAddress
-    });
+    if (error) {
+      if (error.message.includes("already registered")) {
+        return NextResponse.json(
+          { error: "Email already registered" },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
-    if (patientError)
-      throw new Error("Supabase patient insert failed: " + patientError.message);
+    if (!data.user) throw new Error("Auth user not created");
 
-    console.log("✅ Patient stored in Supabase");
+    createdUserId = data.user.id;
 
-    // --------------------------------------------------------------------
-    // 4️⃣ Respond success
-    // --------------------------------------------------------------------
-    return NextResponse.json({
-      message: "Signup successful",
-      user_id: user.id
-    });
+    /* ───────────────────────────────
+       2️⃣ Profile
+    ─────────────────────────────── */
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .insert({
+        id: createdUserId,
+        role: "patient",
+        first_name,
+        last_name,
+        city,
+        state: state_province,
+        country: country || "Sri Lanka",
+      });
+
+    if (profileError) {
+      throw new Error(profileError.message);
+    }
+
+    /* ───────────────────────────────
+       3️⃣ Patient Record
+    ─────────────────────────────── */
+    const { error: patientError } = await supabaseAdmin
+      .from("patients")
+      .insert({
+        supabase_user_id: createdUserId,
+        full_name: `${first_name} ${last_name}`,
+        email,
+        dob: date_of_birth,
+        gender: gender_identity,
+        contact_number: phone,
+        emergency_contact,
+        address,
+        notes: pin_code ? `PIN: ${pin_code}` : null,
+      });
+
+    if (patientError) {
+      throw new Error(patientError.message);
+    }
+
+    /* ───────────────────────────────
+       4️⃣ Government ID (optional)
+    ─────────────────────────────── */
+    if (government_id_type && government_id_number) {
+      const encryptedId = government_id_number; // 🔐 encrypt later
+
+      const { error: govIdError } = await supabaseAdmin
+        .from("user_government_ids")
+        .insert({
+          user_id: createdUserId,
+          id_type: government_id_type,
+          id_number_encrypted: encryptedId,
+          issued_country: "Sri Lanka",
+        });
+
+      if (govIdError) {
+        throw new Error(govIdError.message);
+      }
+    }
+
+    /* ───────────────────────────────
+       5️⃣ Success
+    ─────────────────────────────── */
+    return NextResponse.json(
+      {
+        message:
+          "Account created successfully. Please check your email to verify your account.",
+      },
+      { status: 201 }
+    );
   } catch (err: any) {
-    console.error("❌ Fatal error:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("❌ Signup error:", err.message);
+
+    /* Rollback */
+    if (createdUserId) {
+      await supabaseAdmin.auth.admin.deleteUser(createdUserId);
+    }
+
+    return NextResponse.json(
+      { error: err.message || "Signup failed" },
+      { status: 500 }
+    );
   }
 }

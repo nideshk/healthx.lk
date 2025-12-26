@@ -36,18 +36,20 @@ export async function GET(
 
     const { data, error } = await supabaseAdmin
       .from("appointments")
-      .select(
-        `
+      .select(`
+        id,
+        starts_at,
+        ends_at,
+        status,
+        practitioner:practitioner_id (
           id,
-          starts_at,
-          ends_at,
-          status,
-          practitioner:practitioner_id!inner (
-            id,
-            full_name
-          )
-        `
-      )
+          full_name
+        ),
+        appointment_type:appointment_type!fk_appointments_type (
+          id,
+          name
+        )
+      `)
       .eq("patient_id", patientId)
       .in("status", ["scheduled", "confirmed", "completed"])
       .order("starts_at", { ascending: false });
@@ -71,6 +73,12 @@ export async function GET(
           id: appt.practitioner.id,
           name: appt.practitioner.full_name,
         },
+        appointment_type: appt.appointment_type
+        ? {
+            id: appt.appointment_type.id,
+            name: appt.appointment_type.name,
+          }
+        : null,
       };
 
       if (appt.status === "scheduled" || appt.status === "confirmed") {

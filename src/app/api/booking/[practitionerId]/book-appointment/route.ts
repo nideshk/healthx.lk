@@ -203,10 +203,12 @@ export async function POST(
     }
 
     if (consent) {
+    if (consent) {
       await supabaseClient.from("consents").insert({
         appointment_id: appointment.id,
         terms: consent?.terms,
         telehealth: consent?.telehealth,
+        accepted_at: new Date().toISOString()
         accepted_at: new Date().toISOString()
       })
     }
@@ -218,15 +220,19 @@ export async function POST(
       appointment_id: appointment.id,
       patient_id,
       practitioner_id: practitionerId,
-
+      city: user.patient_data.city,
+      country: user.patient_data.country,
+      address: user.patient_data.address,
       appointment_type_id: appointmentType.id,
-
       amount: resolvedFee,
+      consultation_fee: consultationFee,
+      platform_fee: platformFee,
+      first_name: user.profile.first_name,
+      last_name: user.profile.last_name,
       consultation_fee: consultationFee, // Added this column to transactions table
       platform_fee: platformFee, // Added this column to transactions table
 
       currency: appointment.currency ?? "LKR",
-
       source: "appointment_booking",
       status: "INITIATED",
 
@@ -242,6 +248,49 @@ export async function POST(
     };
 
 
+    // 8️⃣ Send appointment confirmation notification
+    await notify({
+      userId: user.auth_user_id, // auth.users.id
+      role: "patient",
+      eventType: "appointment_confirmed",
+
+      title: "Appointment Confirmed",
+      message: `Your appointment is confirmed on ${new Date(starts_at).toLocaleString()}`,
+
+      channels: ["in_app", "email"],
+
+      payload: {
+        // -------- Common --------
+        appointment_id: appointment.id,
+        practitioner_id: practitionerId,
+        starts_at,
+        ends_at,
+
+        // -------- Email --------
+        email: user.user.email,
+        recipientName:
+          user.profile?.full_name ||
+          user.user.user_metadata?.full_name,
+
+        subject: "Your appointment is confirmed",
+        actionUrl: `https://medx-rho.vercel.app/consultation/meeting?room=${appointment.room_key}`,
+        actionText: "Join Meeting",
+
+        // -------- SMS --------
+        phone: "+917899416499",
+      },
+    });
+
+    // 9 Mark Draft as Used (best-effort, non-critical)
+    try {
+      await supabaseClient
+        .from("appointment_draft")
+        .delete()
+        .eq("patient_id", patient_id);
+    } catch (draftErr) {
+      console.error("⚠️ Failed to delete appointment draft:", draftErr);
+      // Do not rethrow: draft cleanup failure should not break a successful booking
+    }
     // 9 Mark Draft as Used
     await supabaseClient
       .from("appointment_draft")
