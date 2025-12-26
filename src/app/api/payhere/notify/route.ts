@@ -2,7 +2,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { createServerSupabaseClient as supabase } from '@/lib/supabaseServer';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { notify } from '@/lib/notify';
 
 const MERCHANT_SECRET = process.env.PAYHERE_MERCHANT_SECRET!;
 
@@ -32,39 +33,135 @@ export async function POST(request: NextRequest) {
         return new NextResponse(null, { status: 200 });
     }
 
-    // Step2: Determine Status and Prepare Update data
-    const newStatus = status_code === '2' ? 'PAID' : 'FAILED';
+    // Updating step to handle update transaction, update appointment record and send notifications once the payment is verified from payhere side
+    if (status_code === '2') {
+        try {
+            const {data: updatedTransaction, error: transactionError} = await supabaseAdmin
+                .from('transactions')
+                .update({
+                    status: 'PAID',
+                    payment_id: payment_id || null,
+                    status_code: 2,
+                    payhere_data: paymentData,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('order_id', order_id)
+                .neq('status', 'PAID')
+                .select();
+            
+            // Case where transaction was already PAID so return from here ealry
+            if(!updatedTransaction || updatedTransaction.length === 0){
+                console.log(`Transaction ${order_id} already marked as PAID. Skipping.`);
+                return new NextResponse(null, { status: 200 });
+            }
 
-    const updateData = {
-        status: newStatus,
-        payment_id: payment_id || null,
-        status_code: parseInt(status_code, 10),
-        payhere_data: paymentData,
-        updated_at: new Date().toISOString()
-    };
+            // Check if Appointment is already confirmed (Idempotency)
+            const { data: currentApp } = await supabaseAdmin
+                .from('appointments')
+                .select('status, payment_status')
+                .eq('id', order_id)
+                .single();
 
+            if (currentApp?.status === 'confirmed' && currentApp?.payment_status == 'paid') {
+                console.log(`Appointment ${order_id} already confirmed. Skipping notify.`);
+                return new NextResponse(null, { status: 200 });
+            }
 
-    // Step-3: Update Supabase transaction record
-    try {
-        const supabaseServer = await supabase();
-        const { data: updateResult, error: updateError } = await supabaseServer
-            .from('transactions')
-            .update(updateData)
-            .eq('order_id', order_id)
-            .eq('status', 'PENDING') // Only update if still PENDING
-            .select();
+            // Update booking and payment status for appointment
+            const { error: updateError } = await supabaseAdmin
+                .from("appointments")
+                .update({
+                    status: "confirmed",
+                    payment_status: "paid"
+                })
+                .eq("id", order_id);
 
-        if (updateError) {
-            console.error("Supabase update error for order ID", order_id, ":", updateError);
+            if (updateError) {
+                console.error("Error updating appointment statuses", updateError);
+                throw new Error("Failed to update appointment record");
+            }
+
+            // Fetch data for notifications purpose:
+
+            // Fetch the appointment data
+            const { data: appointment, error: fetchError } = await supabaseAdmin
+                .from("appointments")
+                .select("*")
+                .eq('id', order_id)
+                .single();
+
+            if (fetchError || !appointment) {
+                console.error("Appointment Fetch error : ", fetchError);
+                throw new Error("Could not find appointment data");
+            }
+
+            console.log("\n-------------Data fetched for notification purpose related to appointment-------------\n", appointment);
+
+            // Fetch the patient data using the patient_id from the appointment
+            const { data: patientData, error: patientError } = await supabaseAdmin
+                .from("patients")
+                .select("supabase_user_id, email, contact_number, full_name")
+                .eq('id', appointment.patient_id)
+                .single();
+
+            if (patientError || !patientData) {
+                console.error("Patient Fetch error : ", patientError);
+                throw new Error("Could not find patient data for notification");
+            }
+
+            console.log("\n-------------Data fetched for notification purpose related to patient-------------\n", patientData);
+
+            // Trigger the Notification (Email/SMS/In-App)
+            await notify({
+                userId: patientData.supabase_user_id,
+                role: "patient",
+                eventType: "appointment_confirmed",
+                title: "Appointment Confirmed",
+                message: `Your appointment is confirmed on ${new Date(appointment.starts_at).toLocaleString('en-LK', { timeZone: 'Asia/Colombo' })}`,
+                channels: ["in_app", "email"], // Add sms later
+                payload: {
+                    appointment_id: appointment.id,
+                    practitioner_id: appointment.practitioner_id,
+                    starts_at: appointment.starts_at,
+                    ends_at: appointment.ends_at,
+                    email: patientData.email,
+                    recipientName: patientData.full_name,
+                    subject: "Your appointment is confirmed",
+                    actionUrl: `https://medx-rho.vercel.app/consultation/meeting?room=${appointment.room_key}`,
+                    actionText: "Join Meeting",
+                    phone: patientData.contact_number,
+                },
+            });
+
+            console.log(`✅ Webhook Processed: Appointment ${order_id} confirmed and user notified.`);
+
+        } catch (error) {
+            console.error("🚨 Critical Webhook Error:", error);
         }
-        else if (updateResult.length === 0) {
-            console.warn("No PENDING transaction found to update for order ID", order_id);
+    }
+    else if (status_code === '0') {
+        // This means payment is pending so don't mark it as failed, just log it.
+        console.log(`Order ${order_id} is pending bank approval`);
+    }
+    else {
+        // This handles cancelled, failed.
+        console.warn(`Payment not successful. Status Code: ${status_code} for Order: ${order_id}`);
+
+        try {
+            // Update the transaction record
+            await supabaseAdmin
+                .from('transactions')
+                .update({
+                    status: 'FAILED',
+                    status_code: parseInt(status_code, 10),
+                    payhere_data: paymentData
+                })
+                .eq('order_id', order_id)
+                .neq('status', 'PAID');
+
+        } catch (error) {
+            console.error("Error updating failed payment status:", error);
         }
-        else {
-            console.log("Supabase transaction updated for order ID", order_id, "to status", newStatus);
-        }
-    } catch (error) {
-        console.log("Critical DB Update Failure:", error);
     }
 
     // Always respond with 200 OK
