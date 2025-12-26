@@ -83,10 +83,10 @@ export async function requireUser() {
     patient_id: patient?.id || null,
     practitioner_id: practitioner?.id || null,
     patient_data : {
-      city : patient.city,
-      country : patient.country,
-      state : patient.state,
-      address : patient.city+", "+patient.state + ", " + patient.country
+      city : patient?.city,
+      country : patient?.country,
+      state : patient?.state,
+      address : patient?.city+", "+patient?.state + ", " + patient?.country
     }
   };
 
