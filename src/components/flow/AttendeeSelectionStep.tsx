@@ -4,8 +4,8 @@ import { Users, User } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
 
 interface AttendeeSelectionStepProps {
-  nextStep: () => void;
-  prevStep: () => void;
+  nextStep: (data?: Partial<AppointmentFormInputs>) => void;
+  prevStep: (data?: Partial<AppointmentFormInputs>) => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: {
     service_name?: string;
@@ -123,7 +123,7 @@ const AttendeeSelectionStep = ({
       {/* Footer */}
       <div className="mt-12">
         <button
-          onClick={prevStep}
+          onClick={() => prevStep()}
           className="flex items-center text-gray-600 hover:text-blue-500 transition text-sm font-medium"
         >
           <svg
