@@ -11,6 +11,7 @@ import {
   Calendar,
   User,
   ClipboardList,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
@@ -32,9 +33,16 @@ interface Props {
   }>;
 }
 
+declare global {
+  interface Window {
+    payhere: any;
+  }
+}
+
 const PaymentStep = forwardRef<StepRefHandle, Props>(
   ({ prevStep, updateData, bookingData, goToStep, bookingControllerRef }, stepRef) => {
     const [paymentDone, setPaymentDone] = useState(false);
+    const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
     const router = useRouter();
 
     /* ---------------------------
@@ -69,7 +77,16 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
      * HANDLE PAYMENT
      * -------------------------- */
     const handlePayment = async () => {
+
+      // Check to ensure that payhere SDK is ready
+      if (typeof window === "undefined" || !window.payhere) {
+        toast.error("Payment system is still loading. Please wait a few seconds and try again.");
+        return;
+      }
+      const mainLayout = document.getElementById('main-app-layout');
+
       try {
+        setIsPaymentProcessing(true);
         const practitionerId = doctor?.id;
         const appointment_type_id = type?.id;
 
@@ -81,6 +98,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           });
 
         if (!practitionerId || !appointment_type_id || !date || !time) {
+          setIsPaymentProcessing(false);
           toast.error('Missing booking details. Please review.');
           return;
         }
@@ -101,47 +119,121 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         const data = await res.json();
         if (!res.ok) {
           if (res.status === 409) {
+            setIsPaymentProcessing(false);
             toast.error(data.error || 'Slot no longer available');
             goToStep(2);
           }
           return;
         }
 
-        toast.success('Appointment booked successfully!');
-        setPaymentDone(true);
-
+        console.log("Data from book-appointmtnet API : ", data);
+        if (!data?.appointment?.id || !data?.paymentPayload) {
+          setIsPaymentProcessing(false);
+          toast.error("Could not initialize payment data. Please try again.");
+          return;
+        }
         const appointmentId = data.appointment.id; // Replace with real ID from API
 
-        // 2️⃣ Upload attachment via preConsultRef (NOT bookingData)
-        let file: File | null = null;
-        if (
-          bookingControllerRef?.current?.getAttachment &&
-          typeof bookingControllerRef.current.getAttachment === 'function'
-        ) {
-          file = bookingControllerRef.current.getAttachment();
-        }
-        console.log(file); // true
-        if (file instanceof File && appointmentId) {
-          try {
-            await uploadAttachmentAfterBooking(file, appointmentId);
-          } catch (err) {
-            console.error(err);
-            toast.warn(
-              'Appointment booked, but attachment upload failed. You can re-upload later.'
-            );
-          }
-        }
+        console.log("Calling payhere from paymentStpe file");
 
-        updateData({
-          payment_status: 'completed',
-          appointment_id: appointmentId,
+        const payRes = await fetch('/api/payhere', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            first_name: data.paymentPayload?.first_name || "Patient", // Ensure your API returns user details
+            last_name: data.paymentPayload?.last_name,
+            email: data.paymentPayload?.email,
+            phone: data.paymentPayload?.phone,
+            address: "Online Booking",
+            city: "Colombo",
+            country: "Sri Lanka",
+            booking_amount: data.paymentPayload.amount, // The total calculated in your component
+            appointment_id: data.paymentPayload.appointment_id,
+            practitioner_id: data.paymentPayload.practitioner_id,
+            platform_fee: data.paymentPayload.platform_fee,
+            consultation_fee: data.paymentPayload.consultation_fee
+          }),
         });
 
-        router.push('/dashboard/appointment');
+        console.log("payhere call done from payment file");
+
+        const { payment } = await payRes.json();
+        console.log("Payment payload : ", payment);
+
+        try {
+          if (window.payhere) {
+
+            mainLayout?.classList.add('blur-md', 'brightness-75', 'pointer-events-none');
+
+            window.payhere.onCompleted = async function onCompleted(orderId: string) {
+              mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
+              toast.success("Payment successful!");
+              setIsPaymentProcessing(false);
+              toast.success('Appointment booked successfully!');
+              setPaymentDone(true);
+              // Handle post-booking logic (files/redirect)
+              await handlePostBookingActions(appointmentId);
+            };
+
+            window.payhere.onDismissed = function onDismissed() {
+              mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
+              setIsPaymentProcessing(false);
+
+              // Release the slot immediately
+              fetch('/api/booking/release-slot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentId: data.paymentPayload.appointment_id })
+              });
+
+              toast.error("Booking cancelled. You can try booking again or choose a different time.");
+              setTimeout(() => {
+                router.push(`/failure`);
+              }, 1500);
+            };
+
+            window.payhere.onError = function onError(error: string) {
+              mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
+              setIsPaymentProcessing(false);
+              toast.error("Payment Error: " + error);
+              setTimeout(() => {
+                router.push(`/failure`);
+              }, 1500);
+            };
+
+            window.payhere.startPayment(payment);
+          }
+        }
+        catch (err) {
+          mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
+          console.error(err);
+          toast.error('Unexpected error while booking');
+        }
+
       } catch (err) {
         console.error(err);
+        setIsPaymentProcessing(false);
         toast.error('Unexpected error while booking');
       }
+    };
+
+    // Helper to keep the main function clean
+    const handlePostBookingActions = async (appointmentId: string) => {
+      let file: File | null = null;
+      if (bookingControllerRef?.current?.getAttachment) {
+        file = bookingControllerRef.current.getAttachment();
+      }
+
+      if (file instanceof File) {
+        try {
+          await uploadAttachmentAfterBooking(file, appointmentId);
+        } catch (err) {
+          toast.warn('Attachment upload failed. You can re-upload later.');
+        }
+      }
+
+      updateData({ payment_status: 'completed', appointment_id: appointmentId });
+      router.push('/dashboard/appointment');
     };
 
     /* ---------------------------
@@ -239,14 +331,19 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
                 <button
                   onClick={handlePayment}
-                  // disabled={paymentDone}
-                  className="w-full mt-6 py-3 rounded-lg text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:bg-green-600"
+                  disabled={isPaymentProcessing}
+                  className="w-full mt-6 py-3 rounded-lg text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:bg-green-600 flex items-center justify-center gap-2"
+                  aria-busy={isPaymentProcessing}
                 >
-                  {'Pay Now →'}
+                  {
+                    isPaymentProcessing
+                      ? (<Loader2 size={20} className="animate-spin" />)
+                      : 'Pay Now →'
+                  }
                 </button>
-
                 <button
                   onClick={prevStep}
+                  disabled={isPaymentProcessing}
                   className="mt-4 w-full text-sm text-gray-600 underline"
                 >
                   ← Back
