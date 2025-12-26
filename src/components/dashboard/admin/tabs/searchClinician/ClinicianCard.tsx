@@ -13,11 +13,12 @@ interface ClinicianCardProps {
       solo: number;
       family: number;
     };
-    ratings: {
-      overall: number;
-      advice: number;
-      punctuality: number;
-    };
+    experience: number;
+    // ratings: {
+    //   overall: number;
+    //   advice: number;
+    //   punctuality: number;
+    // };
     tags: string[];
   };
   onViewProfile: (id: string) => void;
@@ -62,15 +63,16 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
 
       {/* FEES */}
       <div className="mt-1 text-xs text-slate-600">
-        Solo:{" "}
+        Standard:{" "}
         <span className="font-medium">LKR {clinician.fees.solo}</span>{" "}
         &nbsp; | &nbsp;
-        Family:{" "}
+        Quick:{" "}
         <span className="font-medium">LKR {clinician.fees.family}</span>
       </div>
 
       {/* RATINGS */}
-      <div className="mt-2 flex gap-6 text-[11px] text-slate-600">
+      {/* Shravya to add in response */}
+      {/* <div className="mt-2 flex gap-6 text-[11px] text-slate-600">
         <div>
           Overall Rating:{" "}
           <span className="font-medium text-slate-900">
@@ -89,7 +91,7 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
             {clinician.ratings.punctuality}/5
           </span>
         </div>
-      </div>
+      </div> */}
 
       {/* SPECIALTIES TAGS */}
       <div className="mt-3 flex flex-wrap gap-2">

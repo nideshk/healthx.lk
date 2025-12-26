@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { DateTime } from "luxon";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
+import { CheckCircle, XCircle } from "lucide-react";
+
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -20,47 +22,19 @@ type FollowUpItem = {
   comments?: string;
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                MOCK DATA                                   */
-/* -------------------------------------------------------------------------- */
-
-const MOCK_DATA: FollowUpItem[] = [
-  {
-    id: "1",
-    completedDate: "2024-01-15",
-    patientName: "John Doe",
-    email: "john.doe@email.com",
-    phone: "077-123-4567",
-    followUpDate: "2024-02-15",
-    doctor: "Dr. Sarah Wilson",
-  },
-  {
-    id: "2",
-    completedDate: "2024-01-18",
-    patientName: "Alice Brown",
-    email: "alice.brown@email.com",
-    phone: "077-456-7890",
-    followUpDate: "2024-02-18",
-    doctor: "Dr. Sarah Wilson",
-    comments: "Patient requires blood pressure monitoring",
-  },
-  {
-    id: "3",
-    completedDate: "2024-01-20",
-    patientName: "Eva Martinez",
-    email: "eva.martinez@email.com",
-    phone: "077-678-9012",
-    followUpDate: "2024-02-20",
-    doctor: "Dr. Michael Chen",
-  },
-];
 
 /* -------------------------------------------------------------------------- */
 /*                              MAIN COMPONENT                                */
 /* -------------------------------------------------------------------------- */
 
 const FollowUpNeededTab: React.FC = () => {
-  /* ---------------- DEFAULT CURRENT MONTH ---------------- */
+  /* ---------------- DATE FILTER (UI ONLY for now) ---------------- */
+
+  
+const [showToast, setShowToast] = useState(false);
+const [toastMessage, setToastMessage] = useState("");
+const [toastType, setToastType] = useState<"success" | "error">("success");
+
   const [fromDate, setFromDate] = useState(
     DateTime.now().startOf("month").toISODate()
   );
@@ -69,26 +43,92 @@ const FollowUpNeededTab: React.FC = () => {
   );
 
   const [data, setData] = useState<FollowUpItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  /* ---------------- FETCH (MOCK / API READY) ---------------- */
+  /* ---------------- FETCH FOLLOW UPS ---------------- */
   useEffect(() => {
-    /**
-     * FUTURE API:
-     * GET /api/admin/analytics/follow-ups
-     * params: { fromDate, toDate }
-     */
-    setData(MOCK_DATA);
+    const fetchFollowUps = async () => {
+      try {
+        setLoading(true);
+
+        const res = await fetch("/api/encounter/follow-up", {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch follow-up data");
+        }
+
+        const json = await res.json();
+
+        const mapped: FollowUpItem[] = (json.items || []).map((item: any) => ({
+          id: item.encounter_id,
+          completedDate: DateTime.fromISO(item.completed_date).toFormat(
+            "yyyy-MM-dd"
+          ),
+          patientName: item.patient?.name ?? "-",
+          email: item.patient?.email ?? "-",
+          phone: "-", // ❌ API does not provide phone
+          followUpDate: DateTime.fromISO(item.follow_up_date).toFormat(
+            "yyyy-MM-dd"
+          ),
+          doctor: item.doctor ?? "-",
+          comments:
+            item.follow_up_comments ??
+            item.clinician_notes ??
+            undefined,
+        }));
+
+        setData(mapped);
+      } catch (err) {
+        console.error(err);
+        setData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFollowUps();
   }, [fromDate, toDate]);
 
-  /* ---------------- ACTION ---------------- */
-  const handleNotify = (item: FollowUpItem) => {
-    /**
-     * FUTURE API:
-     * POST /api/admin/follow-ups/notify
-     * body: { followUpId: item.id }
-     */
-    console.log("Notify patient:", item);
-  };
+  /* ---------------- ACTION (PATCH API LATER) ---------------- */
+ const handleNotify = async (item: FollowUpItem) => {
+  try {
+    const res = await fetch("/api/encounter/follow-up", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        encounter_id: item.id,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to notify follow-up");
+    }
+
+    const json = await res.json();
+
+    // ✅ Show success toast from API message
+    setToastMessage(json.message || "Follow-up notified successfully");
+    setToastType("success");
+    setShowToast(true);
+
+    setTimeout(() => setShowToast(false), 3000);
+  } catch (err) {
+    console.error(err);
+
+    // ❌ Error toast
+    setToastMessage("Unable to notify follow-up");
+    setToastType("error");
+    setShowToast(true);
+
+    setTimeout(() => setShowToast(false), 3000);
+  }
+};
+
 
   return (
     <div className="space-y-4">
@@ -130,18 +170,35 @@ const FollowUpNeededTab: React.FC = () => {
           </thead>
 
           <tbody>
+            {loading && (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                  Loading follow-ups...
+                </td>
+              </tr>
+            )}
+
+            {!loading && data.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                  No follow-ups found.
+                </td>
+              </tr>
+            )}
+
             {data.map((item) => (
               <tr
                 key={item.id}
                 className="border-t border-slate-100 hover:bg-slate-50"
               >
-                <td className="px-4 py-3">
-                  {item.completedDate}
-                </td>
+                <td className="px-4 py-3">{item.completedDate}</td>
+
                 <td className="px-4 py-3 font-medium">
                   {item.patientName}
                 </td>
+
                 <td className="px-4 py-3">{item.email}</td>
+
                 <td className="px-4 py-3">{item.phone}</td>
 
                 <td className="px-4 py-3">
@@ -157,10 +214,7 @@ const FollowUpNeededTab: React.FC = () => {
                 </td>
 
                 <td className="px-4 py-3">
-                  <Button
-                    size="sm"
-                    onClick={() => handleNotify(item)}
-                  >
+                  <Button size="sm" onClick={() => handleNotify(item)}>
                     Notify
                   </Button>
                 </td>
@@ -169,8 +223,26 @@ const FollowUpNeededTab: React.FC = () => {
           </tbody>
         </table>
       </div>
+      {showToast && (
+  <div
+    className={`fixed bottom-5 right-5 z-50 border shadow-lg rounded-md flex items-center gap-2 px-4 py-2 text-xs animate-fadeIn
+      ${
+        toastType === "success"
+          ? "bg-white text-gray-700 border-green-200"
+          : "bg-white text-red-700 border-red-200"
+      }
+    `}
+  >
+    {toastType === "success" ? (
+      <CheckCircle size={14} className="text-green-600" />
+    ) : (
+      <XCircle size={14} className="text-red-600" />
+    )}
+    <span>{toastMessage}</span>
+  </div>
+)}
     </div>
-  );
+);
 };
 
 export default FollowUpNeededTab;

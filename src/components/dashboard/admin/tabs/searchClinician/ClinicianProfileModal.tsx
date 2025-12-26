@@ -76,7 +76,7 @@ const ClinicianProfileModal: React.FC<ClinicianProfileModalProps> = ({
 
   {activeTab === "Pricing" && (
     <div className="text-sm text-slate-400">
-      <PricingTab clinician={clinician} />
+<PricingTab clinicianId={clinician.id} />
     </div>
   )}
 
@@ -86,11 +86,18 @@ const ClinicianProfileModal: React.FC<ClinicianProfileModalProps> = ({
     </div>
   )}
 
-  {activeTab === "Settings" && (
-    <div className="text-sm text-slate-400">
-      <SettingsTab clinician={clinician} />
-    </div>
-  )}
+ {activeTab === "Settings" && (
+  <div className="text-sm text-slate-400">
+    <SettingsTab
+      clinician={{
+        id: clinician.id,
+        email: clinician.email ?? clinician.contact_email ?? "",
+        isActive: true, // until backend sends is_active
+      }}
+    />
+  </div>
+)}
+
 </div>
 
 

@@ -1,48 +1,110 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import Input from "@/components/atom/Input/Input";
-import { Patient, Appointment } from "@/types/Dashboard";
+
 import PatientDetails from "./PatientDetails";
+import { Patient } from "@/types/Dashboard";
+
+/* ----------------------------------
+   Admin-only lean appointment type
+----------------------------------- */
+export interface AdminAppointment {
+  id: string;
+  date: string;
+  time: string;
+  doctorName: string;
+  category: "upcoming" | "previous";
+}
 
 interface SearchPatientTabProps {
   search: string;
   onSearchChange: (v: string) => void;
 
-  // ✅ FIX: make optional
   patients?: Patient[];
 
   selectedPatient: Patient | null;
   onSelectPatient: (p: Patient) => void;
   onBackToDashboard: () => void;
-
-  // ✅ FIX: make optional
-  appointments?: Appointment[];
 }
 
 const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
   search,
   onSearchChange,
-  patients = [],              // ✅ default value
+  patients = [],
   selectedPatient,
   onSelectPatient,
   onBackToDashboard,
-  appointments = [],          // ✅ default value
 }) => {
-  // 🔹 Patient details view
+  /* ---------------- Appointments state ---------------- */
+
+  const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+
+  /* ---------------- Fetch appointments on patient select ---------------- */
+
+  useEffect(() => {
+    if (!selectedPatient) return;
+
+    const fetchAppointments = async () => {
+      try {
+        setLoadingAppointments(true);
+
+        const res = await fetch(
+          `/api/patient/${selectedPatient.id}/appointments`,
+          { credentials: "include" }
+        );
+
+        if (!res.ok) throw new Error("Failed to fetch appointments");
+
+        const json = await res.json();
+
+        const mapped: AdminAppointment[] = [
+          ...(json.scheduled ?? []).map((a: any) => ({
+            id: a.id,
+            date: a.appointment_date,
+            time: a.start_time,
+            doctorName: a.doctor.name,
+            category: "upcoming",
+          })),
+          ...(json.completed ?? []).map((a: any) => ({
+            id: a.id,
+            date: a.appointment_date,
+            time: a.start_time,
+            doctorName: a.doctor.name,
+            category: "previous",
+          })),
+        ];
+
+        setAppointments(mapped);
+      } catch (err) {
+        console.error("Error fetching appointments", err);
+        setAppointments([]);
+      } finally {
+        setLoadingAppointments(false);
+      }
+    };
+
+    fetchAppointments();
+  }, [selectedPatient]);
+
+  /* ---------------- Patient details view ---------------- */
+
   if (selectedPatient) {
     return (
       <PatientDetails
         patient={selectedPatient}
         appointments={appointments}
+        loadingAppointments={loadingAppointments}
         onBack={onBackToDashboard}
       />
     );
   }
 
-  // 🔹 Search + list view
+  /* ---------------- Search + list view ---------------- */
+
   return (
     <div className="space-y-4">
       <Card>

@@ -1,4 +1,3 @@
-// src/components/dashboard/admin/AdminDashboard.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -16,9 +15,9 @@ import ManageAdminsTab from "./tabs/ManageAdminsTab";
 import AnalyticsTab from "./tabs/analytics/AnalyticsTab";
 import SettingsTab from "./tabs/SettingsTab";
 
+import { Patient } from "@/types/Dashboard";
 
-// ✅ IMPORTANT: import shared types
-import { Patient, Appointment } from "@/types/Dashboard";
+/* ---------------- TYPES ---------------- */
 
 type AdminMenuId =
   | "home"
@@ -28,6 +27,8 @@ type AdminMenuId =
   | "manageAdmins"
   | "analytics"
   | "settings";
+
+/* ---------------- MENU ---------------- */
 
 const menuItems: DashboardMenuItem[] = [
   { id: "home", label: "Dashboard Home" },
@@ -39,139 +40,49 @@ const menuItems: DashboardMenuItem[] = [
   { id: "settings", label: "Settings" },
 ];
 
+/* ---------------- UTILS ---------------- */
+
+/**
+ * Correct age calculation from DOB
+ * Handles month/day properly (no off-by-one bugs)
+ */
+const calculateAgeFromDob = (dob?: string | null): number => {
+  if (!dob) return 0;
+
+  const birthDate = new Date(dob);
+  const today = new Date();
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+
+  const hasHadBirthdayThisYear =
+    today.getMonth() > birthDate.getMonth() ||
+    (today.getMonth() === birthDate.getMonth() &&
+      today.getDate() >= birthDate.getDate());
+
+  return hasHadBirthdayThisYear ? age : age - 1;
+};
+
+/* ---------------- COMPONENT ---------------- */
+
 const AdminDashboard: React.FC = () => {
-  const [activeMenu, setActiveMenu] = useState<AdminMenuId>("home");
+  const [activeMenu, setActiveMenu] =
+    useState<AdminMenuId>("home");
 
   const [profileName, setProfileName] = useState("Admin");
-  const [profileRole, setProfileRole] = useState("Administrator");
+  const [profileRole, setProfileRole] =
+    useState("Administrator");
 
-  // ✅ Search Patient state (must be initialized)
+  /* -------- Search Patient state -------- */
+
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-
-  // TEMP: mock patients until API is wired
-useEffect(() => {
-  setPatients([
-     {
-    id: "1",
-    patientId: "PT-001",
-    name: "John Doe",
-    email: "john.doe@email.com",
-    phone: "+1 234 567 8900",
-    age: 40,
-    gender: "Male",
-    dob: "15/03/1985",
-    allergies: "Penicillin, Peanuts",
-    lastConsultation: "Oct 18, 2025",
-    consentGiven: true,
-    addressLine1: "123 Main Street",
-    city: "Los Angeles",
-    country: "United States",
-  },
-  {
-    id: "2",
-    patientId: "PT-002",
-    name: "Jane Smith",
-    email: "jane.smith@email.com",
-    phone: "+1 111 222 3333",
-    age: 38,
-    gender: "Female",
-    dob: "20/07/1987",
-    lastConsultation: "Oct 10, 2025",
-    consentGiven: false,
-    addressLine1: "456 Second Ave",
-    city: "New York",
-    country: "United States",
-  },
-  ]);
-}, []);
-
-// TEMP: mock appointments until API is wired
-useEffect(() => {
-  setAppointments([
-    {
-    id: "m1",
-    category: "upcoming",
-    date: "20/01/2025",
-    time: "09:00 AM",
-    doctorName: "Dr. Kumari Silva",
-    reason: "General Health Checkup",
-    status: "confirmed",
-    appointmentType: "Short (10 min)",
-    telehealthConsent: true,
-    termsAccepted: true,
-    mainConcern: "Headaches during work",
-    goal: "Relief and guidance",
-    durationOfConcern: "2 weeks",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-  {
-    id: "m2",
-    category: "upcoming",
-    date: "20/01/2025",
-    time: "11:30 AM",
-    doctorName: "Dr. Kumari Silva",
-    reason: "Follow-up Visit",
-    status: "confirmed",
-    appointmentType: "Long (20 min)",
-    telehealthConsent: true,
-    termsAccepted: true,
-    mainConcern: "",
-    goal: "",
-    durationOfConcern: "",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-  {
-    id: "m3",
-    category: "upcoming",
-    date: "21/01/2025",
-    time: "02:00 PM",
-    doctorName: "Dr. Kumari Silva",
-    reason: "Dermatology Consultation",
-    status: "confirmed",
-    appointmentType: "Short (10 min)",
-    telehealthConsent: true,
-    termsAccepted: true,
-    mainConcern: "",
-    goal: "",
-    durationOfConcern: "",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-   {
-    id: "m4",
-    category: "previous",
-    date: "20/01/2025",
-    time: "11:30 AM",
-    doctorName: "Dr. Sharan Silva",
-    reason: "Follow-up Visit",
-    status: "confirmed",
-    appointmentType: "Long (20 min)",
-    telehealthConsent: true,
-    termsAccepted: true,
-    mainConcern: "",
-    goal: "",
-    durationOfConcern: "",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-  ]);
-}, []);
+  const [selectedPatient, setSelectedPatient] =
+    useState<Patient | null>(null);
+      const [profileEmail, setProfileEmail] = useState(""); // ✅ NEW
 
 
-  /* -------------- Fetch logged in admin user -------------- */
+  /* ---------------- FETCH PATIENTS ---------------- */
+
   useEffect(() => {
     const fetchMe = async () => {
       try {
@@ -182,54 +93,149 @@ useEffect(() => {
         if (!res.ok) return;
 
         const json = await res.json();
-        const name =
+
+        setProfileName(
           json?.user?.profile?.display_name ??
-          json?.user?.display_name ??
-          "Admin";
+            json?.user?.display_name ??
+            "Admin"
+        );
 
-        const role = json?.user?.role ?? "Administrator";
+        setProfileRole(json?.user?.role ?? "Administrator");
 
-        setProfileName(name);
-        setProfileRole(role);
+        // ✅ email from auth/me
+        setProfileEmail(json?.user?.user?.email ?? "");
       } catch (err) {
-        console.error("Failed to fetch admin profile info", err);
+        console.error("Failed to fetch admin profile", err);
       }
     };
 
     fetchMe();
   }, []);
 
-  const handleLogout = () => {
-    console.log("admin logout");
-  };
+  useEffect(() => {
+    if (activeMenu !== "searchPatient") return;
 
-  
+    const fetchPatients = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("page", "1");
+        params.set("limit", "20");
+
+        // Apply search only if >= 4 chars
+        if (search.trim().length >= 4) {
+          params.set("q", search.trim());
+        }
+
+        const res = await fetch(
+          `/api/patient?${params.toString()}`,
+          { credentials: "include" }
+        );
+
+        if (!res.ok)
+          throw new Error("Failed to fetch patients");
+
+        const json = await res.json();
+
+        const mapped: Patient[] = json.data.map(
+          (p: any) => ({
+            id: p.id,
+            patientId: p.id.slice(0, 6).toUpperCase(),
+            name: p.full_name,
+            dob: p.dob ?? "-",
+            age: calculateAgeFromDob(p.dob),
+            gender: p.gender ?? "-",
+            email: p.email,
+            phone: p.contact_number,
+            addressLine1: p.address ?? "",
+            city: "",
+            country: "",
+            consentGiven: false,
+          })
+        );
+
+        setPatients(mapped);
+      } catch (err) {
+        console.error(err);
+        setPatients([]);
+      }
+    };
+
+    fetchPatients();
+  }, [search, activeMenu]);
+
+  /* ---------------- RESET STATE ON TAB SWITCH ---------------- */
+
+  useEffect(() => {
+    if (activeMenu === "searchPatient") {
+      setSearch("");
+      setSelectedPatient(null);
+    }
+  }, [activeMenu]);
+
+  /* ---------------- FETCH LOGGED IN ADMIN ---------------- */
+
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+
+        if (!res.ok) return;
+
+        const json = await res.json();
+
+        setProfileName(
+          json?.user?.profile?.display_name ??
+            json?.user?.display_name ??
+            "Admin"
+        );
+
+        setProfileRole(
+          json?.user?.role ?? "Administrator"
+        );
+      } catch (err) {
+        console.error(
+          "Failed to fetch admin profile",
+          err
+        );
+      }
+    };
+
+    fetchMe();
+  }, []);
+
+  /* ---------------- RENDER ---------------- */
 
   return (
     <DashboardShell
       title="Admin Dashboard"
-      subtitle="Manage clinicians and their details"
+      subtitle="Manage clinicians and patients"
       profileName={profileName}
       profileRole={profileRole}
-      onLogout={handleLogout}
+      onLogout={() => console.log("admin logout")}
     >
       <div className="grid grid-cols-12 gap-6">
-        {/* LEFT SIDE MENU */}
+        {/* LEFT MENU */}
         <div className="col-span-3 max-w-xs">
           <DashboardMenuCard
             title="Admin Menu"
             subtitle="Quick access"
             items={menuItems as any}
             activeId={activeMenu as any}
-            onChange={(id) => setActiveMenu(id as AdminMenuId)}
+            onChange={(id) =>
+              setActiveMenu(id as AdminMenuId)
+            }
           />
         </div>
 
-        {/* RIGHT SIDE CONTENT */}
+        {/* RIGHT CONTENT */}
         <div className="col-span-9">
           {activeMenu === "home" && <HomeTab />}
 
-          {activeMenu === "searchClinician" && <SearchClinicianTab />}
+          {activeMenu === "searchClinician" && (
+            <SearchClinicianTab />
+          )}
 
           {activeMenu === "searchPatient" && (
             <SearchPatientTab
@@ -238,18 +244,27 @@ useEffect(() => {
               patients={patients}
               selectedPatient={selectedPatient}
               onSelectPatient={setSelectedPatient}
-              onBackToDashboard={() => setSelectedPatient(null)}
-              appointments={appointments}
+              onBackToDashboard={() =>
+                setSelectedPatient(null)
+              }
             />
           )}
 
-          {activeMenu === "addClinician" && <AddClinicianTab />}
+          {activeMenu === "addClinician" && (
+            <AddClinicianTab />
+          )}
 
-          {activeMenu === "manageAdmins" && <ManageAdminsTab />}
+          {activeMenu === "manageAdmins" && (
+            <ManageAdminsTab />
+          )}
 
-          {activeMenu === "analytics" && <AnalyticsTab />}
+          {activeMenu === "analytics" && (
+            <AnalyticsTab />
+          )}
 
-          {activeMenu === "settings" && <SettingsTab />}
+          {activeMenu === "settings" && (
+            <SettingsTab email={profileEmail} />
+          )}
         </div>
       </div>
     </DashboardShell>

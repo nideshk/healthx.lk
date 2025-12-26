@@ -87,3 +87,11 @@ export interface TimestampRow {
 }
 
 export type SettingsTabId = "security" | "account" | "availability" | "pricing";
+
+export interface AdminAppointment {
+  id: string;
+  date: string;       // YYYY-MM-DD
+  time: string;       // HH:mm
+  doctorName: string;
+  category: "upcoming" | "previous";
+}

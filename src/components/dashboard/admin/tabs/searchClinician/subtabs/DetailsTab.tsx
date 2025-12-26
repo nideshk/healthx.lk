@@ -2,9 +2,11 @@
 
 import React from "react";
 import Input from "@/components/atom/Input/Input";
+import Button from "@/components/atom/Button/Button";
 
 interface DetailsTabProps {
   clinician: {
+    id: string;
     name: string;
     registration: string;
     specialty: string;

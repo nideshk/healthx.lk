@@ -11,6 +11,7 @@ type InputProps = {
   disabled?: boolean;
   error?: string;
   errorStatus?: boolean;
+  onFocus?: () => void;
   className?: string;
    readOnly?: boolean;     
   icon?: React.ReactNode;          
@@ -24,6 +25,7 @@ export default function Input({
   type = "text",
   value,
   onChange,
+  onFocus,
   disabled = false,
   error,
   errorStatus,

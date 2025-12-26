@@ -5,92 +5,10 @@ import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Input from "@/components/atom/Input/Input";
 import AppointmentCalendar from "@/components/dashboard/admin/tabs/shared/AppointmentCalendar";
 import { Appointment } from "@/types/Dashboard";
+import Loader from "@/components/atom/Loader/Loader";
 
 /* -------------------------------------------------------------------------- */
-/*                               MOCK DATA                                     */
-/* -------------------------------------------------------------------------- */
-
-const MOCK_STATS = {
-  upcoming: 12,
-  completed: 3,
-  activeClinicians: 5,
-};
-
-const MOCK_CLINICIANS = [
-  { id: "c1", name: "Dr. Rohan Fernando", specialty: "Cardiologist" },
-  { id: "c2", name: "Dr. Arjuna Liyanage", specialty: "Cardiologist" },
-  { id: "c3", name: "Dr. Priya Wijesinghe", specialty: "Psychiatrist" },
-  {
-    id: "c4",
-    name: "Dr. Lasantha Amarasinghe",
-    specialty: "Clinical Psychologist",
-  },
-  { id: "c5", name: "Dr. Saman Jayawardena", specialty: "Ophthalmologist" },
-  { id: "c6", name: "Dr. Sunitha Abeywardena", specialty: "Ophthalmologist" },
-];
-
-const MOCK_APPOINTMENTS: Appointment[] = [
-  {
-    id: "a1",
-    category: "upcoming",
-    date: "16/12/2025",
-    time: "09:00 AM",
-    doctorName: "Dr. Rohan Fernando",
-    reason: "General Health Checkup",
-    status: "confirmed",
-    appointmentType: "Short (10 min)",
-    telehealthConsent: true,
-    termsAccepted: true,
-    mainConcern: "",
-    goal: "",
-    durationOfConcern: "",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-  {
-    id: "a2",
-    category: "upcoming",
-    date: "27/10/2025",
-    time: "10:30 AM",
-    doctorName: "Dr. Rohan Fernando",
-    reason: "Follow-up Visit",
-    status: "confirmed",
-    appointmentType: "Long (20 min)",
-    telehealthConsent: true,
-    termsAccepted: true,
-    mainConcern: "",
-    goal: "",
-    durationOfConcern: "",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-  {
-    id: "a3",
-    category: "upcoming",
-    date: "28/12/2025",
-    time: "03:00 PM",
-    doctorName: "Dr. Priya Wijesinghe",
-    reason: "Psychiatry Consultation",
-    status: "confirmed",
-    appointmentType: "Long (30 min)",
-    telehealthConsent: false,
-    termsAccepted: false,
-    mainConcern: "",
-    goal: "",
-    durationOfConcern: "",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-];
-
-/* -------------------------------------------------------------------------- */
-/*                                  MAIN FILE                                 */
+/*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
 
 interface Clinician {
@@ -105,44 +23,192 @@ interface AdminStats {
   activeClinicians: number;
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                  HELPERS                                   */
+/* -------------------------------------------------------------------------- */
+
+const formatDate = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}/${d.getFullYear()}`;
+};
+
+const formatTime = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+/* -------------------------------------------------------------------------- */
+/*                                  MAIN FILE                                 */
+/* -------------------------------------------------------------------------- */
+
 const HomeTab: React.FC = () => {
-  const [stats, setStats] = useState<AdminStats>(MOCK_STATS);
+  const [loading, setLoading] = useState(true);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
+  const [stats, setStats] = useState<AdminStats>({
+    upcoming: 0,
+    completed: 0,
+    activeClinicians: 0,
+  });
+
   const [search, setSearch] = useState("");
-  const [clinicians, setClinicians] = useState<Clinician[]>(MOCK_CLINICIANS);
-  const [filtered, setFiltered] = useState<Clinician[]>(MOCK_CLINICIANS);
+  const [clinicians, setClinicians] = useState<Clinician[]>([]);
+  const [selectedClinician, setSelectedClinician] =
+    useState<Clinician | null>(null);
 
-  const [selectedClinician, setSelectedClinician] = useState<Clinician | null>(
-    null
-  );
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  const [appointments, setAppointments] =
-    useState<Appointment[]>(MOCK_APPOINTMENTS);
+  /* -------------------------------------------------------------------------- */
+  /*                              FETCH OVERVIEW                                */
+  /* -------------------------------------------------------------------------- */
 
-  /* ---------------- Filter clinicians by search ---------------- */
   useEffect(() => {
-    const s = search.toLowerCase();
+    const fetchOverview = async () => {
+      try {
+        const res = await fetch("/api/overview", {
+          credentials: "include",
+        });
 
-    setFiltered(
-      clinicians.filter(
-        (c) =>
-          c.name.toLowerCase().includes(s) ||
-          c.specialty.toLowerCase().includes(s)
-      )
-    );
-  }, [search, clinicians]);
+        const data = await res.json();
 
-  /* ---------------- Select Clinician + Load Mock Calendar ---------------- */
+        if (data.success) {
+          setStats({
+            upcoming: data.upcoming ?? 0,
+            completed: data.completed ?? 0,
+            activeClinicians: data.active_clinicians ?? 0,
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOverview();
+  }, []);
+
+  /* -------------------------------------------------------------------------- */
+  /*                          PRACTITIONER SEARCH (API 24)                      */
+  /* -------------------------------------------------------------------------- */
+
+  useEffect(() => {
+    const fetchPractitioners = async () => {
+      try {
+        const url = search
+          ? `/api/practitioner-list?q=${encodeURIComponent(search)}`
+          : `/api/practitioner-list`;
+
+        const res = await fetch(url, { credentials: "include" });
+        const data = await res.json();
+
+        if (!data.success) return;
+
+        setClinicians(
+          data.data.map((d: any) => ({
+            id: d.id,
+            name: d.full_name,
+            specialty: d.specialization?.join(", ") || "-",
+          }))
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchPractitioners();
+  }, [search]);
+
+  /* -------------------------------------------------------------------------- */
+  /*                   FETCH APPOINTMENTS (API 25)                              */
+  /* -------------------------------------------------------------------------- */
+
+  const fetchAppointments = async (
+    practitionerId: string,
+    view: "weekly" | "daily",
+    date: string
+  ) => {
+    setCalendarLoading(true);
+
+    try {
+      const url =
+        view === "weekly"
+          ? `/api/practitioner/${practitionerId}/appointments?view=weekly&week_start=${date}`
+          : `/api/practitioner/${practitionerId}/appointments?view=daily&date=${date}`;
+
+      const res = await fetch(url, { credentials: "include" });
+      const data = await res.json();
+
+      if (!data.success) return;
+
+      const mapped: Appointment[] = data.data.map((a: any) => ({
+        id: a.id,
+        date: formatDate(a.starts_at),
+        time: formatTime(a.starts_at),
+        reason: a.reason,
+        status: a.status,
+        category: "upcoming",
+        doctorName: selectedClinician?.name || "",
+        appointmentType: "",
+        telehealthConsent: false,
+        termsAccepted: false,
+        mainConcern: "",
+        goal: "",
+        durationOfConcern: "",
+        documents: [],
+        clinicianNotes: "",
+        prescriptions: "",
+        followUpNeeded: false,
+      }));
+
+      setAppointments(mapped);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /*                               SELECT DOCTOR                                */
+  /* -------------------------------------------------------------------------- */
+
   const handleSelectClinician = (c: Clinician) => {
     setSelectedClinician(c);
 
-    // Assign doctor name to mock appointment list for realism
-    const mapped = MOCK_APPOINTMENTS.map((a) => ({
-      ...a,
-      doctorName: c.name,
-    }));
+    // default weekly view, current week
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
 
-    setAppointments(mapped);
+    fetchAppointments(
+      c.id,
+      "weekly",
+      weekStart.toISOString().split("T")[0]
+    );
   };
+
+  /* -------------------------------------------------------------------------- */
+  /*                                  LOADER                                    */
+  /* -------------------------------------------------------------------------- */
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                                  RENDER                                    */
+  /* -------------------------------------------------------------------------- */
 
   return (
     <div className="space-y-6">
@@ -178,20 +244,15 @@ const HomeTab: React.FC = () => {
         </CardBody>
       </Card>
 
-      {/* ---------------- Clinician Search ---------------- */}
+      {/* ---------------- Practitioner Search ---------------- */}
       <Card>
         <CardHeader>
-          <div>
-            <div className="text-sm font-semibold text-slate-900">
-              Appointment Calendar
-            </div>
-            <div className="text-xs text-slate-500">
-              Select a clinician to view their weekly schedule
-            </div>
+          <div className="text-sm font-semibold text-slate-900">
+            Appointment Calendar
           </div>
         </CardHeader>
 
-        <CardBody className="space-y-4">
+        <CardBody className="space-y-3">
           <Input
             placeholder="Search doctor by name or specialty..."
             value={search}
@@ -199,43 +260,33 @@ const HomeTab: React.FC = () => {
           />
 
           <div className="border border-slate-200 rounded-xl overflow-hidden text-sm">
-            {filtered.map((c) => (
+            {clinicians.map((c) => (
               <button
                 key={c.id}
-                type="button"
                 className="w-full text-left px-4 py-2 hover:bg-blue-50"
                 onClick={() => handleSelectClinician(c)}
               >
                 {c.name} — {c.specialty}
               </button>
             ))}
-
-            {filtered.length === 0 && (
-              <div className="text-xs p-3 text-slate-500">
-                No clinicians found.
-              </div>
-            )}
           </div>
-
-          {selectedClinician && (
-            <div className="text-xs text-slate-600">
-              <span className="font-medium text-slate-900">Selected:</span>{" "}
-              {selectedClinician.name} — {selectedClinician.specialty}
-            </div>
-          )}
         </CardBody>
       </Card>
 
-      {/* ---------------- Appointment Calendar ---------------- */}
+      {/* ---------------- Calendar ---------------- */}
       {selectedClinician && (
-        <AppointmentCalendar
-          appointments={appointments}
-          onCompleteAppointment={(id) =>
-            setAppointments((prev) =>
-              prev.map((a) => (a.id === id ? { ...a, status: "completed" } : a))
-            )
-          }
-        />
+        <>
+          {calendarLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader size="md" />
+            </div>
+          ) : (
+            <AppointmentCalendar
+              appointments={appointments}
+              userRole="admin"
+            />
+          )}
+        </>
       )}
     </div>
   );
@@ -243,7 +294,10 @@ const HomeTab: React.FC = () => {
 
 export default HomeTab;
 
-/* ------------------------------ Small Stat Card ------------------------------ */
+/* -------------------------------------------------------------------------- */
+/*                               STAT CARD                                     */
+/* -------------------------------------------------------------------------- */
+
 const StatCard = ({
   label,
   value,
