@@ -2,12 +2,40 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 
+/* -----------------------------------------
+ * RBAC helper
+ * ----------------------------------------- */
+function getAvailablePoliciesForRole(
+  role: string,
+  allPolicies: { code: string; description: string | null }[]
+) {
+  return allPolicies.filter((p) => {
+    // payment → visible to all
+    if (p.code.startsWith("payment:")) return true;
+
+    // superadmin → ONLY super_admin policies
+    if (role === "superadmin") {
+      return p.code.startsWith("super_admin:");
+    }
+
+    // admin → ONLY admin policies
+    if (role === "admin") {
+      return p.code.startsWith("admin:");
+    }
+
+    return false;
+  });
+}
+
+/* =========================================
+ * GET: Fetch admins + policies
+ * ========================================= */
 export async function GET() {
   // 1️⃣ Auth
   const { authorized, user, response } = await requireUser();
   if (!authorized) return response;
 
-  // 2️⃣ Must be super admin
+  // 2️⃣ Must be superadmin
   if (!user?.admin || user.admin.role !== "superadmin") {
     return NextResponse.json(
       { success: false, message: "Forbidden" },
@@ -26,8 +54,26 @@ export async function GET() {
     );
   }
 
-  // 4️⃣ Fetch ALL admins with their policies
-  const { data, error } = await supabaseAdmin
+  // 4️⃣ Fetch all policies (source of truth)
+  const { data: allPoliciesRaw, error: policyError } = await supabaseAdmin
+    .from("policies")
+    .select("code, description");
+
+  if (policyError) {
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch policies" },
+      { status: 500 }
+    );
+  }
+
+  const allPolicies: { code: string; description: string | null }[] =
+    (allPoliciesRaw ?? []).map((p) => ({
+      code: String(p.code),
+      description: p.description ?? null,
+    }));
+
+  // 5️⃣ Fetch admins with assigned policies
+  const { data: admins, error } = await supabaseAdmin
     .from("admin_users")
     .select(`
       id,
@@ -47,14 +93,30 @@ export async function GET() {
     );
   }
 
-  // 5️⃣ Normalize response
-  const result = data.map((admin) => ({
-    id: admin.id,
-    full_name: admin.full_name,
-    email: admin.email,
-    role: admin.role,
-    policies: admin.admin_policy_map.map((p) => p.policy_code),
-  }));
+  // 6️⃣ Normalize response
+  const result = admins.map((admin) => {
+    const assigned = admin.admin_policy_map.map(
+      (p: { policy_code: string }) => p.policy_code
+    );
+
+    const available = getAvailablePoliciesForRole(
+      admin.role,
+      allPolicies
+    ).filter(
+      (p) => !assigned.includes(p.code)
+    );
+
+    return {
+      id: admin.id,
+      full_name: admin.full_name,
+      email: admin.email,
+      role: admin.role,
+      policies: {
+        assigned,
+        available,
+      },
+    };
+  });
 
   return NextResponse.json({
     success: true,
@@ -63,12 +125,15 @@ export async function GET() {
   });
 }
 
+/* =========================================
+ * PUT: Update admin policies
+ * ========================================= */
 export async function PUT(req: Request) {
   // 1️⃣ Auth
   const { authorized, user, response } = await requireUser();
   if (!authorized) return response;
 
-  // 2️⃣ Must be super admin
+  // 2️⃣ Must be superadmin
   if (!user?.admin || user.admin.role !== "superadmin") {
     return NextResponse.json(
       { success: false, message: "Forbidden" },
@@ -106,16 +171,69 @@ export async function PUT(req: Request) {
     );
   }
 
-  // 4️⃣ Replace policies
+  // 4️⃣ Fetch target admin (to know role)
+  const { data: targetAdmin, error: adminError } = await supabaseAdmin
+    .from("admin_users")
+    .select("id, role")
+    .eq("id", targetAdminId)
+    .single();
+
+  if (adminError || !targetAdmin) {
+    return NextResponse.json(
+      { success: false, message: "Admin not found" },
+      { status: 404 }
+    );
+  }
+
+  // 5️⃣ Fetch all policies again (validation source)
+  const { data: allPoliciesRaw, error: policyError } = await supabaseAdmin
+    .from("policies")
+    .select("code, description");
+
+  if (policyError) {
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch policies" },
+      { status: 500 }
+    );
+  }
+
+  const allPolicies: { code: string; description: string | null }[] =
+    (allPoliciesRaw ?? []).map((p) => ({
+      code: String(p.code),
+      description: p.description ?? null,
+    }));
+
+  // 6️⃣ Validate policies for target admin role
+  const allowedPolicyCodes = getAvailablePoliciesForRole(
+    targetAdmin.role,
+    allPolicies
+  ).map((p) => p.code);
+
+  const invalid = policies.filter(
+    (p: string) => !allowedPolicyCodes.includes(p)
+  );
+
+  if (invalid.length > 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Invalid policies for this role",
+        invalid_policies: invalid,
+      },
+      { status: 400 }
+    );
+  }
+
+  // 7️⃣ Replace policies
   await supabaseAdmin
-    .from("admin_policies")
+    .from("admin_policy_map")
     .delete()
-    .eq("admin_user_id", targetAdminId);
+    .eq("admin_id", targetAdminId);
 
   if (policies.length > 0) {
-    await supabaseAdmin.from("admin_policies").insert(
+    await supabaseAdmin.from("admin_policy_map").insert(
       policies.map((code: string) => ({
-        admin_user_id: targetAdminId,
+        admin_id: targetAdminId,
         policy_code: code,
       }))
     );
@@ -130,5 +248,3 @@ export async function PUT(req: Request) {
     },
   });
 }
-
-
