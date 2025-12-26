@@ -118,10 +118,16 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         );
         const data = await res.json();
         if (!res.ok) {
+          setIsPaymentProcessing(false);
           if (res.status === 409) {
-            setIsPaymentProcessing(false);
             toast.error(data.error || 'Slot no longer available');
             goToStep(2);
+          }
+          else if (res.status === 404) {
+            toast.error("Booking session expired. Please start over.");
+            goToStep(2);
+          } else {
+            toast.error(data.error || 'Failed to initialize booking. Please try again.');
           }
           return;
         }
@@ -154,6 +160,24 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
             consultation_fee: data.paymentPayload.consultation_fee
           }),
         });
+
+        if (!payRes.ok) {
+          setIsPaymentProcessing(false);
+          const errorData = await payRes.json();
+
+          if (data.appointment?.id) {
+            await fetch('/api/booking/release-slot', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ appointmentId: data.appointment.id })
+            });
+
+            updateData({appointment_id: undefined})
+          }
+
+          toast.error(`Payment failed : ${errorData.error}`);
+          return;
+        }
 
         console.log("payhere call done from payment file");
 
@@ -343,7 +367,6 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
                 </button>
                 <button
                   onClick={() => prevStep()}
-                  onClick={prevStep}
                   disabled={isPaymentProcessing}
                   className="mt-4 w-full text-sm text-gray-600 underline"
                 >
