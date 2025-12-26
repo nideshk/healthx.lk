@@ -30,12 +30,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Header></Header>
-        {children} 
+        {/* Adding this for blur effect while triggering payment */}
+        <div id="main-app-layout" className="transition-all duration-500">
+          <Header />
+          {children}
+        </div>
         {/* render page.tsx here */}
         <Script
           src="https://www.payhere.lk/lib/payhere.js"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
          <ToastProvider />
       </body>

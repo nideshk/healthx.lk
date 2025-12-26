@@ -143,11 +143,15 @@ if (!password) {
   );
 }
 
-
+  const applicationDocuments = Array.isArray(app.documents)
+    ? app.documents
+    : [];
+    
   /* --------------------------------------------------
    * 1️⃣ Create practitioner
    * -------------------------------------------------- */
   const result = await createPractitioner({
+    practitioner_id: app.id,
     email: app.email,
     password,
     first_name: app.first_name,
@@ -164,6 +168,7 @@ if (!password) {
     fees: app.fees,
     availability: app.availability,
     bank_details: app.bank_details,
+    documents: Array.isArray(app.documents) ? app.documents : []
   });
 
   if (!result.success) {
@@ -177,24 +182,18 @@ if (!password) {
   }
 
   createdUserId = result?.userId ?? null;
-  createdPractitionerId = result.practitioner_id ?? null;
+  createdPractitionerId = result.finalPractitionerId ?? null;
 
   /* --------------------------------------------------
-   * 2️⃣ Update application (CRITICAL)
-   * -------------------------------------------------- */
-  const { error: updateErr } = await supabaseAdmin
+ * 2️⃣ DELETE application (CRITICAL)
+ * -------------------------------------------------- */
+  const { error: deleteErr } = await supabaseAdmin
     .from("practitioner_applications")
-    .update({
-      status: "approved",
-      user_created: true,
-      license_number: finalLicenseNumber,
-      encrypted_password: '_used_',
-      updated_at: new Date().toISOString(),
-    })
+    .delete()
     .eq("id", app.id);
 
-  if (updateErr) {
-    console.error("APPLICATION UPDATE FAILED — ROLLING BACK", updateErr);
+  if (deleteErr) {
+    console.error("APPLICATION UPDATE FAILED — ROLLING BACK", deleteErr);
 
     /* 🔥 ROLLBACK */
     if (createdPractitionerId) {
