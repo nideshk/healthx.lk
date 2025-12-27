@@ -25,7 +25,8 @@ export async function GET(_req: NextRequest) {
         follow_up_date,
         created_at,
         updated_at,
-
+        clinician_notes,
+        prescriptions,
         appointment:appointments (
           id,
           starts_at,
