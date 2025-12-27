@@ -32,11 +32,11 @@ export async function POST(req: Request) {
         const { error: txError } = await supabaseAdmin
             .from('transactions')
             .update({
-                status: 'FAILED',
+                status: 'failed',
                 updated_at: new Date().toISOString()
             })
             .eq('order_id', appointmentId)
-            .neq('status', 'PAID'); // Never cancel a transaction that succeeded
+            .neq('status', 'paid'); // Never cancel a transaction that succeeded
 
         if (txError) {
             console.error("Transaction update failed during release:", txError);
