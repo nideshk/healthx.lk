@@ -1,12 +1,16 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import VideoGrid from "./VideoGrid";
 import ControlsBar from "./ControlsBar";
 import { useVideoCall } from "./useVideoCall";
 import Toaster from "./Toaster";
 import { logCallEvent } from "@/lib/logCallEvent";
+import ConsultationPanel from "./ConsultationPanel";
 
+/* ---------------------------------------------------------
+   COMPONENT
+--------------------------------------------------------- */
 export default function VideoCallContainer({
   appointmentId,
   roomKey,
@@ -15,6 +19,8 @@ export default function VideoCallContainer({
   role,
   iceServers,
 }: any) {
+  const isPractitioner = role === "practitioner";
+
   /* -------------------- TOASTS ---------------------- */
   const [toasts, setToasts] = useState<
     Array<{ id: string; message: string }>
@@ -23,7 +29,9 @@ export default function VideoCallContainer({
   const addToast = useCallback((message: string, ttl = 4000) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     setToasts((s) => [...s, { id, message }]);
-    setTimeout(() => setToasts((s) => s.filter((t) => t.id !== id)), ttl);
+    setTimeout(() => {
+      setToasts((s) => s.filter((t) => t.id !== id));
+    }, ttl);
   }, []);
 
   const removeToast = (id: string) =>
@@ -50,66 +58,111 @@ export default function VideoCallContainer({
     token,
     role,
     iceServers,
-
-    onUserJoin: (id: string) => addToast(`User ${id.slice(0, 5)} joined`),
-    onUserLeave: (id: string) => addToast(`User ${id.slice(0, 5)} left`),
+    onUserJoin: (id: string) =>
+      addToast(`User ${id.slice(0, 5)} joined`),
+    onUserLeave: (id: string) =>
+      addToast(`User ${id.slice(0, 5)} left`),
   });
 
-  const isPractitioner = role === "practitioner";
+  /* -------------------- HEARTBEAT ---------------------- */
+  useEffect(() => {
+    if (!joined) return;
 
+    let lastHeartbeatAt = 0;
 
- useEffect(() => {
-  if (!joined) return;
+    const sendHeartbeat = () => {
+      const now = Date.now();
+      if (now - lastHeartbeatAt < 20000) return;
+      lastHeartbeatAt = now;
 
-  let lastHeartbeatAt = 0;
+      logCallEvent({
+        appointmentId,
+        eventType: "heartbeat",
+      });
+    };
 
-  const sendHeartbeat = () => {
-    const now = Date.now();
-    if (now - lastHeartbeatAt < 20000) return;
+    const interval = setInterval(sendHeartbeat, 5000);
+    return () => clearInterval(interval);
+  }, [joined, appointmentId]);
 
-    lastHeartbeatAt = now;
-    logCallEvent({
-      appointmentId,
-      eventType: "heartbeat",
-    });
+  const handleJoin = async () => {
+    await joinRoom();
+    logCallEvent({ appointmentId, eventType: "joined_call" });
   };
 
-  const interval = setInterval(sendHeartbeat, 5000);
-  return () => clearInterval(interval);
-}, [joined, appointmentId]);
+  const handleLeave = async () => {
+    logCallEvent({ appointmentId, eventType: "left_call" });
+    await leaveRoom();
+  };
 
-const handleJoin = async () => {
-  await joinRoom();               // SDK join
-  logCallEvent({
-    appointmentId,
-    eventType: "joined_call",
-  });
-};
-const handleLeave = async () => {
-  logCallEvent({
-    appointmentId,
-    eventType: "left_call",
-  });
+  /* -------------------- ENCOUNTER STATE ---------------------- */
+  const [saving, setSaving] = useState(false);
+  const [clinicianNotes, setClinicianNotes] = useState("");
+  const [prescriptions, setPrescriptions] = useState("");
+  const [followUpNeeded, setFollowUpNeeded] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState<string | null>(null);
+  const [followUpComments, setFollowUpComments] = useState("");
 
-  await leaveRoom();               // SDK leave
-};
-  /* -------------------- MAIN LAYOUT ---------------------- */
+  /* -------------------- LOAD EXISTING ENCOUNTER ---------------------- */
+  useEffect(() => {
+    if (!isPractitioner || !appointmentId) return;
+
+    fetch(`/api/encounters/${appointmentId}`)
+      .then((res) => res.json())
+      .then((res) => {
+        if (!res?.encounter) return;
+
+        setClinicianNotes(res.encounter.clinician_notes ?? "");
+        setPrescriptions(res.encounter.prescriptions ?? "");
+        setFollowUpNeeded(res.encounter.follow_up_needed ?? false);
+        setFollowUpDate(res.encounter.follow_up_date ?? null);
+        setFollowUpComments(res.encounter.follow_up_comments ?? "");
+      })
+      .catch(() => {});
+  }, [appointmentId, isPractitioner]);
+
+  /* -------------------- SAVE ENCOUNTER ---------------------- */
+  const saveEncounter = async () => {
+    if (followUpNeeded && !followUpDate) {
+      addToast("Select follow-up date");
+      return;
+    }
+
+    setSaving(true);
+
+    await fetch(`/api/encounters/${appointmentId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clinician_notes: clinicianNotes,
+        prescriptions,
+        follow_up_needed: followUpNeeded,
+        follow_up_date: followUpNeeded ? followUpDate : null,
+        follow_up_comments: followUpComments,
+      }),
+    });
+
+    setSaving(false);
+    addToast("Consultation saved");
+  };
+
+  /* -------------------- UI ---------------------- */
   return (
-    <div className="h-screen w-screen bg-[#1b1c1e] text-white overflow-hidden flex">
+    <div className="h-screen w-screen bg-[#1b1c1e] text-white flex overflow-hidden">
 
-      {/* LEFT SIDE — FULL VIDEO AREA */}
+      {/* LEFT — VIDEO */}
       <div
-        className={`flex flex-col h-full ${isPractitioner ? "w-[70%]" : "w-full"
-          } border-r border-white/10`}
-
+        className={`flex flex-col h-full ${
+          isPractitioner ? "w-[70%]" : "w-full"
+        } border-r border-white/10`}
       >
         {!joined ? (
-          <div className="flex flex-col items-center justify-center h-full gap-6 p-6 text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold">
+          <div className="flex flex-col items-center justify-center h-full gap-6">
+            <h1 className="text-3xl font-bold">
               🎥 Telehealth Consultation
             </h1>
             <button
-              onClick={joinRoom}
+              onClick={handleJoin}
               className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-full text-lg font-semibold"
             >
               Join Consultation
@@ -117,7 +170,6 @@ const handleLeave = async () => {
           </div>
         ) : (
           <>
-            {/* Video grid fills all available vertical space */}
             <div className="flex-1 overflow-hidden">
               <VideoGrid
                 localVideoRef={localVideoRef}
@@ -127,7 +179,6 @@ const handleLeave = async () => {
               />
             </div>
 
-            {/* Controls aligned bottom center */}
             <div className="pb-4">
               <ControlsBar
                 isMuted={isMuted}
@@ -144,45 +195,30 @@ const handleLeave = async () => {
         )}
       </div>
 
-      {/* RIGHT SIDE — PRACTITIONER PANEL */}
+      {/* RIGHT — PRACTITIONER PANEL */}
       {isPractitioner && (
-        <div
-          className="w-[30%] bg-[#f9fafb] h-full p-6 flex flex-col overflow-y-auto border-l border-gray-200"
-          style={{ minWidth: 340, maxWidth: 420 }}
-        >
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">
-            Consultation Tools
-          </h2>
-
-          {/* APPOINTMENT DETAILS */}
-          <div className="mb-6 p-4 rounded-xl bg-white shadow-sm border border-gray-100">
-            <h3 className="text-sm font-medium text-gray-600">Appointment ID</h3>
-            <p className="text-gray-900 mt-1 text-sm font-semibold tracking-wide">
-              {appointmentId}
-            </p>
-          </div>
-
-          {/* NOTES */}
-          <div className="flex flex-col p-4 rounded-xl bg-white shadow-sm border border-gray-100">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Notes</h3>
-
-            <textarea
-              className="w-full min-h-[200px] p-3 rounded-lg bg-gray-50 border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              placeholder="Write practitioner notes here..."
-            />
-
-            <button
-              className="mt-3 inline-flex justify-center rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 transition shadow-sm"
-            >
-              Save Notes
-            </button>
-          </div>
-
-        </div>
+        <ConsultationPanel appointmentId={appointmentId}/>
       )}
 
-
       <Toaster toasts={toasts} removeToast={removeToast} />
+    </div>
+  );
+}
+
+/* -------------------- SMALL UI HELPERS ---------------------- */
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="p-4 bg-white rounded-xl border space-y-2">
+      <h3 className="text-sm font-medium text-gray-700">
+        {title}
+      </h3>
+      {children}
     </div>
   );
 }
