@@ -7,9 +7,9 @@ import {
 import Link from "next/link";
 import { PatientTab } from "./patientTabs";
 import AppointmentTab from "./tabs/AppointmentTab";
-import { NextAppointmentCard } from "./NextAppointmentCard";
 import RescheduleTab from "./tabs/RescheduleTab";
 import FileManagerTab from "./tabs/FileManagerTab";
+import FollowUpRequest from "./FollowUpRequest";
 
 export default function PatientDashboardLayout({
   activeTab,
@@ -49,6 +49,16 @@ export default function PatientDashboardLayout({
               <Plus className="w-4 h-4" />
               Book Appointment
             </Link>
+            <div className="mt-5">
+
+              <SidebarLink
+              href="/dashboard?tab=follow-up"
+              active={activeTab === "follow-up"}
+              icon={<Files className="w-4 h-4" />}
+              label="Follow-Ups"
+            />
+
+            </div>
           </div>
 
         </aside>
@@ -58,6 +68,7 @@ export default function PatientDashboardLayout({
           {activeTab === "appointment" && <AppointmentTab />}
           {activeTab === "reschedule" && <RescheduleTab />}
           {activeTab === "file-manager" && <FileManagerTab />}
+          {activeTab === "follow-up" && <FollowUpRequest />}
         </main>
       </div>
     </div>

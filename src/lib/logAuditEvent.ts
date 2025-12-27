@@ -23,14 +23,14 @@ export async function logAuditEvent({
   token
 }: any) {
 
-  await fetch("/api/consultation/audit-log", {
+  await fetch("http://localhost:3000/api/consultation/audit-log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       appointmentId,
       eventType,
       metadata,
-      token: token || localStorage.getItem("telehealth_token") || null,
+      token: token || "",
     }),
   });
 }
