@@ -48,12 +48,21 @@ export async function GET() {
         ),
 
         patient:patient_id (
-          id, full_name, email, contact_number, allergies, dob, blood_type, gender
-        )
+          id,
+          supabase_user_id,
+          full_name,
+          email,
+          contact_number,
+          allergies,
+          dob,
+          blood_type,
+          gender,
+          address
+        ) 
       `
       )
       .order("starts_at", { ascending: true });
-
+   
     // role filters
     if (role === "patient") query.eq("patient_id", user?.patient_id);
     if (role === "practitioner") query.eq("practitioner_id", user?.practitioner_id);
@@ -65,11 +74,48 @@ export async function GET() {
         { status: 500 }
       );
     }
+    const appointments = rawAppointments ?? [];
+
+    // ------------------------------------
+    // FETCH PATIENT PROFILES (2nd QUERY)
+    // ------------------------------------
+    const patientUserIds = [
+      ...new Set(
+        appointments
+          .map((a: any) => {
+            const patient = Array.isArray(a.patient)
+              ? a.patient[0]
+              : a.patient;
+            return patient?.supabase_user_id;
+          })
+          .filter(Boolean)
+      ),
+    ];
+
+    let profileMap: Record<string, any> = {};
+
+    if (patientUserIds.length > 0) {
+      const { data: profiles, error: profileErr } = await supabaseAdmin
+        .from("profiles")
+        .select("id, city, state, country")
+        .in("id", patientUserIds);
+
+      if (profileErr) {
+        return NextResponse.json(
+          { error: "Failed to fetch patient profiles" },
+          { status: 500 }
+        );
+      }
+
+      profileMap = Object.fromEntries(
+        profiles.map((p: any) => [p.id, p])
+      );
+    }    
 
     const now = new Date();
 
     // Normalize view
-    const normalized = rawAppointments.map((appt: any) => {
+  const normalized = appointments.map((appt: any) => {
       const practitioner = Array.isArray(appt.practitioner)
         ? appt.practitioner[0]
         : appt.practitioner;
@@ -101,6 +147,10 @@ export async function GET() {
       }
 
       if (role === "practitioner") {
+        const profile = patient?.supabase_user_id
+        ? profileMap[patient.supabase_user_id]
+        : null;
+                 
         return {
           ...base,
           patient: {
@@ -112,7 +162,11 @@ export async function GET() {
             dob: patient?.dob,
             age: calculateAge(patient?.dob),
             allergies: patient?.allergies,
-            gender: patient?.gender
+            gender: patient?.gender,
+            address: patient?.address ?? null,
+            city: profile?.city ?? null,
+            state: profile?.state ?? null,
+            country: profile?.country ?? null,
           },
         };
       }
