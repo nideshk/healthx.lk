@@ -1,8 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type NotifyInput = {
-  userId: string;
-  role: "patient" | "practitioner" | "admin" | "superadmin";
+  userId: string | null;
+  role: "patient" | "practitioner" | "admin" | "superadmin" | "guest";
   eventType: string;
   title?: string;
   message: string;
@@ -32,5 +32,6 @@ export async function notify({
     scheduled_at: scheduledAt ?? new Date().toISOString(),
   }));
 
-  await supabaseAdmin.from("notifications").insert(rows);
+  const {data , error}= await supabaseAdmin.from("notifications").insert(rows);
+  console.log("Notification Insert Result:", {data, error});
 }
