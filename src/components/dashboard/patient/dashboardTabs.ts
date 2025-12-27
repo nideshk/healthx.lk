@@ -2,6 +2,7 @@
 export type DashboardTab =
   | "appointment"
   | "reschedule"
-  | "file-manager";
+  | "file-manager"
+  | "follow-up";
 
 export const DEFAULT_TAB: DashboardTab = "appointment";
