@@ -72,11 +72,12 @@ export async function requireUser() {
       policies: policyRows?.map(p => p.policy_code) ?? [],
     };
   }
+  console.log("Admin user:", patient);
 
   // 5) final unified user
   const sessionUser = {
     auth_user_id,       
-    phone : patient.contact_number,             // ALWAYS THE AUTH ID
+    phone : patient?.contact_number || " ",             // ALWAYS THE AUTH ID
     role: profile.role,              // patient/practitioner/admin
     profile,
     user,

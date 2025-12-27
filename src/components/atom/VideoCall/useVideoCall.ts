@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { supabaseClient } from "@/lib/supabaseClient";
+import { logCallEvent } from "@/lib/logCallEvent";
 
 const supabase = supabaseClient;
 
@@ -305,6 +306,10 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
   useEffect(() => {
     if (roomId && !joined) {
       joinRoom();
+      logCallEvent({
+        appointmentId: opts?.appointmentId || "unknown",
+        eventType: "joined_call",
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
