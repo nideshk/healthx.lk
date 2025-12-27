@@ -20,7 +20,6 @@ type Result = {
   refunds_requested: number; // count of refund transactions or refund requests
   refund_amount: number;     // NEW: total refunded amount (sum)
   upcoming: number;
-  total_revenue: number; // number in same units as transactions.amount (credits - refunds)
 };
 
 function parseDateInput(val: string | null) {
@@ -88,7 +87,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       .eq("practitioner_id", practitionerId)
       .gt("starts_at", nowIso)
       // exclude cancelled/completed
-      .not("status", "in", `('cancelled','completed')`);
+      .in("status", ["scheduled", "confirmed"]);
 
     // Transactions: filter by practitioner and optional date range
     // We'll request amount and status so we can compute refund_amount and revenue
@@ -128,42 +127,42 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
     const txRows = (txRes.data ?? []) as Array<{ amount: string | number; status: string }>;
 
-    // compute revenue: completed - refunds
-    // treat statuses case-insensitively; consider 'COMPLETED' as revenue, statuses containing 'REFUND' as refund.
-    let revenueCredit = 0; // sum of completed amounts
-    let revenueRefund = 0; // sum of refunded amounts
+    let refund_amount = 0;
     let refunds_requested = 0;
 
     for (const tx of txRows) {
-      const amountNum = typeof tx.amount === "string" ? parseFloat(tx.amount) : Number(tx.amount || 0);
+      const amountNum =
+        typeof tx.amount === "string"
+          ? parseFloat(tx.amount)
+          : Number(tx.amount || 0);
+
       const status = (tx.status || "").toString().toUpperCase();
 
-      if (status === "COMPLETED") {
-        revenueCredit += Number.isFinite(amountNum) ? amountNum : 0;
-      } else if (status.includes("REFUND")) {
-        // includes REFUNDED, REFUND, REFUND_REQUESTED, etc.
-        revenueRefund += Number.isFinite(amountNum) ? amountNum : 0;
+      if (
+        status === "REFUNDED" ||
+        status === "REFUND" ||
+        status === "REFUND_REQUESTED" ||
+        status === "PENDING_REFUND"
+      ) {
         refunds_requested += 1;
-      } else if (status === "PENDING_REFUND" || status === "REFUND_REQUESTED") {
-        refunds_requested += 1;
-      }
-      // other statuses (PENDING / FAILED) ignored for revenue
-    }
 
-    const total_revenue = Number((revenueCredit - revenueRefund) || 0);
-    const refund_amount = Number(revenueRefund || 0); // NEW: total refunded amount
+        if (Number.isFinite(amountNum)) {
+          refund_amount += amountNum;
+        }
+      }
+    }
 
     const result: Result = {
       total_bookings,
       completed,
       cancelled,
       refunds_requested,
-      refund_amount,     // <-- included in response
+      refund_amount,
       upcoming,
-      total_revenue,
     };
 
     return NextResponse.json(result, { status: 200 });
+
   } catch (err: any) {
     console.error("analytics error:", err);
     return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });
