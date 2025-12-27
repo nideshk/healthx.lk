@@ -55,7 +55,7 @@ export default function MeetingPage() {
           localStorage.setItem("telehealth_token", json.token);
           setAuthData(json);
         } else {
-          setError( "Access denied");
+          setError("Access denied");
         }
       } catch (e) {
         console.error(e);

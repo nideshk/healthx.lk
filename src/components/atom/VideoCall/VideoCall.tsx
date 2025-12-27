@@ -101,6 +101,7 @@ const handleLeave = async () => {
       <div
         className={`flex flex-col h-full ${isPractitioner ? "w-[70%]" : "w-full"
           } border-r border-white/10`}
+
       >
         {!joined ? (
           <div className="flex flex-col items-center justify-center h-full gap-6 p-6 text-center">
