@@ -3,6 +3,7 @@ import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { sendNotification } from "@/lib/notifications/sendNotification";
 import { notify } from "@/lib/notify";
+import { sendAppointmentInvites } from "@/lib/additional_attendee/appointmentInvites";
 
 export const runtime = "nodejs";
 
@@ -11,6 +12,9 @@ export async function POST(
   context: { params: Promise<{ practitionerId: string }> }
 ) {
   try {
+
+    const {attendeeList} = await req.json();
+    console.log(attendeeList)
     const { practitionerId } = await context.params;
 
     // 1️⃣ Auth
@@ -53,6 +57,7 @@ export async function POST(
       consent
     } = draftData;
 
+
     // 3️⃣ Validate
     if (!starts_at || !ends_at || !appointmentType?.id || !selectedDoctor?.id) {
       return NextResponse.json(
@@ -68,6 +73,8 @@ export async function POST(
         { status: 400 }
       );
     }
+
+
 
     // 4️⃣ Check Conflicts
     const { data: existing } = await supabaseClient
@@ -88,6 +95,8 @@ export async function POST(
     let resolvedFee: number | null = null;
     let consultationFee!: number;
     let platformFee!: number;
+    let serviceFee: number;
+    let tax: number;
 
     // 1️⃣ Fetch practitioner fees JSON
     const { data: practitionerRow, error: feeErr } = await supabaseClient
@@ -138,12 +147,19 @@ export async function POST(
       platformFee = Number(typeRow.platform_fee);
     }
 
+    serviceFee = Math.round(consultationFee * 0.05);
+    tax = Math.round((consultationFee + serviceFee) * 0.08);
+
     // 4️⃣ Final validation
     if (
       !Number.isFinite(consultationFee) ||
       consultationFee < 0 ||
       !Number.isFinite(platformFee) ||
-      platformFee < 0
+      platformFee < 0 ||
+      !Number.isFinite(serviceFee) ||
+      serviceFee < 0 ||
+      !Number.isFinite(tax) ||
+      tax < 0
     ) {
       return NextResponse.json(
         {
@@ -156,7 +172,7 @@ export async function POST(
     }
 
     // 5️⃣ Final resolved fee
-    resolvedFee = consultationFee + platformFee;
+    resolvedFee = consultationFee + platformFee + serviceFee + tax;
 
     // 6 Insert Appointment
     const { data: appointment, error: insertError } = await supabaseClient
@@ -167,10 +183,10 @@ export async function POST(
         appointment_type_id: appointmentType.id,
         starts_at,
         ends_at,
-        status: "confirmed",
+        status: "scheduled", // Changing this from confirmed to pending payment, will update this to confirm once the payment is received
         notes: pre_consultation?.note?.concern || null,
         source: "web",
-
+        room_key : crypto.randomUUID,
         // 🟦 NEW — STORE HISTORICAL PRICING
         fee_charged: resolvedFee,
         currency: selectedDoctor.currency ?? "LKR",
@@ -195,89 +211,75 @@ export async function POST(
     }
 
     if (consent) {
-      await supabaseClient.from("consents").insert({
+      if (consent) {
+        await supabaseClient.from("consents").insert({
+          appointment_id: appointment.id,
+          terms: consent?.terms,
+          telehealth: consent?.telehealth,
+          accepted_at: new Date().toISOString()
+        })
+      }
+
+      // ---------------------------
+      // 8 Prepare payment payload (backend derived)
+      // ---------------------------
+      const paymentPayload = {
         appointment_id: appointment.id,
-        terms: consent?.terms,
-        telehealth: consent?.telehealth,
-        accepted_at: new Date().toISOString()
-      })
-    }
-
-    // ---------------------------
-    // 8 Prepare payment payload (backend derived)
-    // ---------------------------
-    const paymentPayload = {
-      appointment_id: appointment.id,
-      patient_id,
-      practitioner_id: practitionerId,
-      city: user.patient_data.city,
-      country: user.patient_data.country,
-      address: user.patient_data.address,
-      appointment_type_id: appointmentType.id,
-      amount: resolvedFee,
-      consultation_fee: consultationFee,
-      platform_fee: platformFee,
-      first_name: user.profile.first_name,
-      last_name: user.profile.last_name,
-      currency: appointment.currency ?? "LKR",
-      source: "appointment_booking",
-      status: "INITIATED",
-      metadata: {
-        starts_at,
-        ends_at,
-      },
-    };
-
-    // 8️⃣ Send appointment confirmation notification
-    await notify({
-      userId: user.auth_user_id, // auth.users.id
-      role: "patient",
-      eventType: "appointment_confirmed",
-
-      title: "Appointment Confirmed",
-      message: `Your appointment is confirmed on ${new Date(starts_at).toLocaleString()}`,
-
-      channels: ["in_app", "email"],
-
-      payload: {
-        // -------- Common --------
-        appointment_id: appointment.id,
+        patient_id,
         practitioner_id: practitionerId,
-        starts_at,
-        ends_at,
+        city: user.patient_data.city,
+        country: user.patient_data.country,
+        address: user.patient_data.address,
+        appointment_type_id: appointmentType.id,
+        amount: resolvedFee,
+        first_name: user.profile.first_name,
+        last_name: user.profile.last_name,
+        consultation_fee: consultationFee, // Added this column to transactions table
+        platform_fee: platformFee, // Added this column to transactions table
+        currency: appointment.currency ?? "LKR",
+        source: "appointment_booking",
+        status: "INITIATED",
+        email: user?.user?.email,
+        phone: user?.phone,
+        metadata: {
+          starts_at,
+          ends_at,
+        },
+      };
 
-        // -------- Email --------
-        email: user.user.email,
-        recipientName:
-          user.profile?.full_name ||
-          user.user.user_metadata?.full_name,
+      // Removed notify part from here as we'll send notifications from the payhere webhook once the payment is confirmed and verified.
 
-        subject: "Your appointment is confirmed",
-        actionUrl: `https://medx-rho.vercel.app/consultation/meeting?room=${appointment.room_key}`,
-        actionText: "Join Meeting",
+      // 9 Mark Draft as Used (best-effort, non-critical)
+      try {
+        await supabaseClient
+          .from("appointment_draft")
+          .delete()
+          .eq("patient_id", patient_id);
+      } catch (draftErr) {
+        console.error("⚠️ Failed to delete appointment draft:", draftErr);
+        // Do not rethrow: draft cleanup failure should not break a successful booking
+      }
+     if (Array.isArray(attendeeList) && attendeeList.length > 0) {
+  await sendAppointmentInvites({
+    appointmentId:appointment.id,
+    practitionerId,
+    attendees: attendeeList,
+    meetingStartISO: starts_at,
+    room_key: appointment.room_key
+  });
+}
+  
 
-        // -------- SMS --------
-        phone: "+917899416499",
-      },
-    });
-
-    // 9 Mark Draft as Used (best-effort, non-critical)
-    try {
-      await supabaseClient
-        .from("appointment_draft")
-        .delete()
-        .eq("patient_id", patient_id);
-    } catch (draftErr) {
-      console.error("⚠️ Failed to delete appointment draft:", draftErr);
-      // Do not rethrow: draft cleanup failure should not break a successful booking
+      return NextResponse.json({
+        success: true,
+        // Changing message
+        message: "Appointment initiated, payment pending.",
+        appointment,
+        paymentPayload
+      });
     }
-
-    return NextResponse.json({
-      success: true,
-      message: "Appointment booked successfully",
-      appointment,
-    });
-  } catch (err: any) {
+  }
+  catch (err: any) {
     console.error("❌ Booking Error:", err);
     return NextResponse.json(
       { error: err.message || "Internal server error" },

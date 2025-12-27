@@ -79,3 +79,45 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+export async function GET() {
+
+  const {user} = await requireUser();
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const { data, error } = await supabaseAdmin
+    .from("consultation_audit_summary")
+    .select(`
+      *,
+      appointment:appointments (
+        id,
+        status,
+        starts_at,
+        ends_at,
+        practitioner_no_show,
+        patient_no_show,
+        call_ended_at,
+        practitioner:practitioners (
+          id,
+          full_name,
+          specialization
+        ),
+        patient:patients (
+          id,
+          full_name,
+          email
+        )
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch audit summaries:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ data });
+}

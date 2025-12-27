@@ -5,6 +5,7 @@ import VideoGrid from "./VideoGrid";
 import ControlsBar from "./ControlsBar";
 import { useVideoCall } from "./useVideoCall";
 import Toaster from "./Toaster";
+import { logCallEvent } from "@/lib/logCallEvent";
 
 export default function VideoCallContainer({
   appointmentId,
@@ -56,20 +57,51 @@ export default function VideoCallContainer({
 
   const isPractitioner = role === "practitioner";
 
-  /* -------------------- LEAVE ---------------------- */
-  const handleLeave = async () => {
-    await leaveRoom();
+
+ useEffect(() => {
+  if (!joined) return;
+
+  let lastHeartbeatAt = 0;
+
+  const sendHeartbeat = () => {
+    const now = Date.now();
+    if (now - lastHeartbeatAt < 20000) return;
+
+    lastHeartbeatAt = now;
+    logCallEvent({
+      appointmentId,
+      eventType: "heartbeat",
+    });
   };
 
+  const interval = setInterval(sendHeartbeat, 5000);
+  return () => clearInterval(interval);
+}, [joined, appointmentId]);
+
+const handleJoin = async () => {
+  await joinRoom();               // SDK join
+  logCallEvent({
+    appointmentId,
+    eventType: "joined_call",
+  });
+};
+const handleLeave = async () => {
+  logCallEvent({
+    appointmentId,
+    eventType: "left_call",
+  });
+
+  await leaveRoom();               // SDK leave
+};
   /* -------------------- MAIN LAYOUT ---------------------- */
   return (
     <div className="h-screen w-screen bg-[#1b1c1e] text-white overflow-hidden flex">
 
       {/* LEFT SIDE — FULL VIDEO AREA */}
       <div
-        className={`flex flex-col h-full ${
-          isPractitioner ? "w-[70%]" : "w-full"
-        } border-r border-white/10`}
+        className={`flex flex-col h-full ${isPractitioner ? "w-[70%]" : "w-full"
+          } border-r border-white/10`}
+
       >
         {!joined ? (
           <div className="flex flex-col items-center justify-center h-full gap-6 p-6 text-center">
@@ -105,6 +137,7 @@ export default function VideoCallContainer({
                 toggleScreenShare={toggleScreenShare}
                 toggleMic={toggleMic}
                 leaveRoom={handleLeave}
+                onJoin={handleJoin}
               />
             </div>
           </>
@@ -112,41 +145,41 @@ export default function VideoCallContainer({
       </div>
 
       {/* RIGHT SIDE — PRACTITIONER PANEL */}
-     {isPractitioner && (
-  <div
-    className="w-[30%] bg-[#f9fafb] h-full p-6 flex flex-col overflow-y-auto border-l border-gray-200"
-    style={{ minWidth: 340, maxWidth: 420 }}
-  >
-    <h2 className="text-xl font-semibold text-gray-800 mb-6">
-      Consultation Tools
-    </h2>
+      {isPractitioner && (
+        <div
+          className="w-[30%] bg-[#f9fafb] h-full p-6 flex flex-col overflow-y-auto border-l border-gray-200"
+          style={{ minWidth: 340, maxWidth: 420 }}
+        >
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">
+            Consultation Tools
+          </h2>
 
-    {/* APPOINTMENT DETAILS */}
-    <div className="mb-6 p-4 rounded-xl bg-white shadow-sm border border-gray-100">
-      <h3 className="text-sm font-medium text-gray-600">Appointment ID</h3>
-      <p className="text-gray-900 mt-1 text-sm font-semibold tracking-wide">
-        {appointmentId}
-      </p>
-    </div>
+          {/* APPOINTMENT DETAILS */}
+          <div className="mb-6 p-4 rounded-xl bg-white shadow-sm border border-gray-100">
+            <h3 className="text-sm font-medium text-gray-600">Appointment ID</h3>
+            <p className="text-gray-900 mt-1 text-sm font-semibold tracking-wide">
+              {appointmentId}
+            </p>
+          </div>
 
-    {/* NOTES */}
-    <div className="flex flex-col p-4 rounded-xl bg-white shadow-sm border border-gray-100">
-      <h3 className="text-sm font-medium text-gray-700 mb-2">Notes</h3>
+          {/* NOTES */}
+          <div className="flex flex-col p-4 rounded-xl bg-white shadow-sm border border-gray-100">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Notes</h3>
 
-      <textarea
-        className="w-full min-h-[200px] p-3 rounded-lg bg-gray-50 border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-        placeholder="Write practitioner notes here..."
-      />
+            <textarea
+              className="w-full min-h-[200px] p-3 rounded-lg bg-gray-50 border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+              placeholder="Write practitioner notes here..."
+            />
 
-      <button
-        className="mt-3 inline-flex justify-center rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 transition shadow-sm"
-      >
-        Save Notes
-      </button>
-    </div>
+            <button
+              className="mt-3 inline-flex justify-center rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 transition shadow-sm"
+            >
+              Save Notes
+            </button>
+          </div>
 
-  </div>
-)}
+        </div>
+      )}
 
 
       <Toaster toasts={toasts} removeToast={removeToast} />

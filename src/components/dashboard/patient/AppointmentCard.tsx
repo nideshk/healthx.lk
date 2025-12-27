@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Calendar, Clock, Video } from "lucide-react";
 
 export function AppointmentCard({
@@ -7,6 +10,7 @@ export function AppointmentCard({
   isCancelled,
   isOngoing,
 }: any) {
+  const router = useRouter();
   const start = new Date(appt.starts_at);
 
   const containerStyle = isCancelled
@@ -19,8 +23,17 @@ export function AppointmentCard({
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push(`/dashboard/appointment/${appt.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          router.push(`/dashboard/appointment/${appt.id}`);
+        }
+      }}
       className={`
-        group relative p-5 rounded-2xl transition
+        group relative p-5 rounded-2xl transition cursor-pointer
+        focus:outline-none focus:ring-2 focus:ring-blue-500
         ${containerStyle}
       `}
     >
@@ -74,10 +87,11 @@ export function AppointmentCard({
         </div>
       </div>
 
-      {/* CTA */}
+      {/* CTA — stop click bubbling */}
       {isOngoing && (
         <Link
           href={`/appointment/meeting?room=${appt.telehealth_url}`}
+          onClick={(e) => e.stopPropagation()}
           className="
             mt-5 inline-flex items-center justify-center gap-2
             w-full px-4 py-2 rounded-xl
