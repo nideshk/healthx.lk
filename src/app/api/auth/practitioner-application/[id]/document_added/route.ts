@@ -8,8 +8,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try{
-  const { id: applicationId } = context.params;  
-  const { documents } = await req.json();
+  const { id: applicationId } = await context.params;  
     if (!applicationId) {
       return NextResponse.json(
         { error: "Missing application id" },
