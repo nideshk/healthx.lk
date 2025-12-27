@@ -13,11 +13,18 @@ interface DashboardStats {
 }
 
 interface DashboardHomeProps {
-  clinicianName: string;
+  clinicianName: string; // This comes from props, but we will also check API for full name
 }
 
 const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
-  const todayISO = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  // Helper to get YYYY-MM-DD in local time (Robust for Sri Lanka)
+  const getLocalISODate = (date: Date) => {
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().split("T")[0];
+  };
+
+  const todayISO = getLocalISODate(new Date());
 
   const [stats, setStats] = useState<DashboardStats>({
     todaysAppointments: 0,
@@ -28,12 +35,13 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
     Appointment[]
   >([]);
 
-  const [statsDate, setStatsDate] = useState<string>(todayISO);
+  const [fullName, setFullName] = useState<string>(clinicianName);
+  const [dateRange, setDateRange] = useState({ from: todayISO, to: todayISO });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBookingsForDate = async () => {
+    const fetchBookingsForRange = async () => {
       setLoading(true);
       setError(null);
 
@@ -50,12 +58,22 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
         const practitionerId =
           meJson?.user?.practitioner_id ?? meJson?.practitioner_id;
 
+        // Extract full name from API response metadata or profile
+        const apiFullName =
+          meJson?.user?.user?.user_metadata?.full_name ||
+          (meJson?.user?.profile?.first_name
+            ? `${meJson.user.profile.first_name} ${meJson.user.profile.last_name}`
+            : clinicianName);
+
+        setFullName(apiFullName);
+
         if (!practitionerId) {
           throw new Error("No practitioner id found for current user");
         }
 
+        // Fetch using the range provided by the calendar
         const bookedRes = await fetch(
-          `/api/practitioners/${practitionerId}/booked?from=${statsDate}&to=${statsDate}`,
+          `/api/practitioners/${practitionerId}/booked?from=${dateRange.from}&to=${dateRange.to}`,
           { credentials: "include" }
         );
 
@@ -88,8 +106,8 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
               category: status === "completed" ? "previous" : "upcoming",
               date: formattedDate,
               time: item.from,
-              doctorName: clinicianName,
-              reason: "General Appointment",
+              doctorName: apiFullName,
+              reason: item.reason || "General Appointment",
               status,
               appointmentType: "",
               telehealthConsent: false,
@@ -109,9 +127,7 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
         setCalendarAppointments(mappedAppointments);
       } catch (err: any) {
         console.error("Error loading dashboard home data", err);
-        setError(
-          err?.message || "Unable to load appointments for this date."
-        );
+        setError(err?.message || "Unable to load appointments for this range.");
         setStats({
           todaysAppointments: 0,
           completedAppointments: 0,
@@ -122,8 +138,8 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
       }
     };
 
-    fetchBookingsForDate();
-  }, [statsDate, clinicianName]);
+    fetchBookingsForRange();
+  }, [dateRange, clinicianName]);
 
   const handleCompleteAppointment = (id: string) => {
     setCalendarAppointments((prev) =>
@@ -131,7 +147,10 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
         a.id === id ? { ...a, status: "completed", category: "previous" } : a
       )
     );
-    // later: call API to mark as completed
+  };
+
+  const handleRangeChange = (from: string, to: string) => {
+    setDateRange({ from, to });
   };
 
   return (
@@ -140,54 +159,57 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
       <div className="grid">
         <Card>
           <CardHeader>
-            <div>
-              <div className="text-sm font-semibold text-slate-900">
-                Welcome Dr. {clinicianName}
-              </div>
-              <div className="text-xs text-slate-500">
-                Today&apos;s appointment statistics
+            <div className="flex justify-between items-start w-full">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">
+                  Welcome Dr. {fullName}
+                </div>
+                <div className="text-xs text-slate-500">
+                  Today&apos;s appointment statistics
+                </div>
               </div>
             </div>
           </CardHeader>
 
           <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <StatBox
-              label="My appointments today"
+              label="My Appointments Today "
               value={
-                loading ? <Loader size="sm" /> : stats.todaysAppointments.toString()
+                loading ? (
+                  <Loader size="sm" />
+                ) : (
+                  stats.todaysAppointments.toString()
+                )
               }
-              helper="Scheduled for today"
+              helper="Scheduled for selected range"
               showDatePicker
-              date={statsDate}
-              onDateChange={setStatsDate}
+              // date={dateRange.from}
+              // onDateChange={(v) => setDateRange({ from: v, to: v })}
             />
 
             <StatBox
               label="Completed Appointments"
               value={
-                loading ? <Loader size="sm" /> : stats.completedAppointments.toString()
+                loading ? (
+                  <Loader size="sm" />
+                ) : (
+                  stats.completedAppointments.toString()
+                )
               }
-              helper="Finished today"
+              helper="Finished in selected range"
             />
           </CardBody>
         </Card>
       </div>
 
-      {error && (
-        <div className="text-[11px] text-red-600">{error}</div>
-      )}
+      {error && <div className="text-[11px] text-red-600">{error}</div>}
 
       {/* Calendar */}
-      {loading ? (
-        <div className="flex justify-center py-10">
-          <Loader />
-        </div>
-      ) : (
-        <AppointmentCalendar
-          appointments={calendarAppointments}
-          onCompleteAppointment={handleCompleteAppointment}
-        />
-      )}
+      <AppointmentCalendar
+        appointments={calendarAppointments}
+        onCompleteAppointment={handleCompleteAppointment}
+        onRangeChange={handleRangeChange}
+      />
     </div>
   );
 };
@@ -232,9 +254,7 @@ const StatBox: React.FC<StatBoxProps> = ({
     )}
 
     <div className="text-[11px] text-slate-500 mb-1">{label}</div>
-    <div className="text-2xl font-semibold text-slate-900 mb-1">
-      {value}
-    </div>
+    <div className="text-2xl font-semibold text-slate-900 mb-1">{value}</div>
     <div className="text-[11px] text-slate-400">{helper}</div>
   </div>
 );
