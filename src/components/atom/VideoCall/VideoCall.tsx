@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import VideoGrid from "./VideoGrid";
 import ControlsBar from "./ControlsBar";
 import { useVideoCall } from "./useVideoCall";
@@ -15,16 +15,21 @@ export default function VideoCallContainer({
   role,
   iceServers,
 }: any) {
+  /* -------------------- TOASTS ---------------------- */
   const [toasts, setToasts] = useState<
     Array<{ id: string; message: string }>
   >([]);
 
   const addToast = useCallback((message: string, ttl = 4000) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     setToasts((s) => [...s, { id, message }]);
     setTimeout(() => setToasts((s) => s.filter((t) => t.id !== id)), ttl);
   }, []);
 
+  const removeToast = (id: string) =>
+    setToasts((s) => s.filter((t) => t.id !== id));
+
+  /* -------------------- VIDEO CALL HOOK ---------------------- */
   const {
     localVideoRef,
     peers,
@@ -45,19 +50,12 @@ export default function VideoCallContainer({
     token,
     role,
     iceServers,
+
     onUserJoin: (id: string) => addToast(`User ${id.slice(0, 5)} joined`),
     onUserLeave: (id: string) => addToast(`User ${id.slice(0, 5)} left`),
   });
 
-  const handleJoin = async () => {
-    await joinRoom();
-    logAuditEvent({
-      appointmentId,
-      eventType: "joined_call",
-      metadata: { role },
-      token,
-    });
-  };
+  const isPractitioner = role === "practitioner";
 
 
  useEffect(() => {
@@ -103,13 +101,16 @@ const handleLeave = async () => {
       <div
         className={`flex flex-col h-full ${isPractitioner ? "w-[70%]" : "w-full"
           } border-r border-white/10`}
+
       >
         {!joined ? (
-          <div className="flex flex-col items-center justify-center h-full gap-6">
-            <h1 className="text-3xl font-bold">🎥 Telehealth Consultation</h1>
+          <div className="flex flex-col items-center justify-center h-full gap-6 p-6 text-center">
+            <h1 className="text-3xl sm:text-4xl font-bold">
+              🎥 Telehealth Consultation
+            </h1>
             <button
-              onClick={handleJoin}
-              className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-full text-lg"
+              onClick={joinRoom}
+              className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-full text-lg font-semibold"
             >
               Join Consultation
             </button>
@@ -143,9 +144,6 @@ const handleLeave = async () => {
         )}
       </div>
 
-      <Toaster toasts={toasts} removeToast={(id) =>
-        setToasts((s) => s.filter((t) => t.id !== id))
-      } />
       {/* RIGHT SIDE — PRACTITIONER PANEL */}
       {isPractitioner && (
         <div
