@@ -19,17 +19,18 @@ export async function GET(
   const { authorized, response, user } = await requireUser();
   if (!authorized) return response;
 
+  const { id: practitionerId } = await context.params;
+
   const role = user?.profile?.role;
-  if (role !== "admin" && role !== "superadmin") {
+  if (role !== "admin" && role !== "superadmin" &&  !(
+    role === "practitioner" &&
+    user?.practitioner_id === practitionerId
+  )) {
     return NextResponse.json(
       { success: false, message: "Access denied" },
       { status: 403 }
     );
   }
-
-  // 🧩 AWAIT PARAMS
-  const { id: practitionerId } = await context.params;
-
   // 🔍 QUERY PARAMS
   const { searchParams } = new URL(req.url);
   const view = searchParams.get("view");
@@ -98,7 +99,8 @@ export async function GET(
     success: true,
     data: data.map((a) => ({
       id: a.id,
-      patient: a.patient?.[0]?.full_name ?? null,
+      patient: (a.patient as unknown as { full_name: string } | null)?.full_name ?? null,
+      appointment_type: (a.type as unknown as { name: string } | null)?.name ?? null,
       starts_at: a.starts_at,
       ends_at: a.ends_at,
       participants: 1 + (a.additional_attendees?.length || 0),

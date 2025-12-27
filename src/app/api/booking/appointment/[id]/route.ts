@@ -43,7 +43,7 @@ async function hasConflict({
   return !!data;
 }
 
-async function signViewUrl(s3Key: string) {
+export async function signViewUrl(s3Key: string) {
   const command = new GetObjectCommand({
     Bucket: process.env.AWS_S3_BUCKET,
     Key: s3Key,
