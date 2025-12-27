@@ -58,6 +58,7 @@ export async function GET(
         status,
         notes,
         additional_attendees,
+        room_key,
 
         patient:patients (
             full_name
@@ -68,7 +69,7 @@ export async function GET(
         )
     `)
     .eq("practitioner_id", practitionerId)
-    .neq("status", "cancelled")
+    .in("status", ["confirmed", "completed"])
     .gte(
       "starts_at",
       view === "daily"
@@ -93,10 +94,22 @@ export async function GET(
       { status: 500 }
     );
   }
+  const confirmedCount = data.filter(
+    (a) => a.status === "confirmed"
+  ).length;
+
+  const completedCount = data.filter(
+    (a) => a.status === "completed"
+  ).length;
+
 
   // 📤 RESPONSE
   return NextResponse.json({
     success: true,
+    counts: {
+      confirmed: confirmedCount,
+      completed: completedCount,
+    },
     data: data.map((a) => ({
       id: a.id,
       patient: (a.patient as unknown as { full_name: string } | null)?.full_name ?? null,
@@ -105,6 +118,7 @@ export async function GET(
       ends_at: a.ends_at,
       participants: 1 + (a.additional_attendees?.length || 0),
       reason: a.notes,
+      room_key: a.room_key,
       status: a.status,
       duration_minutes: getDurationInMinutes(
         a.starts_at,
