@@ -8,7 +8,7 @@ import PricingSettings from "../settings/PricingSettings";
 
 type SettingsTabType = "Security" | "Account" | "Availability" | "Pricing";
 
-const SettingsTab: React.FC = () => {
+const  SettingsTab: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTabType>("Security");
 
   return (

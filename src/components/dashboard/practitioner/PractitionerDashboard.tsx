@@ -159,9 +159,7 @@ const PractitionerDashboard: React.FC = () => {
     fetchMe();
   }, []);
 
-  const filteredPatients = MOCK_PATIENTS.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+
 
   const handleBackToDashboard = () => {
     setSelectedPatient(null);
@@ -202,18 +200,16 @@ const PractitionerDashboard: React.FC = () => {
             <SearchPatientsTab
               search={search}
               onSearchChange={setSearch}
-              patients={filteredPatients}
               selectedPatient={selectedPatient}
               onSelectPatient={setSelectedPatient}
               onBackToDashboard={handleBackToDashboard}
-              appointments={MOCK_APPOINTMENTS}
             />
           )}
 
           {activeMenu === "analytics" && <AnalyticsTab/>}
 
           {activeMenu === "settings" && (
-            <SettingsTab practitionerId={practitionerId} />
+            <SettingsTab />
           )}
         </div>
       </div>

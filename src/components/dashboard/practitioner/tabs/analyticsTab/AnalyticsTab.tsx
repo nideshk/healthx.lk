@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { BookingStats, AnalyticsTabId, TimestampRow } from "@/types/Dashboard";
 import TimestampsView from "./TimestampsView";
 import RevenueBreakdownModal from "./RevenueBreakdownModal";
+import Loader from "@/components/atom/Loader/Loader";
 
 /* ---------- constants ---------- */
 
@@ -133,27 +134,25 @@ const revenueBreakdownMock = {
       </div>
 
       {/* Content */}
-      {activeTab === "bookings" ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader size="lg" theme="light" />
+        </div>
+      ) : activeTab === "bookings" ? (
         <>
           {error && (
             <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
               {error}
             </div>
           )}
-
-          {loading ? (
-            <div className="text-xs text-slate-500">Loading analytics…</div>
-          ) : (
-            <BookingsView
-              stats={stats}
-              fromDate={fromDate}
-              toDate={toDate}
-              onChangeFromDate={setFromDate}
-              onChangeToDate={setToDate}
-              onRevenueClick={() => setShowRevenueModal(true)}
-
-            />
-          )}
+          <BookingsView
+            stats={stats}
+            fromDate={fromDate}
+            toDate={toDate}
+            onChangeFromDate={setFromDate}
+            onChangeToDate={setToDate}
+            onRevenueClick={() => setShowRevenueModal(true)}
+          />
         </>
       ) : (
         <TimestampsView

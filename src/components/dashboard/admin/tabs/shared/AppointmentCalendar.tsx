@@ -365,7 +365,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
         </div>
 
         <div className="px-5 py-4 space-y-3">
-          <DetailRow label="Patient" value="(link patient later)" />
+          <DetailRow label="Patient" value={`${appointment.patient}`} />
           <DetailRow label="Time" value={`${appointment.time}`} />
           <DetailRow label="Participants" value="1" />
           <DetailRow label="Reason" value={appointment.reason || "-"} />

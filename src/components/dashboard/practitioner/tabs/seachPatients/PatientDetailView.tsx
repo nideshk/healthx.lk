@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import Input from "@/components/atom/Input/Input";
+import Loader from "@/components/atom/Loader/Loader";
 import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
 
 interface PatientDetailViewProps {
@@ -56,7 +57,7 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
       <div className="flex gap-2 text-xs bg-slate-50 rounded-full p-1 border border-slate-200">
         {renderTab("overview", "Overview", activeTab, setActiveTab)}
         {renderTab("appointments", "Appointments", activeTab, setActiveTab)}
-        {renderTab("settings", "Settings", activeTab, setActiveTab)}
+        {/* {renderTab("settings", "Settings", activeTab, setActiveTab)} */}
         {renderTab("audit", "Audit Log", activeTab, setActiveTab)}
       </div>
 
@@ -65,7 +66,6 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
       {activeTab === "appointments" && (
         <AppointmentsTab appointments={appointments} patient={patient} />
       )}
-      {activeTab === "settings" && <PatientSettingsTab />}
       {activeTab === "audit" && <AuditLogTab />}
     </div>
   );
@@ -129,18 +129,6 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSave = () => {
-    // 🔹 API integration point (later)
-    console.log("Saving patient details:", formData);
-
-    // Example future API call:
-    // await fetch(`/api/patients/${patient.id}`, {
-    //   method: "PUT",
-    //   body: JSON.stringify(formData),
-    // });
-
-    setIsEditing(false);
-  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -151,35 +139,7 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
             Patient Information
           </div>
 
-          {!isEditing ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs px-3"
-              onClick={() => setIsEditing(true)}
-            >
-              Edit
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={() => setIsEditing(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                className="text-xs"
-                onClick={handleSave}
-              >
-                Save
-              </Button>
-            </div>
-          )}
+          
         </CardHeader>
 
         <CardBody className="space-y-3 text-xs">
@@ -318,14 +278,7 @@ const AppointmentsTab: React.FC<{
         <h3 className="text-sm font-semibold text-slate-900">
           Upcoming Appointments
         </h3>
-        <Button
-          variant="primary"
-          size="sm"
-          className="text-xs px-4"
-          onClick={() => setShowCreateModal(true)}
-        >
-          + Create New Appointment
-        </Button>
+        
       </div>
 
       <AppointmentSection appointments={upcoming} patient={patient} />
@@ -376,19 +329,23 @@ const AppointmentRow: React.FC<{
   const [isEditingEmail, setIsEditingEmail] = React.useState(false);
   const [showToast, setShowToast] = React.useState(false);
   const [isEditingAppointment, setIsEditingAppointment] = React.useState(false);
+  const [consultationLoading, setConsultationLoading] = useState(false);
+  const [consultationFetched, setConsultationFetched] = useState(false);
+  const [, forceUpdate] = useState(0);
+
+  
 
   const [appointmentForm, setAppointmentForm] = React.useState({
-    appointmentType: appointment.appointmentType || "",
-    mainConcern: appointment.mainConcern || "",
-    goal: appointment.goal || "",
-    durationOfConcern: appointment.durationOfConcern || "",
+
     clinicianNotes: appointment.clinicianNotes || "",
     followUpDate: appointment.followUpDate || "",
+    prescriptions: appointment.prescriptions || "",
+    followUpNeeded: appointment.followUpNeeded || false,
   });
 
   const updateAppointmentField = (
     key: keyof typeof appointmentForm,
-    value: string
+    value: string | boolean
   ) => {
     setAppointmentForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -398,6 +355,41 @@ const AppointmentRow: React.FC<{
   const [smsMessage, setSmsMessage] = React.useState(
     `Hi  ${patient.name}, this is a reminder about your appointment on ${appointment.date} at ${appointment.time} with ${appointment.doctorName}. Thank you!`
   );
+
+  
+ const handleSave = async () => {
+  try {
+    const payload = {
+      clinician_notes: appointmentForm.clinicianNotes,
+      prescriptions: appointmentForm.prescriptions,
+      follow_up_needed: appointmentForm.followUpNeeded,
+      follow_up_date: appointmentForm.followUpNeeded
+        ? appointmentForm.followUpDate
+        : null,
+    };
+
+    await fetch(
+      `/api/booking/appointment/${appointment.id}/consultation`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      }
+    );
+
+    // 🔹 Sync back to appointment object (no UI change)
+    appointment.clinicianNotes = payload.clinician_notes;
+    appointment.prescriptions = payload.prescriptions;
+    appointment.followUpNeeded = payload.follow_up_needed;
+    appointment.followUpDate = payload.follow_up_date || "";
+
+    setIsEditingAppointment(false);
+  } catch (err) {
+    console.error("Failed to save consultation", err);
+  }
+};
+
 
   const [showSmsToast, setShowSmsToast] = React.useState(false);
 
@@ -446,6 +438,45 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
     setTimeout(() => setShowToast(false), 3000);
   };
 
+  const fetchConsultationDetails = async () => {
+    if (consultationFetched) return;
+
+    setConsultationLoading(true);
+    try {
+      const res = await fetch(
+        `/api/booking/appointment/${appointment.id}/consultation`,
+        { credentials: "include" }
+      );
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      appointment.telehealthConsent = !!data.consent?.telehealth;
+      appointment.termsAccepted = !!data.consent?.terms;
+      appointment.mainConcern =
+        data.preconsult?.raw_payload?.note?.concern || "";
+      appointment.goal =
+        data.preconsult?.raw_payload?.note?.outcome || "";
+      appointment.clinicianNotes =
+        data.encounter?.clinician_notes || "";
+      appointment.prescriptions =
+        data.encounter?.prescriptions || "";
+      appointment.followUpNeeded =
+        !!data.encounter?.follow_up_needed;
+      appointment.followUpDate =
+        data.encounter?.follow_up_date?.slice(0, 10);
+
+      setConsultationFetched(true);
+      forceUpdate((v) => v + 1);
+    } catch (err) {
+      console.error("Failed to load consultation", err);
+    } finally {
+      setConsultationLoading(false);
+    }
+  };
+
+  
   return (
     <>
       <Card>
@@ -494,13 +525,18 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
                 {statusLabel}
               </span>
               <button
-                type="button"
-                onClick={() => setOpen((o) => !o)}
-                className="text-xs text-slate-500 border border-slate-200 rounded-full px-2 py-1"
-              >
-                {open ? "▴" : "▾"}
-              </button>
+            type="button"
+            onClick={() => {
+              if (!open) fetchConsultationDetails();
+              setOpen((o) => !o);
+            }}
+            className="text-xs border rounded-full px-2 py-1"
+          >
+            {open ? "▴" : "▾"}
+          </button>
             </div>
+
+            
           </div>
 
           {/* expanded appointment details */}
@@ -508,6 +544,11 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
             <div className="pt-3 border-t border-slate-200 space-y-4 text-xs">
               {/* Top row title + Edit (for questionnaire, not email) */}
               <div className="flex items-center justify-between">
+                 {consultationLoading && (
+              <div className="flex justify-center py-4">
+                <Loader size="sm" />
+              </div>
+            )}
                 <div className="font-semibold text-slate-900">
                   Appointment Details
                 </div>
@@ -527,14 +568,11 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
                       size="sm"
                       className="text-xs"
                       onClick={() => {
-                        setAppointmentForm({
-                          appointmentType: appointment.appointmentType || "",
-                          mainConcern: appointment.mainConcern || "",
-                          goal: appointment.goal || "",
-                          durationOfConcern:
-                            appointment.durationOfConcern || "",
+                        setAppointmentForm({                        
                           clinicianNotes: appointment.clinicianNotes || "",
+                          followUpNeeded: appointment.followUpNeeded || false,
                           followUpDate: appointment.followUpDate || "",
+                          prescriptions: appointment.prescriptions || "",
                         });
                         setIsEditingAppointment(false);
                       }}
@@ -547,11 +585,7 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
                       size="sm"
                       className="text-xs"
                       onClick={() => {
-                        console.log("SAVE appointment changes", {
-                          appointmentId: appointment.id,
-                          ...appointmentForm,
-                        });
-
+                        handleSave();
                         // API later
                         // PUT /api/appointments/:id
 
@@ -570,21 +604,11 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
                   <div className="text-[11px] text-slate-500">
                     Appointment Type
                   </div>
-                  {isEditingAppointment ? (
-                    <Input
-                      value={appointmentForm.appointmentType}
-                      onChange={(e) =>
-                        updateAppointmentField(
-                          "appointmentType",
-                          e.target.value
-                        )
-                      }
-                    />
-                  ) : (
+                  
                     <div className="text-slate-700">
                       {appointment.appointmentType || "-"}
                     </div>
-                  )}
+                  
 
                   <div className="text-[11px] text-slate-500 pt-3">
                     Telehealth Consent
@@ -607,67 +631,19 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
               </div>
 
               {/* Main concern & goal */}
-              {isEditingAppointment ? (
-                <div className="space-y-1">
-                  <div className="text-[11px] text-slate-500">
-                    What is your main concern today?
-                  </div>
-                  <textarea
-                    value={appointmentForm.mainConcern}
-                    onChange={(e) =>
-                      updateAppointmentField("mainConcern", e.target.value)
-                    }
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
-                  />
-                </div>
-              ) : (
+              
+             
                 <InfoRow
                   label="What is your main concern today?"
                   value={appointment.mainConcern || "-"}
                 />
-              )}
-              {isEditingAppointment ? (
-                <div className="space-y-1">
-                  <div className="text-[11px] text-slate-500">
-                    What are you hoping to achieve from this consultation?
-                  </div>
-                  <textarea
-                    value={appointmentForm.goal}
-                    onChange={(e) =>
-                      updateAppointmentField("goal", e.target.value)
-                    }
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
-                  />
-                </div>
-              ) : (
+              
+            
                 <InfoRow
                   label="What are you hoping to achieve from this consultation?"
                   value={appointment.goal || "-"}
                 />
-              )}
-
-              {/* Duration */}
-              {isEditingAppointment ? (
-                <div className="space-y-1">
-                  <div className="text-[11px] text-slate-500">
-                    How long have you had this concern?
-                  </div>
-                  <Input
-                    value={appointmentForm.durationOfConcern}
-                    onChange={(e) =>
-                      updateAppointmentField(
-                        "durationOfConcern",
-                        e.target.value
-                      )
-                    }
-                  />
-                </div>
-              ) : (
-                <InfoRow
-                  label="How long have you had this concern?"
-                  value={appointment.durationOfConcern || "-"}
-                />
-              )}
+              
 
               {/* Documents Uploaded */}
               <div className="space-y-1">
@@ -718,22 +694,96 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
               )}
 
               {/* Prescriptions Provided */}
+              {isEditingAppointment ? (
+                <div className="space-y-1">
+                  <div className="text-[11px] text-slate-500">
+                    Prescriptions Provided
+                  </div>
+                  <textarea
+                    value={appointmentForm.prescriptions}
+                    onChange={(e) =>
+                      updateAppointmentField("prescriptions", e.target.value)
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                  />
+                </div>
+              ) : (
               <InfoRow
                 label="Prescriptions Provided"
                 value={appointment.prescriptions || "-"}
               />
+              )}
 
-              {/* Follow-up row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                <div className="flex items-center gap-2 text-[11px] text-slate-600 mt-2">
-                  <span className="inline-flex h-3 w-3 rounded-full border-4 border-blue-500 bg-white" />
-                  <span>
-                    Follow-up appointment{" "}
-                    {appointment.followUpNeeded ? "needed" : "not needed"}
-                  </span>
-                </div>
+        
+{/* Follow-up row */}
+<div className="space-y-2">
+  <div className="flex items-center gap-2 text-[11px] text-slate-600">
+    {isEditingAppointment ? (
+      <input
+        type="checkbox"
+        checked={appointmentForm.followUpNeeded  === true}
+        onChange={(e) =>
+          updateAppointmentField("followUpNeeded", e.target.checked )
+        }
+        className="h-4 w-4"
+      />
+    ) : (
+      <span className="inline-flex h-3 w-3 rounded-full border-4 border-blue-500 bg-white" />
+    )}
 
-              </div>
+    <span>
+      Follow-up appointment needed
+      {/* {appointmentForm.followUpNeeded ? "needed" : "not needed"} */}
+    </span>
+  </div>
+
+  {/* Follow-up slot – visible ONLY if follow-up needed */}
+  {isEditingAppointment && appointmentForm.followUpNeeded && (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        {/* Date Picker */}
+        <div className="space-y-1">
+          <div className="text-[11px] text-slate-500">
+            Select Date
+          </div>
+          <input
+            type="date"
+            value={appointmentForm.followUpDate.split(" ")[0] || ""}
+            onChange={(e) => {
+              const existingTime = appointmentForm.followUpDate.split(" ")[1] || "10:00";
+              updateAppointmentField("followUpDate", `${e.target.value} ${existingTime}`);
+            }}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300"
+          />
+        </div>
+
+        {/* Time Picker */}
+        <div className="space-y-1">
+          <div className="text-[11px] text-slate-500">
+            Select Time
+          </div>
+          <input
+            type="time"
+            value={appointmentForm.followUpDate.split(" ")[1] || "10:00"}
+            onChange={(e) => {
+              const existingDate = appointmentForm.followUpDate.split(" ")[0] || new Date().toISOString().split("T")[0];
+              updateAppointmentField("followUpDate", `${existingDate} ${e.target.value}`);
+            }}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300"
+          />
+        </div>
+      </div>
+
+      {/* Display formatted follow-up date/time */}
+      {appointmentForm.followUpDate && (
+        <div className="text-[11px] text-slate-600 bg-slate-50 rounded-lg px-3 py-2">
+          📅 Follow-up scheduled: {appointmentForm.followUpDate}
+        </div>
+      )}
+    </div>
+  )}
+</div>
+
             </div>
           )}
         </CardBody>
@@ -1102,16 +1152,6 @@ const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     </div>
   );
 };
-
-const PatientSettingsTab: React.FC = () => (
-  <div className="mt-2">
-    <h2 className="text-sm font-semibold text-slate-900">Patient Settings</h2>
-
-    <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-xs text-slate-500">Settings management coming soon.</p>
-    </div>
-  </div>
-);
 
 interface AuditEntry {
   id: string;

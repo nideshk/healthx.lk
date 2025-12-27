@@ -1,4 +1,3 @@
-// src/components/dashboard/practitioner/DashboardHome.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -6,6 +5,7 @@ import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import { Appointment } from "@/types/Dashboard";
 import AppointmentCalendar from "@/components/dashboard/practitioner/tabs/shared/AppointmentCalendar";
 import { Calendar } from "lucide-react";
+import Loader from "@/components/atom/Loader/Loader";
 
 interface DashboardStats {
   todaysAppointments: number;
@@ -23,12 +23,12 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
     todaysAppointments: 0,
     completedAppointments: 0,
   });
+
   const [calendarAppointments, setCalendarAppointments] = useState<
     Appointment[]
   >([]);
 
   const [statsDate, setStatsDate] = useState<string>(todayISO);
-
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +41,7 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
         const meRes = await fetch("/api/auth/me", {
           credentials: "include",
         });
+
         if (!meRes.ok) {
           throw new Error("Failed to load current user");
         }
@@ -72,7 +73,7 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
         const mappedAppointments: Appointment[] = (data.booked || []).map(
           (item: any) => {
             const [year, month, day] = (item.date as string).split("-");
-            const formattedDate = `${day}/${month}/${year}`; // DD/MM/YYYY
+            const formattedDate = `${day}/${month}/${year}`;
 
             const statusFromApi: string = item.status || "scheduled";
             const status =
@@ -135,7 +136,7 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
 
   return (
     <div className="space-y-4">
-      {/* Welcome + stats row */}
+      {/* Welcome + stats */}
       <div className="grid">
         <Card>
           <CardHeader>
@@ -152,15 +153,20 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
           <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <StatBox
               label="My appointments today"
-              value={loading ? "…" : stats.todaysAppointments.toString()}
+              value={
+                loading ? <Loader size="sm" /> : stats.todaysAppointments.toString()
+              }
               helper="Scheduled for today"
               showDatePicker
               date={statsDate}
               onDateChange={setStatsDate}
             />
+
             <StatBox
               label="Completed Appointments"
-              value={loading ? "…" : stats.completedAppointments.toString()}
+              value={
+                loading ? <Loader size="sm" /> : stats.completedAppointments.toString()
+              }
               helper="Finished today"
             />
           </CardBody>
@@ -171,10 +177,17 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
         <div className="text-[11px] text-red-600">{error}</div>
       )}
 
-      <AppointmentCalendar
-        appointments={calendarAppointments}
-        onCompleteAppointment={handleCompleteAppointment}
-      />
+      {/* Calendar */}
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <Loader />
+        </div>
+      ) : (
+        <AppointmentCalendar
+          appointments={calendarAppointments}
+          onCompleteAppointment={handleCompleteAppointment}
+        />
+      )}
     </div>
   );
 };
@@ -185,7 +198,7 @@ export default HomeTab;
 
 interface StatBoxProps {
   label: string;
-  value: string;
+  value: React.ReactNode;
   helper: string;
   showDatePicker?: boolean;
   date?: string;
