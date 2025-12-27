@@ -1,0 +1,469 @@
+// src/components/dashboard/practitioner/AppointmentCalendar.tsx
+"use client";
+
+import React, { useMemo, useState } from "react";
+import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
+import Button from "@/components/atom/Button/Button";
+import { Appointment } from "@/types/Dashboard";
+import ManageAppointmentModal from "./ManageAppointmentModal";
+
+type ViewMode = "weekly" | "daily";
+
+interface AppointmentCalendarProps {
+  appointments: Appointment[];
+  onCompleteAppointment?: (id: string) => void; // easy API hook later
+   userRole?: "admin" | "superadmin" | "practitioner";
+}
+
+
+const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
+  appointments,
+  onCompleteAppointment,
+  userRole = "practitioner",
+}) => {
+  const [viewMode, setViewMode] = useState<ViewMode>("weekly");
+  const [anchorDate, setAnchorDate] = useState<Date>(new Date());
+  const [selectedAppt, setSelectedAppt] = useState<CalendarAppointment | null>(
+    null
+  );
+  const [confirmAppt, setConfirmAppt] = useState<CalendarAppointment | null>(
+    null
+  );
+  const [showManage, setShowManage] = useState(false);
+
+
+  const parsedAppointments = useMemo<CalendarAppointment[]>(() => {
+    return appointments.map((a) => ({
+      ...a,
+      start: parseAppointmentDateTime(a),
+    }));
+  }, [appointments]);
+
+  const weekStart = getWeekStart(anchorDate);
+
+  const daysInView: Date[] =
+    viewMode === "weekly"
+      ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+      : [startOfDay(anchorDate)];
+
+  const timeSlots = generateHourSlots(7, 20); // 07:00 – 19:00
+
+  const headerLabel =
+    viewMode === "weekly"
+      ? `Week of ${formatDate(weekStart)}`
+      : formatDate(anchorDate);
+
+  const changePeriod = (direction: -1 | 1) => {
+    const delta = viewMode === "weekly" ? 7 : 1;
+    setAnchorDate((d) => addDays(d, delta * direction));
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">
+              Appointment Calendar
+            </div>
+            <div className="text-xs text-slate-500">
+              Your weekly schedule
+            </div>
+          </div>
+
+          {/* Weekly / Daily toggle */}
+          <div className="flex gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setViewMode("weekly")}
+              className={`rounded-full px-3 py-1 border text-xs ${
+                viewMode === "weekly"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-slate-600 border-slate-200"
+              }`}
+            >
+              Weekly
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("daily")}
+              className={`rounded-full px-3 py-1 border text-xs ${
+                viewMode === "daily"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-slate-600 border-slate-200"
+              }`}
+            >
+              Daily
+            </button>
+          </div>
+        </CardHeader>
+
+        <CardBody className="space-y-3">
+          {/* Week / day navigation */}
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="px-2"
+                onClick={() => changePeriod(-1)}
+              >
+                ←
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="px-2"
+                onClick={() => setAnchorDate(new Date())}
+              >
+                Today
+              </Button>
+            </div>
+            <div className="font-medium text-slate-900">{headerLabel}</div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="px-2"
+              onClick={() => changePeriod(1)}
+            >
+              →
+            </Button>
+          </div>
+
+          {/* Calendar grid */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
+            {/* Header row: time column + day columns */}
+            <div className="grid grid-cols-[60px_repeat(7,1fr)] bg-slate-50 border-b border-slate-200">
+              <div className="px-2 py-2" />
+              {daysInView.map((day) => (
+                <div
+                  key={day.toISOString()}
+                  className="px-2 py-2 text-center border-l border-slate-200"
+                >
+                  <div className="font-medium text-slate-900">
+                    {formatDayName(day)}
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    {formatDayMonth(day)}
+                  </div>
+                </div>
+              ))}
+              {/* if daily view, grid-cols still expects 7, fill rest with empty */}
+              {viewMode === "daily" &&
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={`empty-${i}`} className="border-l border-slate-200" />
+                ))}
+            </div>
+
+            {/* Time rows */}
+            <div className="max-h-[360px] overflow-y-auto">
+              {timeSlots.map((slot) => (
+                <div
+                  key={slot.hour}
+                  className="grid grid-cols-[60px_repeat(7,1fr)]"
+                >
+                  {/* Time label */}
+                  <div className="px-2 py-3 border-t border-slate-100 text-[11px] text-slate-500">
+                    {slot.label}
+                  </div>
+
+                  {/* Cells per day */}
+                  {daysInView.map((day, dayIndex) => {
+                    const cellAppointments = parsedAppointments.filter((a) => {
+                      if (!a.start) return false;
+                      if (!isSameDay(a.start, day)) return false;
+                      return a.start.getHours() === slot.hour;
+                    });
+
+                    return (
+                      <div
+                        key={dayIndex}
+                        className="border-t border-l border-slate-100 h-12 relative px-1"
+                      >
+                        {cellAppointments.map((appt) => {
+                          const isCompleted = appt.status === "completed";
+                          const colorClasses = isCompleted
+                            ? "bg-slate-200 text-slate-600"
+                            : "bg-blue-500 text-white";
+
+                          return (
+                            <button
+                              key={appt.id}
+                              type="button"
+                              className={`w-full h-[22px] rounded-md text-[11px] px-2 truncate ${colorClasses}`}
+                              onClick={() => setSelectedAppt(appt)}
+                            >
+                              {appt.reason || "Appointment"}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+
+                  {/* fill remaining columns in daily mode */}
+                  {viewMode === "daily" &&
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <div
+                        key={`row-empty-${slot.hour}-${i}`}
+                        className="border-t border-l border-slate-100 h-12"
+                      />
+                    ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Appointment details modal */}
+      {selectedAppt && (
+        <DetailsModal
+          appointment={selectedAppt}
+          onClose={() => setSelectedAppt(null)}
+          onMarkCompleted={() => setConfirmAppt(selectedAppt)}
+          onManage={() => setShowManage(true)}
+        />
+      )}
+
+      {/* Confirm completed modal */}
+      {confirmAppt && (
+        <ConfirmCompleteModal
+          onCancel={() => setConfirmAppt(null)}
+          onConfirm={() => {
+            if (onCompleteAppointment) {
+              onCompleteAppointment(confirmAppt.id);
+            }
+            setConfirmAppt(null);
+            setSelectedAppt(null);
+          }}
+        />
+      )}
+
+      {/* Manage appointment modal */}
+      {showManage && selectedAppt && (
+      <ManageAppointmentModal
+        open={showManage}
+        appointment={selectedAppt}
+        onClose={() => setShowManage(false)}
+      />
+    )}
+    </>
+  );
+};
+
+export default AppointmentCalendar;
+
+/* ---------- Types & helpers ---------- */
+
+type CalendarAppointment = Appointment & { start: Date | null };
+
+const generateHourSlots = (startHour: number, endHour: number) => {
+  const slots: { hour: number; label: string }[] = [];
+  for (let h = startHour; h < endHour; h++) {
+    slots.push({ hour: h, label: formatHour(h) });
+  }
+  return slots;
+};
+
+const formatHour = (hour24: number) => {
+  const ampm = hour24 >= 12 ? "PM" : "AM";
+  let h = hour24 % 12;
+  if (h === 0) h = 12;
+  return `${String(h).padStart(2, "0")}:00 ${ampm}`;
+};
+
+const parseAppointmentDateTime = (appt: Appointment): Date | null => {
+  if (!appt.date || !appt.time) return null;
+
+  try {
+    const [dayStr, monthStr, yearStr] = appt.date.split("/");
+    const [timePart, meridiem] = appt.time.split(" ");
+    const [hourStr, minuteStr] = timePart.split(":");
+
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+    const year = parseInt(yearStr, 10);
+    let hour = parseInt(hourStr, 10);
+    const minute = parseInt(minuteStr || "0", 10);
+
+    if (meridiem?.toUpperCase() === "PM" && hour < 12) hour += 12;
+    if (meridiem?.toUpperCase() === "AM" && hour === 12) hour = 0;
+
+    return new Date(year, month, day, hour, minute);
+  } catch {
+    return null;
+  }
+};
+
+const getWeekStart = (date: Date): Date => {
+  const d = startOfDay(date);
+  const day = d.getDay(); // 0 = Sun
+  d.setDate(d.getDate() - day); // start from Sunday
+  return d;
+};
+
+const addDays = (date: Date, days: number): Date => {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
+const startOfDay = (date: Date): Date => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const isSameDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+const formatDate = (d: Date) =>
+  `${String(d.getDate()).padStart(2, "0")}/${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}/${d.getFullYear()}`;
+
+const formatDayName = (d: Date) =>
+  d.toLocaleDateString(undefined, { weekday: "short" }); // Sun, Mon…
+
+const formatDayMonth = (d: Date) =>
+  d.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
+
+/* ---------- Modals ---------- */
+
+interface DetailsModalProps {
+  appointment: CalendarAppointment;
+  onClose: () => void;
+  onMarkCompleted: () => void;
+  onManage: () => void;
+}
+
+const DetailsModal: React.FC<DetailsModalProps> = ({
+  appointment,
+  onClose,
+  onMarkCompleted,
+  onManage,
+}) => {
+  const isCompleted = appointment.status === "completed";
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md text-xs">
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div className="text-sm font-semibold text-slate-900">
+            Appointment Details
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 text-lg"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-3">
+          <DetailRow label="Patient" value="(link patient later)" />
+          <DetailRow label="Time" value={`${appointment.time}`} />
+          <DetailRow label="Participants" value="1" />
+          <DetailRow label="Reason" value={appointment.reason || "-"} />
+          <DetailRow
+            label="Status"
+            value={appointment.status ? capitalize(appointment.status) : "-"}
+          />
+          
+        </div>
+
+        <div className="flex justify-end gap-2 px-5 py-4 border-t">
+          <Button
+            variant="primary"
+            size="sm"
+            className="text-xs"
+            onClick={onMarkCompleted}
+            disabled={isCompleted}
+          >
+            {isCompleted ? "Already Completed" : "Appt. Completed"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+           onClick={onManage}
+          >
+            Manage Appointment
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DetailRow: React.FC<{ label: string; value: string }> = ({
+  label,
+  value,
+}) => (
+  <div className="flex gap-4 text-xs">
+    <div className="w-24 text-[11px] font-medium text-slate-600">
+      {label}
+    </div>
+    <div className="flex-1 text-slate-800">{value}</div>
+  </div>
+);
+
+interface ConfirmCompleteModalProps {
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
+  onCancel,
+  onConfirm,
+}) => {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm text-xs">
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div className="text-sm font-semibold text-slate-900">
+            Complete Appointment
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-slate-400 hover:text-slate-600 text-lg"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-2">
+          <p className="text-xs text-slate-800">
+            Are you sure you want to mark this appointment as completed?
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 px-5 py-4 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={onCancel}
+          >
+            No
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            className="text-xs"
+            onClick={onConfirm}
+          >
+            Yes
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
