@@ -75,7 +75,6 @@ export function NextAppointmentCard({ appt }: any) {
           {isLive ? "Happening now" : `Starts in ${timeLeft}`}
         </span>
       </div>
-
       {/* CTA */}
       {isLive && (
         <Link

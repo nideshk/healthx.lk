@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { supabaseClient } from "@/lib/supabaseClient";
+import { logCallEvent } from "@/lib/logCallEvent";
 
 const supabase = supabaseClient;
 
@@ -39,7 +40,7 @@ export type UseVideoCallOptions = {
 export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
   const searchParams = useSearchParams();
   const params = useParams();
-
+  console.log(opts?.roomKey)
   const [roomId, setRoomId] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const [peers, setPeers] = useState<{ [id: string]: MediaStream }>({});
@@ -60,7 +61,7 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   useEffect(() => {
-    const fromQuery = searchParams.get("room");
+    const fromQuery = searchParams.get("room") || opts?.roomKey;
     const fromPath = (params as any)?.roomId as string | undefined;
     const id = fromQuery || fromPath;
     if (id) {
@@ -305,6 +306,10 @@ export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
   useEffect(() => {
     if (roomId && !joined) {
       joinRoom();
+      logCallEvent({
+        appointmentId: opts?.appointmentId || "unknown",
+        eventType: "joined_call",
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);

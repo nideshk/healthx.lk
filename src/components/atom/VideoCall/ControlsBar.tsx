@@ -20,7 +20,7 @@ type Props = {
   toggleCamera: () => Promise<void>;
   toggleScreenShare: () => Promise<void>;
   leaveRoom: () => Promise<void>;
-
+onJoin: () => Promise<void>;
   onLogEvent?: (eventType: string) => void; // optional callback hook
 };
 
@@ -33,6 +33,7 @@ export default function ControlsBar({
   toggleScreenShare,
   leaveRoom,
   onLogEvent,
+  onJoin,
 }: Props) {
   const [visible, setVisible] = useState(true);
   const idleTimer = useRef<NodeJS.Timeout | null>(null);

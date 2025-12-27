@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { sendNotification } from "@/lib/notifications/sendNotification";
+import { notify } from "@/lib/notify";
+import { sendAppointmentInvites } from "@/lib/additional_attendee/appointmentInvites";
 
 export const runtime = "nodejs";
 
@@ -10,6 +12,9 @@ export async function POST(
   context: { params: Promise<{ practitionerId: string }> }
 ) {
   try {
+
+    const {attendeeList} = await req.json();
+    console.log(attendeeList)
     const { practitionerId } = await context.params;
 
     // 1️⃣ Auth
@@ -52,6 +57,7 @@ export async function POST(
       consent
     } = draftData;
 
+
     // 3️⃣ Validate
     if (!starts_at || !ends_at || !appointmentType?.id || !selectedDoctor?.id) {
       return NextResponse.json(
@@ -67,6 +73,8 @@ export async function POST(
         { status: 400 }
       );
     }
+
+
 
     // 4️⃣ Check Conflicts
     const { data: existing } = await supabaseClient
@@ -178,7 +186,7 @@ export async function POST(
         status: "scheduled", // Changing this from confirmed to pending payment, will update this to confirm once the payment is received
         notes: pre_consultation?.note?.concern || null,
         source: "web",
-
+        room_key : crypto.randomUUID,
         // 🟦 NEW — STORE HISTORICAL PRICING
         fee_charged: resolvedFee,
         currency: selectedDoctor.currency ?? "LKR",
@@ -251,6 +259,16 @@ export async function POST(
         console.error("⚠️ Failed to delete appointment draft:", draftErr);
         // Do not rethrow: draft cleanup failure should not break a successful booking
       }
+     if (Array.isArray(attendeeList) && attendeeList.length > 0) {
+  await sendAppointmentInvites({
+    appointmentId:appointment.id,
+    practitionerId,
+    attendees: attendeeList,
+    meetingStartISO: starts_at,
+    room_key: appointment.room_key
+  });
+}
+  
 
       return NextResponse.json({
         success: true,

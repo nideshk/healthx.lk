@@ -113,6 +113,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
               date,
               time,
               appointment_type_id,
+              attendeeList
             }),
           }
         );

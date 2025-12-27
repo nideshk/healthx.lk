@@ -225,17 +225,17 @@ ${appointment.telehealth_url || "Not available"}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6">
               <p className="text-xs uppercase text-blue-600 mb-1">Main Concern</p>
               <p className="font-medium text-gray-800 text-lg">
-                {appointment.notes.raw_payload.note.concern}
+                {appointment?.notes?.raw_payload.note?.concern}
               </p>
             </div>
             <div className="grid sm:grid-cols-2 gap-6">
               <InfoRow
                 label="Expected Outcome"
-                value={appointment.notes.raw_payload.note.outcome}
+                value={appointment?.notes?.raw_payload.note?.outcome}
               />
               <InfoRow
                 label="Referral"
-                value={appointment.notes.raw_payload.referral}
+                value={appointment?.notes?.raw_payload.referral}
               />
             </div>
           </section>

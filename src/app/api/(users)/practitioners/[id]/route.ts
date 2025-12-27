@@ -54,6 +54,7 @@ export async function GET(
       )
     : [];
 
+    console.log(appointmentTypes)
 
     // ------------------------------------------------
     // FETCH BANK DETAILS (ADMIN / SUPER ADMIN ONLY) ✅
