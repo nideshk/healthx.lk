@@ -80,6 +80,11 @@ export async function POST(req: Request) {
   }
 }
 export async function GET() {
+
+  const {user} = await requireUser();
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { data, error } = await supabaseAdmin
     .from("consultation_audit_summary")
     .select(`
