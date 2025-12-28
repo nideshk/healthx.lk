@@ -1,17 +1,24 @@
 import { sendEmail } from "@/lib/email";
+import { getEmailTemplate, renderTemplate } from "@/lib/emailRenderer";
 import { sendSMS } from "@/lib/sms";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import {
-  generateAppointmentConfirmationEmail,
-  generateAppointmentReminderEmail,
-  generatePaymentSuccessEmail,
-  generateGenericEmail
-} from "@/lib/emailTemplates";
+
+/* ---------------------------------------------------------
+   Map notification event → template_key
+--------------------------------------------------------- */
+const EMAIL_TEMPLATE_MAP: Record<string, string> = {
+  appointment_confirmed: "appointment_confirmed",
+  appointment_reminder: "appointment_reminder",
+  payment_success: "payment_success",
+  generic: "generic_notification",
+};
 
 export async function processNotifications() {
   const now = new Date().toISOString();
 
-  const { data, error } = await supabaseAdmin
+  console.log("Processing notifications at", now);
+
+  const { data: notifications, error } = await supabaseAdmin
     .from("notifications")
     .update({ status: "processing" })
     .eq("status", "pending")
@@ -22,118 +29,102 @@ export async function processNotifications() {
 
   if (error) throw error;
 
-  for (const n of data || []) {
+  for (const n of notifications || []) {
     try {
+      /* =====================================================
+         EMAIL CHANNEL
+      ===================================================== */
       if (n.channel === "email") {
         if (!n.payload?.email) {
           throw new Error("Email missing in payload");
         }
 
-        // Fetch additional appointment details if appointment_id is provided
-        let appointmentData = undefined;
+        /* ---------------- Appointment data (optional) ---------------- */
+        let appointment: any = null;
+
         if (n.payload?.appointment_id) {
-          const { data: appointment } = await supabaseAdmin
+          const { data: appt } = await supabaseAdmin
             .from("appointments")
             .select(`
               id,
-              room_key,
-              telehealth_url,
               starts_at,
               ends_at,
+              room_key,
+              telehealth_url,
               appointment_type_id,
               practitioner_id
             `)
             .eq("id", n.payload.appointment_id)
             .single();
 
-          if (appointment) {
-            // Fetch practitioner name
-            const { data: practitioner } = await supabaseAdmin
-              .from("practitioners")
-              .select("full_name")
-              .eq("id", appointment.practitioner_id)
-              .single();
+          if (appt) {
+            const [{ data: practitioner }, { data: appointmentType }] =
+              await Promise.all([
+                supabaseAdmin
+                  .from("practitioners")
+                  .select("full_name")
+                  .eq("id", appt.practitioner_id)
+                  .single(),
+                supabaseAdmin
+                  .from("appointment_types")
+                  .select("name")
+                  .eq("id", appt.appointment_type_id)
+                  .single(),
+              ]);
 
-            // Fetch appointment type name
-            const { data: appointmentType } = await supabaseAdmin
-              .from("appointment_types")
-              .select("name")
-              .eq("id", appointment.appointment_type_id)
-              .single();
-
-            appointmentData = {
-              id: appointment.id,
-              roomKey: appointment.room_key,
-              meetingUrl: appointment.telehealth_url,
-              startsAt: appointment.starts_at,
-              endsAt: appointment.ends_at,
-              practitionerName: practitioner?.full_name || "Your Practitioner",
-              appointmentType: appointmentType?.name || "Consultation",
+            appointment = {
+              id: appt.id,
+              practitionerName:
+                practitioner?.full_name ?? "Your Practitioner",
+              appointmentType:
+                appointmentType?.name ?? "Consultation",
+              startsAt: new Date(appt.starts_at).toLocaleString(),
+              endsAt: appt.ends_at
+                ? new Date(appt.ends_at).toLocaleString()
+                : "",
+              roomKey: appt.room_key ?? "",
+              meetingUrl: appt.telehealth_url ?? "",
             };
           }
         }
 
-        let html: string;
+        /* ---------------- Resolve template ---------------- */
+        const templateKey =
+          EMAIL_TEMPLATE_MAP[n.event_type] ??
+          EMAIL_TEMPLATE_MAP.generic;
 
-        // Use specific templates based on event type
-        switch (n.event_type) {
-          case "appointment_confirmed":
-            if (!appointmentData) {
-              throw new Error("Appointment details required for appointment confirmation");
-            }
-            html = generateAppointmentConfirmationEmail({
-              recipientName: n.payload?.recipientName,
-              appointment: appointmentData,
-            });
-            break;
+        const template = await getEmailTemplate(templateKey);
 
-          case "appointment_reminder":
-            if (!appointmentData) {
-              throw new Error("Appointment details required for appointment reminder");
-            }
-            html = generateAppointmentReminderEmail({
-              recipientName: n.payload?.recipientName,
-              appointment: {
-                id: appointmentData.id,
-                startsAt: appointmentData.startsAt,
-                practitionerName: appointmentData.practitionerName,
-                roomKey: appointmentData.roomKey,
-                meetingUrl: appointmentData.meetingUrl,
-              },
-            });
-            break;
+        /* ---------------- Render payload ---------------- */
+        const renderData = {
+          greeting: n.payload?.recipientName ?? "Hello",
+          appointment,
+          payment: n.payload?.payment,
+          title: n.title,
+          message: n.message,
+          actionUrl: n.payload?.actionUrl,
+          actionText: n.payload?.actionText,
+        };
 
-          case "payment_success":
-            html = generatePaymentSuccessEmail({
-              recipientName: n.payload?.recipientName,
-              payment: {
-                amount: n.payload?.amount || 0,
-                currency: n.payload?.currency || "LKR",
-                status: "Successful",
-                appointmentId: n.payload?.appointment_id,
-              },
-            });
-            break;
+        // Optional debug (remove later)
+        console.log(
+          "Rendering email",
+          templateKey,
+          JSON.stringify(renderData, null, 2)
+        );
 
-          default:
-            // Fallback to generic template
-            html = generateGenericEmail({
-              title: n.title || "MedX Notification",
-              message: n.message,
-              recipientName: n.payload?.recipientName,
-              actionUrl: n.payload?.actionUrl,
-              actionText: n.payload?.actionText,
-            });
-            break;
-        }
+        const html = renderTemplate(template.html, renderData);
 
         await sendEmail({
           to: n.payload.email,
-          subject: n.title || "MedX Notification",
+          subject: n.title || template.name,
           html,
         });
       }
 
+      /* =====================================================
+         SMS CHANNEL
+      ===================================================== */
       if (n.channel === "sms") {
         if (!n.payload?.phone) {
           throw new Error("Phone missing in payload");
@@ -145,6 +136,9 @@ export async function processNotifications() {
         });
       }
 
+      /* =====================================================
+         MARK AS SENT
+      ===================================================== */
       await supabaseAdmin
         .from("notifications")
         .update({
@@ -153,6 +147,8 @@ export async function processNotifications() {
         })
         .eq("id", n.id);
     } catch (err: any) {
+      console.error("Notification failed", n.id, err);
+
       await supabaseAdmin
         .from("notifications")
         .update({
@@ -160,8 +156,6 @@ export async function processNotifications() {
           error_message: err?.message?.slice(0, 500),
         })
         .eq("id", n.id);
-
-      console.error("Notification failed", n.id, err);
     }
   }
 }
