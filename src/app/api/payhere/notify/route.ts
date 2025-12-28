@@ -39,14 +39,14 @@ export async function POST(request: NextRequest) {
             const {data: updatedTransaction, error: transactionError} = await supabaseAdmin
                 .from('transactions')
                 .update({
-                    status: 'PAID',
+                    status: 'paid',
                     payment_id: payment_id || null,
                     status_code: 2,
                     payhere_data: paymentData,
                     updated_at: new Date().toISOString()
                 })
                 .eq('order_id', order_id)
-                .neq('status', 'PAID')
+                .neq('status', 'paid')
                 .select();
             
             // Case where transaction was already PAID so return from here ealry
@@ -152,12 +152,12 @@ export async function POST(request: NextRequest) {
             await supabaseAdmin
                 .from('transactions')
                 .update({
-                    status: 'FAILED',
+                    status: 'failed',
                     status_code: parseInt(status_code, 10),
                     payhere_data: paymentData
                 })
                 .eq('order_id', order_id)
-                .neq('status', 'PAID');
+                .neq('status', 'paid');
 
         } catch (error) {
             console.error("Error updating failed payment status:", error);

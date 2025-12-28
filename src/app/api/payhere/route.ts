@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         const supabaseServer = await supabase();
         const { data: dbData, error: dbError } = await supabaseServer.from('transactions').insert({
             order_id: orderID,
-            status: 'PENDING',
+            status: 'pending',
             amount: formattedAmount,
             currency: currency,
             customer_email: email,
