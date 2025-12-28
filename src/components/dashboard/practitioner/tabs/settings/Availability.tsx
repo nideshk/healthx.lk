@@ -194,9 +194,9 @@ const CancelLeaveModal: React.FC<CancelLeaveModalProps> = ({
                 </div>
 
                 <div className="pt-2 border-t border-red-200">
-                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                    Reason
-                  </div>
+                    <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                    Reason*
+                    </div>
                   <div className="text-sm text-gray-700 mt-1 italic">"{leave.reason}"</div>
                 </div>
               </div>
