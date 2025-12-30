@@ -183,7 +183,7 @@ export async function POST(
         appointment_type_id: appointmentType.id,
         starts_at,
         ends_at,
-        status: "scheduled", // Changing this from confirmed to pending payment, will update this to confirm once the payment is received
+        status: "pending", // Changing this from confirmed to pending payment, will update this to confirm once the payment is received
         notes: pre_consultation?.note?.concern || null,
         source: "web",
         room_key : crypto.randomUUID,
