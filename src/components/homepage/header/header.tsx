@@ -126,14 +126,12 @@ export default function Header() {
   ).length;
 
   async function fetchNotifications() {
-    const res = await axios.get("/api/notification");
-    setNotifications(res.data.notifications || []);
-  }
-
-  async function markAsRead(id: string) {
-    await axios.patch(`/api/notification/${id}/read`);
-    fetchNotifications();
-    setNotifOpen(false);
+    try{
+      const res = await axios.get("/api/notification");
+      setNotifications(res.data.notifications || []);
+    } catch (err) {
+      console.log("Failed to fetch notifications:", err);
+    }
   }
 
   /* ---------------- AUTH STATE ---------------- */

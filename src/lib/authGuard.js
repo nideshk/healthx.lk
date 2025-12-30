@@ -11,6 +11,7 @@ export async function requireUser() {
 
   console.log("Auth Guard - Supabase User:", user);
 
+  
   if (!user || error) {
     return {
       authorized: false,
