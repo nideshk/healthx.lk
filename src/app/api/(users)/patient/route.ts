@@ -61,14 +61,54 @@ export async function GET(request: Request) {
     }
 
     /** Pagination + ordering */
-    const { data, count, error } = await query
+    const { data:patients, count, error } = await query
       .order("created_at", { ascending: false })
       .range(from, to);
 
     if (error) throw error;
 
+    const patientUserIds = [
+      ...new Set(
+        (patients ?? [])
+          .map((p: any) => p.supabase_user_id)
+          .filter(Boolean)
+      ),
+    ];
+
+    let profileMap: Record<string, any> = {};
+
+    if (patientUserIds.length > 0) {
+      const { data: profiles, error: profileErr } = await supabaseAdmin
+        .from("profiles")
+        .select("id, city, state, country")
+        .in("id", patientUserIds);
+
+      if (profileErr) {
+        return NextResponse.json(
+          { error: "Failed to fetch patient profiles" },
+          { status: 500 }
+        );
+      }
+
+      profileMap = Object.fromEntries(
+        profiles.map((p: any) => [p.id, p])
+      );
+    }
+
+    const enrichedPatients = (patients ?? []).map((p: any) => {
+    const profile = profileMap[p.supabase_user_id] ?? {};
+
+    return {
+      ...p,
+      city: profile.city ?? null,
+      state: profile.state ?? null,
+      country: profile.country ?? null,
+    };
+  });
+
+
     return NextResponse.json({
-      data: data ?? [],
+      data: enrichedPatients ?? [],
       meta: {
         page,
         limit,

@@ -60,6 +60,7 @@ export type Appointment = {
   followUpNeeded?: boolean;
   followUpDate?: string;
   patient?: string;
+  room_key?: string;
 };
 
 // ---------------- Analytics ---------------- //

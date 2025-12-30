@@ -6,6 +6,7 @@ import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import { Appointment } from "@/types/Dashboard";
 import ManageAppointmentModal from "./ManageAppointmentModal";
+import Link from "next/link";
 
 type ViewMode = "weekly" | "daily";
 
@@ -203,7 +204,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                               className={`w-full h-[22px] rounded-md text-[11px] px-2 truncate ${colorClasses}`}
                               onClick={() => setSelectedAppt(appt)}
                             >
-                              {appt.reason || "Appointment"}
+                            {appt.patient || "Patient"} • {appt.time}                            
                             </button>
                           );
                         })}
@@ -371,8 +372,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
         </div>
 
         <div className="px-5 py-4 space-y-3">
-          <DetailRow label="Patient" value="(link patient later)" />
+          <DetailRow label="Patient" value={`${appointment.patient}`} />
           <DetailRow label="Time" value={`${appointment.time}`} />
+          <DetailRow label="Appointment Type" value={`${appointment.appointmentType}`} />
           <DetailRow label="Participants" value="1" />
           <DetailRow label="Reason" value={appointment.reason || "-"} />
           <DetailRow
@@ -382,6 +384,28 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
         </div>
 
         <div className="flex justify-end gap-2 px-5 py-4 border-t">
+          {isCompleted ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              disabled
+            >
+              Meeting completed
+            </Button>
+          ) : (
+            <Link
+              href={`/appointment/meeting?room=${appointment.room_key}`}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                Join Meeting
+              </Button>
+            </Link>
+          )}
           <Button
             variant="primary"
             size="sm"
