@@ -1,29 +1,32 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
 import { supabaseAdmin } from "./supabaseAdmin";
+import { supabaseServer } from "./supabaseServer";
 
-async function getSupabase() {
-  const cookieStore = await cookies();
-  return createRouteHandlerClient({ cookies: () => cookieStore });
-}
 export async function requireUser() {
-  const supabase = await getSupabase();
+  const supabase = await supabaseServer();
 
-  // 1) Auth user
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  console.log("Auth Guard - Supabase User:", user);
+
+  
+  if (!user || error) {
     return {
       authorized: false,
-      response: Response.json({ error: "Unauthorized" }, { status: 401 }),
+      response: Response.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      ),
     };
   }
 
   const auth_user_id = user.id;
 
-  // 2) Fetch profile
+  /* ---------------------------------------
+     2️⃣ Fetch profile (admin client)
+  --------------------------------------- */
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("*")
@@ -33,25 +36,35 @@ export async function requireUser() {
   if (!profile) {
     return {
       authorized: false,
-      response: Response.json({ error: "Profile not found" }, { status: 403 }),
+      response: Response.json(
+        { error: "Profile not found" },
+        { status: 403 }
+      ),
     };
   }
 
-  // 3) map patient row
+  /* ---------------------------------------
+     3️⃣ Map patient row
+  --------------------------------------- */
   const { data: patient } = await supabaseAdmin
     .from("patients")
     .select("id, contact_number")
     .eq("supabase_user_id", auth_user_id)
     .maybeSingle();
 
-  // 4) map practitioner row
+  /* ---------------------------------------
+     4️⃣ Map practitioner row
+  --------------------------------------- */
   const { data: practitioner } = await supabaseAdmin
     .from("practitioners")
     .select("id")
     .eq("supabase_user_id", auth_user_id)
     .maybeSingle();
 
-  const { data: adminUser} = await supabaseAdmin
+  /* ---------------------------------------
+     5️⃣ Map admin + policies
+  --------------------------------------- */
+  const { data: adminUser } = await supabaseAdmin
     .from("admin_users")
     .select("id, role")
     .eq("supabase_user_id", auth_user_id)
@@ -60,7 +73,6 @@ export async function requireUser() {
   let admin = null;
 
   if (adminUser) {
-    // 6️⃣ admin policies
     const { data: policyRows } = await supabaseAdmin
       .from("admin_policy_map")
       .select("policy_code")
@@ -68,34 +80,50 @@ export async function requireUser() {
 
     admin = {
       id: adminUser.id,
-      role: adminUser.role, // "admin" | "superadmin"
-      policies: policyRows?.map(p => p.policy_code) ?? [],
+      role: adminUser.role,
+      policies: policyRows?.map((p) => p.policy_code) ?? [],
     };
   }
-  console.log("Admin user:", patient);
 
-  // 5) final unified user
+  /* ---------------------------------------
+     6️⃣ (OPTIONAL) Enforce MFA for admins
+  --------------------------------------- */
+  if (
+    admin &&
+    !user.amr?.includes("mfa")
+  ) {
+    return {
+      authorized: false,
+      response: Response.json(
+        { error: "MFA required" },
+        { status: 403 }
+      ),
+    };
+  }
+
+  /* ---------------------------------------
+     7️⃣ Unified session user
+  --------------------------------------- */
   const sessionUser = {
-    auth_user_id,       
-    phone : patient?.contact_number || " ",             // ALWAYS THE AUTH ID
-    role: profile.role,              // patient/practitioner/admin
+    auth_user_id,
+    role: profile.role,
     profile,
-    user,
+    user, // raw Supabase user
     admin,
+    phone: patient?.contact_number || null,
     patient_id: patient?.id || null,
     practitioner_id: practitioner?.id || null,
-    patient_data : {
-      city : profile?.city,
-      country : profile?.country,
-      state : profile?.state,
-      address : profile?.city+", "+profile?.state + ", " + profile?.country
-    }
+    patient_data: {
+      city: profile.city,
+      state: profile.state,
+      country: profile.country,
+      address: `${profile.city}, ${profile.state}, ${profile.country}`,
+    },
   };
 
   return {
     authorized: true,
     user: sessionUser,
     role: sessionUser.role,
-    supabase,
   };
 }

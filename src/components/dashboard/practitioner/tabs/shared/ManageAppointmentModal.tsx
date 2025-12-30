@@ -69,10 +69,6 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
       <div className="space-y-2">
         {[
           { label: "Cancel Appointment", action: () => setScreen("cancel") },
-          {
-            label: "Reschedule Appointment",
-            action: () => setScreen("reschedule"),
-          },
           { label: "Request Refund", action: () => setScreen("refund") },
           {
             label: "Resend Telehealth Details",

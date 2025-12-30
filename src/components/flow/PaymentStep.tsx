@@ -4,6 +4,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useState,
+  useEffect
 } from 'react';
 import { AppointmentFormInputs } from '@/types/FormType';
 import {
@@ -16,6 +17,7 @@ import {
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
 import { uploadAttachmentAfterBooking } from '@/lib/s3/uploadAttachmentAfterBooking';
+import { createPortal } from 'react-dom';
 
 interface StepRefHandle {
   validateStep?: () => boolean;
@@ -39,10 +41,78 @@ declare global {
   }
 }
 
+const releaseAppointmentSlot = async (appointmentId: string | null) => {
+  if (!appointmentId) {
+    console.warn("No appointment ID provided to release slot.");
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/booking/release-slot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appointmentId })
+    });
+
+    if (!res.ok) {
+      console.error("Failed to release slot. Status:", res.status);
+    } else {
+      console.log("Slot released successfully:", appointmentId);
+    }
+  } catch (err) {
+    console.error("Error calling release-slot API:", err);
+  }
+};
+
 const PaymentStep = forwardRef<StepRefHandle, Props>(
   ({ prevStep, updateData, bookingData, goToStep, bookingControllerRef }, stepRef) => {
     const [paymentDone, setPaymentDone] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(600); // 10 mins
+    const [mounted, setMounted] = useState(false);
+    const [isExpired, setIsExpired] = useState(false);
+    const appointmentIdRef = React.useRef<string | null>(null);
+
+    useEffect(() => { setMounted(true) }, []);
+
+    const handleExpiry = async () => {
+      // If session is expired, release the slot and redirect them to dashboard
+      setIsExpired(true);
+      setIsPaymentProcessing(false);
+      setIsVerifying(true);
+
+      const id = appointmentIdRef.current;
+      releaseAppointmentSlot(id);
+      setTimeout(() => {
+        window.location.href = '/dashboard/appointment';
+      }, 2300);
+    };
+
+    // useEffect specifically for the Countdown
+    useEffect(() => {
+      let timer: NodeJS.Timeout;
+
+      // We start the timer as soon as the booking process starts
+      if (isPaymentProcessing || isVerifying) {
+        timer = setInterval(() => {
+          setTimeLeft((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              handleExpiry();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+
+      // Cleanup: Important to stop the timer if the user finishes early or leaves
+      return () => {
+        if (timer) clearInterval(timer);
+      };
+    }, [isPaymentProcessing, isVerifying]);
+
     const router = useRouter();
 
     /* ---------------------------
@@ -73,10 +143,28 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
       },
     }));
 
+    // Disable page while payment is processing
+    useEffect(() => {
+      if (isVerifying || isPaymentProcessing) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = 'unset';
+      }
+
+      // Cleanup function to ensure scroll is restored if the component unmounts
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }, [isVerifying, isPaymentProcessing]);
+
     /* ---------------------------
      * HANDLE PAYMENT
      * -------------------------- */
     const handlePayment = async () => {
+
+      if(isPaymentProcessing || isVerifying){
+        return;
+      }
 
       // Check to ensure that payhere SDK is ready
       if (typeof window === "undefined" || !window.payhere) {
@@ -140,6 +228,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           return;
         }
         const appointmentId = data.appointment.id; // Replace with real ID from API
+        appointmentIdRef.current = appointmentId;
 
         console.log("Calling payhere from paymentStpe file");
 
@@ -167,13 +256,8 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           const errorData = await payRes.json();
 
           if (data.appointment?.id) {
-            await fetch('/api/booking/release-slot', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ appointmentId: data.appointment.id })
-            });
-
-            updateData({appointment_id: undefined})
+            releaseAppointmentSlot(data?.appointment?.id)
+            updateData({ appointment_id: undefined })
           }
 
           toast.error(`Payment failed : ${errorData.error}`);
@@ -191,35 +275,72 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
             mainLayout?.classList.add('blur-md', 'brightness-75', 'pointer-events-none');
 
             window.payhere.onCompleted = async function onCompleted(orderId: string) {
-              mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
-              toast.success("Payment successful!");
               setIsPaymentProcessing(false);
-              toast.success('Appointment booked successfully!');
-              setPaymentDone(true);
-              // Handle post-booking logic (files/redirect)
-              await handlePostBookingActions(appointmentId);
+              mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
+              setIsVerifying(true);
+              
+              let attempts = 0;
+              const maxAttempts = 5;
+              const pollInterval = 2000;
+
+              const verifyPayment = async () => {
+                try {
+                  const res = await fetch(`/api/booking/check-status?appointmentId=${appointmentId}`);
+                  if (!res.ok) return false;
+                  const data = await res.json();
+                  if (data.status === 'confirmed' && data.payment_status === 'paid') {
+                    return true;
+                  }
+                  return false;
+                } catch (err) {
+                  console.error("Polling error:", err);
+                  return false;
+                }
+              };
+
+              // Verify with backend to confirm the payment was done
+              const checkInterval = setInterval(async () => {
+                attempts++;
+
+                const isVerified = await verifyPayment();
+
+                if (isVerified) {
+                  // Checked and confirmed that payment is done
+                  clearInterval(checkInterval);
+                  await handlePostBookingActions(appointmentId);
+                  setIsVerifying(false);
+                  setPaymentDone(true);
+                  toast.success("Payment verified! Your appointment is successfully booked.");
+                }
+                else if (attempts >= maxAttempts) {
+                  // attempts finished and payment couldn't be verified
+                  clearInterval(checkInterval);
+                  releaseAppointmentSlot(appointmentId);
+                  setIsVerifying(false);
+                  toast.error("Booking cancelled, Payment could not be verified.");
+                  // Redirect to dashboard
+                  router.push('/dashboard/appointment');
+                }
+              }, pollInterval);
             };
 
             window.payhere.onDismissed = function onDismissed() {
-              mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
+              setIsVerifying(true);
               setIsPaymentProcessing(false);
+              mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
+              releaseAppointmentSlot(data?.paymentPayload?.appointment_id);
 
-              // Release the slot immediately
-              fetch('/api/booking/release-slot', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ appointmentId: data.paymentPayload.appointment_id })
-              });
-
-              toast.error("Booking cancelled. You can try booking again or choose a different time.");
               setTimeout(() => {
-                router.push(`/failure`);
-              }, 1500);
+                setIsVerifying(false);
+                toast.error("Booking cancelled. Redirecting to dashboard.");
+                router.push(`/dashboard/appointment`);
+              }, 2300);
             };
 
             window.payhere.onError = function onError(error: string) {
               mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
               setIsPaymentProcessing(false);
+              setIsVerifying(false);
               toast.error("Payment Error: " + error);
               setTimeout(() => {
                 router.push(`/failure`);
@@ -259,6 +380,13 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
       updateData({ payment_status: 'completed', appointment_id: appointmentId });
       router.push('/dashboard/appointment');
+    };
+
+    const formatTime = (seconds: number) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      // padStart ensures that 9 seconds shows as "09" instead of "9"
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
     /* ---------------------------
@@ -378,6 +506,75 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
           </div>
         </div>
+        {/* 2. PORTAL (Teleports the UI to the Body to escape the Blur) */}
+        {mounted && createPortal(
+          <div className="relative z-[10001]">
+            {/* Full Width Top Bar Timer */}
+            {(isPaymentProcessing || isExpired) && (!isVerifying || isExpired) && !paymentDone && (
+              <div className={`fixed top-0 left-0 right-0 z-[10001] transition-all duration-500 shadow-md ${isExpired || timeLeft < 60 ? "bg-red-600" : "bg-blue-600"
+                }`}>
+                <div className="max-w-7xl mx-auto px-4 py-2 sm:py-3 flex items-center justify-between text-white">
+
+                  {/* Left Side: Message */}
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className={`p-1.5 rounded-md bg-white/20 ${isExpired ? "animate-bounce" : ""}`}>
+                      {isExpired ? <span className="text-sm sm:text-base">⚠️</span> : <Loader2 size={18} className="animate-spin" />}
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-90 leading-none">
+                        {isExpired ? "Booking Status" : "Secure Booking"}
+                      </span>
+                      <span className="text-xs sm:text-sm font-medium leading-tight">
+                        {isExpired
+                          ? "Your session has expired. Please wait for redirection..."
+                          : "Complete your payment before the timer runs out to secure this slot."}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Side: Timer/Status */}
+                  <div className="pl-4 border-l border-white/20 flex flex-col items-end shrink-0">
+                    <span className="text-[9px] uppercase font-bold opacity-70 leading-none mb-0.5">
+                      Time Left
+                    </span>
+                    <span className="font-mono text-lg sm:text-2xl font-black leading-none tracking-tighter">
+                      {isExpired ? "00:00" : formatTime(timeLeft)}
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+            )}
+            {/* Verififcation overlay */}
+            {isVerifying && (
+              <div className="fixed inset-0 z-[20000] flex flex-col items-center justify-center bg-black/40">
+                <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm text-center border border-gray-100">
+                  <div className="relative mb-6">
+                    {isExpired ? (
+                      <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center animate-bounce">
+                        <span className="text-2xl font-bold">!</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-16 h-16 border-4 border-blue-100 rounded-full"></div>
+                        <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      </>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    {isExpired ? "Session Timed Out" : "Verifying Payment"}
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed px-4">
+                    {isExpired
+                      ? "The 10-minute booking window has closed. Please try again."
+                      : "Please wait while we confirm your booking with the bank."}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>,
+          document.body
+        )}
       </div>
     );
   }
