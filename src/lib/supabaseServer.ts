@@ -1,6 +1,17 @@
 import { cookies } from "next/headers";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 
 export async function createServerSupabaseClient() {
-  return createServerComponentClient({ cookies });
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { 
+      auth : {persistSession: false},
+      global: {
+        headers: {
+          cookie: cookies().toString(),
+        },
+      },
+     }
+  );
 }
