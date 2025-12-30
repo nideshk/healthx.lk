@@ -59,7 +59,7 @@ export type Appointment = {
   prescriptions?: string;
   followUpNeeded?: boolean;
   followUpDate?: string;
-  patient?: string;
+  patient: string;
 };
 
 // ---------------- Analytics ---------------- //

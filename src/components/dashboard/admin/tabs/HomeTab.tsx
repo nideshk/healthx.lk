@@ -40,7 +40,7 @@ const formatTime = (iso: string) => {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: 'Asia/Colombo'
+    timeZone: "Asia/Colombo",
   });
 };
 
@@ -60,8 +60,9 @@ const HomeTab: React.FC = () => {
 
   const [search, setSearch] = useState("");
   const [clinicians, setClinicians] = useState<Clinician[]>([]);
-  const [selectedClinician, setSelectedClinician] =
-    useState<Clinician | null>(null);
+  const [selectedClinician, setSelectedClinician] = useState<Clinician | null>(
+    null
+  );
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
@@ -145,28 +146,30 @@ const HomeTab: React.FC = () => {
 
       const res = await fetch(url, { credentials: "include" });
       const data = await res.json();
-
       if (!data.success) return;
 
-      const mapped: Appointment[] = data.data.map((a: any) => ({
-        id: a.id,
-        date: formatDate(a.starts_at),
-        time: formatTime(a.starts_at),
-        reason: a.reason,
-        status: a.status,
-        category: "upcoming",
-        doctorName: selectedClinician?.name || "",
-        appointmentType: "",
-        telehealthConsent: false,
-        termsAccepted: false,
-        mainConcern: "",
-        goal: "",
-        durationOfConcern: "",
-        documents: [],
-        clinicianNotes: "",
-        prescriptions: "",
-        followUpNeeded: false,
-      }));
+      const mapped: Appointment[] = data.data.map((a: any) => {
+        return {
+          id: a.id,
+          date: formatDate(a.starts_at),
+          time: formatTime(a.starts_at),
+          reason: a.reason,
+          status: a.status,
+          category: "upcoming",
+          doctorName: selectedClinician?.name || "",
+          appointmentType: "",
+          telehealthConsent: false,
+          termsAccepted: false,
+          mainConcern: "",
+          goal: "",
+          durationOfConcern: "",
+          documents: [],
+          clinicianNotes: "",
+          prescriptions: "",
+          followUpNeeded: false,
+          patient: a.patient,
+        };
+      });
 
       setAppointments(mapped);
     } catch (err) {
@@ -188,11 +191,7 @@ const HomeTab: React.FC = () => {
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
 
-    fetchAppointments(
-      c.id,
-      "weekly",
-      weekStart.toISOString().split("T")[0]
-    );
+    fetchAppointments(c.id, "weekly", weekStart.toISOString().split("T")[0]);
   };
 
   /* -------------------------------------------------------------------------- */
@@ -282,10 +281,7 @@ const HomeTab: React.FC = () => {
               <Loader size="md" />
             </div>
           ) : (
-            <AppointmentCalendar
-              appointments={appointments}
-              userRole="admin"
-            />
+            <AppointmentCalendar appointments={appointments} userRole="admin" />
           )}
         </>
       )}

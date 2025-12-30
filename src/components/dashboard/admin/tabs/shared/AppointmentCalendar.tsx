@@ -348,6 +348,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
 }) => {
   const isCompleted = appointment.status === "completed";
 
+  console.log("Appointment object:", appointment);
+
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md text-xs">
