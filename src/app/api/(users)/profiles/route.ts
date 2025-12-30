@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 
@@ -25,7 +24,7 @@ export async function POST(req: Request) {
 
   // create route handler client with cookies => uses the caller's session
   const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = supabaseAdmin
 
   // get authenticated user from session (no redirects)
   const { data: userData, error: userErr } = await supabase.auth.getUser();
