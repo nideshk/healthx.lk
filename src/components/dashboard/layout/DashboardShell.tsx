@@ -39,15 +39,6 @@ const DashboardShell: React.FC<DashboardShellProps> = ({
             </div>
             <div className="text-slate-400">{profileRole}</div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-            onClick={onLogout}
-          >
-            <span className="text-xs">↩</span>
-            <span>Logout</span>
-          </Button>
         </div>
       </header>
 

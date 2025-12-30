@@ -61,9 +61,20 @@ export async function GET(
 
     (data ?? []).forEach((appt: any) => {
       const startsAt = new Date(appt.starts_at);
+      // Local date (YYYY-MM-DD)
+      const appointment_date = new Date(
+        startsAt.getTime() - startsAt.getTimezoneOffset() * 60000
+      )
+        .toISOString()
+        .split("T")[0];
 
-      const appointment_date = startsAt.toISOString().split("T")[0];
-      const start_time = startsAt.toISOString().split("T")[1].slice(0, 5); // HH:mm
+      // Local time with AM/PM
+      const start_time = startsAt.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
 
       const item = {
         id: appt.id,
