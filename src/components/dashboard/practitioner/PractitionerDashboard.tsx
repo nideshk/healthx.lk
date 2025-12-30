@@ -166,9 +166,6 @@ const PractitionerDashboard: React.FC = () => {
     setActiveMenu("searchPatient");
   };
 
-  const handleLogout = () => {
-    console.log("logout clicked");
-  };
 
   const effectiveProfileName = profileName || "Clinician";
 
@@ -178,7 +175,6 @@ const PractitionerDashboard: React.FC = () => {
       subtitle="Manage patients and appointments"
       profileName={effectiveProfileName}
       profileRole="Clinician"
-      onLogout={handleLogout}
     >
       <div className="grid grid-cols-12 gap-6">
         {/* LEFT MENU CARD */}

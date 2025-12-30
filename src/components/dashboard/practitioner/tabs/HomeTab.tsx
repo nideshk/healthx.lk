@@ -24,7 +24,26 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
     return localDate.toISOString().split("T")[0];
   };
 
-  const todayISO = getLocalISODate(new Date());
+  const today = new Date();
+
+  const getWeekStartISO = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay(); // Sunday = 0
+    d.setDate(d.getDate() - day);
+    return getLocalISODate(d);
+  };
+
+  const getWeekEndISO = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    d.setDate(d.getDate() + (6 - day));
+    return getLocalISODate(d);
+  };
+
+  const [dateRange, setDateRange] = useState({
+    from: getWeekStartISO(today),
+    to: getWeekEndISO(today),
+  });
 
   const [stats, setStats] = useState<DashboardStats>({
     todaysAppointments: 0,
@@ -36,7 +55,6 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
   >([]);
 
   const [fullName, setFullName] = useState<string>(clinicianName);
-  const [dateRange, setDateRange] = useState({ from: todayISO, to: todayISO });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,28 +89,32 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
           throw new Error("No practitioner id found for current user");
         }
 
-        // Fetch using the range provided by the calendar
-        const bookedRes = await fetch(
-          `/api/practitioners/${practitionerId}/booked?from=${dateRange.from}&to=${dateRange.to}`,
-          { credentials: "include" }
-        );
+        const view = dateRange.from === dateRange.to ? "daily" : "weekly";
+        const date = dateRange.from;
 
-        if (!bookedRes.ok) {
-          throw new Error("Failed to load booked appointments");
+        const url =
+          view === "weekly"
+            ? `/api/practitioner/${practitionerId}/appointments?view=weekly&week_start=${date}`
+            : `/api/practitioner/${practitionerId}/appointments?view=daily&date=${date}`;
+
+        const res = await fetch(url, { credentials: "include" });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(`Appointments API error (${res.status})`);
         }
 
-        const data = await bookedRes.json();
+        if (!data.success) {
+          throw new Error("Appointments API returned success=false");
+        }
 
         setStats({
-          todaysAppointments: data.scheduled_count ?? 0,
-          completedAppointments: data.completed_count ?? 0,
+          todaysAppointments: data.counts?.confirmed ?? 0,
+          completedAppointments: data.counts?.completed ?? 0,
         });
 
-        const mappedAppointments: Appointment[] = (data.booked || []).map(
+        const mappedAppointments: Appointment[] = (data.data  || []).map(
           (item: any) => {
-            const [year, month, day] = (item.date as string).split("-");
-            const formattedDate = `${day}/${month}/${year}`;
-
             const statusFromApi: string = item.status || "scheduled";
             const status =
               statusFromApi === "completed"
@@ -104,12 +126,18 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
             return {
               id: item.id,
               category: status === "completed" ? "previous" : "upcoming",
-              date: formattedDate,
-              time: item.from,
+              date: new Date(item.starts_at).toLocaleDateString("en-GB"),
+              time: new Date(item.starts_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              }),
+              patient: item.patient || "—",
               doctorName: apiFullName,
-              reason: item.reason || "General Appointment",
+              reason: item.reason || "Reason not given",
               status,
-              appointmentType: "",
+              appointmentType: item.appointment_type || "-",
+              room_key: item.room_key,
               telehealthConsent: false,
               termsAccepted: false,
               mainConcern: "",
@@ -153,6 +181,14 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
     setDateRange({ from, to });
   };
 
+  const isSingleDay = dateRange.from === dateRange.to;
+
+  const formattedRangeLabel = isSingleDay
+    ? `Appointments on ${new Date(dateRange.from).toLocaleDateString("en-GB")}`
+    : `Appointments (${new Date(dateRange.from).toLocaleDateString("en-GB")} – ${new Date(
+        dateRange.to
+      ).toLocaleDateString("en-GB")})`;
+
   return (
     <div className="space-y-4">
       {/* Welcome + stats */}
@@ -173,7 +209,7 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
 
           <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <StatBox
-              label="My Appointments Today "
+              label={formattedRangeLabel}
               value={
                 loading ? (
                   <Loader size="sm" />
@@ -181,22 +217,21 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
                   stats.todaysAppointments.toString()
                 )
               }
-              helper="Scheduled for selected range"
-              showDatePicker
-              // date={dateRange.from}
-              // onDateChange={(v) => setDateRange({ from: v, to: v })}
+              helper={
+                isSingleDay
+                  ? "Scheduled appointments for selected day"
+                  : "Scheduled appointments for selected range"
+              }
             />
 
             <StatBox
               label="Completed Appointments"
-              value={
-                loading ? (
-                  <Loader size="sm" />
-                ) : (
-                  stats.completedAppointments.toString()
-                )
+              value={loading ? <Loader size="sm" /> : stats.completedAppointments.toString()}
+              helper={
+                isSingleDay
+                  ? "Completed on selected day"
+                  : "Completed in selected range"
               }
-              helper="Finished in selected range"
             />
           </CardBody>
         </Card>
