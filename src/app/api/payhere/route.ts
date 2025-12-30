@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient as supabase } from "@/lib/supabaseServer"; // supabase Server
 import { requireUser } from "@/lib/authGuard";
 import crypto from 'crypto';
+import { supabaseServer } from "@/lib/supabaseServer";
 
 export async function POST(request: Request) {
     const { authorized, response, user } = await requireUser();
@@ -69,8 +69,8 @@ export async function POST(request: Request) {
         const orderID = appointment_id;
         const formattedAmount = parseFloat(booking_amount).toFixed(2);
 
-        const supabaseServer = await supabase();
-        const { data: dbData, error: dbError } = await supabaseServer.from('transactions').insert({
+        const supabase = await supabaseServer();
+        const { data: dbData, error: dbError } = await supabase.from('transactions').insert({
             order_id: orderID,
             status: 'pending',
             amount: formattedAmount,
