@@ -21,6 +21,43 @@ export async function GET(req: Request) {
         );
     }
 
+    // Get query params
+    const { searchParams } = new URL(req.url);
+    const from = searchParams.get("from")
+    const to = searchParams.get("to");
+    const status = searchParams.get("status")?.toLowerCase();
+
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
+
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize - 1;
+    
+    // Validate status
+    const allowedStatuses = ['refund', 'paid', 'failed'];
+    if (status && !allowedStatuses.includes(status)) {
+        return NextResponse.json(
+            { message: "Invalid status filter" },
+            { status: 400 }
+        );
+    }
+
+    // Validate date helper
+    const isValidDate = (dateStr: string | null) => {
+        if (!dateStr) return true;
+
+        // Check if it's a real date and matches YYYY-MM-DD
+        const regex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!regex.test(dateStr)) return false;
+        const d = new Date(dateStr);
+        return d instanceof Date && !isNaN(d.getTime());
+    };
+
+    // Validate dates
+    if (!isValidDate(from) || !isValidDate(to)) {
+        return NextResponse.json({ message: "Invalid date format. Please use YYYY-MM-DD." }, { status: 400 });
+    }
+
     const practitionerId = user?.practitioner_id;
 
     if (!practitionerId) {
@@ -30,25 +67,86 @@ export async function GET(req: Request) {
     console.log(`🔍 Fetching transactions for practioner ID: ${practitionerId} (User: ${user?.auth_user_id}, Role: ${user?.role})`);
 
     try {
-        // Fetch all transactions for the practitioner using their practitioner ID
-        const { data: transactions, error } = await supabaseClient
-            .from("transactions")
-            .select("*")
-            .eq("practitioner_id", practitionerId)
-            .order("created_at", { ascending: false });
+        // query to send analytics data
+        const dateColumn = 'created_at';
+        const requiredFields = "amount, appointment_id, consultation_fee, created_at, currency, customer_name, customer_phone, id, order_id, patient_id, payment_id, platform_fee, practitioner_id, status";
 
-        if (error) {
-            console.error('Database Error:', error);
-            return NextResponse.json(
-                { message: 'Failed to fetch practitioner transactions.' },
-                { status: 500 }
-            );
+
+        let analyticsQuery = supabaseClient
+            .from("transactions")
+            .select("amount, platform_fee, consultation_fee, status")
+            .eq("practitioner_id", practitionerId)
+            .eq("status", "paid");
+
+
+        // Create base query to get paginated data
+
+        let query = supabaseClient.
+            from("transactions")
+            .select(requiredFields, { count: 'exact' })
+            .eq("practitioner_id", practitionerId);
+
+        if (from) {
+            analyticsQuery = analyticsQuery.gte(dateColumn, `${from}T00:00:00Z`);
+            query = query.gte(dateColumn, `${from}T00:00:00Z`);
         }
+
+        if (to) {
+            // Filter transactions ON or BEFORE the end of the 'to' date
+            analyticsQuery = analyticsQuery.lte(dateColumn, `${to}T23:59:59Z`);
+            query = query.lte(dateColumn, `${to}T23:59:59Z`);
+        }
+
+        if (status) {
+            query = query.eq('status', status);
+        }
+
+        query = query.order(dateColumn, { ascending: false }).range(start, end);
+
+        const [analyticsResult, listResult] = await Promise.all([
+            analyticsQuery,
+            query
+        ]);
+
+        if (analyticsResult.error) throw analyticsResult.error;
+        if (listResult.error) throw listResult.error;
+
+        const analytics = (analyticsResult.data || []).reduce((acc, curr) => {
+            const gross = Number(curr?.amount || 0);
+            const platformFee = Number(curr?.platform_fee || 0);
+            const consultationFee = Number(curr?.consultation_fee || 0);
+            const serviceFee = Math.round(consultationFee * 0.05);
+            const tax = Math.round((consultationFee + serviceFee) * 0.08);
+
+            return {
+                totalGrossAmount: acc.totalGrossAmount + gross,
+                totalPlatformFees: acc.totalPlatformFees + platformFee,
+                totalConsultationFees: acc.totalConsultationFees + consultationFee,
+                totalServiceFees: acc.totalServiceFees + serviceFee,
+                totalTaxes: acc.totalTaxes + tax,
+                netAmount: acc.netAmount + consultationFee,
+                totalCompletedTransactions: acc.totalCompletedTransactions + 1
+            };
+        }, {
+            totalGrossAmount: 0,
+            totalPlatformFees: 0,
+            totalConsultationFees: 0,
+            totalServiceFees: 0,
+            totalTaxes: 0,
+            netAmount: 0,
+            totalCompletedTransactions: 0
+        });
 
         return NextResponse.json({
             message: "Practitioner transactions fetched successfully.",
-            count: transactions?.length || 0,
-            data: transactions || []
+            analytics,
+            pagination: {
+                totalRecords: listResult.count || 0,
+                currentPage: page,
+                pageSize: pageSize,
+                totalPages: Math.ceil((listResult.count || 0) / pageSize)
+            },
+            data: listResult.data || []
         })
 
     } catch (error) {
