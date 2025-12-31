@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppointmentCard } from "../AppointmentCard";
 import Loader from "@/components/atom/Loader/Loader";
+import { set } from "zod";
 
 export default function AppointmentTab() {
   const [ongoing, setOngoing] = useState<any[]>([]);
@@ -10,6 +11,7 @@ export default function AppointmentTab() {
   const [past, setPast] = useState<any[]>([]);
   const [cancelled, setCancelled] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState<any[]>([]);
 
   useEffect(() => {
     fetch("/api/booking/appointment")
@@ -19,6 +21,7 @@ export default function AppointmentTab() {
         setUpcoming(j.upcoming || []);
         setPast(j.past || []);
         setCancelled(j.cancelled || []);
+        setPending(j.pending_payment || []);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -45,6 +48,10 @@ export default function AppointmentTab() {
 
       <Section title="Cancelled" items={cancelled}>
         {(a:any) => <AppointmentCard appt={a} isCancelled />}
+      </Section>
+
+      <Section title="Pending Payment" items={pending}>
+        {(a:any) => <AppointmentCard appt={a} isPending />}
       </Section>
     </div>
   );
