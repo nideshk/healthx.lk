@@ -216,6 +216,11 @@ export async function GET() {
         continue;
       }
 
+  if(a.status === "pending"){
+    console.log("Skipping pending appointment\n");
+    continue;
+  }
+
   // Cancelled
   if (a.status === "cancelled" || a.cancellation_reason) {
     console.log("⛔ → CANCELLED\n");

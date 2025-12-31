@@ -24,7 +24,7 @@ export async function POST(req: Request) {
                 payment_status: 'failed'
             })
             .eq('id', appointmentId)
-            .eq('status', 'scheduled'); // Cancel if it hasn't been confirmed yet
+            .eq('status', 'pending'); // Cancel if it hasn't been confirmed yet
 
         if (appError) throw appError;
 
