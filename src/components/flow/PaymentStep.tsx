@@ -33,6 +33,8 @@ interface Props {
     validateStep?: () => boolean;
     getAttachment?: () => File | null;
   }>;
+  isManualCheckout?: boolean;
+  preExistingId?: string | null;
 }
 
 declare global {
@@ -65,7 +67,7 @@ const releaseAppointmentSlot = async (appointmentId: string | null) => {
 };
 
 const PaymentStep = forwardRef<StepRefHandle, Props>(
-  ({ prevStep, updateData, bookingData, goToStep, bookingControllerRef }, stepRef) => {
+  ({ prevStep, updateData, bookingData, goToStep, bookingControllerRef, isManualCheckout = false, preExistingId = null }, stepRef) => {
     const [paymentDone, setPaymentDone] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
@@ -161,8 +163,8 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
      * HANDLE PAYMENT
      * -------------------------- */
     const handlePayment = async () => {
-
-      if(isPaymentProcessing || isVerifying){
+      
+      if (isPaymentProcessing || isVerifying) {
         return;
       }
 
@@ -172,82 +174,127 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         return;
       }
       const mainLayout = document.getElementById('main-app-layout');
+      let paymentPayload:any = null;
+      let currentAppointmentId = preExistingId;
 
       try {
         setIsPaymentProcessing(true);
         const practitionerId = doctor?.id;
         const appointment_type_id = type?.id;
+        let first_name="", last_name="", email="", phone = "", address = "", city ="", country="", finalPrice;
 
-        const date = bookingData.starts_at?.split('T')[0];
-        const time = new Date(bookingData.starts_at || '')
-          .toLocaleTimeString('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
+        // Adding this condition to differentiate between fresh booking and an existing booking
+        if (!isManualCheckout || !currentAppointmentId) {
+          console.log("Normal Flow starting!!!!!!!!!!!!!!!!!!!!!!!!");
+          
+          const date = bookingData.starts_at?.split('T')[0];
+          const time = new Date(bookingData.starts_at || '')
+            .toLocaleTimeString('en-GB', {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
 
-        if (!practitionerId || !appointment_type_id || !date || !time) {
-          setIsPaymentProcessing(false);
-          toast.error('Missing booking details. Please review.');
-          return;
+          if (!practitionerId || !appointment_type_id || !date || !time) {
+            setIsPaymentProcessing(false);
+            toast.error('Missing booking details. Please review.');
+            return;
+          }
+
+          // 1️⃣ Create appointment (uncomment and use real API in production)
+          const res = await fetch(
+            `/api/booking/${practitionerId}/book-appointment`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                date,
+                time,
+                appointment_type_id,
+                attendeeList
+              }),
+            }
+          );
+          const data = await res.json();
+          if (!res.ok) {
+            setIsPaymentProcessing(false);
+            if (res.status === 409) {
+              toast.error(data.error || 'Slot no longer available');
+              goToStep(2);
+            }
+            else if (res.status === 404) {
+              toast.error("Booking session expired. Please start over.");
+              goToStep(2);
+            } else {
+              toast.error(data.error || 'Failed to initialize booking. Please try again.');
+            }
+            return;
+          }
+          currentAppointmentId = data?.appointment?.id;
+          paymentPayload = data?.paymentPayload;
+          first_name = paymentPayload?.first_name;
+          last_name = paymentPayload?.last_name;
+          phone = paymentPayload?.phone;
+          email = paymentPayload?.email;
+          address = paymentPayload?.address;
+          city = paymentPayload?.city;
+          country = paymentPayload?.country;
+          finalPrice = data?.appointment?.fee_charged
+          //console.log("Data  book-appointmtnet API : ", data);
+          if (!data?.appointment?.id || !data?.paymentPayload) {
+            setIsPaymentProcessing(false);
+            toast.error("Could not initialize payment data. Please try again.");
+            return;
+          }
         }
 
-        // 1️⃣ Create appointment (uncomment and use real API in production)
-        const res = await fetch(
-          `/api/booking/${practitionerId}/book-appointment`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              date,
-              time,
-              appointment_type_id,
-              attendeeList
-            }),
-          }
-        );
-        const data = await res.json();
-        if (!res.ok) {
-          setIsPaymentProcessing(false);
-          if (res.status === 409) {
-            toast.error(data.error || 'Slot no longer available');
-            goToStep(2);
-          }
-          else if (res.status === 404) {
-            toast.error("Booking session expired. Please start over.");
-            goToStep(2);
-          } else {
-            toast.error(data.error || 'Failed to initialize booking. Please try again.');
-          }
-          return;
-        }
-
-        console.log("Data from book-appointmtnet API : ", data);
-        if (!data?.appointment?.id || !data?.paymentPayload) {
-          setIsPaymentProcessing(false);
-          toast.error("Could not initialize payment data. Please try again.");
-          return;
-        }
-        const appointmentId = data.appointment.id; // Replace with real ID from API
-        appointmentIdRef.current = appointmentId;
+        appointmentIdRef.current = currentAppointmentId;
 
         console.log("Calling payhere from paymentStpe file");
+                
+        // Get the values from bookingData if its manualCheckout and it would have skipped above logic
+        if(bookingData)
+        {
+          const fullName = bookingData?.fullName;   
+          if(fullName)
+            [first_name, last_name] = fullName?.split(" "); 
+          if(!email)
+            email = bookingData?.email || "";
+          if(!phone)
+            phone = bookingData?.phone || "";
 
+          const completeAddress = bookingData?.address; // Check logic once with anirudh because we don't have seperate fields for address, city, country in patients thats why I have split it up - can cause issues or inconsistency if everyone doesn't enter in same format
+          if(completeAddress){
+              const addressParts = completeAddress.split(",").map(x => x.trim());
+              address = addressParts[0];
+              city = addressParts[1];
+              country = addressParts[2];
+          }else
+          {
+            // Fallback in case address is not provided, give some defaults as its required by payhere
+            address = "Default address";
+            city = "Default city";
+            country = "Sri lanka";
+          }
+
+          if(!finalPrice){
+            finalPrice = bookingData?.fee_charged;
+          }
+        }
         const payRes = await fetch('/api/payhere', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            first_name: data.paymentPayload?.first_name || "Patient", // Ensure your API returns user details
-            last_name: data.paymentPayload?.last_name,
-            email: data.paymentPayload?.email,
-            phone: data.paymentPayload?.phone,
-            address: "Online Booking",
-            city: "Colombo",
-            country: "Sri Lanka",
-            booking_amount: data.paymentPayload.amount, // The total calculated in your component
-            appointment_id: data.paymentPayload.appointment_id,
-            practitioner_id: data.paymentPayload.practitioner_id,
-            platform_fee: data.paymentPayload.platform_fee,
-            consultation_fee: data.paymentPayload.consultation_fee
+            first_name: first_name, // Ensure your API returns user details
+            last_name: last_name,
+            email: email,
+            phone: phone,
+            address: address,
+            city: city,
+            country: country,
+            appointment_id: currentAppointmentId,
+            practitioner_id: doctor?.id,
+            platform_fee: serviceFee, // Change with platformFee verify
+            consultation_fee: consultationFee
           }),
         });
 
@@ -255,8 +302,8 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           setIsPaymentProcessing(false);
           const errorData = await payRes.json();
 
-          if (data.appointment?.id) {
-            releaseAppointmentSlot(data?.appointment?.id)
+          if (currentAppointmentId) {
+            releaseAppointmentSlot(currentAppointmentId)
             updateData({ appointment_id: undefined })
           }
 
@@ -278,14 +325,14 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
               setIsPaymentProcessing(false);
               mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
               setIsVerifying(true);
-              
+
               let attempts = 0;
               const maxAttempts = 5;
               const pollInterval = 2000;
 
               const verifyPayment = async () => {
                 try {
-                  const res = await fetch(`/api/booking/check-status?appointmentId=${appointmentId}`);
+                  const res = await fetch(`/api/booking/check-status?appointmentId=${currentAppointmentId}`);
                   if (!res.ok) return false;
                   const data = await res.json();
                   if (data.status === 'confirmed' && data.payment_status === 'paid') {
@@ -307,7 +354,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
                 if (isVerified) {
                   // Checked and confirmed that payment is done
                   clearInterval(checkInterval);
-                  await handlePostBookingActions(appointmentId);
+                  await handlePostBookingActions(currentAppointmentId!);
                   setIsVerifying(false);
                   setPaymentDone(true);
                   toast.success("Payment verified! Your appointment is successfully booked.");
@@ -315,7 +362,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
                 else if (attempts >= maxAttempts) {
                   // attempts finished and payment couldn't be verified
                   clearInterval(checkInterval);
-                  releaseAppointmentSlot(appointmentId);
+                  releaseAppointmentSlot(currentAppointmentId);
                   setIsVerifying(false);
                   toast.error("Booking cancelled, Payment could not be verified.");
                   // Redirect to dashboard
@@ -328,7 +375,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
               setIsVerifying(true);
               setIsPaymentProcessing(false);
               mainLayout?.classList.remove('blur-md', 'brightness-75', 'pointer-events-none');
-              releaseAppointmentSlot(data?.paymentPayload?.appointment_id);
+              releaseAppointmentSlot(currentAppointmentId);
 
               setTimeout(() => {
                 setIsVerifying(false);

@@ -2,52 +2,71 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Calendar, Clock, Video } from "lucide-react";
+import { Calendar, Clock, Video, Lock } from "lucide-react";
 
 export function AppointmentCard({
   appt,
   isPast,
   isCancelled,
   isOngoing,
+  isPending,
 }: any) {
   const router = useRouter();
   const start = new Date(appt.starts_at);
 
   const containerStyle = isCancelled
     ? "bg-red-50 border border-red-200"
+    : isPending
+    ? "bg-yellow-50 border border-yellow-200 cursor-default"
     : isOngoing
     ? "bg-green-50 border border-green-300 shadow-green-200/40"
     : isPast
     ? "bg-gray-50 border border-gray-200"
     : "bg-white/70 border border-gray-200 hover:shadow-lg";
 
+  // 🔒 Disable navigation for pending
+  const canNavigate = !isPending;
+
   return (
     <article
-      role="button"
-      tabIndex={0}
-      onClick={() => router.push(`/dashboard/appointment/${appt.id}`)}
+      role={canNavigate ? "button" : undefined}
+      tabIndex={canNavigate ? 0 : -1}
+      onClick={() => {
+        if (!canNavigate) return;
+        router.push(`/dashboard/appointment/${appt.id}`);
+      }}
       onKeyDown={(e) => {
+        if (!canNavigate) return;
         if (e.key === "Enter") {
           router.push(`/dashboard/appointment/${appt.id}`);
         }
       }}
       className={`
-        group relative p-5 rounded-2xl transition cursor-pointer
+        group relative p-5 rounded-2xl transition
         focus:outline-none focus:ring-2 focus:ring-blue-500
         ${containerStyle}
       `}
     >
       {/* STATUS BADGE */}
+      {isPending && (
+        <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-600 text-white flex items-center gap-1">
+          <Lock className="w-3 h-3" />
+          Payment Pending
+        </span>
+      )}
+
       {isOngoing && (
         <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-600 text-white animate-pulse">
           Live
         </span>
       )}
+
       {isCancelled && (
         <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-600 text-white">
           Cancelled
         </span>
       )}
+
       {isPast && !isCancelled && (
         <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-500 text-white">
           Completed
@@ -87,7 +106,27 @@ export function AppointmentCard({
         </div>
       </div>
 
-      {/* CTA — stop click bubbling */}
+      {/* 🔥 PENDING PAYMENT CTA */}
+      {isPending && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(
+              `/payments/checkout?appointment_id=${appt.id}`
+            );
+          }}
+          className="
+            mt-5 w-full px-4 py-2 rounded-xl
+            bg-yellow-600 text-white font-semibold
+            hover:bg-yellow-700
+            transition
+          "
+        >
+          Complete Payment
+        </button>
+      )}
+
+      {/* CTA — Ongoing only */}
       {isOngoing && (
         <Link
           href={`/appointment/meeting?room=${appt.telehealth_url}`}

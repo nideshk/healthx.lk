@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -67,6 +68,89 @@ export async function GET(req: Request) {
     console.error("❌ Appointments Fetch Error:", error);
     return NextResponse.json(
       { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    // 1️⃣ Auth check
+    const {user} = await requireUser();
+    console.log("User creating appointment:", user);
+    // const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+
+    // if (!isAdmin) {
+    //   return NextResponse.json(
+    //     { error: "Unauthorized" },
+    //     { status: 401 }
+    //   );
+    // }
+
+    // 2️⃣ Parse body
+    const {
+      patient_id,
+      practitioner_id,
+      appointment_type_id,
+      starts_at,
+      ends_at,
+      fee,
+      currency,
+    } = await req.json();
+
+    if (
+      !patient_id ||
+      !practitioner_id ||
+      !appointment_type_id ||
+      !starts_at ||
+      !ends_at
+    ) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // 3️⃣ Expiry = 24 hours
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // 4️⃣ Insert appointment
+    const { data, error } = await supabaseAdmin
+      .from("appointments")
+      .insert({
+        patient_id,
+        practitioner_id,
+        appointment_type_id,
+        starts_at,
+        ends_at,
+        status: "pending",
+        payment_status: "pending",
+        expires_at: expiresAt.toISOString(),
+        fee_charged: fee,
+        currency: currency || "INR",
+        source: "admin",
+        created_by_admin_id: user?.admin?.id || user?.auth_user_id, // 🔥 THIS LINE
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error(error);
+      return NextResponse.json(
+        { error: "Failed to create appointment" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      appointment: data,
+      status: 201,
+    });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json(
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

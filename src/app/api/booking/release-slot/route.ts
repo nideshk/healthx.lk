@@ -24,6 +24,7 @@ export async function POST(req: Request) {
                 payment_status: 'failed'
             })
             .eq('id', appointmentId)
+            .eq('patient_id', user?.patient_id)
             .eq('status', 'pending'); // Cancel if it hasn't been confirmed yet
 
         if (appError) throw appError;
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
                 updated_at: new Date().toISOString()
             })
             .eq('order_id', appointmentId)
+            .eq('patient_id', user?.patient_id)
             .neq('status', 'paid'); // Never cancel a transaction that succeeded
 
         if (txError) {
