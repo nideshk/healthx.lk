@@ -51,21 +51,8 @@ export async function GET() {
   }
 
   const isSuperAdmin = user.admin.role === "superadmin";
-
-
-  // 3️⃣ Must have manage policy permission
-  // if (!user.admin.policies.includes("super_admin:manage_policy")) {
-  //   return NextResponse.json(
-  //     {
-  //       success: false,
-  //       message: "Missing super_admin:manage_policy policy",
-  //     },
-  //     { status: 403 }
-  //   );
-  // }
-
   
-  // 4️⃣ Fetch all policies (source of truth)
+  //  Fetch all policies (source of truth)
   const { data: allPoliciesRaw, error: policyError } = await supabaseAdmin
     .from("policies")
     .select("code, description");
@@ -84,20 +71,6 @@ export async function GET() {
     }));
 
   // 5️⃣ Fetch admins with assigned policies
-  // const { data: admins, error } = await supabaseAdmin
-  //   .from("admin_users")
-  //   .select(`
-  //     id,
-  //     full_name,
-  //     email,
-  //     role,
-  //     admin_policy_map (
-  //       policy_code
-  //     )
-  //   `)
-  //   .eq("is_active", true)
-  //   .order("created_at", { ascending: false });
-
   let adminQuery = supabaseAdmin
     .from("admin_users")
     .select(`
