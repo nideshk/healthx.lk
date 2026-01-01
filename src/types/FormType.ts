@@ -13,6 +13,11 @@ export interface AppointmentFormInputs {
   payment_status: any;
   selectedService : any;
   last_visited_step: number;
+  fullName?: string;
+  email?: string;
+  phone?:string;
+  address?:string;
+  fee_charged?:number;
 }
 
 
