@@ -78,6 +78,8 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
               : "",
             lastConsultation: "",
             consentGiven: false,
+            city:p.city,
+            country : p.country
           });
         });
 

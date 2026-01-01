@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 
 /* -------------------------------------------------------------------------- */
-/*                                   TYPES                                    */
+/* TYPES                                    */
 /* -------------------------------------------------------------------------- */
 
 type SettingsTabType = "Security" | "Account" | "Platform";
@@ -29,8 +29,19 @@ interface ChangePasswordResponse {
   error?: string;
 }
 
+interface PlatformFee {
+  id: string;
+  name: string;
+  description: string;
+  duration_mins: number;
+  base_fee: number;
+  max_attendee: number;
+  extra_fee_per_attendee: number | null;
+  platform_fee: number;
+}
+
 /* -------------------------------------------------------------------------- */
-/*                              MAIN COMPONENT                                */
+/* MAIN COMPONENT                                */
 /* -------------------------------------------------------------------------- */
 
 const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
@@ -54,16 +65,28 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
 
   /* ---------------- PLATFORM ---------------- */
 
-  const [platformCharges, setPlatformCharges] = useState({
-    solo: { quick: 1500, standard: 2500, extended: 3500 },
-    plusOne: { quick: 2000, standard: 3000, extended: 4000 },
-    maxAttendees: { quick: 1, standard: 2, extended: 3 },
-    baseFee: 950,
-  });
+  const [fees, setFees] = useState<PlatformFee[]>([]);
+  const [platformLoading, setPlatformLoading] = useState(false);
 
   /* -------------------------------------------------------------------------- */
-  /*                               API HELPERS                                  */
+  /* API HELPERS                                  */
   /* -------------------------------------------------------------------------- */
+
+  // Fetch Platform Fees
+  useEffect(() => {
+    const fetchFees = async () => {
+      try {
+        const res = await fetch("/api/platform_fee");
+        const json = await res.json();
+        if (json.success) {
+          setFees(json.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch platform fees", err);
+      }
+    };
+    fetchFees();
+  }, []);
 
   const update2FA = async (enabled: boolean) => {
     const res = await fetch("/api/profiles", {
@@ -99,7 +122,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
   };
 
   /* -------------------------------------------------------------------------- */
-  /*                                HANDLERS                                    */
+  /* HANDLERS                                    */
   /* -------------------------------------------------------------------------- */
 
   const handleToggle2FA = async () => {
@@ -148,36 +171,53 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
     }
   };
 
-  const updateCharge = (
-    section: string,
-    key: string,
-    value: number,
-    min = 0,
-    max?: number
-  ) => {
-    if (value < min) return;
-    if (max !== undefined && value > max) return;
-
-    setPlatformCharges((prev) => ({
-      ...prev,
-      [section]: {
-        ...(prev as any)[section],
-        [key]: value,
-      },
-    }));
+  // Helper to update specific fee fields in state
+  const updateFeeField = (id: string, field: keyof PlatformFee, value: number) => {
+    setFees((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, [field]: value } : f))
+    );
   };
 
-  const updateBaseFee = (value: number) => {
-    if (value < 0) return;
-    setPlatformCharges((prev) => ({ ...prev, baseFee: value }));
+  const savePlatformCharges = async () => {
+    setPlatformLoading(true);
+    try {
+      const updates = fees.map((f) => ({
+        id: f.id,
+        base_fee: f.base_fee,
+        max_attendee: f.max_attendee,
+        platform_fee: f.platform_fee,
+        extra_fee_per_attendee: f.extra_fee_per_attendee,
+      }));
+
+      const res = await fetch("/api/platform_fee", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updates }),
+      });
+
+      if (!res.ok) throw new Error("Update failed");
+      alert("Platform charges updated successfully.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save platform charges.");
+    } finally {
+      setPlatformLoading(false);
+    }
   };
 
-  const savePlatformCharges = () => {
-    console.log("Saving platform charges:", platformCharges);
+  // Helper to get fee by name (Quick, Standard, Extended)
+  const getFeeData = (name: string) => {
+    return fees.find((f) => f.name.toLowerCase().includes(name.toLowerCase())) || {
+      id: "",
+      base_fee: 0,
+      max_attendee: 0,
+      platform_fee: 0,
+      extra_fee_per_attendee: 0,
+    };
   };
 
   /* -------------------------------------------------------------------------- */
-  /*                                  RENDER                                    */
+  /* RENDER                                    */
   /* -------------------------------------------------------------------------- */
 
   return (
@@ -303,42 +343,77 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
             Appointment Fees
           </div>
 
-          <Section title="Solo Appointments">
-            <ChargeRow
-              values={platformCharges.solo}
-              onChange={(k, v) => updateCharge("solo", k, v)}
-            />
+          <Section title="Consultation Base Fees (LKR)">
+            <div className="grid grid-cols-3 gap-4">
+              {["Quick", "Standard", "Extended"].map((type) => {
+                const item = getFeeData(type);
+                return (
+                  <Input
+                    key={type}
+                    label={`${type} (LKR)`}
+                    type="number"
+                    value={item.base_fee.toString()}
+                    onChange={(e) =>
+                      updateFeeField(item.id, "base_fee", Number(e.target.value))
+                    }
+                  />
+                );
+              })}
+            </div>
           </Section>
 
-          <Section title="Appointments with +1 Attendee">
-            <ChargeRow
-              values={platformCharges.plusOne}
-              onChange={(k, v) => updateCharge("plusOne", k, v)}
-            />
+          <Section title="Extra Fee Per Attendee (LKR)">
+            <div className="grid grid-cols-3 gap-4">
+              {["Quick", "Standard", "Extended"].map((type) => {
+                const item = getFeeData(type);
+                return (
+                  <Input
+                    key={type}
+                    label={`${type} Extra (LKR)`}
+                    type="number"
+                    value={(item.extra_fee_per_attendee ?? 0).toString()}
+                    onChange={(e) =>
+                      updateFeeField(item.id, "extra_fee_per_attendee", Number(e.target.value))
+                    }
+                  />
+                );
+              })}
+            </div>
           </Section>
 
           <Section title="Max Number of Attendees">
-            <ChargeRow
-              values={platformCharges.maxAttendees}
-              onChange={(k, v) =>
-                updateCharge("maxAttendees", k, v, 0, 3)
-              }
-            />
+            <div className="grid grid-cols-3 gap-4">
+              {["Quick", "Standard", "Extended"].map((type) => {
+                const item = getFeeData(type);
+                return (
+                  <Input
+                    key={type}
+                    label={type}
+                    type="number"
+                    value={item.max_attendee.toString()}
+                    onChange={(e) =>
+                      updateFeeField(item.id, "max_attendee", Number(e.target.value))
+                    }
+                  />
+                );
+              })}
+            </div>
           </Section>
 
           <Section title="Platform Charges">
             <Input
-              label="Base Fee (LKR)"
+              label="System Platform Fee (LKR)"
               type="number"
-              value={platformCharges.baseFee.toString()}
-              onChange={(e) =>
-                updateBaseFee(Number(e.target.value))
-              }
+              value={(fees[0]?.platform_fee ?? 0).toString()}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setFees(fees.map((f) => ({ ...f, platform_fee: val })));
+              }}
             />
           </Section>
 
-          <Button onClick={savePlatformCharges}>
-            Save Service Charges
+          <Button onClick={savePlatformCharges} disabled={platformLoading}>
+            {platformLoading ? "Saving..." : "Save Service Charges"}
           </Button>
         </div>
       )}
@@ -347,7 +422,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                              HELPER COMPONENTS                              */
+/* HELPER COMPONENTS                              */
 /* -------------------------------------------------------------------------- */
 
 const Section = ({
@@ -364,34 +439,5 @@ const Section = ({
     {children}
   </div>
 );
-
-const ChargeRow = ({
-  values,
-  onChange,
-}: {
-  values: Record<string, number>;
-  onChange: (key: string, value: number) => void;
-}) => (
-  <div className="grid grid-cols-3 gap-4">
-    {Object.entries(values).map(([key, value]) => (
-      <Input
-        key={key}
-        label={formatLabel(key)}
-        type="number"
-        value={value.toString()}
-        onChange={(e) =>
-          onChange(key, Number(e.target.value))
-        }
-      />
-    ))}
-  </div>
-);
-
-const formatLabel = (key: string) => {
-  if (key === "quick") return "Quick Consultation (LKR)";
-  if (key === "standard") return "Standard Consultation (LKR)";
-  if (key === "extended") return "Extended Consultation (LKR)";
-  return key;
-};
 
 export default SettingsTab;
