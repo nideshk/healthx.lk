@@ -93,8 +93,8 @@ const AdminDashboard: React.FC = () => {
           email: p.email,
           phone: p.contact_number,
           addressLine1: p.address ?? "",
-          city: "",
-          country: "",
+          city: p.city ?? "",
+          country: p.country ?? "",
           consentGiven: false,
         }));
 

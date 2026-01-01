@@ -110,7 +110,7 @@ const ManageAdminsTab: React.FC = () => {
                 {/* Manage Policy Button (Only for Super Admins with policy) */}
                 {hasPolicy("super_admin:manage_policy") && (
                   <Button variant="outline" size="sm" onClick={() => setEditingAdmin(admin)}>
-                    Edit Policies
+                    Edit Permissions
                   </Button>
                 )}
 
@@ -145,7 +145,7 @@ const ManageAdminsTab: React.FC = () => {
       {showDeleteReqsModal && (
         <DeleteRequestsModal onClose={() => setShowDeleteReqsModal(false)} />
       )}
-      {console.log(currentUser)};
+      {console.log(currentUser)}
       {/* Delete Confirmation Modal */}
       {removeTarget && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
