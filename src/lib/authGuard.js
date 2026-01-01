@@ -88,18 +88,18 @@ export async function requireUser() {
   /* ---------------------------------------
      6️⃣ (OPTIONAL) Enforce MFA for admins
   --------------------------------------- */
-  if (
-    admin &&
-    !user.amr?.includes("mfa")
-  ) {
-    return {
-      authorized: false,
-      response: Response.json(
-        { error: "MFA required" },
-        { status: 403 }
-      ),
-    };
-  }
+  // if (
+  //   admin &&
+  //   !user.amr?.includes("mfa")
+  // ) {
+  //   return {
+  //     authorized: false,
+  //     response: Response.json(
+  //       { error: "MFA required" },
+  //       { status: 403 }
+  //     ),
+  //   };
+  // }
 
   /* ---------------------------------------
      7️⃣ Unified session user

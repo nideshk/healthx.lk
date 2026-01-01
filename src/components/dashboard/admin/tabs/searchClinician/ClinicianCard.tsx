@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Button from "@/components/atom/Button/Button";
+import Loader from "@/components/atom/Loader/Loader";
 
 interface ClinicianCardProps {
   clinician: {
@@ -10,32 +11,53 @@ interface ClinicianCardProps {
     specialty: string;
     registration: string;
     fees: {
-      solo: number;
-      family: number;
+      standard: number;
+      quick: number;
     };
     experience: number;
-    // ratings: {
-    //   overall: number;
-    //   advice: number;
-    //   punctuality: number;
-    // };
     tags: string[];
   };
-  onViewProfile: (id: string) => void;
+  onViewProfile: (id: string) => Promise<void> | void;
 }
 
 const ClinicianCard: React.FC<ClinicianCardProps> = ({
   clinician,
   onViewProfile,
 }) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleViewProfile = async () => {
+    if (loading) return;
+
+    setLoading(true);
+    try {
+      await onViewProfile(clinician.id);
+    } finally {
+      // If navigation happens, this component unmounts
+      // If not, loader safely resets
+      setLoading(false);
+    }
+  };
+
+  console.log("Rendering ClinicianCard for:", clinician);
+
   return (
-    <div className="border border-slate-200 rounded-xl p-4 bg-white">
+    <div className="relative border border-slate-200 rounded-xl p-4 bg-white">
+      {/* 🔄 Loader overlay */}
+      {loading && (
+        <div className="absolute inset-0 z-10 bg-white/70 flex items-center justify-center rounded-xl">
+          <Loader />
+        </div>
+      )}
+
       {/* NAME + SPECIALTY */}
       <div className="flex justify-between items-start">
         <div>
           <div
-            className="text-sm font-semibold text-blue-600 hover:underline cursor-pointer"
-            onClick={() => onViewProfile(clinician.id)}
+            className={`text-sm font-semibold text-blue-600 hover:underline cursor-pointer ${
+              loading ? "pointer-events-none opacity-60" : ""
+            }`}
+            onClick={handleViewProfile}
           >
             {clinician.name}
           </div>
@@ -49,7 +71,8 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
           variant="outline"
           size="sm"
           className="text-xs"
-          onClick={() => onViewProfile(clinician.id)}
+          disabled={loading}
+          onClick={handleViewProfile}
         >
           View Profile
         </Button>
@@ -64,36 +87,13 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
       {/* FEES */}
       <div className="mt-1 text-xs text-slate-600">
         Standard:{" "}
-        <span className="font-medium">LKR {clinician.fees.solo}</span>{" "}
+        <span className="font-medium">{clinician.fees.standard} LKR </span>
         &nbsp; | &nbsp;
         Quick:{" "}
-        <span className="font-medium">LKR {clinician.fees.family}</span>
+        <span className="font-medium">{clinician.fees.quick} LKR </span>
       </div>
 
-      {/* RATINGS */}
-      {/* Shravya to add in response */}
-      {/* <div className="mt-2 flex gap-6 text-[11px] text-slate-600">
-        <div>
-          Overall Rating:{" "}
-          <span className="font-medium text-slate-900">
-            {clinician.ratings.overall}/5
-          </span>
-        </div>
-        <div>
-          Advice:{" "}
-          <span className="font-medium text-slate-900">
-            {clinician.ratings.advice}/5
-          </span>
-        </div>
-        <div>
-          Punctuality:{" "}
-          <span className="font-medium text-slate-900">
-            {clinician.ratings.punctuality}/5
-          </span>
-        </div>
-      </div> */}
-
-      {/* SPECIALTIES TAGS */}
+      {/* TAGS */}
       <div className="mt-3 flex flex-wrap gap-2">
         {clinician.tags.map((tag) => (
           <span
@@ -109,3 +109,18 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
 };
 
 export default ClinicianCard;
+
+const extractFees = (fees: any[]) => {
+  const standard = fees.find(
+    (f) => f.code === "standard_consultation"
+  );
+
+  const quick = fees.find(
+    (f) => f.code === "quick_consultation"
+  );
+
+  return {
+    standard: standard?.amount ?? 0,
+    quick: quick?.amount ?? 0,
+  };
+};

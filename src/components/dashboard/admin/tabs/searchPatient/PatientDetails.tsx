@@ -126,6 +126,7 @@ const DetailLine: React.FC<{ label: string; value: string }> = ({
 const PatientOverviewTab: React.FC<{ patient: Patient }> = ({
   patient,
 }) => (
+
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
     <Card>
       <CardHeader>

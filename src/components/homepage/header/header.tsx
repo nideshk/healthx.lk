@@ -121,6 +121,16 @@ export default function Header() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
 
+  /* -------------------------MFA------------------------*/
+  const [mfa, setMfa] = useState<{
+    factorId: string;
+    challengeId: string;
+  } | null>(null);
+
+  const [otp, setOtp] = useState("");
+  const [mfaInProgress, setMfaInProgress] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+
   const unreadCount = notifications.filter(
     (n) => n.status === "unread"
   ).length;
@@ -134,12 +144,70 @@ export default function Header() {
     }
   }
 
+  async function finalizeLogin(
+    session: any,
+    toastId: any,
+  ) {
+    // 1️⃣ Exchange session with backend
+    const res = await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Session setup failed");
+    }
+
+    // 2️⃣ Set auth state
+    setUser(session.user);
+    setUsername(session.user.email?.split("@")[0] ?? null);
+    setAuthReady(true);
+
+    // 3️⃣ Cleanup MFA state (safe even if MFA not used)
+    setMfa(null);
+    setOtp("");
+    setMfaInProgress(false);
+
+    // 4️⃣ Success toast
+    toast.update(toastId, {
+      render: `Welcome back. Your care continues here 💙`,
+      type: "success",
+      isLoading: false,
+      autoClose: 2000,
+    });
+
+    closeLoginModal();
+
+    // 5️⃣ Restore draft + redirect
+    const restored = await restoreBookingDraftIfExists();
+
+    if (restored) {
+      toast.success("We’ve restored your appointment in progress 🩺");
+      router.push("/appointment");
+    } else {
+      router.push("/dashboard");
+    }
+  }
+
+
   /* ---------------- AUTH STATE ---------------- */
   useEffect(() => {
     async function init() {
       const { data } = await supabaseBrowser.auth.getUser();
-      setUser(data.user);
-      setUsername(data.user?.email?.split("@")[0] ?? null);
+      if (data.user ) {
+        setUser(data.user);
+        setUsername(data.user?.email?.split("@")[0] ?? null);
+        setAuthReady(true);
+      } else {
+        setUser(null);
+        setUsername(null);
+        setAuthReady(false);
+      }
       setLoading(false);
 
       if (data.user) fetchNotifications();
@@ -149,6 +217,11 @@ export default function Header() {
 
     const { data: listener } =
       supabaseBrowser.auth.onAuthStateChange((_event, session) => {
+      if (mfaInProgress) {
+          console.log("[AUTH] session received but MFA pending → ignoring");
+          toast.error("[AUTH] session received but MFA pending → ignoring");
+          return;
+        }        
         setUser(session?.user ?? null);
         setNotifOpen(false);
 
@@ -185,44 +258,57 @@ export default function Header() {
       if (error || !data.session) {
         throw new Error(error?.message || "Invalid credentials");
       }
+      
+      if (error) {
+        console.error("[STEP 1] login error:", error);
+        throw error;
+      }
 
+      // STEP 2 — detect MFA enrollment
+      const factors = data.user?.factors ?? [];
+
+      const hasEnrolledMfa = factors.some(
+        (f) => f.factor_type === "totp" && f.status === "verified"
+      );
+
+      // STEP 3 — decide if MFA is required for this login
+      const mustDoMfa = hasEnrolledMfa;
+
+      if (mustDoMfa) {
+        const factorId = factors[0].id; // first verified TOTP
+
+        const { data: challenge, error: challengeError } =
+          await supabaseBrowser.auth.mfa.challenge({ factorId });
+
+        if (challengeError) {
+          toast.update(toastId, {
+            render: "Unable to start security verification",
+            type: "error",
+            isLoading: false,
+            autoClose: 2000,
+          });
+          throw challengeError;
+        }
+
+        setMfa({
+          factorId,
+          challengeId: challenge.id,
+        });
+
+        toast.update(toastId, {
+          render: "Enter the verification code from your authenticator app",
+          type: "info",
+          isLoading: false,
+          autoClose: 2000,
+        });
+
+        // 🚫 STOP normal login here
+        return;
+      }
+      
+      /* ✅ NO MFA → normal flow */
       /* 2️⃣ Exchange session with server */
-      const res = await fetch("/api/auth/session", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    access_token: data.session.access_token,
-    refresh_token: data.session.refresh_token,
-  }),
-});
-
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Session setup failed");
-      }
-
-      setUser(data.user);
-      setUsername(email.split("@")[0]);
-
-      toast.update(toastId, {
-        render: "Welcome back. Your care continues here 💙",
-        type: "success",
-        isLoading: false,
-        autoClose: 2000,
-      });
-
-      closeLoginModal();
-
-      /* 3️⃣ Restore draft */
-      const restored = await restoreBookingDraftIfExists();
-
-      if (restored) {
-        toast.success("We’ve restored your appointment in progress 🩺");
-        router.push("/appointment");
-      } else {
-        router.push("/dashboard");
-      }
+      await finalizeLogin(data.session, toastId);
     } catch (err: any) {
       toast.update(toastId, {
         render: err.message || "Login failed",
@@ -231,6 +317,44 @@ export default function Header() {
         autoClose: 2000,
       });
     }
+  }
+
+  async function verifyMfa() {
+    if (!mfa) return;
+    
+    const toastId = toast.loading("Verifying security code…");
+
+    const { error } = await supabaseBrowser.auth.mfa.verify({
+      factorId: mfa.factorId,
+      challengeId: mfa.challengeId,
+      code: otp,
+    });
+
+    if (error) {
+      // ⛔ CASE 2: ANY other error → abort MFA & restart login
+      toast.update(toastId, {
+        render: error.message,
+        type: "error",
+        isLoading: false,
+        autoClose: 2500,
+      });
+
+      // 🧹 Reset MFA state
+      setMfa(null);
+      setOtp("");
+      handleLogout()
+      return;
+    }
+
+    const { data: sessionData } =
+      await supabaseBrowser.auth.getSession();
+
+    if (!sessionData.session) {
+      throw new Error("Session not available after MFA");
+    }
+
+    // 🔁 Reuse your EXISTING backend session exchange
+    await finalizeLogin(sessionData.session, toastId);
   }
 
   /* ---------------- LOGOUT ---------------- */
@@ -267,7 +391,7 @@ export default function Header() {
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
-            {!user ? (
+            {!authReady ? (
               <button
                 onClick={openLoginModal}
                 className="px-4 py-2 rounded-full bg-gray-100"
@@ -312,56 +436,80 @@ export default function Header() {
       {/* LOGIN MODAL */}
       <Modal
         isOpen={isLoginModalOpen}
-        onClose={() => {
+        onClose={async () => {
           setShowForgot(false);
           closeLoginModal();
+          if (mfa) {
+            console.log("[MFA] Login aborted → signing out");
+
+            setMfa(null);
+            setOtp("");
+            setAuthReady(false);
+            handleLogout();
+          }
         }}
         title={showForgot ? "Reset Password" : "Login"}
         theme="light"
       >
-        {!showForgot ? (
-          <>
-            <form onSubmit={handleLogin} className="space-y-3">
-              <input
-                name="email"
-                type="email"
-                placeholder="Email"
-                required
-                className="border rounded-lg p-2 w-full"
-              />
-              <input
-                name="password"
-                type="password"
-                placeholder="Password"
-                required
-                className="border rounded-lg p-2 w-full"
-              />
-              <button className="w-full bg-teal-500 text-white py-2 rounded-lg">
-                Login
-              </button>
-            </form>
+        {!showForgot && !mfa ? (
+        <>
+          <form onSubmit={handleLogin} className="space-y-3">
+            <input
+              name="email"
+              type="email"
+              placeholder="Email"
+              required
+              className="border rounded-lg p-2 w-full"
+            />
+            <input
+              name="password"
+              type="password"
+              placeholder="Password"
+              required
+              className="border rounded-lg p-2 w-full"
+            />
+            <button className="w-full bg-teal-500 text-white py-2 rounded-lg">
+              Login
+            </button>
+          </form>
 
-            <div className="flex justify-between text-sm mt-4">
-              <button
-                onClick={() => setShowForgot(true)}
-                className="text-teal-500"
-              >
-                Forgot password?
-              </button>
-              <button
-                onClick={() => {
-                  router.push("/create-account");
-                  closeLoginModal();
-                }}
-                className="text-teal-500"
-              >
-                Sign up
-              </button>
-            </div>
-          </>
-        ) : (
-          <ForgotPasswordForm onDone={() => setShowForgot(false)} />
-        )}
+          <div className="flex justify-between text-sm mt-4">
+            <button
+              onClick={() => setShowForgot(true)}
+              className="text-teal-500"
+            >
+              Forgot password?
+            </button>
+            <button
+              onClick={() => {
+                router.push("/create-account");
+                closeLoginModal();
+              }}
+              className="text-teal-500"
+            >
+              Sign up
+            </button>
+          </div>
+        </>
+      ) : mfa ? (
+        <div className="space-y-3">
+          <input
+            type="text"
+            placeholder="Enter 6-digit code"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.trim())}
+            className="border rounded-lg p-2 w-full"
+          />
+          <button
+            onClick={verifyMfa}
+            className="w-full bg-teal-500 text-white py-2 rounded-lg"
+          >
+            Verify & Continue
+          </button>
+        </div>
+      ) : (
+        <ForgotPasswordForm onDone={() => setShowForgot(false)} />
+      )}
       </Modal>
     </>
   );

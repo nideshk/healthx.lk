@@ -26,30 +26,9 @@ const TrackBookingsTab: React.FC = () => {
               <Input type="date" label="From Date" />
               <Input type="date" label="To Date" />
     
-              <div>
-                <label className="text-xs text-slate-600 mb-1 block">
-                  Specialty
-                </label>
-                <select className="w-full border border-slate-300 rounded-lg p-2 text-sm">
-                  <option>All Specialties</option>
-                  <option>General Physician</option>
-                  <option>Psychiatry</option>
-                </select>
-              </div>
+             
             </div>
     
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs text-slate-600 mb-1 block">
-                  Doctor
-                </label>
-                <select className="w-full border border-slate-300 rounded-lg p-2 text-sm">
-                  <option>All doctors</option>
-                  <option>Dr. Kumari Silva</option>
-                  <option>Dr. Nimal Perera</option>
-                </select>
-              </div>
-            </div>
           </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
