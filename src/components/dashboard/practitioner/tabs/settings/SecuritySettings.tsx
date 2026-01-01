@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { toast } from "react-toastify";
 
@@ -18,8 +18,6 @@ const SecuritySettings: React.FC = () => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const toastId = toast.loading("Starting two-factor authentication…");
-
 
   console.log("🧩 [RENDER] SecuritySettings", {
     twoFactorEnabled,
@@ -75,19 +73,14 @@ const SecuritySettings: React.FC = () => {
 
     setLoading(true);
     setError(null);
-
+    toast.info("Starting two-factor authentication…")
     const { data, error } =
       await supabaseClient.auth.mfa.enroll({
         factorType: "totp",
       });
 
     if (error || !data) {
-      toast.update(toastId, {
-        render: error?.message || "Failed to start MFA enrollment",
-        type: "error",
-        isLoading: false,
-        autoClose: 2000,
-      });
+      toast.error(error?.message || "Failed to start MFA enrollment")
       setError(error?.message ?? "Failed to start MFA enrollment");
       setLoading(false);
       return;
@@ -114,12 +107,7 @@ const SecuritySettings: React.FC = () => {
 
     if (error || !data) {
       console.error("🔴 [CP-4] challenge error:", error);
-      toast.update(toastId, {
-        render: error?.message || "Unable to start verification",
-        type: "error",
-        isLoading: false,
-        autoClose: 2000,
-      });
+      toast.error(error?.message || "Unable to start verification")
       setError(error?.message ?? "Failed to create challenge");
       setLoading(false);
       return;
@@ -146,17 +134,13 @@ const SecuritySettings: React.FC = () => {
       });
 
     if (error) {
-      toast.update(toastId, {
-        render: "Invalid code. Please try again.",
-        type: "error",
-        isLoading: false,
-        autoClose: 2000,
-      });
+      toast.error(error?.message || "Invalid code. Please try again.")
       setError(error.message);
       setLoading(false);
       return;
     }
 
+    toast.success("MFA enrollment successful")
     // Re-check MFA status
     const { data: factors } =
       await supabaseClient.auth.mfa.listFactors();
@@ -191,6 +175,7 @@ const SecuritySettings: React.FC = () => {
       toast.error("Unable to disable two-factor authentication");
       return;
     }
+    toast.success("MFA enrollment disabled successful")
 
     setTwoFactorEnabled(false);
   };

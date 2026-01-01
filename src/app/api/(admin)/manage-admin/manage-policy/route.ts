@@ -36,25 +36,23 @@ export async function GET() {
   if (!authorized) return response;
 
   // 2️⃣ Must be superadmin
-  if (!user?.admin || user.admin.role !== "superadmin") {
+  if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
+    return NextResponse.json(
+      { success: false, message: "Forbidden" },
+      { status: 403 }
+    );
+  }
+  // Must be admin or superadmin
+  if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
     return NextResponse.json(
       { success: false, message: "Forbidden" },
       { status: 403 }
     );
   }
 
-  // 3️⃣ Must have manage policy permission
-  if (!user.admin.policies.includes("super_admin:manage_policy")) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Missing super_admin:manage_policy policy",
-      },
-      { status: 403 }
-    );
-  }
-
-  // 4️⃣ Fetch all policies (source of truth)
+  const isSuperAdmin = user.admin.role === "superadmin";
+  
+  //  Fetch all policies (source of truth)
   const { data: allPoliciesRaw, error: policyError } = await supabaseAdmin
     .from("policies")
     .select("code, description");
@@ -73,7 +71,7 @@ export async function GET() {
     }));
 
   // 5️⃣ Fetch admins with assigned policies
-  const { data: admins, error } = await supabaseAdmin
+  let adminQuery = supabaseAdmin
     .from("admin_users")
     .select(`
       id,
@@ -84,7 +82,17 @@ export async function GET() {
         policy_code
       )
     `)
+    .eq("is_active", true)
     .order("created_at", { ascending: false });
+
+    /**
+     * Admins should NOT see superadmins
+     */
+  if (!isSuperAdmin) {
+    adminQuery = adminQuery.eq("role", "admin");
+  }
+
+  const { data: admins, error } = await adminQuery;
 
   if (error) {
     return NextResponse.json(
@@ -106,6 +114,17 @@ export async function GET() {
       (p) => !assigned.includes(p.code)
     );
 
+    if (!isSuperAdmin) {
+  // Admin view — NO policies
+      return {
+        id: admin.id,
+        full_name: admin.full_name,
+        email: admin.email,
+        role: admin.role,
+      };
+    }
+
+    // Superadmin view — include policies
     return {
       id: admin.id,
       full_name: admin.full_name,
