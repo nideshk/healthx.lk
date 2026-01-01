@@ -1,0 +1,61 @@
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireUser } from "@/lib/authGuard";
+
+export async function GET(request: Request) {
+  try {
+    const { authorized, user } = await requireUser();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!authorized || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Fetch the appoiontment details
+    const { data: appt, error: apptError } = await supabaseAdmin
+      .from("appointments")
+      .select(`
+        id,
+        starts_at,
+        patient_id,
+        practitioner_id,
+        appointment_type_id,
+        fee_charged
+      `)
+      .eq("id", id)
+      .maybeSingle();
+
+    if (apptError) throw new Error(apptError.message);
+    if (!appt) {
+       return NextResponse.json({ error: `Appointment ${id} not found in DB.` }, { status: 404 });
+    }
+
+    // Fetch the related data separately
+    const [patientRes, practitionerRes, typeRes, consentsRes] = await Promise.all([
+      supabaseAdmin.from("patients").select("full_name, email, contact_number, address").eq("id", appt.patient_id).maybeSingle(),
+      supabaseAdmin.from("practitioners").select("id, full_name, profile_bio").eq("id", appt.practitioner_id).maybeSingle(),
+      supabaseAdmin.from("appointment_type").select("id, name, base_fee, duration_mins").eq("id", appt.appointment_type_id).maybeSingle(),
+      supabaseAdmin.from("consents").select('telehealth, terms').eq('appointment_id', appt.id)
+    ]);        
+
+    const formattedData = {
+      selectedDoctor: practitionerRes.data,
+      appointmentType: typeRes.data,
+      starts_at: appt.starts_at,
+      fullName: patientRes.data?.full_name,
+      email: patientRes.data?.email,
+      phone: patientRes.data?.contact_number,
+      fee_charged:appt?.fee_charged,
+      address: patientRes.data?.address,
+      selectedService: { name: "Medical Consultation" }, 
+      consents: consentsRes.data,
+      selectedAttendees: []
+    };
+
+    return NextResponse.json(formattedData);
+  } catch (err: any) {
+    console.error("API Error Detail:", err.message);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

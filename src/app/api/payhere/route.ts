@@ -58,19 +58,39 @@ export async function POST(request: Request) {
 
         // These are paramters that we expect from the booking form
         const {
-            first_name, last_name, email, phone, address, city, country, booking_amount, appointment_id, practitioner_id, consultation_fee, platform_fee
+            first_name, last_name, email, phone, address, city, country, appointment_id, practitioner_id, consultation_fee, platform_fee
         } = body;
 
         // if any required field is missing, return error 
-        if (!first_name || !last_name || !email || !phone || !address || !city || !country || !booking_amount || !appointment_id || !practitioner_id) {
+        if (!first_name || !last_name || !email || !phone || !address || !city || !country || !appointment_id || !practitioner_id) {
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
+        }
+        
+        const supabase = await supabaseServer();
+
+        // Get the appointment based on appointment_id from frontend
+        const {data: appt, error: apptError} = await supabase
+        .from('appointments')
+        .select('patient_id, fee_charged')
+        .eq('id', appointment_id)
+        .single();
+
+        if(!appt || apptError)
+        {
+            return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+        }
+
+        if(appt.patient_id !== patient_id)
+        {
+            return NextResponse.json({ error: "Unauthorized: This appointment does not belong to you." }, { status: 403 });
         }
 
         const orderID = appointment_id;
-        const formattedAmount = parseFloat(booking_amount).toFixed(2);
 
-        const supabase = await supabaseServer();
-        const { data: dbData, error: dbError } = await supabase.from('transactions').insert({
+        // Using total fee stored in DB instead of passing it from front-end directly
+        const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
+        
+        const { data: dbData, error: dbError } = await supabase.from('transactions').upsert({
             order_id: orderID,
             status: 'pending',
             amount: formattedAmount,
@@ -85,7 +105,10 @@ export async function POST(request: Request) {
             appointment_id: appointment_id,
             practitioner_id: practitioner_id,
             consultation_fee: parseFloat(consultation_fee).toFixed(2),
-            platform_fee: parseFloat(platform_fee).toFixed(2)
+            platform_fee: parseFloat(platform_fee).toFixed(2),
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'order_id'
         });
 
         if (dbError) {
@@ -114,7 +137,6 @@ export async function POST(request: Request) {
         const notifyUrl = `${publicDomain}${PAYHERE_NOTIFY_PATH}`;
 
         console.log("Notify URL : ", notifyUrl);
-        
 
         // Final PayHere payment payload (With fields from form and other required fields)
         const payHerePayload = {
