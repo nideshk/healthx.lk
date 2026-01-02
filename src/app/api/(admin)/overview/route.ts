@@ -1,15 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { DateTime } from "luxon";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export const runtime = "nodejs";
 
 const TIMEZONE = "Asia/Colombo";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const { authorized, role } = await requireUser();
+    const { authorized, role, user } = await requireUser();
 
     if (!authorized || role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -81,6 +83,26 @@ export async function GET() {
     // -----------------------------------
     // ✅ Response
     // -----------------------------------
+
+
+    const cnx = getAuditContext(req, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        success: true,
+        date: todayLocal.toISODate(),
+        timezone: TIMEZONE,
+        upcoming,
+        completed,
+        active_clinicians,
+      }
+    });
+
     return NextResponse.json({
       success: true,
       date: todayLocal.toISODate(),
@@ -90,7 +112,6 @@ export async function GET() {
       active_clinicians,
     });
   } catch (err: any) {
-    console.error("❌ Admin today stats error:", err);
     return NextResponse.json(
       { error: err.message || "Internal server error" },
       { status: 500 }

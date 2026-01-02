@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,7 @@ const STATUS_MAP: Record<string, string[]> = {
   cancelled: ["cancelled"],
 };
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { authorized, response, user } = await requireUser();
     if (!authorized) return response;
@@ -78,6 +79,17 @@ export async function GET(req: Request) {
   .lte("starts_at", `${toDate}T23:59:59`)
   .in("status", statuses)
   .range(from, to);
+
+
+  const cnx = getAuditContext(req, user);
+    await auditLog({
+      ...cnx,
+      action      : "VIEWED",
+      entityType  : "APPOINTMENT",
+      purpose     : "operations",
+      source      : "dashboard",
+      metadata    : { filters: { from: fromDate, to: toDate, type  }}
+    })
 
 
     const { data, error, count } = await query;
@@ -151,6 +163,20 @@ export async function GET(req: Request) {
       };
     });
 
+
+    await auditLog({
+      ...cnx,
+      action      : "VIEWED",
+      entityType  : "APPOINTMENT",
+      purpose     : "operations",
+      source      : "dashboard",
+      metadata    :  {
+        total: count ?? 0,
+        page,
+        per_page: perPage,
+        total_pages: count ? Math.ceil(count / perPage) : 0,
+      }
+    })
 
     return NextResponse.json({
       success: true,

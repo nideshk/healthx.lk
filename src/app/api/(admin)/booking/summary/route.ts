@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { authorized, user, response } = await requireUser();
     if (!authorized) return response;
@@ -54,6 +56,21 @@ export async function GET(request: Request) {
         cancelled++;
       }
     });
+    
+    const cnx = getAuditContext(request, user);
+    await auditLog({
+      ...cnx,
+      action      : "VIEWED",
+      entityType  : "APPOINTMENT",
+      purpose     : "operations",
+      source      : "dashboard",
+      metadata    : { stats: {
+        total_bookings: upcoming + completed + cancelled,
+        upcoming,
+        completed,
+        cancelled,
+      } },
+    })
 
     return NextResponse.json({
       success: true,

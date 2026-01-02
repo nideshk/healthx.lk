@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 /* -----------------------------------------
  * RBAC helper
@@ -30,7 +32,7 @@ function getAvailablePoliciesForRole(
 /* =========================================
  * GET: Fetch admins + policies
  * ========================================= */
-export async function GET() {
+export async function GET(req: NextRequest) {
   // 1️⃣ Auth
   const { authorized, user, response } = await requireUser();
   if (!authorized) return response;
@@ -137,6 +139,20 @@ export async function GET() {
     };
   });
 
+  const cnx = getAuditContext(req, user);
+
+  await auditLog({
+    ...cnx,
+    action: "VIEWED",
+    entityType: "ADMIN_USER",
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      data : result,
+      count: result.length
+    }
+  });
+
   return NextResponse.json({
     success: true,
     message: "Admins and policies fetched successfully",
@@ -147,7 +163,7 @@ export async function GET() {
 /* =========================================
  * PUT: Update admin policies
  * ========================================= */
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
   // 1️⃣ Auth
   const { authorized, user, response } = await requireUser();
   if (!authorized) return response;
@@ -257,6 +273,23 @@ export async function PUT(req: Request) {
       }))
     );
   }
+
+  
+  const cnx = getAuditContext(req, user);
+
+  await auditLog({
+    ...cnx,
+    action: "UPDATED",
+    entityType: "ADMIN_USER",
+    entityId: targetAdminId,
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      admin_id: targetAdminId,
+      policies,
+    }
+  });
+
 
   return NextResponse.json({
     success: true,

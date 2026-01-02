@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 /* -------------------------------------------------------------------------- */
 /*                                    GET                                     */
 /* -------------------------------------------------------------------------- */
 /* Fetch all appointment types */
 
-export async function GET() {
-  const { authorized, role } = await requireUser();
+export async function GET(req: NextRequest) {
+  const { authorized, role, user } = await requireUser();
   if (!authorized) {
     return NextResponse.json(
     { error: "You are not authorized." },
@@ -46,6 +48,19 @@ export async function GET() {
     );
   }
 
+  const cnx = getAuditContext(req, user);
+  await auditLog({
+    ...cnx,
+    action: "VIEWED",
+    entityType: "ADMIN_USER",
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      success: true,
+      data,
+    }
+  });
+
   return NextResponse.json({ success: true, data });
 }
 
@@ -55,7 +70,7 @@ export async function GET() {
 /* Create new appointment type */
 
 export async function POST(req: NextRequest) {
-  const { authorized, role } = await requireUser();
+  const { authorized, role, user } = await requireUser();
   if (!authorized) {
     return NextResponse.json(
     { error: "You are not authorized." },
@@ -109,6 +124,19 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+    const cnx = getAuditContext(req, user);
+  await auditLog({
+    ...cnx,
+    action: "CREATED",
+    entityType: "ADMIN_USER",
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      success: true,
+      data,
+    }
+  });
+
 
   return NextResponse.json({ success: true, data });
 }
@@ -119,7 +147,7 @@ export async function POST(req: NextRequest) {
 /* Update pricing fields ONLY */
 
 export async function PUT(req: NextRequest) {
-  const { authorized, role } = await requireUser();
+  const { authorized, role, user } = await requireUser();
   if (!authorized) {
     return NextResponse.json(
     { error: "You are not authorized." },
@@ -189,6 +217,19 @@ export async function PUT(req: NextRequest) {
 
     results.push(data);
   }
+
+    const cnx = getAuditContext(req, user);
+  await auditLog({
+    ...cnx,
+    action: "UPDATED",
+    entityType: "ADMIN_USER",
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      success: true,
+      data: results,
+    }
+  });
 
   return NextResponse.json({
     success: true,
