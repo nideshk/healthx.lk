@@ -65,7 +65,7 @@ export async function GET() {
    
     // role filters
     if (role === "patient") query.eq("patient_id", user?.patient_id);
-    if (role === "practitioner") query.eq("practitioner_id", user?.practitioner_id);
+    if (role === "practitioner") query.eq("practitioner_id", user?.practitioner_id).not("patient_id", "is", null);
 
     const { data: rawAppointments, error } = await query;
     if (error) {
