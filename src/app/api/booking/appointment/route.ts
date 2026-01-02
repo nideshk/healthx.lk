@@ -77,7 +77,7 @@ export async function GET() {
     }
 
     if (role === "practitioner") {
-      query = query.eq("practitioner_id", user?.practitioner_id);
+      query = query.eq("practitioner_id", user?.practitioner_id).not("patient_id", "is", null);
     }
 
     const { data: rawAppointments, error } = await query;
