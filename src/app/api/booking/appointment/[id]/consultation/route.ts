@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { signViewUrl } from "../route";
 
 type PostBody = {
   clinician_notes?: string | null;
@@ -61,6 +63,33 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     if (preErr) throw preErr;
 
     
+    let attachments: any[] = [];
+    
+      const { data } = await supabaseAdmin
+        .from("attachments")
+        .select(
+          `
+          *
+        `
+        )
+        .eq("appointment_id", appointmentId)
+        .eq("practitioner_id", user?.practitioner_id);
+console.log("Fetched attachments (practitioner):", data);
+      attachments = data ?? [];
+    
+
+    console.log("Fetched attachments:", attachments);
+      const signedAttachments = await Promise.all(
+        attachments.map(async (atc) => ({
+          id: atc.id,
+          file_name: atc.file_name,
+          file_type: atc.file_type,
+          file_size: atc.file_size,
+          created_at: atc.created_at,
+          view_url: await signViewUrl(atc.file_url),
+        }))
+      );
+    
     // Fetch encounter (assumes one encounter per appointment)
     const { data: encounter, error: encErr } = await supabaseClient
       .from("encounters")
@@ -70,7 +99,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       .maybeSingle();
     if (encErr) throw encErr;
 
-    return NextResponse.json({ consent: consent ?? null ,preconsult: preconsult ?? null, encounter: encounter ?? null }, { status: 200 });
+    return NextResponse.json({ consent: consent ?? null ,preconsult: preconsult ?? null, encounter: encounter ?? null, attachments: signedAttachments ?? [] }, { status: 200 });
   } catch (err: any) {
     console.error("GET /consultation error:", err);
     return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });

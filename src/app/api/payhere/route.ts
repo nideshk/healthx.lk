@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient as supabase } from "@/lib/supabaseServer"; // supabase Server
 import { requireUser } from "@/lib/authGuard";
-import crypto from "crypto";
+import crypto from 'crypto';
+import { supabaseServer } from "@/lib/supabaseServer";
 
 export async function POST(request: Request) {
     const { authorized, response, user } = await requireUser();
@@ -26,7 +26,6 @@ export async function POST(request: Request) {
 
     console.log("*******User patient_id:", patient_id);
 
-
     if (!patient_id) {
         console.log("User missing patient_id");
         return NextResponse.json({ error: "User profile incomplete for payment processing." }, { status: 400 });
@@ -36,6 +35,7 @@ export async function POST(request: Request) {
 
     try {
         const MERCHANT_ID = process.env.PAYHERE_MERCHANT_ID!;
+        const MERCHANT_SECRET = process.env.PAYHERE_MERCHANT_SECRET!;
         const currency = process.env.PAYHERE_CURRENCY || 'LKR';
         const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         const NGROK_URL = process.env.NGROK_URL;
@@ -58,23 +58,42 @@ export async function POST(request: Request) {
 
         // These are paramters that we expect from the booking form
         const {
-            first_name, last_name, email, phone, address, city, country, booking_amount, appointment_id, practitioner_id
+            first_name, last_name, email, phone, address, city, country, appointment_id, practitioner_id, consultation_fee, platform_fee
         } = body;
 
         // if any required field is missing, return error 
-        if (!first_name || !last_name || !email || !phone || !address || !city || !country || !booking_amount) {
+        if (!first_name || !last_name || !email || !phone || !address || !city || !country || !appointment_id || !practitioner_id) {
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
         }
+        
+        const supabase = await supabaseServer();
 
-        // Add null checks for appointment_id and practitioner_id (Not adding now because I am assuming I will always get them)
+        // Get the appointment based on appointment_id from frontend
+        const {data: appt, error: apptError} = await supabase
+        .from('appointments')
+        .select('patient_id, fee_charged')
+        .eq('id', appointment_id)
+        .single();
 
-        const orderID = crypto.randomUUID();
+        if(!appt || apptError)
+        {
+            return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+        }
 
-        const supabaseServer = await supabase();
-        const { data: dbData, error: dbError } = await supabaseServer.from('transactions').insert({
+        if(appt.patient_id !== patient_id)
+        {
+            return NextResponse.json({ error: "Unauthorized: This appointment does not belong to you." }, { status: 403 });
+        }
+
+        const orderID = appointment_id;
+
+        // Using total fee stored in DB instead of passing it from front-end directly
+        const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
+        
+        const { data: dbData, error: dbError } = await supabase.from('transactions').upsert({
             order_id: orderID,
-            status: 'PENDING',
-            amount: parseFloat(booking_amount).toFixed(2),
+            status: 'pending',
+            amount: formattedAmount,
             currency: currency,
             customer_email: email,
             customer_name: `${first_name} ${last_name}`,
@@ -84,7 +103,12 @@ export async function POST(request: Request) {
             customer_country: country,
             patient_id: patient_id,
             appointment_id: appointment_id,
-            practitioner_id: practitioner_id
+            practitioner_id: practitioner_id,
+            consultation_fee: parseFloat(consultation_fee).toFixed(2),
+            platform_fee: parseFloat(platform_fee).toFixed(2),
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'order_id'
         });
 
         if (dbError) {
@@ -94,32 +118,33 @@ export async function POST(request: Request) {
 
         console.log("DB : Created PENDING transaction with Order ID:", orderID);
 
-        // Construct URL to call our hash calculation API
-        const hashApiUrl = `${BASE_URL}/api/payhere/calculate-hash?amount=${booking_amount}&order_id=${orderID}`;
-        console.log("Hash API URL:", hashApiUrl);
+        // Creating hash directly here instead of calculate-hash route 
+        const hash = crypto
+            .createHash('md5')
+            .update(
+                MERCHANT_ID +
+                orderID +
+                formattedAmount +
+                currency +
+                crypto.createHash('md5').update(MERCHANT_SECRET).digest('hex').toUpperCase()
+            )
+            .digest('hex')
+            .toUpperCase();
 
-        // Generate hash for PayHere payment
-        const hashResponse = await fetch(hashApiUrl, {
-            method: 'GET',
-        });
+        const itemsDescription = `Medical Consultation (Ref: ${orderID})`;
 
-        if (!hashResponse.ok) {
-            const errData = await hashResponse.json();
-            throw new Error(errData.error || 'Failed to get hash from server.');
-        }
+        const publicDomain = NGROK_URL || BASE_URL;
+        const notifyUrl = `${publicDomain}${PAYHERE_NOTIFY_PATH}`;
 
-        // Extract data from hashResponse
-        const data: { order_id: string, hash: string; amount: string; currency: string } = await hashResponse.json();
-
-        const itemsDescription = `Booking Payment for your reservation (Ref: ${orderID})`;
+        console.log("Notify URL : ", notifyUrl);
 
         // Final PayHere payment payload (With fields from form and other required fields)
         const payHerePayload = {
-            sandbox: true,
+            sandbox: process.env.NODE_ENV !== 'production',
             merchant_id: MERCHANT_ID,
             return_url: `${BASE_URL}${PAYHERE_RETURN_PATH}`,
             cancel_url: `${BASE_URL}${PAYHERE_CANCEL_PATH}`,
-            notify_url: `${NGROK_URL}${PAYHERE_NOTIFY_PATH}`,
+            notify_url: notifyUrl,
             first_name,
             last_name,
             email,
@@ -127,10 +152,10 @@ export async function POST(request: Request) {
             address,
             city,
             country,
-            amount:data.amount,
+            amount:formattedAmount,
             currency,
-            order_id:data.order_id,
-            hash: data.hash,
+            order_id:orderID,
+            hash: hash,
             items: itemsDescription
         }
         return NextResponse.json({ payment: payHerePayload });

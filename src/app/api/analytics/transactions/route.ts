@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { pages } from "next/dist/build/templates/app-page";
 
 export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching)
 
@@ -31,29 +32,52 @@ export async function GET(req: Request) {
     const start = (page - 1) * pageSize;
     const end = start + pageSize - 1;
 
-    // Check if the status is valid
-    if (status) {
-        const allowedStatuses = ['refund', 'complete', 'pending'];
-        if (!allowedStatuses.includes(status)) {
-            return NextResponse.json(
-                { message: `Invalid status filter value: ${status}. Must be one of: refund, complete, pending.` },
-                { status: 400 }
-            );
-        }
+    // Validate status
+    const allowedStatuses = ['refund', 'paid', 'failed'];
+    if (status && !allowedStatuses.includes(status)) {
+        return NextResponse.json(
+            { message: "Invalid status filter" },
+            { status: 400 }
+        );
+    }
+
+    // Validate date helper
+    const isValidDate = (dateStr: string | null) => {
+        if (!dateStr) return true;
+
+        // Check if it's a real date and matches YYYY-MM-DD
+        const regex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!regex.test(dateStr)) return false;
+        const d = new Date(dateStr);
+        return d instanceof Date && !isNaN(d.getTime());
+    };
+
+    // Validate dates
+    if (!isValidDate(from) || !isValidDate(to)) {
+        return NextResponse.json({ message: "Invalid date format. Please use YYYY-MM-DD." }, { status: 400 });
     }
 
     try {
-        // Create base query
-        let query = supabaseClient.from("transactions").select("*, count()", { count: 'exact' });
-
+        // query to send analytics data
         const dateColumn = 'created_at';
+        const requiredFields = "amount, appointment_id, consultation_fee, created_at, currency, customer_email, customer_name, customer_phone, id, order_id, payment_id, platform_fee, practitioner_id, status";
+
+
+        let analyticsQuery = supabaseClient
+            .from("transactions")
+            .select("amount, platform_fee, consultation_fee, status")
+            .eq("status", "paid");
+
+        // Create base query
+        let query = supabaseClient.from("transactions").select(requiredFields, { count: 'exact' });
 
         if (from) {
-            // Filter transactions ON or AFTER the start of the 'from' date
+            analyticsQuery = analyticsQuery.gte(dateColumn, `${from}T00:00:00Z`);
             query = query.gte(dateColumn, `${from}T00:00:00Z`);
         }
+
         if (to) {
-            // Filter transactions ON or BEFORE the end of the 'to' date
+            analyticsQuery = analyticsQuery.lte(dateColumn, `${to}T23:59:59Z`);
             query = query.lte(dateColumn, `${to}T23:59:59Z`);
         }
 
@@ -63,24 +87,50 @@ export async function GET(req: Request) {
 
         query = query.order(dateColumn, { ascending: false }).range(start, end);
 
-        // Execute query
-        const { data: transactions, error, count: totalCount } = await query;
+        const [analyticsResult, listResult] = await Promise.all([
+            analyticsQuery,
+            query
+        ]);
 
-        if (error) {
-            console.error('Database Error:', error);
-            return NextResponse.json(
-                { message: 'Failed to fetch filtered transactions.' },
-                { status: 500 }
-            );
-        }
+        if (analyticsResult.error) throw analyticsResult.error;
+        if (listResult.error) throw listResult.error;
+
+        const analytics = (analyticsResult.data || []).reduce((acc, curr) => {
+            const gross = Number(curr?.amount || 0);
+            const platformFee = Number(curr?.platform_fee || 0);
+            const consultationFee = Number(curr?.consultation_fee || 0);
+            const serviceFee = Math.round(consultationFee * 0.05);
+            const tax = Math.round((consultationFee + serviceFee) * 0.08);
+
+            return {
+                totalGrossAmount: acc.totalGrossAmount + gross,
+                totalPlatformFees: acc.totalPlatformFees + platformFee,
+                totalConsultationFees: acc.totalConsultationFees + consultationFee,
+                totalServiceFees: acc.totalServiceFees + serviceFee,
+                totalTaxes: acc.totalTaxes + tax,
+                netAmount: acc.netAmount + platformFee,
+                totalCompletedTransactions: acc.totalCompletedTransactions + 1
+            };
+        }, {
+            totalGrossAmount: 0,
+            totalPlatformFees: 0,
+            totalConsultationFees: 0,
+            totalServiceFees: 0,
+            totalTaxes: 0,
+            netAmount: 0,
+            totalCompletedTransactions: 0
+        });
 
         return NextResponse.json({
-            message: "Filtered transactions fetched successfully.",
-            page,
-            pageSize,
-            totalCount: totalCount || 0,
-            count: transactions?.length || 0,
-            data: transactions || []
+            message: "Transactions fetched successfully.",
+            analytics,
+            pagination: {
+                totalRecords: listResult.count || 0,
+                currentPage: page,
+                pageSize: pageSize,
+                totalPages: Math.ceil((listResult.count || 0) / pageSize)
+            },
+            data: listResult.data || []
         });
 
     } catch (error) {

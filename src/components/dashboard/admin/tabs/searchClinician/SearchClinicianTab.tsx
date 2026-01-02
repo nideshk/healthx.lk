@@ -1,0 +1,204 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
+import Input from "@/components/atom/Input/Input";
+import ClinicianCard from "./ClinicianCard";
+import ClinicianProfileModal from "./ClinicianProfileModal";
+import Loader from "@/components/atom/Loader/Loader";
+
+const mapFees = (fees: any[] = []) => {
+  const standard = fees.find((f) => f.code === "standard_consultation");
+  const quick = fees.find((f) => f.code === "quick_consultation");
+
+  return {
+    standard: standard?.amount ?? 0,
+    quick: quick?.amount ?? 0,
+  };
+};
+
+const SearchClinicianTab: React.FC = () => {
+  const [search, setSearch] = useState("");
+  const [clinicians, setClinicians] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [limit] = useState(10);
+  const [offset] = useState(0);
+
+  useEffect(() => {
+    const fetchClinicians = async () => {
+      // Logic: Initial load/clear (length 0) OR search when length >= 3
+      if (search.length > 0 && search.length < 3) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const params = new URLSearchParams();
+        if (search.length >= 3) {
+          params.append("q", search);
+        }
+        params.append("limit", limit.toString());
+        params.append("offset", offset.toString());
+
+        const res = await fetch(`/api/practitioner?${params.toString()}`, {
+          credentials: "include",
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch clinicians");
+
+        const data = await res.json();
+        setClinicians(data.practitioners || []);
+      } catch (err: any) {
+        setError(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClinicians();
+  }, [search, limit, offset]);
+
+  type Clinician = {
+    id: string;
+    name: string;
+    specialty: string;
+    registration: string;
+    qualifications: string;
+    intro: string;
+    email: string;
+    bank: {
+      bankName: string;
+      accountName: string;
+      branch: string;
+      accountNumber: string;
+    };
+    fees: {
+      solo: number;
+      family: number;
+    };
+    ratings: {
+      overall: number;
+      advice: number;
+      punctuality: number;
+    };
+    tags: string[];
+  };
+
+  const [selectedClinician, setSelectedClinician] = useState<Clinician | null>(null);
+  const [openProfile, setOpenProfile] = useState(false);
+
+  const handleViewProfile = async (id: string) => {
+    try {
+      const res = await fetch(`/api/practitioners/${id}`, {
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch practitioner");
+
+      const data = await res.json();
+      const p = data.practitioner || {};
+      const bank = data.bank_details?.[0] || {};
+
+      // Kept your existing bank and profile mapping intact
+      setSelectedClinician({
+        id: p.id,
+        name: p.full_name ?? "",
+        registration: p.license_number ?? "",
+        specialty: p.specialization?.[0] ?? "",
+        qualifications: p.qualifications ?? "",
+        intro: p.profile_bio ?? "",
+        email: p.contact_email ?? "",
+        bank: {
+          bankName: bank.bank_name ?? "",
+          accountName: bank.account_holder_name ?? "",
+          branch: bank.branch_name ?? "",
+          accountNumber: bank.account_number ?? "",
+        },
+        fees: {
+          solo: p.fees?.solo || 0,
+          family: p.fees?.family || 0,
+        },
+        ratings: { overall: 0, advice: 0, punctuality: 0 },
+        tags: p.specialization ?? [],
+      });
+
+      setOpenProfile(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div>
+            <div className="text-sm font-semibold text-slate-900">
+              Search Clinicians
+            </div>
+            <div className="text-xs text-slate-500">
+              Find clinicians and view quick details. Click name to open profile.
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardBody className="space-y-4">
+          <Input
+            placeholder="Search by name, specialty, or registration..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
+          {openProfile && (
+            <ClinicianProfileModal
+              open={openProfile}
+              onClose={() => setOpenProfile(false)}
+              clinician={selectedClinician}
+            />
+          )}
+
+          <div className="space-y-3 min-h-[100px] relative">
+            {/* Custom Loader Component integration */}
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <Loader />
+              </div>
+            ) : (
+              <>
+                {clinicians.length > 0 ? (
+                  clinicians.map((c) => (
+                    <ClinicianCard
+                      key={c.id}
+                      clinician={{
+                        id: c.id,
+                        name: c.full_name,
+                        specialty: c.qualification,
+                        registration: c.license_number,
+                        tags: c.specialization,
+                        experience: c.experience_years,
+                        // Fix: Using mapFees to transform the raw array for the card
+                        fees: mapFees(c.fees),
+                      }}
+                      onViewProfile={handleViewProfile}
+                    />
+                  ))
+                ) : (
+                  /* Message shows when search results are empty */
+                  <div className="text-xs text-slate-500 py-10 text-center">
+                    No clinicians found.
+                  </div>
+                )}
+              </>
+            )}
+
+            {error && <div className="text-xs text-red-600">{error}</div>}
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+};
+
+export default SearchClinicianTab;

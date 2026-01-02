@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { redirect, useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { DateTime } from "luxon";
@@ -11,11 +11,18 @@ import {
   Pencil,
   Trash2,
   AlertCircle,
+  FileText,
+  Download,
+  Paperclip,
+  UserCircle2,
+  CalendarDays,
+  Clock,
 } from "lucide-react";
 import Modal from "@/components/atom/Modal/Modal";
 import { toast } from "react-toastify";
+import Loader from "@/components/atom/Loader/Loader";
 
-/* ---------------- SMALL UI HELPER ---------------- */
+/* ---------------- UI HELPER ---------------- */
 function InfoRow({
   label,
   value,
@@ -24,9 +31,9 @@ function InfoRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="font-medium text-gray-900">{value}</p>
+    <div>
+      <p className="text-xs uppercase text-gray-500">{label}</p>
+      <p className="font-medium text-gray-900 mt-1">{value}</p>
     </div>
   );
 }
@@ -53,55 +60,51 @@ export default function AppointmentDetailsPage() {
   useEffect(() => {
     axios
       .get(`/api/booking/appointment/${params.id}`)
-      .then((res) => setAppointment(res.data))
+      .then((res) => {
+       setAppointment(res.data)
+      })
       .catch(() => toast.error("Failed to load appointment"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [params.id]);
 
-  if (loading) return <div className="p-10">Loading…</div>;
-  if (!appointment) return <div className="p-10 text-red-500">Not Found</div>;
+  if (loading)
+    return (
+      <div className="h-screen flex justify-center items-center">
+        <Loader size="lg"/>
+      </div>
+    );
+
+  if (!appointment)
+    return <div className="p-10 text-red-500">Appointment not found</div>;
 
   /* ---------------- TIME ---------------- */
   const tz = appointment.practitioner?.timezone || "Asia/Kolkata";
-  const startLocal = DateTime.fromISO(appointment.starts_at).setZone(tz);
-  const endLocal = DateTime.fromISO(appointment.ends_at).setZone(tz);
+  const start = DateTime.fromISO(appointment.starts_at).setZone(tz);
+  const end = DateTime.fromISO(appointment.ends_at).setZone(tz);
 
-  const readableDate = startLocal.toFormat("EEEE, MMM dd yyyy");
-  const readableTime = `${startLocal.toFormat("hh:mm a")} — ${endLocal.toFormat(
-    "hh:mm a"
-  )}`;
+  const readableDate = start.toFormat("EEEE, MMM dd yyyy");
+  const readableTime = `${start.toFormat("hh:mm a")} — ${end.toFormat("hh:mm a")}`;
 
-  const isPastAppointment = startLocal < DateTime.now();
+  const isPast = start < DateTime.now();
   const isCancelled = appointment.status === "cancelled";
-  const canReschedule =
-    !isPastAppointment &&
-    !isCancelled &&
-    startLocal.diffNow("hours").hours >= 6;
+  const canReschedule = !isPast && !isCancelled && start.diffNow("hours").hours >= 6;
 
   /* ---------------- SHARE ---------------- */
-  const handleShare = async () => {
+  async function handleShare() {
     const text = `
 Appointment Details
 
 Doctor: ${appointment.practitioner.full_name}
-Specialization: ${appointment.practitioner.specialization?.join(", ") || "—"}
-
 Date: ${readableDate}
 Time: ${readableTime}
 
 Join Link:
 ${appointment.telehealth_url || "Not available"}
-
-— Clinico Telehealth
     `.trim();
 
     try {
       if (navigator.share) {
-        await navigator.share({
-          title: "Appointment Details",
-          text,
-          url: appointment.telehealth_url || undefined,
-        });
+        await navigator.share({ title: "Appointment", text });
       } else {
         await navigator.clipboard.writeText(text);
         toast.success("Appointment details copied");
@@ -109,220 +112,261 @@ ${appointment.telehealth_url || "Not available"}
     } catch {
       toast.error("Unable to share appointment");
     }
-  };
+  }
 
   /* ---------------- CANCEL ---------------- */
   async function performCancel() {
-    if (!cancelReason) return toast.error("Please select a reason");
-
-    const finalReason =
+    const reason =
       cancelReason === "Other" ? customReason.trim() : cancelReason;
 
-    if (cancelReason === "Other" && !finalReason) {
-      return toast.error("Please enter a reason");
-    }
+    if (!reason) return toast.error("Please provide a reason");
 
     try {
       await axios.patch(`/api/booking/appointment/${appointment.id}`, {
         action: "cancel",
-        reason: finalReason,
+        reason,
       });
-
       toast.success("Appointment cancelled");
-      setShowCancelModal(false);
       router.push("/dashboard/appointment");
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.error || "Failed to cancel appointment"
-      );
+      toast.error(err?.response?.data?.error || "Failed to cancel");
     }
   }
 
-  /* ---------------- UI ---------------- */
+  /* ---------------- STATUS BADGE ---------------- */
+  const StatusBadge = () => {
+    if (isCancelled)
+      return (
+        <span className="px-3 py-1 rounded-full text-xs bg-red-100 text-red-700">
+          Cancelled
+        </span>
+      );
+    if (isPast)
+      return (
+        <span className="px-3 py-1 rounded-full text-xs bg-gray-200 text-gray-700">
+          Completed
+        </span>
+      );
+    return (
+      <span className="px-3 py-1 rounded-full text-xs bg-green-100 text-green-700">
+        Confirmed
+      </span>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="flex items-center gap-3 p-6">
-        <button
-          onClick={() => router.back()}
-          className="p-2 rounded-full hover:bg-gray-100"
-        >
-          <ArrowLeft className="w-5 h-5" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* STATUS BAR */}
+      <div className="flex items-center gap-3 p-6 border-b bg-white/80 backdrop-blur sticky top-0 z-10 shadow-sm">
+        <button onClick={() => router.back()} className="p-2 hover:bg-blue-100 rounded-full">
+          <ArrowLeft />
         </button>
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Appointment Details
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <UserCircle2 className="w-7 h-7 text-blue-600" /> Appointment Details
         </h1>
+        <div className="ml-auto flex items-center gap-2">
+          <StatusBadge />
+        </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 pb-24 space-y-8">
-        {/* ================= SUMMARY ================= */}
-        <section className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Appointment Summary</h2>
-
-            {isCancelled ? (
-              <span className="px-3 py-1 rounded-full text-xs bg-red-100 text-red-700">
-                Cancelled
-              </span>
-            ) : isPastAppointment ? (
-              <span className="px-3 py-1 rounded-full text-xs bg-gray-200 text-gray-700">
-                Completed
-              </span>
-            ) : (
-              <span className="px-3 py-1 rounded-full text-xs bg-green-100 text-green-700">
-                Confirmed
-              </span>
-            )}
-          </div>
-
-          <div className="border-t" />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <InfoRow
-              label="Doctor"
-              value={appointment.practitioner.full_name}
+      <div className="max-w-7xl mx-auto px-4 pb-24 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-10">
+        {/* LEFT: Main Details */}
+        <div className="col-span-2 flex flex-col gap-10">
+          {/* SUMMARY CARD */}
+          <section className="bg-white border rounded-3xl shadow-lg p-8 flex flex-col md:flex-row gap-8 items-center">
+            <img
+              src={appointment.practitioner.profile_picture_url || "/doctor-placeholder.png"}
+              className="w-28 h-28 rounded-full border-2 border-blue-200 object-cover shadow-lg"
+              alt="Doctor profile"
             />
-            <InfoRow
-              label="Specialization"
-              value={
-                appointment.practitioner.specialization?.join(", ") || "—"
-              }
-            />
-            <InfoRow label="Date" value={readableDate} />
-            <InfoRow label="Time" value={readableTime} />
-            <InfoRow
-              label="Duration"
-              value={`${appointment.appointment_type?.duration_mins} minutes`}
-            />
-            <InfoRow
-              label="Mode"
-              value={
-                <span className="flex items-center gap-1 text-blue-600">
-                  <Video className="w-4 h-4" />
-                  Online
+            <div className="flex-1 space-y-2">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-2xl font-bold text-gray-900">
+                  Dr. {appointment.practitioner.full_name}
                 </span>
-              }
-            />
-          </div>
-
-          {/* JOIN */}
-          <div className="border-t pt-5 space-y-3">
-            <p className="text-sm font-medium text-gray-700">
-              Join Consultation
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                readOnly
-                value={
-                  appointment.telehealth_url ||
-                  "No telehealth link available"
-                }
-                className="flex-1 px-4 py-2.5 text-xs border rounded-xl bg-gray-50 truncate"
-              />
-
-              <button
-                disabled={isPastAppointment}
-                onClick={() =>
-                  window.open(appointment.telehealth_url, "_blank")
-                }
-                className={`px-4 py-2 rounded-xl text-sm font-medium ${
-                  isPastAppointment
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                Join
-              </button>
+                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                  {appointment.practitioner.specialization?.join(", ")}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-3 mt-2">
+                <span className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-full text-sm">
+                  <CalendarDays className="w-4 h-4 text-blue-500" /> {readableDate}
+                </span>
+                <span className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-full text-sm">
+                  <Clock className="w-4 h-4 text-blue-500" /> {readableTime}
+                </span>
+                <span className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm">
+                  <Video className="w-4 h-4" /> Online
+                </span>
+                <span className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-full text-sm">
+                  ⏱ {appointment.appointment_type.duration_mins} mins
+                </span>
+              </div>
+              <div className="mt-4 flex gap-3">
+                <input
+                  readOnly
+                  value={appointment.telehealth_url || "No telehealth link"}
+                  className="flex-1 px-4 py-2 text-xs bg-gray-50 border rounded-xl truncate"
+                />
+                <button
+                  disabled={!appointment.telehealth_url || isPast}
+                  onClick={() => window.open(appointment.telehealth_url, "_blank")}
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white disabled:bg-gray-300 shadow"
+                >
+                  Join
+                </button>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* ================= ACTIONS ================= */}
-        <section className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold">Actions</h2>
+          {/* PRE-CONSULTATION CARD */}
+          <section className="bg-white border rounded-3xl shadow p-8">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 border-b pb-3">
+              <Paperclip className="w-6 h-6 text-blue-500" /> Pre-Consultation Notes
+            </h2>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6">
+              <p className="text-xs uppercase text-blue-600 mb-1">Main Concern</p>
+              <p className="font-medium text-gray-800 text-lg">
+                {appointment?.notes?.raw_payload.note?.concern}
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-6">
+              <InfoRow
+                label="Expected Outcome"
+                value={appointment?.notes?.raw_payload.note?.outcome}
+              />
+              <InfoRow
+                label="Referral"
+                value={appointment?.notes?.raw_payload.referral}
+              />
+            </div>
+          </section>
 
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={handleShare}
-              className="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center gap-2 font-medium"
-            >
-              <Share2 className="w-4 h-4" />
-              Share Appointment
-            </button>
-
-            {!isPastAppointment && !isCancelled && (
-              <>
-                <button
-                  disabled={!canReschedule}
-                  onClick={() =>
-                    router.push(`/dashboard/reschedule/${appointment.id}`)
-                  }
-                  className={`px-6 py-3 rounded-xl flex items-center gap-2 font-medium ${
-                    canReschedule
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  <Pencil className="w-4 h-4" />
-                  Reschedule Appointment
-                </button>
-
-                <button
-                  onClick={() => setShowCancelModal(true)}
-                  className="px-6 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 flex items-center gap-2 font-medium"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Cancel Appointment
-                </button>
-              </>
-            )}
-
-            {isPastAppointment && !isCancelled && (
-              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-100 text-gray-600 text-sm">
-                <AlertCircle className="w-4 h-4" />
-                This appointment has already taken place.
+          {/* ATTACHMENTS CARD */}
+          <section className="bg-white border rounded-3xl shadow p-8">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 border-b pb-3">
+              <FileText className="w-6 h-6 text-blue-500" /> Attachments
+            </h2>
+            {appointment.attachments.length === 0 ? (
+              <p className="text-sm text-gray-500">No attachments uploaded.</p>
+            ) : (
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {appointment.attachments.map((file: any) => {
+                  const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(file.file_name);
+                  return (
+                    <div
+                      key={file.id}
+                      className="group border rounded-xl p-4 hover:shadow-lg transition flex flex-col items-center bg-gray-50"
+                    >
+                      <div className="w-full flex items-center gap-2 mb-2">
+                        <Paperclip className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm font-medium truncate flex-1">{file.file_name}</span>
+                      </div>
+                      <div className="relative w-full flex flex-col items-center">
+                        {isImage ? (
+                          <img
+                            src={file.view_url}
+                            className="rounded-lg max-h-40 mx-auto border"
+                            alt={file.file_name}
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-32 w-full bg-white border rounded-lg text-gray-400">
+                            <FileText className="w-10 h-10 mb-2" />
+                            <span className="text-xs">No preview</span>
+                          </div>
+                        )}
+                        <div className="flex gap-2 mt-3">
+                          {isImage && (
+                            <a
+                              href={file.view_url}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300 transition"
+                            >
+                              View
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
-          </div>
-        </section>
+          </section>
+        </div>
+
+        {/* RIGHT: Sidebar for Actions and Status */}
+        <div className="col-span-1 flex flex-col gap-10">
+          <section className="bg-white border rounded-3xl shadow p-8 sticky top-28">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 border-b pb-3">
+              <AlertCircle className="w-6 h-6 text-blue-500" /> Actions
+            </h2>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleShare}
+                className="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 flex gap-2 items-center font-medium shadow"
+              >
+                <Share2 className="w-4 h-4" /> Share Appointment
+              </button>
+              {!isPast && !isCancelled && (
+                <>
+                  <button
+                    disabled={!canReschedule}
+                    onClick={() =>
+                      router.push(`/dashboard/reschedule/${appointment.id}`)
+                    }
+                    className="px-6 py-3 rounded-xl bg-blue-600 text-white disabled:bg-gray-300 flex gap-2 items-center font-medium shadow"
+                  >
+                    <Pencil className="w-4 h-4" /> Reschedule
+                  </button>
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="px-6 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 flex gap-2 items-center font-medium shadow"
+                  >
+                    <Trash2 className="w-4 h-4" /> Cancel Appointment
+                  </button>
+                </>
+              )}
+              {isPast && !isCancelled && (
+                <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-xl text-sm text-gray-600">
+                  <AlertCircle className="w-4 h-4" />
+                  This appointment has already occurred.
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
       </div>
 
-      {/* ================= CANCEL MODAL ================= */}
+      {/* CANCEL MODAL */}
       <Modal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         title="Cancel Appointment"
-        theme="light"
       >
         <div className="space-y-4">
-          {CANCEL_REASONS.map((reason) => (
-            <label
-              key={reason}
-              className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50"
-            >
+          {CANCEL_REASONS.map((r) => (
+            <label key={r} className="flex gap-2 items-center">
               <input
                 type="radio"
-                checked={cancelReason === reason}
-                onChange={() => setCancelReason(reason)}
+                checked={cancelReason === r}
+                onChange={() => setCancelReason(r)}
               />
-              {reason}
+              {r}
             </label>
           ))}
-
           {cancelReason === "Other" && (
             <textarea
               value={customReason}
               onChange={(e) => setCustomReason(e.target.value)}
-              rows={4}
               className="w-full p-3 border rounded-xl"
-              placeholder="Please specify reason"
+              rows={3}
+              placeholder="Specify reason"
             />
           )}
-
           <button
             onClick={performCancel}
-            className="w-full bg-red-600 text-white py-2.5 rounded-xl font-medium hover:bg-red-700"
+            className="w-full bg-red-600 text-white py-2 rounded-xl font-semibold shadow"
           >
             Confirm Cancel
           </button>

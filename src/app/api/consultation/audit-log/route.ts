@@ -79,3 +79,85 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+export async function GET() {
+  /* ----------------------------------------
+     1️⃣ Authenticate
+  ---------------------------------------- */
+  const { user } = await requireUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  const isAdmin = user.role === "admin" || user.role === "superadmin";
+  const isPractitioner = user.role === "practitioner";
+
+  if (!isAdmin && !isPractitioner) {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403 }
+    );
+  }
+
+  /* ----------------------------------------
+     2️⃣ Resolve practitioner_id (only if practitioner)
+  ---------------------------------------- */
+  let practitionerId = user.practitioner_id
+
+  /* ----------------------------------------
+     3️⃣ Build query
+  ---------------------------------------- */
+  let query = supabaseAdmin
+    .from("consultation_audit_summary")
+    .select(`
+      appointment_id,
+      meeting_started_at,
+      meeting_ended_at,
+      meeting_duration_seconds,
+      participant_summary,
+      event_timeline,
+      created_at,
+      last_processed_at,
+      practitioner_id,
+      appointment:appointments (
+        id,
+        status,
+        starts_at,
+        ends_at,
+        practitioner_no_show,
+        patient_no_show,
+        call_ended_at
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  /* ----------------------------------------
+     4️⃣ Scope for practitioner
+  ---------------------------------------- */
+  if (isPractitioner && practitionerId) {
+    query = query.eq("practitioner_id", practitionerId);
+  }
+
+  /* ----------------------------------------
+     5️⃣ Execute
+  ---------------------------------------- */
+  const { data, error } = await query;
+
+  if (error) {
+    console.error(
+      "Failed to fetch consultation audit summaries:",
+      error
+    );
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ data });
+}
+
+

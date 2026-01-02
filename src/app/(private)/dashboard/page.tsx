@@ -10,38 +10,42 @@ import Loader from "@/components/atom/Loader/Loader";
 import { redirect } from "next/navigation";
 import { toast } from "react-toastify";
 
+type Role = "patient" | "practitioner" | "admin" | "superadmin";
+
 export default function DashboardPage() {
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     async function loadRole() {
-      // 1️⃣ Check localStorage cache
-      const cached = localStorage.getItem("user_role");
-      if (cached) {
-        setRole(cached);
-        setLoading(false);
-        return;
-      }
-
-      // 2️⃣ Fetch from backend
       try {
         const res = await axios.get("/api/auth/me");
-        const r = res.data?.user?.role;
-        let userid ;
-        if(role === "patient"){
-         userid = res.data?.user?.patient_id;
+        const user = res.data?.user;
+
+        if (!user?.role) {
+          throw new Error("No role");
         }
-        else if(role === "practitioner"){
-         userid = res.data?.user?.practitioner_id;
-        }
-        if (r) {
-          localStorage.setItem("user_role", r); // Cache role
-          localStorage.setItem("user_id", userid); // Cache user id
-          setRole(r);
+
+        // ✅ SOURCE OF TRUTH = BACKEND
+        setRole(user.role);
+
+        // Optional cache (safe now)
+        localStorage.setItem("user_role", user.role);
+
+        if (user.role === "patient") {
+          localStorage.setItem("user_id", user.patient_id);
+        } else if (user.role === "practitioner") {
+          localStorage.setItem("user_id", user.practitioner_id);
+        } else if (user.role === "admin") {
+          localStorage.setItem("user_id", user.admin_id);
         }
       } catch (err) {
+        // ❌ Clear stale cache
+        localStorage.removeItem("user_role");
+        localStorage.removeItem("user_id");
+
         toast.error("Please login to access the dashboard.");
-        setRole(null);
+        redirect("/");
       } finally {
         setLoading(false);
       }
@@ -50,7 +54,7 @@ export default function DashboardPage() {
     loadRole();
   }, []);
 
-  // 3️⃣ Loading State
+  /* ---------------- LOADING ---------------- */
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -59,16 +63,10 @@ export default function DashboardPage() {
     );
   }
 
-  // 4️⃣ Role-Based Rendering
-  if (role === "patient") {
-    return <PatientDashboard />;}
-  if (role === "practitioner"){ 
-    return <PractitionerDashboard />;
-  }
-  if  (role === "admin") {
-    return <AdminDashboard />;
-  }
-  else{
-    redirect("/")
-  }
+  /* ---------------- ROLE BASED ---------------- */
+  if (role === "patient") return <PatientDashboard />;
+  if (role === "practitioner") return <PractitionerDashboard />;
+  if (role === "admin" || role === "superadmin") return <AdminDashboard />;
+
+  redirect("/");
 }
