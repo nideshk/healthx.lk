@@ -1,6 +1,8 @@
 import { supabaseAdmin } from "./supabaseAdmin";
 import { supabaseServer } from "./supabaseServer";
 
+export const dynamic = "force-dynamic";
+
 export async function requireUser() {
   const supabase = await supabaseServer();
 
@@ -8,9 +10,6 @@ export async function requireUser() {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-
-  console.log("Auth Guard - Supabase User:", user);
-
   
   if (!user || error) {
     return {

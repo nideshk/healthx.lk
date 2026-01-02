@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { redirect, useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { DateTime } from "luxon";
@@ -60,7 +60,9 @@ export default function AppointmentDetailsPage() {
   useEffect(() => {
     axios
       .get(`/api/booking/appointment/${params.id}`)
-      .then((res) => setAppointment(res.data))
+      .then((res) => {
+       setAppointment(res.data)
+      })
       .catch(() => toast.error("Failed to load appointment"))
       .finally(() => setLoading(false));
   }, [params.id]);
