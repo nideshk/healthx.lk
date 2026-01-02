@@ -61,13 +61,7 @@ export default function AppointmentDetailsPage() {
     axios
       .get(`/api/booking/appointment/${params.id}`)
       .then((res) => {
-        if(res.data.payment_status){
-          toast.info("Payment pending. Please complete payment to view details.");
-          router.push("/dashboard/appointment");
-        }
-        else{
-          setAppointment(res.data)
-        }
+       setAppointment(res.data)
       })
       .catch(() => toast.error("Failed to load appointment"))
       .finally(() => setLoading(false));
