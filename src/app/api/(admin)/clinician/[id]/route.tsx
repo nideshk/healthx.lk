@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { requireUser } from "@/lib/authGuard";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export const dynamic = "force-dynamic";
 
@@ -8,8 +11,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ⬅️ THIS is required for your typed routes setup
     const { id } = await context.params;
+
+    const {user} = await requireUser();
 
     if (!id) {
       return NextResponse.json(
@@ -47,6 +51,22 @@ export async function GET(
         { status: 404 }
       );
     }
+    
+    const cnx = getAuditContext(req,user);
+
+    await auditLog(
+      {
+        ...cnx,
+        action: "VIEWED",
+        entityType : "PRACTITIONER",
+        purpose : "operations",
+        entityId : data[0].id,
+        source : "dashboard",
+        metadata : {
+          practitioner_viewed : data[0]
+        }
+      }
+    );
 
     return NextResponse.json(
       {

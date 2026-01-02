@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 /* ---------------------------------------------------------
    GET HIPAA AUDIT LOGS (ADMIN ONLY)
@@ -109,6 +111,19 @@ export async function GET(req: NextRequest) {
     const { data, error, count } = await query;
 
     if (error) throw error;
+
+    const cnx = getAuditContext(req, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "HIPAA_AUDIT_LOG",
+      purpose: "compliance",
+      source: "admin_panel",
+      metadata: {
+        filters: { actorRole, action, entityType, entityId, from, to}
+      }
+    })
 
     return NextResponse.json({
       success: true,

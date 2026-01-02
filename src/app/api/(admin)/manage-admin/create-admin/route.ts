@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   // 1️⃣ Auth
   const { authorized, user, response } = await requireUser();
   if (!authorized) return response;
@@ -109,7 +111,7 @@ export async function POST(req: Request) {
   }
 
   // 6️⃣ Admin user
-  const { error: adminError } = await supabaseAdmin
+  const { data: adminData, error: adminError } = await supabaseAdmin
     .from("admin_users")
     .insert({
       supabase_user_id: authUserId,
@@ -127,6 +129,20 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+
+  const cnx = getAuditContext(req, user);
+  await auditLog({
+    ...cnx,
+    action: "CREATED",
+    entityType: "ADMIN_USER",
+    entityId: authUserId,
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      user_created: adminData,
+      role,
+    }
+  })
 
   return NextResponse.json(
     { message: "Admin created successfully" },

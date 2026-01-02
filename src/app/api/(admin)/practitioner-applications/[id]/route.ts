@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "@/lib/s3/s3";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET!;
 
@@ -25,7 +27,7 @@ async function signViewUrl(s3Key: string) {
 }
 
 export async function GET(
-  _req: Request,
+  _req: NextRequest,
   context: { params: Promise<{ id: string }> }) {
   try {
     // 🔐 Authentication check
@@ -120,6 +122,18 @@ export async function GET(
       );
     }
 
+     const cnx = getAuditContext(_req, user);
+  await auditLog({
+    ...cnx,
+    action: "EXPORTED",
+    entityType: "ADMIN_USER",
+    purpose: "operations",
+    source: "dashboard",
+    entityId : data.id || undefined,
+    metadata: {
+      success: true,
+    }
+  });
 
     return NextResponse.json({
       success: true,

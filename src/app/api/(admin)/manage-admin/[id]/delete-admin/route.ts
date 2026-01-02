@@ -1,23 +1,36 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function DELETE(
   _req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   // 1️⃣ Auth
+  const { id: targetAdminId } = await context.params;
   const { authorized, user, response } = await requireUser();
   if (!authorized) return response;
   console.log(user)
   if (!user?.admin) {
+    auditLog({
+      ...getAuditContext(_req as any, user),
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "insufficient_privileges"
+      }
+    });
     return NextResponse.json(
       { success: false, message: "Not an admin" },
       { status: 403 }
     );
   }
 
-  const { id: targetAdminId } = await context.params;
   // 2️⃣ Self-delete protection
   if (user.admin.id === targetAdminId) {
     return NextResponse.json(
@@ -59,6 +72,18 @@ export async function DELETE(
     user.admin.role === "admin" &&
     target.role === "superadmin"
   ) {
+    auditLog({
+      ...getAuditContext(_req as any, user),
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "insufficient_privileges"
+      }
+    });
+
     return NextResponse.json(
       {
         success: false,
@@ -80,6 +105,18 @@ export async function DELETE(
       target.role === "superadmin" &&
       !user.admin.policies.includes("super_admin:delete")
     ) {
+      auditLog({
+        ...getAuditContext(_req as any, user),
+        action: "FAILED_ACCESS",
+        entityType: "ADMIN_USER",
+        entityId: targetAdminId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "insufficient_privileges"
+        }
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -110,6 +147,20 @@ export async function DELETE(
         deleted_at: deletedAt,
       })
       .eq("id", target.supabase_user_id);
+
+    // ✅ Audit: admin requested delete
+    auditLog({
+      ...getAuditContext(_req as any, user),
+      action: "DELETED",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        event: "delete_requested"
+      }
+    });
+
 
     return NextResponse.json({
       success: true,
