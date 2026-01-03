@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 // Helper: calculate 2 week window
 function getDateRange() {
@@ -15,7 +17,7 @@ function getDateRange() {
 }
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   const { authorized, user, response } = await requireUser();
@@ -55,8 +57,22 @@ export async function GET(
   const isAdmin = user?.role === "admin";
   const isPatient = user?.role === "patient";
 
+  const cnx = getAuditContext(req, user);
   // Practitioners can only view THEIR OWN full data
   if (user?.role === "practitioner" && !isSelf) {
+
+    await auditLog({
+      ...cnx,
+      action: "DENIED",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "insufficient_privileges"
+      }
+    });
+
     return NextResponse.json(
       { error: "You cannot view another practitioner's data" },
       { status: 403 }
@@ -98,7 +114,7 @@ export async function GET(
   // -------------------------------------------------------
   // SANITIZE APPOINTMENTS FOR PATIENTS
   // -------------------------------------------------------
-  let sanitizedAppointments:any = appointments;
+  let sanitizedAppointments: any = appointments;
 
   if (isPatient) {
     sanitizedAppointments = appointments.map((appt) => ({
@@ -108,7 +124,7 @@ export async function GET(
       status: appt.status,
       patient: null, // hide patient details
       appointment_type: appt.appointment_type,
-      
+
     }));
   }
 
@@ -140,6 +156,20 @@ export async function GET(
   // -------------------------------------------------------
   // RETURN DATA BASED ON ROLE
   // -------------------------------------------------------
+  await auditLog({
+    ...cnx,
+    action: "VIEWED",
+    entityType: "PRACTITIONER",
+    entityId: practitionerId,
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      success: true,
+      practitioner: isAdmin || isSelf ? practitionerFull : practitionerPublic,
+      appointments: sanitizedAppointments,
+      range: { start, end }
+    }
+  });
   return NextResponse.json({
     success: true,
     practitioner: isAdmin || isSelf ? practitionerFull : practitionerPublic,
