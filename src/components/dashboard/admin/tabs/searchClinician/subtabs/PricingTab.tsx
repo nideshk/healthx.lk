@@ -159,7 +159,7 @@ const PricingTab: React.FC<PricingTabProps> = ({ clinicianId }) => {
             </span>
             <div className="mt-1">
               Platform fee of{" "}
-              <b>LKR {pricing[0].platformFee}</b> is applied per
+              <b>{pricing[0].platformFee} LKR</b> is applied per
               consultation.
             </div>
           </div>

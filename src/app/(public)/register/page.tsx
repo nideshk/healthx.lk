@@ -368,7 +368,7 @@ export default function PractitionerRegisterPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-5 flex justify-center">
       <div className="w-full max-w-3xl">
         <h1 className="text-4xl font-bold text-gray-900 text-center mb-10">
-          Appliaction for <span className="text-teal-600">Practitioner</span>
+          Application for <span className="text-teal-600">Practitioner</span>
         </h1>
 
         <div className="bg-white shadow-lg rounded-2xl p-8 border border-gray-100">

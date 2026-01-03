@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Input from "@/components/atom/Input/Input";
 import AppointmentCalendar from "@/components/dashboard/admin/tabs/shared/AppointmentCalendar";
 import { Appointment } from "@/types/Dashboard";
 import Loader from "@/components/atom/Loader/Loader";
+import { ChevronLeft, ChevronRight, User, Stethoscope } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
-/*                                   TYPES                                    */
+/* TYPES                                    */
 /* -------------------------------------------------------------------------- */
 
 interface Clinician {
@@ -24,7 +25,7 @@ interface AdminStats {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                  HELPERS                                   */
+/* HELPERS                                   */
 /* -------------------------------------------------------------------------- */
 
 const formatDate = (iso: string) => {
@@ -45,7 +46,7 @@ const formatTime = (iso: string) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                                  MAIN FILE                                 */
+/* MAIN FILE                                 */
 /* -------------------------------------------------------------------------- */
 
 const HomeTab: React.FC = () => {
@@ -66,8 +67,15 @@ const HomeTab: React.FC = () => {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Ref for auto-scroll
+  const calendarSectionRef = useRef<HTMLDivElement>(null);
+
   /* -------------------------------------------------------------------------- */
-  /*                              FETCH OVERVIEW                                */
+  /* FETCH OVERVIEW                                */
   /* -------------------------------------------------------------------------- */
 
   useEffect(() => {
@@ -97,7 +105,7 @@ const HomeTab: React.FC = () => {
   }, []);
 
   /* -------------------------------------------------------------------------- */
-  /*                          PRACTITIONER SEARCH (API 24)                      */
+  /* PRACTITIONER SEARCH (API 24)                      */
   /* -------------------------------------------------------------------------- */
 
   useEffect(() => {
@@ -119,6 +127,7 @@ const HomeTab: React.FC = () => {
             specialty: d.specialization?.join(", ") || "-",
           }))
         );
+        setCurrentPage(1); // Reset to first page on new search
       } catch (err) {
         console.error(err);
       }
@@ -128,7 +137,7 @@ const HomeTab: React.FC = () => {
   }, [search]);
 
   /* -------------------------------------------------------------------------- */
-  /*                   FETCH APPOINTMENTS (API 25)                              */
+  /* FETCH APPOINTMENTS (API 25)                              */
   /* -------------------------------------------------------------------------- */
 
   const fetchAppointments = async (
@@ -180,7 +189,7 @@ const HomeTab: React.FC = () => {
   };
 
   /* -------------------------------------------------------------------------- */
-  /*                               SELECT DOCTOR                                */
+  /* SELECT DOCTOR                                */
   /* -------------------------------------------------------------------------- */
 
   const handleSelectClinician = (c: Clinician) => {
@@ -195,7 +204,30 @@ const HomeTab: React.FC = () => {
   };
 
   /* -------------------------------------------------------------------------- */
-  /*                                  LOADER                                    */
+  /* AUTO SCROLL                                  */
+  /* -------------------------------------------------------------------------- */
+
+  useEffect(() => {
+    if (selectedClinician && calendarSectionRef.current) {
+      calendarSectionRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [selectedClinician, calendarLoading]);
+
+  /* -------------------------------------------------------------------------- */
+  /* PAGINATION LOGIC                             */
+  /* -------------------------------------------------------------------------- */
+
+  const totalPages = Math.ceil(clinicians.length / itemsPerPage);
+  const currentData = clinicians.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  /* -------------------------------------------------------------------------- */
+  /* LOADER                                    */
   /* -------------------------------------------------------------------------- */
 
   if (loading) {
@@ -207,11 +239,11 @@ const HomeTab: React.FC = () => {
   }
 
   /* -------------------------------------------------------------------------- */
-  /*                                  RENDER                                    */
+  /* RENDER                                    */
   /* -------------------------------------------------------------------------- */
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-10">
       {/* ---------------- Dashboard Stats ---------------- */}
       <Card>
         <CardHeader>
@@ -244,47 +276,127 @@ const HomeTab: React.FC = () => {
         </CardBody>
       </Card>
 
-      {/* ---------------- Practitioner Search ---------------- */}
+      {/* ---------------- Practitioner Search & List ---------------- */}
       <Card>
         <CardHeader>
-          <div className="text-sm font-semibold text-slate-900">
-            Appointment Calendar
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">
+                Appointment Calendar
+              </div>
+              <div className="text-xs text-slate-500">
+                Select a clinician below to view their schedule
+              </div>
+            </div>
+            <div className="w-full md:w-80">
+              <Input
+                placeholder="Search doctor by name or specialty..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
         </CardHeader>
 
-        <CardBody className="space-y-3">
-          <Input
-            placeholder="Search doctor by name or specialty..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <div className="border border-slate-200 rounded-xl overflow-hidden text-sm">
-            {clinicians.map((c) => (
-              <button
-                key={c.id}
-                className="w-full text-left px-4 py-2 hover:bg-blue-50"
-                onClick={() => handleSelectClinician(c)}
-              >
-                {c.name} — {c.specialty}
-              </button>
-            ))}
+        <CardBody className="space-y-4">
+          <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+            {currentData.length > 0 ? (
+              currentData.map((c) => (
+                <button
+                  key={c.id}
+                  className={`w-full text-left px-5 py-3 transition-colors flex items-center justify-between group ${
+                    selectedClinician?.id === c.id
+                      ? "bg-blue-50"
+                      : "hover:bg-slate-50"
+                  }`}
+                  onClick={() => handleSelectClinician(c)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`p-2 rounded-full ${
+                        selectedClinician?.id === c.id
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-slate-100 text-slate-400 group-hover:text-blue-500 transition-colors"
+                      }`}
+                    >
+                      <User size={18} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-slate-900 text-sm">
+                        {c.name}
+                      </div>
+                      <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Stethoscope size={12} />
+                        {c.specialty}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedClinician?.id === c.id && (
+                    <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider bg-blue-100 px-2 py-1 rounded">
+                      Selected
+                    </div>
+                  )}
+                </button>
+              ))
+            ) : (
+              <div className="p-10 text-center text-slate-500 text-sm">
+                No clinicians found.
+              </div>
+            )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2 pt-2">
+              <div className="text-xs text-slate-500 font-medium">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
         </CardBody>
       </Card>
 
-      {/* ---------------- Calendar ---------------- */}
-      {selectedClinician && (
-        <>
-          {calendarLoading ? (
-            <div className="flex justify-center py-10">
-              <Loader size="md" />
+      {/* ---------------- Calendar Section ---------------- */}
+      <div ref={calendarSectionRef} className="scroll-mt-10">
+        {selectedClinician && (
+          <>
+            <div className="mb-4 flex items-center gap-3 px-1">
+              <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+              <h3 className="text-sm font-bold text-slate-800">
+                Viewing Schedule: {selectedClinician.name}
+              </h3>
             </div>
-          ) : (
-            <AppointmentCalendar appointments={appointments} userRole="admin" />
-          )}
-        </>
-      )}
+            {calendarLoading ? (
+              <div className="flex justify-center py-20 bg-white border border-slate-200 rounded-2xl">
+                <Loader size="md" />
+              </div>
+            ) : (
+              <AppointmentCalendar
+                appointments={appointments}
+                userRole="admin"
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
@@ -292,7 +404,7 @@ const HomeTab: React.FC = () => {
 export default HomeTab;
 
 /* -------------------------------------------------------------------------- */
-/*                               STAT CARD                                     */
+/* STAT CARD                                     */
 /* -------------------------------------------------------------------------- */
 
 const StatCard = ({
