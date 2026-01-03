@@ -4,8 +4,10 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
   const { authorized, user, role } = await requireUser();
   if (!authorized || !["admin", "superadmin"].includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -14,7 +16,7 @@ export async function PATCH(
   const { action, admin_note } = await req.json();
 
   if (action === "mark_refunded") {
-    await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from("refunds")
       .update({
         status: "refunded",
@@ -23,13 +25,25 @@ export async function PATCH(
         admin_note,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", params.id);
+      .eq("id", id)
+      .eq("status", "requested"); // safety guard
 
-    return NextResponse.json({ success: true });
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: "refunded",
+      refund_id: id,
+    });
   }
 
   if (action === "reject") {
-    await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from("refunds")
       .update({
         status: "rejected",
@@ -37,9 +51,21 @@ export async function PATCH(
         admin_note,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", params.id);
+      .eq("id", id)
+      .eq("status", "requested");
 
-    return NextResponse.json({ success: true });
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: "rejected",
+      refund_id: id,
+    });
   }
 
   return NextResponse.json({ error: "Invalid action" }, { status: 400 });
