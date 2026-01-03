@@ -1,11 +1,14 @@
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   // 🔐 AUTH
   const { authorized, response, user } = await requireUser();
   if (!authorized) return response;
+  const cnx = getAuditContext(req, user);
 
   const role = user?.profile?.role;
   if (role !== "admin" && role !== "superadmin") {
@@ -31,6 +34,20 @@ export async function GET(req: Request) {
       { status: 500 }
     );
   }
+
+  await auditLog({
+    ...cnx,
+    action: "EXPORTED",
+    entityType: "PRACTITIONER",
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      success: true,
+      query: q,
+      resultCount: data.length,
+      result: data,
+    },
+  })
 
   return NextResponse.json({
     success: true,

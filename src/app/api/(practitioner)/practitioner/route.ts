@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -30,7 +32,7 @@ function normalizeFeesToArray(
     }));
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
 
@@ -41,12 +43,14 @@ export async function GET(req: Request) {
      * 🔐 Auth check (optional – may be guest)
      * ------------------------------------------------ */
     const authResult = await requireUser();
+    const { user } = await requireUser();
     const isAdmin =
       authResult.authorized && authResult.role === "admin";
 
     /* =================================================
      * 🛡️ ADMIN FLOW
      * ================================================= */
+    const cnx = getAuditContext(req, user);
     if (isAdmin) {
       const q = searchParams.get("q")?.trim() || "";
 
@@ -131,6 +135,25 @@ export async function GET(req: Request) {
         fees: normalizeFeesToArray(p.fees),
       }));
 
+      await auditLog({
+        ...cnx,
+        action: "VIEWED",
+        entityType: "PRACTITIONER",
+        purpose: "operations",
+        metadata: {
+          success: true,
+          role: "admin",
+          search_applied: q.length >= 4,
+          query: q.length >= 4 ? q : null,
+          pagination: {
+            limit,
+            offset,
+            total,
+          },
+          practitioners,
+        }
+      })
+
       return NextResponse.json({
         success: true,
         role: "admin",
@@ -183,6 +206,18 @@ export async function GET(req: Request) {
         { status: 500 }
       );
     }
+    await auditLog({
+        ...cnx,
+        action: "VIEWED",
+        entityType: "PRACTITIONER",
+        purpose: "operations",
+        metadata: {
+        success: true,
+        role: "guest",
+        count: data?.length ?? 0,
+        data: data ?? [],
+      }
+      })
 
     return NextResponse.json(
       {

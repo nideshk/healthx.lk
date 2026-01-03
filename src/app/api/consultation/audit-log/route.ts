@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { verifyTelehealthToken } from "@/lib/telehealthToken";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { token, appointmentId, eventType, metadata = {} } = await req.json();
 
