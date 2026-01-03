@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
+import { useMfaEnrollment } from "@/hooks/useMfaEnrollment";
 import { toast } from "react-toastify";
 
 /* -------------------------------------------------------------------------- */
@@ -46,11 +47,27 @@ interface PlatformFee {
 /* -------------------------------------------------------------------------- */
 
 const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
+  const {
+    twoFactorEnabled,
+    qr,
+    otp,
+    loading,
+    error,
+    challengeId,
+    setOtp,
+    startEnrollment,
+    createChallenge,
+    verifyEnrollment,
+    disableMfa,
+  } = useMfaEnrollment();
+
+
   const [activeTab, setActiveTab] = useState<SettingsTabType>("Security");
 
   /* ---------------- SECURITY ---------------- */
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [loading2FA, setLoading2FA] = useState(false);
+
+  // const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  // const [loading2FA, setLoading2FA] = useState(false);
 
   /* ---------------- ACCOUNT ---------------- */
   const [accountForm, setAccountForm] = useState({ newPassword: "", confirmPassword: "" });
@@ -96,17 +113,21 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
     }
   };
 
-  const update2FA = async (enabled: boolean) => {
-    const res = await fetch("/api/profiles", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled }),
-    });
-    if (!res.ok) throw new Error("Failed to update 2FA");
-    const json: ProfileResponse = await res.json();
-    return json.profile.multi_factor;
-  };
+  // const update2FA = async (enabled: boolean) => {
+  //   const res = await fetch("/api/profiles", {
+  //     method: "POST",
+  //     credentials: "include",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ enabled }),
+  //   });
+
+  //   if (!res.ok) {
+  //     throw new Error("Failed to update 2FA");
+  //   }
+
+  //   const json: ProfileResponse = await res.json();
+  //   return json.profile.multi_factor;
+  // };
 
   const changePassword = async (newPassword: string) => {
     const res = await fetch("/api/auth/change-password", {
@@ -124,21 +145,16 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
   /* HANDLERS                                                                   */
   /* -------------------------------------------------------------------------- */
 
-  const handleToggle2FA = async () => {
-    const nextValue = !twoFactorEnabled;
-    setTwoFactorEnabled(nextValue);
-    setLoading2FA(true);
-    try {
-      const confirmedValue = await update2FA(nextValue);
-      setTwoFactorEnabled(confirmedValue);
-      toast.success(`2FA ${confirmedValue ? "enabled" : "disabled"} successfully`);
-    } catch {
-      setTwoFactorEnabled(!nextValue);
-      toast.error("Failed to update 2FA settings");
-    } finally {
-      setLoading2FA(false);
+  const handleToggle2FA = () => {
+    if (loading || twoFactorEnabled === null) return;
+
+    if (!twoFactorEnabled) {
+      startEnrollment();
+    } else {
+      disableMfa();
     }
   };
+
 
   const handleSaveAccount = async () => {
     setAccountError(null);
@@ -288,7 +304,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
         ))}
       </div>
 
-      {activeTab === "Security" && (
+      {/* ======================== SECURITY TAB ======================== */}
+    {activeTab === "Security" && (
+      <>
         <div className="border border-slate-200 rounded-xl p-5 bg-white">
           <div className="text-sm font-semibold text-slate-900 mb-1">Security</div>
           <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
@@ -296,13 +314,65 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
               <div className="text-sm font-medium text-slate-900">Two-Factor Authentication (2FA)</div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" checked={twoFactorEnabled} disabled={loading2FA} onChange={handleToggle2FA} />
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={!!twoFactorEnabled}
+                disabled={loading}
+                onChange={handleToggle2FA}
+              />
               <div className="w-11 h-6 bg-slate-300 rounded-full peer-checked:bg-blue-600 transition"></div>
               <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-5"></div>
             </label>
           </div>
         </div>
-      )}
+
+        {/* ENROLLMENT UI */}
+        {qr && (
+          <div className="mt-4 border rounded-lg p-4 bg-slate-50">
+            <div
+              dangerouslySetInnerHTML={{ __html: qr }}
+              className="mb-3"
+            />
+
+            {!challengeId ? (
+              <button
+                onClick={createChallenge}
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-2 rounded mb-2"
+              >
+                Enable 2FA
+              </button>
+            ) : (
+              <>
+                <input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.trim())}
+                  placeholder="Enter 6-digit code"
+                  className="border rounded px-3 py-2 w-full mb-2"
+                />
+
+                <button
+                  onClick={verifyEnrollment}
+                  disabled={loading}
+                  className="w-full bg-blue-600 text-white py-2 rounded"
+                >
+                  Verify & Enable
+                </button>
+              </>
+            )}
+
+            {error && (
+              <div className="text-xs text-red-600 mt-2">
+                {error}
+              </div>
+            )}
+          </div>
+        )}
+      </>
+    )}
+
+
 
       {activeTab === "Account" && (
         <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-4">
