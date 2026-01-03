@@ -13,16 +13,8 @@ interface EarningsSummary {
 }
 
 interface EarningsTabProps {
-  clinicianId: string; // future API usage
+  clinicianId: string; // The practitioner ID passed from the search list
 }
-
-/* ---------------- MOCK API RESPONSE ---------------- */
-const MOCK_EARNINGS: EarningsSummary = {
-  completedAppointments: 12,
-  grossAmount: 18000,
-  platformFees: 11400,
-  netAmount: 6600,
-};
 
 const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
   const startOfMonth = DateTime.now().startOf("month").toISODate();
@@ -30,6 +22,8 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
 
   const [startDate, setStartDate] = useState<string | null>(startOfMonth);
   const [endDate, setEndDate] = useState<string | null>(endOfMonth);
+  const [loading, setLoading] = useState(false);
+  
   const [summary, setSummary] = useState<EarningsSummary>({
     completedAppointments: 0,
     grossAmount: 0,
@@ -37,31 +31,44 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
     netAmount: 0,
   });
 
-  /* ---------------- FETCH (MOCK for now) ---------------- */
+  /* ---------------- FETCH REAL TRANSACTION DATA ---------------- */
   const fetchEarnings = async () => {
-    /**
-     * FUTURE API CALL:
-     * GET /api/admin/clinicians/{id}/earnings
-     * params: { startDate, endDate }
-     */
+    setLoading(true);
+    try {
+      // API 2: Analytics Transactions endpoint with practitioner filter
+      // Note: Assuming the backend filters by practitioner_id when passed as a query param
+      const url = `http://localhost:3000/api/analytics/transactions?from=${startDate}&to=${endDate}&practitioner_id=${clinicianId}`;
+      
+      const res = await fetch(url, {
+        credentials: "include",
+      });
 
-    console.log("Fetching earnings with params:", {
-      clinicianId,
-      startDate,
-      endDate,
-    });
+      if (!res.ok) throw new Error("Failed to fetch earnings");
 
-    // mock delay
-    setTimeout(() => {
-      setSummary(MOCK_EARNINGS);
-    }, 300);
+      const json = await res.json();
+
+      if (json.analytics) {
+        setSummary({
+          completedAppointments: json.analytics.totalCompletedTransactions || 0,
+          grossAmount: json.analytics.totalGrossAmount || 0,
+          platformFees: json.analytics.totalPlatformFees || 0,
+          netAmount: json.analytics.netAmount || 0,
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching clinician earnings:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ---------------- DEFAULT LOAD (Current Month) ---------------- */
   useEffect(() => {
-    fetchEarnings();
+    if (clinicianId) {
+      fetchEarnings();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clinicianId]);
 
   /* ---------------- DATE FILTER HANDLER ---------------- */
   const handleApplyFilter = () => {
@@ -71,7 +78,8 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
   const handleClear = () => {
     setStartDate(startOfMonth);
     setEndDate(endOfMonth);
-    fetchEarnings();
+    // Use a small timeout or functional state update to ensure fetch uses reset values
+    setTimeout(() => fetchEarnings(), 0);
   };
 
   return (
@@ -83,7 +91,7 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
           Earnings Summary
         </div>
         <div className="text-xs text-slate-500">
-          Completed appointments and payouts with date filtering
+          {loading ? "Fetching data..." : "Completed appointments and payouts with date filtering"}
         </div>
       </div>
 
@@ -108,8 +116,8 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
             onChange={(e) => setEndDate(e.target.value)}
           />
 
-          <Button size="sm" onClick={handleApplyFilter}>
-            Apply
+          <Button size="sm" onClick={handleApplyFilter} disabled={loading}>
+            {loading ? "..." : "Apply"}
           </Button>
 
           <button
@@ -131,19 +139,19 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
 
         <StatCard
           label="Gross Amount (LKR)"
-          value={summary.grossAmount}
+          value={summary.grossAmount.toLocaleString()}
           valueClass="text-green-600"
         />
 
         <StatCard
           label="Platform Fees (LKR)"
-          value={summary.platformFees}
+          value={summary.platformFees.toLocaleString()}
           valueClass="text-orange-600"
         />
 
         <StatCard
           label="Net Amount (LKR)"
-          value={summary.netAmount}
+          value={summary.netAmount.toLocaleString()}
           valueClass="text-blue-600"
         />
       </div>
@@ -161,7 +169,7 @@ const StatCard = ({
   valueClass,
 }: {
   label: string;
-  value: number;
+  value: string | number;
   valueClass?: string;
 }) => (
   <div className="border border-slate-200 rounded-xl p-4 bg-white">

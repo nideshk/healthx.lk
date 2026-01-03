@@ -8,7 +8,6 @@ import BookingDetailsModal from "../subtabs/BookingDetailsModal";
 import Input from "@/components/atom/Input/Input";
 
 const TrackBookingsTab: React.FC = () => {
-  // Default to current month
   const [fromDate, setFromDate] = useState(
     DateTime.now().startOf("month").toISODate() || ""
   );
@@ -20,12 +19,17 @@ const TrackBookingsTab: React.FC = () => {
     total_bookings: 0,
     completed: 0,
     upcoming: 0,
-    totalRevenue: 17000, // Still using dummy for revenue as API 33 doesn't provide it
+    totalRevenue: 0, 
+  });
+
+  const [revenueBreakdown, setRevenueBreakdown] = useState({
+    totalPlatformFees: 0,
+    totalConsultationFees: 0,
+    totalServiceFees: 0,
+    totalTaxes: 0,
   });
 
   const [showRevenueModal, setShowRevenueModal] = useState(false);
-  
-  // New Modal States
   const [detailModal, setDetailModal] = useState<{
     isOpen: boolean;
     type: "total" | "upcoming" | "completed" | "cancelled";
@@ -34,28 +38,50 @@ const TrackBookingsTab: React.FC = () => {
     type: "total",
   });
 
-  // Fetch API 33 Summary
-  const fetchSummary = async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch(
+      // 1. Fetch Booking Summary
+      const summaryRes = await fetch(
         `http://localhost:3000/api/booking/summary?from=${fromDate}&to=${toDate}`
       );
-      const json = await res.json();
-      if (json.success) {
+      const summaryJson = await summaryRes.json();
+      
+      // 2. Fetch Transaction Analytics
+      const analyticsRes = await fetch(
+        `http://localhost:3000/api/analytics/transactions?from=${fromDate}&to=${toDate}`
+      );
+      const analyticsJson = await analyticsRes.json();
+
+      if (summaryJson.success) {
         setStats((prev) => ({
           ...prev,
-          total_bookings: json.stats.total_bookings,
-          completed: json.stats.completed,
-          upcoming: json.stats.upcoming,
+          total_bookings: summaryJson.stats.total_bookings,
+          completed: summaryJson.stats.completed,
+          upcoming: summaryJson.stats.upcoming,
         }));
       }
+
+      if (analyticsJson.analytics) {
+        const { analytics } = analyticsJson;
+        setStats((prev) => ({
+          ...prev,
+          totalRevenue: analytics.totalGrossAmount || 0,
+        }));
+        
+        setRevenueBreakdown({
+          totalPlatformFees: analytics.totalPlatformFees || 0,
+          totalConsultationFees: analytics.totalConsultationFees || 0,
+          totalServiceFees: analytics.totalServiceFees || 0,
+          totalTaxes: analytics.totalTaxes || 0,
+        });
+      }
     } catch (err) {
-      console.error("Failed to fetch summary", err);
+      console.error("Failed to fetch analytics data", err);
     }
   };
 
   useEffect(() => {
-    fetchSummary();
+    fetchData();
   }, [fromDate, toDate]);
 
   const openDetails = (type: "total" | "upcoming" | "completed" | "cancelled") => {
@@ -64,7 +90,6 @@ const TrackBookingsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* FILTER SECTION */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Input
@@ -82,7 +107,6 @@ const TrackBookingsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* STAT CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
           label="Total Bookings"
@@ -114,15 +138,13 @@ const TrackBookingsTab: React.FC = () => {
         />
       </div>
 
-      {/* REVENUE MODAL */}
       {showRevenueModal && (
         <RevenueBreakdownModal
-          data={{ platformFees: 6800, doctorEarnings: 10200 }}
+          data={revenueBreakdown}
           onClose={() => setShowRevenueModal(false)}
         />
       )}
 
-      {/* DYNAMIC LIST MODAL (API 34) */}
       <BookingDetailsModal
         isOpen={detailModal.isOpen}
         type={detailModal.type}

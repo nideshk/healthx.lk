@@ -38,24 +38,24 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
           <Input
             label="Full Name"
             value={clinician.name}
-            readOnly
+            disabled
           />
           <Input
             label="Registration Number"
             value={clinician.registration}
-            readOnly
+            disabled
           />
 
           <Input
             label="Qualifications"
             value={clinician.qualifications}
-            readOnly
+            disabled
           />
 
           <Input
             label="Speciality"
             value={clinician.specialty}
-            readOnly
+            disabled
           />
         </div>
       </div>
@@ -73,7 +73,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
           className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none"
           rows={4}
           value={clinician.intro}
-          readOnly
+          disabled
         />
       </div>
 
@@ -90,23 +90,23 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
           <Input
             label="Bank Name"
             value={clinician.bank.bankName}
-            readOnly
+            disabled
           />
           <Input
             label="Account Name"
             value={clinician.bank.accountName}
-            readOnly
+            disabled
           />
 
           <Input
             label="Branch Location"
             value={clinician.bank.branch}
-            readOnly
+            disabled
           />
           <Input
             label="Account Number"
             value={clinician.bank.accountNumber}
-            readOnly
+            disabled
           />
         </div>
       </div>
