@@ -51,7 +51,7 @@ export async function GET(
         )
       `)
       .eq("patient_id", patientId)
-      .in("status", ["scheduled", "confirmed", "completed"])
+      .in("status", ["scheduled", "confirmed", "completed","pending"])
       .order("starts_at", { ascending: false });
 
     if (error) throw error;
@@ -92,7 +92,7 @@ export async function GET(
         : null,
       };
 
-      if (appt.status === "scheduled" || appt.status === "confirmed") {
+      if (appt.status === "scheduled" || appt.status === "confirmed" || appt.status === "pending") {
         scheduled.push(item);
       }
 

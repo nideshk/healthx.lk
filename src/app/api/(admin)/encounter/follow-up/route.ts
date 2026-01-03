@@ -1,20 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { notify } from "@/lib/notify";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
+import { count } from "console";
 
 export const dynamic = "force-dynamic";
 
-/**
- * GET /api/encounters/pending-followups
- *
- * Fetch encounters where:
- * - follow_up_needed = true
- * - follow_up_notified = false
- * - appointment status = completed
- */
-export async function GET() {
+
+export async function GET(req: NextRequest) {
   // 🔐 Auth check (admin / staff recommended)
   const { authorized, response, user } = await requireUser();
   if (!authorized) return response;
@@ -68,8 +64,6 @@ export async function GET() {
       { status: 500 }
     );
   }
-  console.log(data)
-  // 🔄 Shape response for frontend / consumers
   const items = (data || []).map((row: any) => ({
     encounter_id: row.id,
     completed_date: row.appointments?.ends_at,
@@ -85,6 +79,20 @@ export async function GET() {
 
     doctor: row.appointments?.practitioners?.full_name,
   }));
+
+  const cnx = getAuditContext(req, user);
+
+  await auditLog({
+    ...cnx,
+    action: "VIEWED",
+    entityType: "FOLLOW_UP_ENCOUNTERS",
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      data: items,
+      count: items.length
+    },
+  })
 
   return NextResponse.json({
     success: true,
@@ -151,43 +159,42 @@ export async function PATCH(req: Request) {
     .eq("id", encounter_id)
     .single();
 
-    console.log(data)
 
-    if (error) {
-        console.error("notifying error:", error);
-        return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-        );
-    }
+  if (error) {
+    console.error("notifying error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
 
-    if (!data) {
-        console.error("Encounter not found", error);
-        return NextResponse.json(
-        { success: false, error: "Encounter not found" },
-        { status: 500 }
-        );
-    }
+  if (!data) {
+    console.error("Encounter not found", error);
+    return NextResponse.json(
+      { success: false, error: "Encounter not found" },
+      { status: 500 }
+    );
+  }
 
-    const appointment = Array.isArray(data.appointments)
+  const appointment = Array.isArray(data.appointments)
     ? data.appointments[0]
     : data.appointments;
 
-    if (!appointment) {
+  if (!appointment) {
     throw new Error("Appointment missing");
-    }
+  }
 
-    const patient = Array.isArray(appointment.patients)
+  const patient = Array.isArray(appointment.patients)
     ? appointment.patients[0]
     : appointment.patients;
 
-    const practitioner = Array.isArray(appointment.practitioners)
+  const practitioner = Array.isArray(appointment.practitioners)
     ? appointment.practitioners[0]
     : appointment.practitioners;
 
-    if (!patient || !practitioner) {
+  if (!patient || !practitioner) {
     throw new Error("Patient or practitioner missing");
-    }
+  }
 
 
 
@@ -239,6 +246,23 @@ Clinico Team
       updated_at: new Date().toISOString(),
     })
     .eq("id", encounter_id);
+
+  // 8️⃣ Audit: follow-up notification sent
+  const cnx = getAuditContext(req as any, user);
+
+  auditLog({
+    ...cnx,
+    action: "UPDATED",
+    entityType: "ENCOUNTER",
+    entityId: encounter_id,
+    purpose: "treatment",
+    source: "dashboard",
+    metadata: {
+      event: "follow_up_notified",
+      channel: "email"
+    }
+  });
+
 
   if (updateError) {
     return NextResponse.json(

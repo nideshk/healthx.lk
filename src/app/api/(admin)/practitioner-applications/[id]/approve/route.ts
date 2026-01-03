@@ -1,14 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
 import { requireUser } from "@/lib/authGuard";
 import { createPractitioner } from "@/lib/createPractitioner";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 type ActionType = "approve" | "reject";
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   let createdUserId: string | null = null;
@@ -17,7 +19,7 @@ export async function POST(
   /* --------------------------------------------------
    * 1️⃣ Authentication & Authorization
    * -------------------------------------------------- */
-  const { authorized, role } = await requireUser();
+  const { authorized, role, user } = await requireUser();
 
   if (!authorized || !["admin", "superadmin"].includes(role)) {
     return NextResponse.json(
@@ -156,7 +158,6 @@ if (!password) {
     password,
     first_name: app.first_name,
     last_name: app.last_name,
-
     qualification: app.qualification,
     specialization: app.specialization,
     license_number: finalLicenseNumber,
@@ -208,6 +209,18 @@ if (!password) {
       await supabaseAdmin.from("profiles").delete().eq("id", createdUserId);
     }
 
+     const cnx = getAuditContext(req, user);
+  await auditLog({
+    ...cnx,
+    action: "FAILED",
+    entityType: "ADMIN_USER",
+    purpose: "operations",
+    source: "dashboard",
+    entityId : createdPractitionerId || createdUserId || undefined,
+    metadata: {
+      success: true,
+    }
+  });
     return NextResponse.json(
       {
         success: false,
@@ -217,6 +230,20 @@ if (!password) {
       { status: 500 }
     );
   }
+
+    const cnx = getAuditContext(req, user);
+  await auditLog({
+    ...cnx,
+    action: "APPROVED",
+    entityType: "ADMIN_USER",
+    purpose: "operations",
+    source: "dashboard",
+    entityId : createdPractitionerId || undefined,
+    metadata: {
+      success: true,
+    }
+  });
+
 
   /* --------------------------------------------------
    * ✅ SUCCESS

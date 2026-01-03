@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     // 🔐 Authentication check
     const { authorized, response, user } = await requireUser();
@@ -46,6 +48,19 @@ export async function GET() {
         { status: 500 }
       );
     }
+
+     const cnx = getAuditContext(req, user);
+  await auditLog({
+    ...cnx,
+    action: "EXPORTED",
+    entityType: "ADMIN_USER",
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      success: true,
+      data,
+    }
+  });
 
     return NextResponse.json({
       success: true,
