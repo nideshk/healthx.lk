@@ -1,47 +1,68 @@
 "use client";
 
-import React, { useState,useEffect  } from "react";
+import React, { useState, useEffect } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
-// import toast from "react-hot-toast"; // Uncomment if using react-hot-toast
 
 interface AddAdminModalProps {
   onClose: () => void;
   onRefresh: () => void;
 }
 
-
 const AddAdminModal: React.FC<AddAdminModalProps> = ({ onClose, onRefresh }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-    const [isSuccess, setIsSuccess] = useState(false);
-
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const [form, setForm] = useState({
     full_name: "",
-    gender: "female", 
+    gender: "", // Changed from "female" to empty string for initial selection
     email: "",
     password: "",
     confirm_password: "",
-    role: "admin", 
+    role: "admin",
   });
 
   useEffect(() => {
-  if (isSuccess) {
-    onClose();
-    onRefresh();
-  }
-}, [isSuccess, onClose, onRefresh]);
+    if (isSuccess) {
+      onClose();
+      onRefresh();
+    }
+  }, [isSuccess, onClose, onRefresh]);
 
+  // Password validation helper
+  const validatePassword = (pass: string) => {
+    const hasMinLength = pass.length >= 8;
+    const hasUppercase = /[A-Z]/.test(pass);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
+
+    if (!hasMinLength) return "Password must be at least 8 characters long.";
+    if (!hasUppercase) return "Password must contain at least one uppercase letter.";
+    if (!hasSpecialChar) return "Password must contain at least one special character.";
+    return null;
+  };
 
   const handleSubmit = async () => {
     setError(null);
 
+    // 1. Basic Field Validation
+    if (!form.gender) {
+        setError("Please select a gender.");
+        return;
+    }
+
+    // 2. Password Matching Validation
     if (form.password !== form.confirm_password) {
-      setError("Passwords do not match");
+      setError("Passwords do not match.");
       return;
     }
-    
+
+    // 3. Password Complexity Validation
+    const passwordError = validatePassword(form.password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -51,23 +72,12 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({ onClose, onRefresh }) => 
         body: JSON.stringify(form),
       });
 
-    //   const json = await res.json();
-      console.log("Response:", res);
       if (res.ok) {
-        // 1. Show Toast Success Message
-        // toast.success("Admin created successfully!"); 
-        alert("Admin created successfully!"); // Fallback if no toast library is installed
-          setIsSuccess(true);
-
-//         // 3. Auto-close the modal
-//         onClose();
-
-//         setTimeout(() => {
-//     onRefresh();
-//   }, 0);
-
+        alert("Admin created successfully!");
+        setIsSuccess(true);
       } else {
-        setError(res.statusText || "Failed to create admin");
+        const json = await res.json();
+        setError(json.message || "Failed to create admin");
       }
     } catch (err) {
       setError("An error occurred. Please try again.");
@@ -91,7 +101,6 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({ onClose, onRefresh }) => 
           <p className="text-sm text-slate-500">Create a new administrator account with specific roles.</p>
         </div>
 
-        {/* Error is now only shown for actual failures, not success */}
         {error && (
           <div className="mb-4 p-2 text-xs bg-red-50 text-red-600 border border-red-100 rounded">
             {error}
@@ -101,7 +110,7 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({ onClose, onRefresh }) => 
         <div className="space-y-4">
           <Input
             label="Full Name"
-            placeholder="Shibangi"
+            placeholder="Enter full name"
             value={form.full_name}
             onChange={(e) => setForm({ ...form, full_name: e.target.value })}
           />
@@ -110,10 +119,11 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({ onClose, onRefresh }) => 
             <div>
               <label className="text-xs font-medium text-slate-700 mb-1 block">Gender</label>
               <select
-                className="w-full border border-slate-200 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full border border-slate-200 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                 value={form.gender}
                 onChange={(e) => setForm({ ...form, gender: e.target.value })}
               >
+                <option value="" disabled>Select</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
@@ -122,7 +132,7 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({ onClose, onRefresh }) => 
             <Input
               label="Email"
               type="email"
-              placeholder="shibiadmin@mail.com"
+              placeholder="Enter email address"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
@@ -131,6 +141,7 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({ onClose, onRefresh }) => 
           <Input
             label="Password"
             type="password"
+            placeholder="Enter password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
@@ -138,6 +149,7 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({ onClose, onRefresh }) => 
           <Input
             label="Confirm Password"
             type="password"
+            placeholder="Re-enter password"
             value={form.confirm_password}
             onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
           />

@@ -38,8 +38,8 @@ const ApplicationList: React.FC<ApplicationListProps> = ({ onViewDetails, onAddN
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <div className="text-sm font-semibold text-slate-900">Search Practitioner Applications</div>
-          <div className="text-xs text-slate-500">Find records and manage incoming applications.</div>
+          <div className="text-sm font-semibold text-slate-900">Practitioner Applications</div>
+          <div className="text-xs text-slate-500">Find records and manage incoming applications</div>
         </div>
         <Button size="sm" onClick={onAddNew}>+ Add New Clinician</Button>
       </CardHeader>
