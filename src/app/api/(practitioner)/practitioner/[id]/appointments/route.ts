@@ -1,6 +1,8 @@
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 function getDurationInMinutes(
   startsAt: string,
@@ -12,20 +14,36 @@ function getDurationInMinutes(
 }
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   // 🔐 AUTH
   const { authorized, response, user } = await requireUser();
   if (!authorized) return response;
-
+  const cnx = getAuditContext(req, user);
   const { id: practitionerId } = await context.params;
 
   const role = user?.profile?.role;
-  if (role !== "admin" && role !== "superadmin" &&  !(
+  if (role !== "admin" && role !== "superadmin" && !(
     role === "practitioner" &&
     user?.practitioner_id === practitionerId
   )) {
+
+    await auditLog(
+      {
+        ...cnx,
+        action: "DENIED",
+        entityType: "APPOINTMENT",
+        entityId: practitionerId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "insufficient_privileges"
+        }
+
+      }
+    );
+
     return NextResponse.json(
       { success: false, message: "Access denied" },
       { status: 403 }
@@ -81,10 +99,10 @@ export async function GET(
       view === "daily"
         ? `${date}T23:59:59`
         : (() => {
-            const end = new Date(weekStart!);
-            end.setDate(end.getDate() + 6);
-            return end.toISOString();
-          })()
+          const end = new Date(weekStart!);
+          end.setDate(end.getDate() + 6);
+          return end.toISOString();
+        })()
     )
     .order("starts_at");
 
@@ -103,6 +121,38 @@ export async function GET(
   ).length;
 
 
+  await auditLog(
+    {
+      ...cnx,
+      action: "VIEWED",
+      entityType: "APPOINTMENT",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        counts: {
+          confirmed: confirmedCount,
+          completed: completedCount,
+        },
+        data: data.map((a) => ({
+          id: a.id,
+          patient: (a.patient as unknown as { full_name: string } | null)?.full_name ?? null,
+          appointment_type: (a.type as unknown as { name: string } | null)?.name ?? null,
+          starts_at: a.starts_at,
+          ends_at: a.ends_at,
+          participants: 1 + (a.additional_attendees?.length || 0),
+          reason: a.notes,
+          room_key: a.room_key,
+          status: a.status,
+          duration_minutes: getDurationInMinutes(
+            a.starts_at,
+            a.ends_at
+          )
+        }))
+      }
+
+    }
+  );
   // 📤 RESPONSE
   return NextResponse.json({
     success: true,
@@ -123,7 +173,7 @@ export async function GET(
       duration_minutes: getDurationInMinutes(
         a.starts_at,
         a.ends_at
-    )
+      )
     }))
   });
 }

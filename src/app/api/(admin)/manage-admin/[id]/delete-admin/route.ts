@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
 export async function DELETE(
-  _req: Request,
+  _req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   // 1️⃣ Auth

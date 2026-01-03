@@ -10,6 +10,7 @@ export type AuditAction =
   | "CREATED"
   | "UPDATED"
   | "FAILED"
+  | "DENIED"
   | "DELETED"
   | "APPROVED"
   | "CANCELLED"

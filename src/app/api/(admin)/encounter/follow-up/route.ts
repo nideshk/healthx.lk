@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
 /* -----------------------------------------
    PATCH: Notify follow-up & mark as notified
 ------------------------------------------ */
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
   // 1️⃣ Auth
   const { authorized, response, user } = await requireUser();
   if (!authorized) return response;
