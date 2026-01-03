@@ -175,7 +175,7 @@ export async function PUT(req: NextRequest) {
   const results = [];
 
   for (const item of updatesArray) {
-    const { id, base_fee, max_attendee, extra_fee_per_attendee, platform_fee } =
+    const { id, name, base_fee, max_attendee, extra_fee_per_attendee, platform_fee } =
       item;
 
     if (!id) {
@@ -189,6 +189,16 @@ export async function PUT(req: NextRequest) {
     const updateData: any = {
       updated_at: new Date().toISOString(),
     };
+
+    if (name !== undefined) {
+      if (typeof name !== "string" || name.trim().length === 0) {
+        return NextResponse.json(
+          { success: false, message: "Invalid appointment type name" },
+          { status: 400 }
+        );
+      }
+      updateData.name = name.trim();
+    }
 
     if (base_fee !== undefined) updateData.base_fee = base_fee;
     if (max_attendee !== undefined) updateData.max_attendee = max_attendee;
@@ -236,4 +246,58 @@ export async function PUT(req: NextRequest) {
     updated: results.length,
     data: results,
   });
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { authorized, role } = await requireUser();
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!["admin", "superadmin"].includes(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const appointmentTypeId = body?.id;
+
+    if (!appointmentTypeId) {
+      return NextResponse.json(
+        { error: "appointment type id is required" },
+        { status: 400 }
+      );
+    }
+
+    const deletedAt = new Date().toISOString();
+
+    // 1️⃣ Soft delete appointment_type
+    const { error: typeError } = await supabaseAdmin
+      .from("appointment_type")
+      .update({
+        is_active: false,
+        deleted_at: deletedAt,
+        updated_at: deletedAt,
+      })
+      .eq("id", appointmentTypeId);
+
+    if (typeError) throw typeError;
+
+    // 2️⃣ Remove from practitioners (services + fees)
+    await supabaseAdmin.rpc(
+      "remove_appointment_type_from_practitioners",
+      { type_id: appointmentTypeId }
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: "Appointment type deactivated successfully",
+    });
+  } catch (err: any) {
+    console.error("DELETE /api/platform_fee error:", err);
+    return NextResponse.json(
+      { error: err.message ?? "Server error" },
+      { status: 500 }
+    );
+  }
 }
