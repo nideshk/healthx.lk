@@ -322,6 +322,7 @@ export default function Header() {
   async function verifyMfa() {
     if (!mfa) return;
     
+    setMfaInProgress(true);
     const toastId = toast.loading("Verifying security code…");
 
     const { error } = await supabaseBrowser.auth.mfa.verify({
@@ -341,6 +342,7 @@ export default function Header() {
 
       // 🧹 Reset MFA state
       setMfa(null);
+      setMfaInProgress(false);
       setOtp("");
       handleLogout()
       return;
@@ -444,6 +446,7 @@ export default function Header() {
 
             setMfa(null);
             setOtp("");
+            setMfaInProgress(false);
             setAuthReady(false);
             handleLogout();
           }
@@ -502,9 +505,11 @@ export default function Header() {
           />
           <button
             onClick={verifyMfa}
-            className="w-full bg-teal-500 text-white py-2 rounded-lg"
+            disabled={mfaInProgress || otp.length !== 6}
+            className={`w-full py-2 rounded-lg text-white
+                      ${mfaInProgress ? "bg-gray-400 cursor-not-allowed" : "bg-teal-500"}`}
           >
-            Verify & Continue
+            {mfaInProgress ? "Verifying…" : "Verify & Continue"}
           </button>
         </div>
       ) : (

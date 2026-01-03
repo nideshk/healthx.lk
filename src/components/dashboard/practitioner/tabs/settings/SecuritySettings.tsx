@@ -3,51 +3,49 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { toast } from "react-toastify";
+import { useMfaEnrollment } from "@/hooks/useMfaEnrollment";
 
 const SecuritySettings: React.FC = () => {
-  /* --------------------------------
-     STATE
-  --------------------------------- */
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean | null>(null);
 
-  // Enrollment lifecycle
-  const [factorId, setFactorId] = useState<string | null>(null);
-  const [challengeId, setChallengeId] = useState<string | null>(null);
-  const [qr, setQr] = useState<string | null>(null);
-
-  const [otp, setOtp] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  console.log("🧩 [RENDER] SecuritySettings", {
+  const {
     twoFactorEnabled,
     factorId,
     challengeId,
-  });
+    qr,
+    otp,
+    loading,
+    error,
+    setOtp,
+    startEnrollment,
+    createChallenge,
+    verifyEnrollment,
+    disableMfa,
+  } = useMfaEnrollment();
+  /* --------------------------------
+     STATE
+  --------------------------------- */
+  // const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean | null>(null);
+
+  // Enrollment lifecycle
+  // const [factorId, setFactorId] = useState<string | null>(null);
+  // const [challengeId, setChallengeId] = useState<string | null>(null);
+  // const [qr, setQr] = useState<string | null>(null);
+
+  // const [otp, setOtp] = useState("");
+  // const [loading, setLoading] = useState(false);
+  // const [error, setError] = useState<string | null>(null);
+
+  // console.log("🧩 [RENDER] SecuritySettings", {
+  //   twoFactorEnabled,
+  //   factorId,
+  //   challengeId,
+  // });
 
   /* --------------------------------
      CP-1: LOAD MFA STATUS
      Runs when tab becomes active
   --------------------------------- */
   useEffect(() => {
-
-    const loadStatus = async () => {
-
-      const { data: factors, error } =
-        await supabaseClient.auth.mfa.listFactors();
-
-      if (error) {
-        toast.error("Unable to load MFA status");
-        setTwoFactorEnabled(false);
-        return;
-      }
-
-      const enabled = !!factors && factors.totp.length > 0;
-
-      setTwoFactorEnabled(enabled);
-    };
-
-    loadStatus();
   });
 
   /* --------------------------------
@@ -61,123 +59,6 @@ const SecuritySettings: React.FC = () => {
     } else {
       disableMfa();
     }
-  };
-
-  /* --------------------------------
-     CP-3: ENROLL (QR CODE)
-  --------------------------------- */
-  const startEnrollment = async () => {
-    if (factorId) {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    toast.info("Starting two-factor authentication…")
-    const { data, error } =
-      await supabaseClient.auth.mfa.enroll({
-        factorType: "totp",
-      });
-
-    if (error || !data) {
-      toast.error(error?.message || "Failed to start MFA enrollment")
-      setError(error?.message ?? "Failed to start MFA enrollment");
-      setLoading(false);
-      return;
-    }
-
-    setFactorId(data.id);
-    setQr(data.totp.qr_code);
-    setLoading(false);
-  };
-
-  /* --------------------------------
-     CP-4: CREATE CHALLENGE
-  --------------------------------- */
-  const createChallenge = async () => {
-    if (!factorId) return;
-
-    setLoading(true);
-    setError(null);
-    debugger;
-    const { data, error } =
-      await supabaseClient.auth.mfa.challenge({
-        factorId,
-      });
-
-    if (error || !data) {
-      console.error("🔴 [CP-4] challenge error:", error);
-      toast.error(error?.message || "Unable to start verification")
-      setError(error?.message ?? "Failed to create challenge");
-      setLoading(false);
-      return;
-    }
-
-    setChallengeId(data.id);
-    setLoading(false);
-  };
-
-  /* --------------------------------
-     CP-5: VERIFY OTP
-  --------------------------------- */
-  const verifyEnrollment = async () => {
-    if (!factorId || !challengeId) return;
-
-    setLoading(true);
-    setError(null);
-
-    const { error } =
-      await supabaseClient.auth.mfa.verify({
-        factorId,
-        challengeId,
-        code: otp,
-      });
-
-    if (error) {
-      toast.error(error?.message || "Invalid code. Please try again.")
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-
-    toast.success("MFA enrollment successful")
-    // Re-check MFA status
-    const { data: factors } =
-      await supabaseClient.auth.mfa.listFactors();
-
-    setTwoFactorEnabled(!!factors && factors.totp.length > 0);
-
-    // Cleanup
-    setFactorId(null);
-    setChallengeId(null);
-    setQr(null);
-    setOtp("");
-    setLoading(false);
-  };
-
-  /* --------------------------------
-     CP-7: DISABLE MFA
-  --------------------------------- */
-  const disableMfa = async () => {
-
-    const { data: factors, error } =
-      await supabaseClient.auth.mfa.listFactors();
-
-    if (error || !factors || factors.totp.length === 0) {
-      return;
-    }
-
-    const {error: disable_error} = await supabaseClient.auth.mfa.unenroll({
-      factorId: factors.totp[0].id,
-    });
-
-    if(disable_error){
-      toast.error("Unable to disable two-factor authentication");
-      return;
-    }
-    toast.success("MFA enrollment disabled successful")
-
-    setTwoFactorEnabled(false);
   };
 
   /* --------------------------------
