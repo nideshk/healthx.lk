@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
       platform_fee
     `
     )
+    .eq("is_active", true)
     .order("created_at", { ascending: false });
 
   if (error) {
