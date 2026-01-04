@@ -6,7 +6,7 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }>  }
 ) {
   try {
     /* ---------------- AUTH ---------------- */
@@ -15,6 +15,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const {id} = await context.params;
     const patientId = user?.patient_id;
     if (!patientId) {
       return NextResponse.json(
@@ -37,7 +38,7 @@ export async function POST(
     const { data: appointment, error: apptError } = await supabaseClient
       .from("appointments")
       .select("id, patient_id, practitioner_id, status")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (apptError || !appointment) {
