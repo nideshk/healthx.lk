@@ -1,24 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
-
-/**
- * GET /api/practitioner/[id]/analytics?from=2025-12-01&to=2025-12-05
- *
- * Returns appointment & transaction aggregates for the practitioner.
- *
- * Notes:
- * - `from` and `to` are optional ISO date strings (e.g. 2025-12-01 or 2025-12-01T00:00:00Z).
- * - `from` is inclusive; `to` is inclusive (end of day).
- * - upcoming = appointments with starts_at > now() and status NOT cancelled/completed.
- */
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 type Result = {
   total_bookings: number;
   completed: number;
   cancelled: number;
-  refunds_requested: number; // count of refund transactions or refund requests
-  refund_amount: number;     // NEW: total refunded amount (sum)
+  refunds_requested: number;
+  refund_amount: number;
   upcoming: number;
 };
 
@@ -160,6 +151,23 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       refund_amount,
       upcoming,
     };
+
+
+    const cnx = getAuditContext(req, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        practitionerId,
+        result,
+      }
+    });
+
 
     return NextResponse.json(result, { status: 200 });
 

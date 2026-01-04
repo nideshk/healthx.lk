@@ -1,14 +1,16 @@
 // app/api/booking/appointment/draft/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 const supabase = supabaseClient;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { user, authorized } = await requireUser();
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+  const cnx = getAuditContext(req, user);
   const patientId = user?.patient_id;
   if (!patientId) return NextResponse.json({ error: "Only patients can have drafts" }, { status: 403 });
 
@@ -23,19 +25,38 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  await auditLog({
+    ...cnx,
+    action: "VIEWED",
+    entityType: "APPOINTMENT_DRAFT",
+    purpose: "operations",
+    source: "user_portal",
+    metadata: data ? { draft_id: data.id } : {}
+  })
   return NextResponse.json({ success: true, draft: data || null });
 }
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
   // Expect shape: { draft_id?: string|null, data: {...} }
   const body = await req.json();
   const { draft_id, data: newData } = body ?? {};
 
   const { user, authorized } = await requireUser();
+  const cnx = getAuditContext(req, user);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const patientId = user?.patient_id;
-  if (!patientId) return NextResponse.json({ error: "Only patients can save drafts" }, { status: 403 });
+  if (!patientId) {
+    await auditLog({
+      ...cnx,
+      action: "UNAUTHORIZED_ATTEMPT",
+      entityType: "APPOINTMENT_DRAFT",
+      purpose: "operations",
+      source: "user_portal",
+      metadata:{ data :  `no_patient_id : patient_id_missing`}
+    })
+    return NextResponse.json({ error: "Only patients can save drafts" }, { status: 403 });
+  }
 
   if (!newData || typeof newData !== "object") {
     return NextResponse.json({ error: "Invalid 'data' payload" }, { status: 400 });
@@ -55,11 +76,8 @@ export async function PATCH(req: Request) {
       if (!error) {
         return NextResponse.json({ success: true, draft: data });
       }
-      // otherwise fallthrough to upsert (safe)
-      console.warn("Update returned error, falling back to upsert:", error);
     }
 
-    // Upsert by patient_id to ensure one-draft-per-patient (requires UNIQUE(patient_id))
     const { data: upserted, error: upsertErr } = await supabase
       .from("appointment_draft")
       .upsert(
@@ -77,6 +95,16 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: upsertErr.message }, { status: 400 });
     }
 
+    await auditLog({
+      ...cnx,
+      action: "UPDATED",
+      entityType: "APPOINTMENT_DRAFT",
+      entityId: upserted.id,
+      purpose: "operations",
+      source: "user_portal",
+      metadata: { draft_id: upserted.id }
+    })
+
     return NextResponse.json({ success: true, draft: upserted });
   } catch (err: any) {
     console.error("Unexpected error saving draft:", err);
@@ -84,15 +112,27 @@ export async function PATCH(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const body = await req.json();
   const { data: newData } = body ?? {};
 
   const { user, authorized } = await requireUser();
+  const cnx = getAuditContext(req, user);
+
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const patientId = user?.patient_id;
-  if (!patientId) return NextResponse.json({ error: "Only patients can create drafts" }, { status: 403 });
+  if (!patientId){ 
+    await auditLog({
+      ...cnx,
+      action: "UNAUTHORIZED_ATTEMPT",
+      entityType: "APPOINTMENT_DRAFT",
+      purpose: "operations",
+      source: "user_portal",
+      metadata:{ data :  `no_patient_id : patient_id_missing`}
+    })
+    return NextResponse.json({ error: "Only patients can create drafts" }, { status: 403 });
+  }
 
   if (!newData || typeof newData !== "object") {
     return NextResponse.json({ error: "Invalid 'data' payload" }, { status: 400 });
@@ -115,6 +155,16 @@ export async function POST(req: Request) {
       console.error("Insert upsert error:", error);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+
+    await auditLog({
+      ...cnx,
+      action: "CREATED",
+      entityType: "APPOINTMENT_DRAFT",
+      entityId: created.id,
+      purpose: "operations",
+      source: "user_portal",
+      metadata: { draft_id: created.id }
+    })
 
     return NextResponse.json({ success: true, draft: created });
   } catch (err: any) {

@@ -1,7 +1,9 @@
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { supabaseClient } from "@/lib/supabaseClient";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 interface PractitionerPayload {
   full_name: string;
@@ -22,7 +24,7 @@ interface PractitionerPayload {
   profile_picture_url?: string;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body: PractitionerPayload = await req.json();
 
@@ -46,6 +48,17 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
+
+      const cnx = getAuditContext(req);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PRACTITIONER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: { message: "Practitioner created successfully", data },
+    })
 
     return NextResponse.json(
       { message: "Practitioner created successfully", data },

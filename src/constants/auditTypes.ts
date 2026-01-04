@@ -9,8 +9,12 @@ export type AuditAction =
   | "VIEWED"
   | "CREATED"
   | "UPDATED"
+  | "CHECKED_STATUS"
+  | "UNAUTHORIZED_ATTEMPT"
   | "FAILED"
+  | "UNAUTHORIZED_ATTACHMENT_META_ATTEMPT"
   | "DENIED"
+  | "FORBIDDEN_ACCESS_ATTEMPT"
   | "DELETED"
   | "APPROVED"
   | "CANCELLED"
@@ -22,13 +26,20 @@ export type AuditPurpose =
   | "treatment"
   | "payment"
   | "operations"
+  | "analytics"
   | "support"
   | "compliance"
 
 
 export type EntityType = 
 | "PATIENT"
+| "ATTACHMENT"
+| "APPOINTMENT_DRAFT"
+| "FOLLOW_UP_DATA"
 | "PRACTITIONER"
+| "APPOINTMENT_DETAILS"
+| "APPOINTMENT_TYPE"
+| "CONSULTATION_DATA"
 | "APPOINTMENT"
 | "PHI_FILE"
 | "IDENTIFICATION_FILE"
@@ -40,6 +51,7 @@ export type EntityType =
 | "ENCOUNTER"
 | "HIPAA_AUDIT_LOG"
 | "ADMIN_USER"
+| "TRANSACTION";
 
 
 export type AuditEvent = {
@@ -49,7 +61,7 @@ export type AuditEvent = {
   entityType: EntityType;
   entityId?: string;
   purpose?: AuditPurpose;
-  source?: "api" | "dashboard" | "cron" | "webhook" | "admin_panel";
+  source?: "api" | "dashboard" | "cron" | "webhook" | "admin_panel" | "user_portal";
   requestId?: string;
   metadata?: Record<string, any>;
   ipAddress?: string | null;

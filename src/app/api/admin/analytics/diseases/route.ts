@@ -6,20 +6,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   try {
-    /* ---------------------------------------
-       1️⃣ Authenticate admin
-    --------------------------------------- */
-    // const {user} = await requireUser();
-    // if (!user || !["superadmin"].includes(user.role)) {
-    //   return NextResponse.json(
-    //     { error: "Unauthorized" },
-    //     { status: 403 }
-    //   );
-    // }
-
-    /* ---------------------------------------
-       2️⃣ Read query params
-    --------------------------------------- */
+ 
     const { searchParams } = new URL(req.url);
 
     const country = searchParams.get("country") || "LK";
