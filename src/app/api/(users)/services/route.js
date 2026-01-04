@@ -12,6 +12,7 @@ export async function GET() {
     const { data: appointmentTypes, error } = await supabaseClient
       .from("appointment_type")
       .select("*")
+      .eq("is_active", true)
       .order("created_at", { ascending: false });
 
     if (error) {

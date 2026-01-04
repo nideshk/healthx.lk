@@ -130,6 +130,7 @@ export async function GET(
     const { data: appointmentTypes } = await supabaseClient
       .from("appointment_type")
       .select("id, name, duration_mins")
+      .eq("is_active", true)
       .in("id", offeredTypes);
 
     if (!appointmentTypes) {

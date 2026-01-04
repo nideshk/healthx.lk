@@ -7,6 +7,7 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("appointment_type")
       .select("id, name, duration_mins, base_fee, max_attendee, platform_fee, extra_fee_per_attendee")
+      .eq("is_active", true)
       .order("name", { ascending: true });
 
     if (error) {

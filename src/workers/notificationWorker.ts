@@ -59,6 +59,7 @@ export async function processNotifications() {
               .from("appointment_types")
               .select("name")
               .eq("id", appointment.appointment_type_id)
+              .eq("is_active", true)
               .single();
 
             appointmentData = {

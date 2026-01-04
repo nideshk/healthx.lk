@@ -130,6 +130,7 @@ export async function POST(
         .from("appointment_type")
         .select("base_fee, platform_fee")
         .eq("id", appointmentType.id)
+        .eq("is_active", true)
         .single();
 
       if (typeErr || !typeRow) {
