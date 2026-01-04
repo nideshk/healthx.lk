@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
-import { pages } from "next/dist/build/templates/app-page";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
@@ -16,17 +15,16 @@ export async function GET(req: NextRequest) {
     }
 
     const cnx = getAuditContext(req, user);
-    // Check if the user has the 'admin' role
-    if (user?.profile?.role !== 'admin') {
-        
+    // Check if the user has the 'admin' role or 'superadmin' role
+    if (user?.profile?.role !== 'admin' && user?.profile?.role !== 'superadmin') {
         await auditLog({
             ...cnx,
             action: "FORBIDDEN_ACCESS_ATTEMPT",
-            entityType : "TRANSACTION",
+            entityType: "TRANSACTION",
             purpose: "analytics",
             metadata: {
                 description: `Non-admin ${user?.auth_user_id} attempted to access transactions analytics.`,
-            }   
+            }
         })
         return NextResponse.json(
             { message: 'Access denied.' },
@@ -137,7 +135,7 @@ export async function GET(req: NextRequest) {
         await auditLog({
             ...cnx,
             action: "VIEWED",
-            entityType : "TRANSACTION",
+            entityType: "TRANSACTION",
             purpose: "analytics",
             source: "dashboard",
             metadata: {
