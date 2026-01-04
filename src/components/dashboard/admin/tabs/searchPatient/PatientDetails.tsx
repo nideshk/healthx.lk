@@ -65,7 +65,6 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
       <div className="flex gap-2 text-xs bg-slate-50 rounded-full p-1 border border-slate-200">
         {renderTab("overview", "Overview")}
         {renderTab("appointments", "Appointments")}
-        {renderTab("audit", "Audit Log")}
       </div>
 
       {/* Tab Content */}
@@ -80,7 +79,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
         />
       )}
 
-      {activeTab === "audit" && <AuditLogTab />}
+      
     </div>
   );
 
@@ -259,12 +258,3 @@ const EmptyText = () => (
   </p>
 );
 
-/* ----------------------------------
-   Audit Log (unchanged placeholder)
------------------------------------ */
-
-const AuditLogTab: React.FC = () => (
-  <p className="text-xs text-slate-500">
-    Audit log integration coming soon.
-  </p>
-);
