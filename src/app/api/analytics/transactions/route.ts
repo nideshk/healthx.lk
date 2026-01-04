@@ -13,8 +13,8 @@ export async function GET(req: Request) {
         return response;
     }
 
-    // Check if the user has the 'admin' role
-    if (user?.profile?.role !== 'admin') {
+    // Check if the user has the 'admin' role or 'superadmin' role
+    if (user?.profile?.role !== 'admin' && user?.profile?.role !== 'superadmin') {
         return NextResponse.json(
             { message: 'Access denied.' },
             { status: 403 }

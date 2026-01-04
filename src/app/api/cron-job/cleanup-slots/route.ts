@@ -13,6 +13,7 @@ export async function GET(reques: NextRequest) {
             .update({ status: 'cancelled', payment_status: 'failed' })
             .eq('status', 'pending')
             .lt('created_at', expiryTime)
+            .neq('source', 'admin') // donot delete appointments created by admin
             .select();
 
         console.log("Expired appointments : ", updatedAppoitments);
@@ -21,22 +22,30 @@ export async function GET(reques: NextRequest) {
             throw apptUpdateError;
         }
 
-        // Update stale transactions
-        const { data: updatedTransactions, error: transactionUpdateError } = await supabaseAdmin
-            .from("transactions")
-            .update({ status: 'failed' })
-            .eq('status', 'pending')
-            .lt('created_at', expiryTime)
-            .select();
+        const cancelledAppointmentIds = updatedAppoitments?.map(x => x.id) || [];
+        let cancelledTransactionsCount = 0;
 
-        if (transactionUpdateError) {
-            throw transactionUpdateError;
+        if (cancelledAppointmentIds.length > 0) {
+            // Update stale transactions which were related to above cancelled appointments
+            const { data: updatedTransactions, error: transactionUpdateError } = await supabaseAdmin
+                .from("transactions")
+                .update({ status: 'failed' })
+                .eq('status', 'pending')
+                .lt('created_at', expiryTime)
+                .in('appointment_id', cancelledAppointmentIds)
+                .select();
+
+            if (transactionUpdateError) {
+                throw transactionUpdateError;
+            }
+
+            cancelledTransactionsCount = updatedTransactions?.length || 0;
         }
 
         return NextResponse.json({
             success: true,
             releasedAppointments: updatedAppoitments?.length || 0,
-            releasedTransactions: updatedTransactions?.length || 0,
+            releasedTransactions: cancelledTransactionsCount || 0,
             processedAt: new Date().toISOString()
         });
     } catch (error) {
