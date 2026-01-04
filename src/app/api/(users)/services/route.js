@@ -20,6 +20,28 @@ export async function GET() {
       return Response.json({ error: error.message }, { status: 500 });
     }
 
+    const cnx = getAuditContext(_, user);
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "SERVICE",
+      entityId: null,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        services: appointmentTypes.map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          duration: t.duration_mins,
+          price: t.base_fee,
+          max_attendees: t.max_attendee,
+        })),
+        total: appointmentTypes.length,
+        user: user.email
+      }
+    });
+    
     // Final response
     return Response.json(
       {

@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 
 export const runtime = "nodejs";
 
@@ -22,12 +24,13 @@ function calculateAge(dob: string | Date | null | undefined): number | null {
 /* -------------------------------------
    GET Appointments
 ------------------------------------- */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const { authorized, user, role } = await requireUser();
     if (!authorized) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
+    const cnx = getAuditContext(req, user);
 
     /* -------------------------------------
        Base Query
@@ -253,6 +256,29 @@ export async function GET() {
     /* -------------------------------------
        Final Response
     ------------------------------------- */
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "APPOINTMENT",
+      purpose: "operations",
+      source: "user_portal",
+      metadata: {
+      success: true,
+      role,
+      count: {
+        pending_payment: pending_payment.length,
+        ongoing: ongoing.length,
+        upcoming: upcoming.length,
+        past: past.length,
+        cancelled: cancelled.length,
+      },
+      pending_payment,
+      ongoing,
+      upcoming,
+      past,
+      cancelled,
+    }
+    })
     return NextResponse.json({
       success: true,
       role,

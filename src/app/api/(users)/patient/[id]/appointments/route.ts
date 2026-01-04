@@ -1,9 +1,11 @@
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -16,7 +18,7 @@ export async function GET(
       );
     }
 
-    const { authorized, role } = await requireUser();
+    const { authorized, role , user } = await requireUser();
 
     if (!authorized) {
       return NextResponse.json(
@@ -25,7 +27,6 @@ export async function GET(
       );
     }
 
-    /** RBAC */
     const allowedRoles = ["admin", "superadmin"];
     if (!allowedRoles.includes(role)) {
       return NextResponse.json(
@@ -99,6 +100,18 @@ export async function GET(
       if (appt.status === "completed") {
         completed.push(item);
       }
+    });
+
+    const cnx = getAuditContext(request, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "APPOINTMENT",
+      entityId: patientId,
+      purpose: "operations",
+      source: "user_portal",
+      metadata: { patientId , total_appointments: data.length, scheduled: scheduled.length, completed: completed.length }
     });
 
     return NextResponse.json({

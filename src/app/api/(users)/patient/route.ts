@@ -1,10 +1,14 @@
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { authorized, role } = await requireUser();
+    const { authorized, role, user } = await requireUser();
+
+    const cnx = getAuditContext(request, user);
 
     if (!authorized) {
       return NextResponse.json(
@@ -61,7 +65,7 @@ export async function GET(request: Request) {
     }
 
     /** Pagination + ordering */
-    const { data:patients, count, error } = await query
+    const { data: patients, count, error } = await query
       .order("created_at", { ascending: false })
       .range(from, to);
 
@@ -96,15 +100,34 @@ export async function GET(request: Request) {
     }
 
     const enrichedPatients = (patients ?? []).map((p: any) => {
-    const profile = profileMap[p.supabase_user_id] ?? {};
+      const profile = profileMap[p.supabase_user_id] ?? {};
 
-    return {
-      ...p,
-      city: profile.city ?? null,
-      state: profile.state ?? null,
-      country: profile.country ?? null,
-    };
-  });
+      return {
+        ...p,
+        city: profile.city ?? null,
+        state: profile.state ?? null,
+        country: profile.country ?? null,
+      };
+    });
+
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PATIENT",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        data: enrichedPatients ?? [],
+        meta: {
+          page,
+          limit,
+          total: count ?? 0,
+          totalPages: count ? Math.ceil(count / limit) : 0,
+          searchApplied: Boolean(q),
+        },
+      }
+    })
 
 
     return NextResponse.json({

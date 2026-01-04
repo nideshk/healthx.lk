@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   const requestId = crypto.randomUUID();
@@ -16,14 +18,21 @@ export async function POST(
      * ------------------------------------------------ */
     const auth = await requireUser();
 
-    console.log("🔹 [ATTACHMENT_META] Auth result", {
-      requestId,
-      authorized: auth.authorized,
-      role: auth.user?.role,
-      patient_id: auth.user?.patient_id,
-    });
+    const cnx = getAuditContext(req, auth.user);
 
     if (!auth.authorized || !auth.user?.patient_id) {
+
+      await auditLog({
+        ...cnx,
+        action: "UNAUTHORIZED_ATTACHMENT_META_ATTEMPT",
+        entityType : "ATTACHMENT",
+        purpose: "treatment",
+        source: "user_portal",
+        metadata: {
+          reason: !auth.authorized ? "unauthorized" : "no_patient_context",
+        }
+      })
+
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -34,11 +43,6 @@ export async function POST(
      * PARAMS
      * ------------------------------------------------ */
     const { id: appointmentId } = await context.params;
-
-    console.log("🔹 [ATTACHMENT_META] Params resolved", {
-      requestId,
-      appointmentId,
-    });
 
     if (!appointmentId) {
       return NextResponse.json(
@@ -53,13 +57,6 @@ export async function POST(
     const body = await req.json();
     const { file_key, file_name, file_type, file_size } = body;
 
-    console.log("🔹 [ATTACHMENT_META] Body received", {
-      requestId,
-      file_name,
-      file_type,
-      file_size,
-      has_file_key: Boolean(file_key),
-    });
 
     if (!file_key || !file_name || !file_type || !file_size) {
       console.warn("⛔ [ATTACHMENT_META] Invalid payload", {
@@ -81,14 +78,6 @@ export async function POST(
       .eq("id", appointmentId)
       .single();
 
-    console.log("🔹 [ATTACHMENT_META] Appointment lookup", {
-      requestId,
-      found: Boolean(appointment),
-      error: apptErr?.message,
-      appointment_patient_id: appointment?.patient_id,
-      user_patient_id: auth.user.patient_id,
-    });
-
     if (apptErr || !appointment) {
       return NextResponse.json(
         { error: "Appointment not found" },
@@ -97,11 +86,17 @@ export async function POST(
     }
 
     if (appointment.patient_id !== auth.user.patient_id) {
-      console.warn("⛔ [ATTACHMENT_META] Forbidden", {
-        requestId,
-        appointment_patient_id: appointment.patient_id,
-        user_patient_id: auth.user.patient_id,
-      });
+
+       await auditLog({
+        ...cnx,
+        action: "UNAUTHORIZED_ATTACHMENT_META_ATTEMPT",
+        entityType : "ATTACHMENT",
+        purpose: "treatment",
+        source: "user_portal",
+        metadata: {
+          data : `${auth.user.patient_id} tried to access attachment meta for appointment ${appointmentId} owned by patient ${appointment.patient_id}`,
+        }
+      })
 
       return NextResponse.json(
         { error: "Forbidden" },
@@ -136,11 +131,14 @@ export async function POST(
       );
     }
 
-    console.log("✅ [ATTACHMENT_META] Attachment saved", {
-      requestId,
-      appointmentId,
-      file_name,
-    });
+    await auditLog({
+      ...cnx,
+      action: "CREATED",
+      entityType: "ATTACHMENT",
+      purpose: "treatment",
+      source: "user_portal",
+      metadata: { file_key, file_name, file_type, file_size }
+    })
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

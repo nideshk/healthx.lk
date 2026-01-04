@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin"; // client with service key not required for read
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function GET() {
   try {
@@ -22,12 +24,9 @@ export async function GET() {
   }
 }
 
-/* ------------------------------------------------
- * POST — Create appointment type (SUPER ADMIN)
- * ------------------------------------------------ */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { authorized, role } = await requireUser();
+    const { authorized, role, user } = await requireUser();
 
     if (!authorized || role !== "superadmin") {
       return NextResponse.json(
@@ -35,6 +34,8 @@ export async function POST(req: Request) {
         { status: 403 }
       );
     }
+
+    const cnx = getAuditContext(req, user);
 
     const body = await req.json();
     const {
@@ -69,6 +70,18 @@ export async function POST(req: Request) {
       .single();
 
     if (error) throw error;
+
+      await auditLog({
+      ...cnx,
+      action: "CREATED",
+      entityType: "APPOINTMENT_TYPE",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        info: "Created new appointment type",
+        data: data
+      }
+    })
 
     return NextResponse.json({
       success: true,

@@ -9,6 +9,10 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { s3 } from "@/lib/s3/s3";
+import { get } from "http";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { logAuditEvent } from "@/lib/logAuditEvent";
+import { auditLog } from "@/lib/audit/auditLog";
 
 /* ─────────────────────────────────────────────
    GET: View file (signed URL)
@@ -44,6 +48,18 @@ export async function GET(
     const signedUrl = await getSignedUrl(s3, command, {
       expiresIn: 60,
     });
+
+    const cnx = getAuditContext(_request, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "ATTACHMENT",
+      entityId: id,
+      purpose: "operations",
+      source: "user_portal",
+      metadata: { file_url: attachment.file_url }
+    })
 
     return NextResponse.json({
       url: signedUrl,

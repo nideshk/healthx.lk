@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching)
 
 // Endpoint: /api/analytics/transactions/practitioner
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
     const { authorized, response, user } = await requireUser();
 
     console.log("User: ", user);
@@ -13,8 +15,20 @@ export async function GET(req: Request) {
 
     if (!authorized) return response;
 
+    const cnx = getAuditContext(req, user);
+
     // Check if the user has the 'practitioner' role
     if (user?.profile?.role !== 'practitioner') {
+
+        await auditLog({
+            ...cnx,
+            action: "FORBIDDEN_ACCESS_ATTEMPT",
+            entityType : "TRANSACTION",
+            purpose: "analytics",
+            metadata: {
+                description: `Non-practitioner ${user?.auth_user_id} attempted to access practitioner transactions.`,
+            }
+        })
         return NextResponse.json(
             { message: 'Access denied.' },
             { status: 403 }
@@ -63,8 +77,6 @@ export async function GET(req: Request) {
     if (!practitionerId) {
         return NextResponse.json({ error: "Practitioner ID not found for the user" }, { status: 403 });
     }
-
-    console.log(`🔍 Fetching transactions for practioner ID: ${practitionerId} (User: ${user?.auth_user_id}, Role: ${user?.role})`);
 
     try {
         // query to send analytics data
@@ -136,6 +148,18 @@ export async function GET(req: Request) {
             netAmount: 0,
             totalCompletedTransactions: 0
         });
+
+        await auditLog({
+            ...cnx,
+            action: "VIEWED",
+            entityType : "TRANSACTION",
+            purpose: "analytics",
+            source: "dashboard",
+            metadata: {
+                filters: { from, to, status, page, pageSize },
+                summary: analytics
+            }
+        })
 
         return NextResponse.json({
             message: "Practitioner transactions fetched successfully.",

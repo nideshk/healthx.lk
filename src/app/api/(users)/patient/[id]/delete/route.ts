@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function DELETE(
   req: Request,
@@ -30,7 +32,6 @@ export async function DELETE(
           { status: 403 }
         );
       }
-
       const { error } = await supabaseAdmin
         .from("appointments")
         .update({
@@ -41,7 +42,7 @@ export async function DELETE(
         .eq("practitioner_id", practitionerId);
 
       if (error) throw error;
-
+      
       return NextResponse.json({
         success: true,
         message: "Patient removed from your appointments",
@@ -79,6 +80,20 @@ export async function DELETE(
 
         if (profileError) throw profileError;
       }
+
+      const cnx = getAuditContext(req as any, user);
+      await auditLog({
+        ...cnx,
+        action: "DELETED",
+        entityType: "PATIENT",
+        entityId: patientId,
+        metadata: {
+          patientId,
+          message : "Patient soft deleted by admin/superadmin",
+          id : patientId
+          }
+      });
+
 
       return NextResponse.json({
         success: true,

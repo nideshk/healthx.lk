@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { pages } from "next/dist/build/templates/app-page";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching)
 
 // Endpoint: /api/analytics/transactions
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
 
     const { authorized, response, user } = await requireUser();
     if (!authorized) {
@@ -15,6 +17,19 @@ export async function GET(req: Request) {
 
     // Check if the user has the 'admin' role or 'superadmin' role
     if (user?.profile?.role !== 'admin' && user?.profile?.role !== 'superadmin') {
+    const cnx = getAuditContext(req, user);
+    // Check if the user has the 'admin' role
+    if (user?.profile?.role !== 'admin') {
+        
+        await auditLog({
+            ...cnx,
+            action: "FORBIDDEN_ACCESS_ATTEMPT",
+            entityType : "TRANSACTION",
+            purpose: "analytics",
+            metadata: {
+                description: `Non-admin ${user?.auth_user_id} attempted to access transactions analytics.`,
+            }   
+        })
         return NextResponse.json(
             { message: 'Access denied.' },
             { status: 403 }
@@ -120,6 +135,18 @@ export async function GET(req: Request) {
             netAmount: 0,
             totalCompletedTransactions: 0
         });
+
+        await auditLog({
+            ...cnx,
+            action: "VIEWED",
+            entityType : "TRANSACTION",
+            purpose: "analytics",
+            source: "dashboard",
+            metadata: {
+                filters: { from, to, status, page, pageSize },
+                analytics_summary: analytics
+            }
+        })
 
         return NextResponse.json({
             message: "Transactions fetched successfully.",

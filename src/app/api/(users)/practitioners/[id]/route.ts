@@ -1,13 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
- 
+
   try {
     const id = (await context.params).id;
 
@@ -17,12 +19,8 @@ export async function GET(
         { status: 400 }
       );
     }
-    const { authorized, response, user } = await requireUser();
+    const { user } = await requireUser();
 
-
-    // ------------------------------------------------
-    // FETCH PRACTITIONER
-    // ------------------------------------------------
     const { data: practitioner, error: dbError } = await supabaseClient
       .from("practitioners")
       .select("*")
@@ -36,35 +34,27 @@ export async function GET(
       );
     }
 
-     // ------------------------------------------------
-    // BUILD APPOINTMENT TYPES FROM FEES JSON ✅
-    // ------------------------------------------------
     console.log(practitioner)
     const appointmentTypes =
-  practitioner.fees && typeof practitioner.fees === "object"
-    ? Object.entries<any>(practitioner.fees).map(
-        ([appointment_type_id, f]) => ({
-          id: appointment_type_id,          // ✅ appointment_type_id
-          name: f.type,
-          fee: f.fee,
-          duration_mins: f.duration_mins,
-          max_attendees: f.max_attendees,
-          extra_fee_per_attendee: f.extra_fee_per_attendee ?? 0,
-        })
-      )
-    : [];
+      practitioner.fees && typeof practitioner.fees === "object"
+        ? Object.entries<any>(practitioner.fees).map(
+          ([appointment_type_id, f]) => ({
+            id: appointment_type_id,          // ✅ appointment_type_id
+            name: f.type,
+            fee: f.fee,
+            duration_mins: f.duration_mins,
+            max_attendees: f.max_attendees,
+            extra_fee_per_attendee: f.extra_fee_per_attendee ?? 0,
+          })
+        )
+        : [];
 
-    console.log(appointmentTypes)
-
-    // ------------------------------------------------
-    // FETCH BANK DETAILS (ADMIN / SUPER ADMIN ONLY) ✅
-    // ------------------------------------------------
     let bankDetails: any[] | null = null;
     console.log(user?.role)
     if (["admin", "superadmin"].includes(user?.role)) {
       console.log("enterd here")
       console.log(id)
-      const { data: bank, error: bank_error} = await supabaseAdmin
+      const { data: bank, error: bank_error } = await supabaseAdmin
         .from("practitioner_bank_details")
         .select(
           `account_holder_name,
@@ -76,19 +66,11 @@ export async function GET(
         .eq("practitioner_id", id);
 
       bankDetails = bank ?? [];
-      if (bank_error){
+      if (bank_error) {
         console.log(bank_error)
       }
     }
 
-
-    // ----------------------------------------------------------
-    // ROLE-BASED RESPONSES
-    // ----------------------------------------------------------
-
-    //
-    // 👉 PATIENT — PUBLIC SAFE VIEW
-    //
     if (user?.role === "patient") {
       return NextResponse.json({
         success: true,
@@ -104,9 +86,6 @@ export async function GET(
       });
     }
 
-    //
-    // 👉 PRACTITIONER — SELF ONLY
-    //
     if (user?.role === "practitioner" && user?.practitioner_id !== id) {
       return NextResponse.json(
         { error: "You cannot view another practitioner's profile" },
@@ -114,20 +93,51 @@ export async function GET(
       );
     }
 
-    //
-    // 👉 PRACTITIONER (self) OR ADMIN → full details
-    //
+    const cnx = getAuditContext(req, user);
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PRACTITIONER",
+      entityId: practitioner.id,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        success: true,
+        practitioner: {
+          id: practitioner.id,
+          gender: practitioner.gender,
+          license_number: practitioner.license_number,
+          contact_number: practitioner.contact_number,
+          contact_email: practitioner.contact_email,
+          full_name: practitioner.full_name,
+          first_name: practitioner.first_name || null,
+          last_name: practitioner.last_name || null,
+          profile_bio: practitioner.profile_bio,
+          specialization: practitioner.specialization,
+          qualifications: practitioner.qualification,
+          experience_years: practitioner.experience_years,
+          price: practitioner.solo_consultation_fee,
+          family_price: practitioner.family_consultation_fee,
+          profile_image: practitioner.profile_picture_url,
+          available_services: practitioner.available_services,
+          appointment_types: appointmentTypes,
+        },
+        bank_details: bankDetails,
+        requested_by: user?.auth_user_id,
+      }
+    });
+
     return NextResponse.json({
       success: true,
       practitioner: {
         id: practitioner.id,
         gender: practitioner.gender,
-        license_number : practitioner.license_number,
-        contact_number : practitioner.contact_number,
-        contact_email : practitioner.contact_email,
+        license_number: practitioner.license_number,
+        contact_number: practitioner.contact_number,
+        contact_email: practitioner.contact_email,
         full_name: practitioner.full_name,
         first_name: practitioner.first_name || null,
-        last_name: practitioner.last_name || null,        
+        last_name: practitioner.last_name || null,
         profile_bio: practitioner.profile_bio,
         specialization: practitioner.specialization,
         qualifications: practitioner.qualification,
@@ -155,7 +165,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -168,7 +178,7 @@ export async function DELETE(
       );
     }
 
-    const { authorized, role } = await requireUser();
+    const { authorized, role, user } = await requireUser();
 
     if (!authorized) {
       return NextResponse.json(
@@ -226,6 +236,22 @@ export async function DELETE(
 
       if (profileError) throw profileError;
     }
+
+    const cnx = getAuditContext(request, user);
+
+    await auditLog({
+      ...cnx,
+      action: "DELETED",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        success: true,
+        message: "Practitioner and profile soft-deleted successfully.",
+      }
+    })
+
 
     return NextResponse.json({
       success: true,

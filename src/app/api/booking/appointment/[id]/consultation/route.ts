@@ -3,6 +3,8 @@ import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { signViewUrl } from "../route";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 type PostBody = {
   clinician_notes?: string | null;
@@ -78,7 +80,6 @@ console.log("Fetched attachments (practitioner):", data);
       attachments = data ?? [];
     
 
-    console.log("Fetched attachments:", attachments);
       const signedAttachments = await Promise.all(
         attachments.map(async (atc) => ({
           id: atc.id,
@@ -98,6 +99,19 @@ console.log("Fetched attachments (practitioner):", data);
       .limit(1)
       .maybeSingle();
     if (encErr) throw encErr;
+
+
+    const cnx = getAuditContext(request, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "CONSULTATION_DATA",
+      entityId: appointmentId,
+      purpose: "treatment",
+      source: isPatient ? "user_portal" : "dashboard",
+      metadata: { appointment_id: appointmentId }
+    })
 
     return NextResponse.json({ consent: consent ?? null ,preconsult: preconsult ?? null, encounter: encounter ?? null, attachments: signedAttachments ?? [] }, { status: 200 });
   } catch (err: any) {

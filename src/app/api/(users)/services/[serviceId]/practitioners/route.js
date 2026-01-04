@@ -12,7 +12,6 @@ export async function GET(_, { params }) {
       return Response.json({ error: "Service ID is required" }, { status: 400 });
     }
 
-    // Fetch practitioners who offer this appointment type
     const { data: practitioners, error } = await supabaseClient
       .from("practitioners")
       .select("*")
@@ -34,6 +33,23 @@ export async function GET(_, { params }) {
       active: true, // or p.active if you add that column later
       profile_image: p.profile_picture_url,
     }));
+
+    const cnx = getAuditContext(_, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "SERVICE",
+      entityId: serviceId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        service_id: serviceId,
+        practitioners: formatted,
+        total: formatted.length,
+        user: user.email,
+      }
+    });
 
     return Response.json(
       {

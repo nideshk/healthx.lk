@@ -1,10 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "@/lib/s3/s3";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 /* -------------------------------------------------------------
    CONFLICT CHECKER → prevents overlapping appointments
@@ -57,7 +59,7 @@ export async function signViewUrl(s3Key: string) {
    GET: Fetch appointment details depending on role
 --------------------------------------------------------------*/
 export async function GET(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   const requestId = crypto.randomUUID();
@@ -80,6 +82,7 @@ export async function GET(
      * ------------------------------------------------ */
     const { authorized, user, role } = await requireUser();
 
+    const cnx = getAuditContext(req, user);
     if (!authorized || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -158,6 +161,15 @@ export async function GET(
       role === "patient" &&
       patient?.id !== user.patient_id
     ) {
+      await auditLog({
+        ...cnx,
+        action: "UNAUTHORIZED_ATTEMPT",
+        entityType: "APPOINTMENT",
+        entityId: appointmentId,
+        purpose: "operations",
+        source: "user_portal",
+        metadata:{ data :  `${patient?.id} : patient_id_mismatch`}
+      })
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -165,6 +177,15 @@ export async function GET(
       role === "practitioner" &&
       practitioner?.id !== user.practitioner_id
     ) {
+      await auditLog({
+        ...cnx,
+        action: "UNAUTHORIZED_ATTEMPT",
+        entityType: "APPOINTMENT",
+        entityId: appointmentId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata:{ data :  `${practitioner?.id} : practitioner_id_mismatch`}
+      })
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -238,6 +259,17 @@ export async function GET(
       view_url: await signViewUrl(atc.file_url),
     }))
   );
+
+      await auditLog({
+        ...cnx,
+        action: "VIEWED",
+        entityType: "APPOINTMENT",
+        entityId: appointmentId,
+        purpose: "treatment",
+        source: "user_portal",
+        metadata: { appointment_id: appointmentId }
+      })
+
       return NextResponse.json({
         id: appointment.id,
         starts_at: appointment.starts_at,
@@ -260,6 +292,17 @@ export async function GET(
     }
 
     // Practitioner / Admin
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "APPOINTMENT",
+      entityId: appointmentId,
+      purpose: "treatment",
+      source : "dashboard",
+      metadata: { appointment_id: appointmentId }
+    })
+
     return NextResponse.json({
       ...appointment,
       patient,
@@ -281,14 +324,25 @@ export async function GET(
 }
 
 export async function PATCH(
-  req: Request,
+  req:  NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await context.params;
 
-    const { authorized } = await requireUser();
+    const { authorized , user} = await requireUser();
+
+    const cnx = getAuditContext(req, user);
     if (!authorized) {
+      await auditLog({
+        ...cnx,
+        action: "UNAUTHORIZED_ATTEMPT",
+        entityType: "APPOINTMENT",
+        entityId: id,
+        purpose: "operations",
+        source: "user_portal",
+        metadata:{ data :  `unauthorized_access`}
+      })
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -335,6 +389,17 @@ export async function PATCH(
         );
       }
 
+
+      await auditLog({        
+        ...cnx,
+        action: "UPDATED",
+        entityType: "APPOINTMENT",
+        entityId: id,
+        purpose: "treatment",
+        source: "dashboard",
+        metadata: { cancellation_reason: reason }
+      })
+
       return NextResponse.json({
         success: true,
         message: "Appointment cancelled",
@@ -360,6 +425,16 @@ export async function PATCH(
           { status: 500 }
         );
       }
+
+      await auditLog({
+        ...cnx,
+        action: "UPDATED",
+        entityType: "APPOINTMENT",
+        entityId: id,
+        purpose: "treatment",
+        source: "dashboard",
+        metadata: { event: "soft_deleted" }
+      })
 
       return NextResponse.json({
         success: true,
@@ -398,6 +473,16 @@ export async function PATCH(
           { status: 500 }
         );
       }
+
+      await auditLog({
+        ...cnx,
+        action: "UPDATED",
+        entityType: "APPOINTMENT",
+        entityId: id,
+        purpose: "treatment",
+        source: "dashboard",
+        metadata: { updated_fields: Object.keys(updateData) }
+      })
 
       return NextResponse.json({
         success: true,
