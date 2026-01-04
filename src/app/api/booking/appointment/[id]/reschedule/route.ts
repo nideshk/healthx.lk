@@ -1,12 +1,14 @@
 // FILE: /app/api/booking/appointment/[id]/reschedule/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { DateTime } from "luxon";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -14,6 +16,8 @@ export async function PATCH(
 
     // Auth
     const { authorized, user } = await requireUser();
+
+    const cnx = getAuditContext(req, user);
     if (!authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -44,6 +48,15 @@ export async function PATCH(
 
     // Verify ownership
     if (appointment.patient_id !== user?.patient_id) {
+      await auditLog({
+        ...cnx,
+        action: "UNAUTHORIZED_ATTEMPT",
+        entityType: "APPOINTMENT",  
+        entityId: appointmentId,
+        purpose: "operations",
+        source: "user_portal",
+        metadata:{ data :  `${appointment.patient_id} : patient_id_mismatch`}
+      })
       return NextResponse.json(
         { error: "You cannot modify this appointment" },
         { status: 403 }
@@ -108,6 +121,16 @@ export async function PATCH(
         { status: 500 }
       );
     }
+
+    await auditLog({
+      ...cnx,
+      action: "UPDATED",
+      entityType: "APPOINTMENT",
+      entityId: appointmentId,
+      purpose: "treatment",
+      source: "user_portal",
+      metadata: { starts_at, ends_at }
+    })
 
     return NextResponse.json({
       success: true,

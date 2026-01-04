@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 /* -----------------------------------------------------------
    Utility: convert a local date/time (YYYY-MM-DD + "HH:MM") in a timezone into UTC ISO
@@ -133,6 +135,22 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const { data, error } = await query.order("start_date", { ascending: true });
 
     if (error) throw error;
+
+       const cnx = getAuditContext(request, user);
+    
+        await auditLog({
+          ...cnx,
+          action: "VIEWED",
+          entityType: "PRACTITIONER",
+          entityId: practitionerId,
+          purpose: "operations",
+          source: "dashboard",
+          metadata: {
+            leaves : data ?? []
+          }
+        })
+    
+
     return NextResponse.json({ leaves: data ?? [] });
   } catch (err: any) {
     console.error("GET /leaves error:", err);

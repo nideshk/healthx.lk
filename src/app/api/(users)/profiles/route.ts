@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 
@@ -23,7 +22,6 @@ export async function POST(req: Request) {
   if (vErr) return NextResponse.json({ error: vErr }, { status: 400 });
 
   // create route handler client with cookies => uses the caller's session
-  const cookieStore = cookies();
   const supabase = supabaseAdmin
 
   // get authenticated user from session (no redirects)

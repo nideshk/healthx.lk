@@ -1,3 +1,5 @@
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { logAuditEvent } from "@/lib/logAuditEvent";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -9,7 +11,7 @@ export async function GET(_req: NextRequest) {
        1️⃣ Authentication
     --------------------------------------------------------- */
     const { user } = await requireUser();
-
+    const cnx = getAuditContext(_req, user);
     if (!user?.auth_user_id || !user?.patient_id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -54,15 +56,19 @@ export async function GET(_req: NextRequest) {
     /* ---------------------------------------------------------
        3️⃣ Audit log (non-blocking)
     --------------------------------------------------------- */
-    logAuditEvent({
-      userId: user.auth_user_id,
-      eventType: "VIEWED",
+   
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
       entityType: "FOLLOW_UP_DATA",
+      entityId: user.patient_id,
+      purpose: "operations",
+      source: "dashboard",
       metadata: {
-        patientId: user.patient_id,
-        recordCount: data?.length ?? 0,
-      },
-    }).catch(console.error);
+        data : data,
+        follow_up_count: data?.length || 0
+      }
+    })
 
     /* ---------------------------------------------------------
        4️⃣ Response

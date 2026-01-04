@@ -1,43 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
-/**
- * GET  -> view pricing (practitioner self OR admin OR patient)
- * PATCH -> update pricing (ONLY practitioner self)
- *
- * Response (GET):
- * {
- *   practitioner_id: string,
- *   solo_consultation_fee: string | null,   // numeric string from DB (or null)
- *   family_consultation_fee: string | null
- * }
- *
- * PATCH body:
- *{
- *   "fees": {
- *     "c6f80f6b-e66f-4adb-b423-42b034fc568c": { "fee": 1500, "type": "Standard Consultation", "duration_mins": 30, "max_attendees": 1 }
- *   },
- *   "available_services": ["c6f80f6b-e66f-4adb-b423-42b034fc568c"]
- * }
- */
 
-function isUuidLike(s: any) {
-  return typeof s === "string" && s.length > 0;
-}
-
-function validateFee(value: any) {
-  if (value === null || value === undefined || value === "") return true; // allow clearing with null
-  // allow number or numeric string; up to 2 decimal places and non-negative
-  const s = String(value);
-  if (!/^\d+(\.\d{1,2})?$/.test(s)) return false;
-  // numeric check
-  const n = Number(s);
-  if (!isFinite(n) || n < 0) return false;
-  return true;
-}
-
-export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { id: practitionerId } = await ctx.params;
     if (!practitionerId) return NextResponse.json({ error: "Practitioner identifier is required." }, { status: 400 });
@@ -61,9 +29,25 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
     if (error) throw error;
     if (!data) return NextResponse.json({ error: "Practitioner not found." }, { status: 404 });
 
+    const cnx = getAuditContext(request, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        practitioner_id: data.id,
+        fees: data.fees ?? {}
+      }
+    })
+
+
     return NextResponse.json({
       practitioner_id: data.id,
-      fees: data.fees ?? {}      
+      fees: data.fees ?? {}
     });
   } catch (err: any) {
     console.error("GET /pricing error:", err);
@@ -71,7 +55,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
   }
 }
 
-export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { id: practitionerId } = await ctx.params;
     if (!practitionerId) return NextResponse.json({ error: "Practitioner identifier is required." }, { status: 400 });
@@ -92,7 +76,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     }
 
     const { fees, available_services } = body ?? {};
-    if (fees  === undefined && available_services === undefined) {
+    if (fees === undefined && available_services === undefined) {
       return NextResponse.json({ error: "Nothing to update. Provide at least one fee field." }, { status: 400 });
     }
 
@@ -116,6 +100,24 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
 
     if (error) throw error;
     if (!updated) return NextResponse.json({ error: "Practitioner not found." }, { status: 404 });
+
+
+    const cnx = getAuditContext(request, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        practitioner_id: updated.id,
+        fees: updated.fees ?? null,
+        available_services: updated.available_services ?? []
+      }
+    })
+
 
     return NextResponse.json({
       practitioner_id: updated.id,

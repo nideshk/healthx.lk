@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/authGuard";
 import crypto from 'crypto';
 import { supabaseServer } from "@/lib/supabaseServer";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     const { authorized, response, user } = await requireUser();
 
     if (!authorized) {
@@ -116,7 +118,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Failed to initialize payment transaction in DB." }, { status: 500 });
         }
 
-        console.log("DB : Created PENDING transaction with Order ID:", orderID);
 
         // Creating hash directly here instead of calculate-hash route 
         const hash = crypto
@@ -158,6 +159,17 @@ export async function POST(request: Request) {
             hash: hash,
             items: itemsDescription
         }
+
+        const cnx = getAuditContext(request, user);
+        await auditLog({
+            ...cnx,
+            action: "CREATED",
+            entityType: "TRANSACTION",
+            entityId: practitioner_id,
+            purpose: "operations",
+            source: "user_portal",
+            metadata: { payment_initiated_for_appointment: appointment_id, order_id: orderID }
+        })
         return NextResponse.json({ payment: payHerePayload });
     } catch (err: any) {
         console.log("Error in /api/payhere:", err);

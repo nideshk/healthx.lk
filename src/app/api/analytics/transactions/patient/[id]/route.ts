@@ -1,15 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { get } from "http";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching)
 
 // Endpoint: /api/analytics/transactions/patient/[transaction_id]
-export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
     const { authorized, response, user } = await requireUser();
     if (!authorized) return response;
 
-    // Check if the user has the 'patient' role
     if (user?.profile?.role !== 'patient') {
         return NextResponse.json(
             { message: 'Access denied.' },
@@ -29,7 +31,6 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
 
     try {
         
-        // Fetch the transaction by ID
         const { data: transaction, error } = await supabaseClient
             .from("transactions")
             .select("*")
@@ -59,6 +60,19 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
                 { status: 404 }
             );
         }
+
+        const cnx = getAuditContext(req, user);
+
+        await auditLog({
+            ...cnx,
+            action: "VIEWED",
+            entityType: "TRANSACTION",
+            entityId: transactionId,
+            purpose: "operations",
+            source: "user_portal",
+            metadata: { transactionId  }
+            
+        })
 
         return NextResponse.json({
             message: `Transaction fetched successfully.`,

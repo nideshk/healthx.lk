@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { DateTime } from "luxon";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -23,29 +25,17 @@ export async function GET(
       );
     }
 
-    // -----------------------------------
-    // 🔐 1. Get current authenticated user
-    // -----------------------------------
-    const user = await requireUser();
+    const {user} = await requireUser();
 
-    // user = { id, role, practitioner_id }
-
-    // -----------------------------------
-    // 🔐 2. Enforce role rules
-    // -----------------------------------
-
-    // Patients are NOT allowed
-    console.log("Current user:", user);
-    if (user.role === "patient") {
+    if (user?.role === "patient") {
       return NextResponse.json(
         { error: "Access denied" },
         { status: 403 }
       );
     }
 
-    // Practitioners can ONLY see their own bookings
-    if (user.role === "practitioner") {
-      if (user.user?.practitioner_id !== practitionerId) {
+    if (user?.role === "practitioner") {
+      if (user?.practitioner_id !== practitionerId) {
         return NextResponse.json(
           { error: "You cannot view another practitioner's bookings" },
           { status: 403 }
@@ -53,13 +43,9 @@ export async function GET(
       }
     }
 
-    // Admin has full access — no restrictions
 
     const TIMEZONE = "Asia/Colombo";
 
-    // -----------------------------------
-    // 📅 3. Fetch appointments from DB
-    // -----------------------------------
     const { data, error } = await supabaseClient
       .from("appointments")
       .select("id, starts_at, ends_at, appointment_type_id, status, telehealth_url")
@@ -71,9 +57,6 @@ export async function GET(
 
     if (error) throw error;
 
-    // -----------------------------------
-    // ✅ 4. Compute scheduled / completed counts from raw rows
-    // -----------------------------------
     const scheduledCount = data.filter((r) => {
       const status = (r.status ?? "").toString().toLowerCase();
       return status === "scheduled" || status === "confirmed";
@@ -84,7 +67,6 @@ export async function GET(
       return status === "completed";
     }).length;
 
-    // Convert UTC → Local timezone
     const booked = data.map((a) => {
       const startLocal = DateTime.fromISO(a.starts_at).setZone(TIMEZONE);
       const endLocal = DateTime.fromISO(a.ends_at).setZone(TIMEZONE);
@@ -100,9 +82,25 @@ export async function GET(
       };
     });
 
+    const cnx = getAuditContext(req, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        practitioner_id : practitionerId,
+        range : { from, to },
+        total : booked.length
+      }
+    })
+
     return NextResponse.json({
       success: true,
-      role: user.role,
+      role: user?.role,
       practitioner_id: practitionerId,
       range: { from, to },
       total: booked.length,

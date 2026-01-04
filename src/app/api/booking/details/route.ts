@@ -1,13 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { authorized, user } = await requireUser();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-
+    const cnx = getAuditContext(request, user);
     if (!authorized || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -52,6 +54,16 @@ export async function GET(request: Request) {
       consents: consentsRes.data,
       selectedAttendees: []
     };
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "APPOINTMENT_DETAILS",
+      entityId: appt.id,
+      purpose: "operations",
+      source: "user_portal",
+      metadata: { appointment_id: appt.id }
+    })
 
     return NextResponse.json(formattedData);
   } catch (err: any) {

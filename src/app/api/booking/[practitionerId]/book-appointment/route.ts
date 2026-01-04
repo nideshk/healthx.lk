@@ -1,20 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
-import { sendNotification } from "@/lib/notifications/sendNotification";
 import { notify } from "@/lib/notify";
 import { sendAppointmentInvites } from "@/lib/additional_attendee/appointmentInvites";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export const runtime = "nodejs";
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ practitionerId: string }> }
 ) {
   try {
 
     const {attendeeList} = await req.json();
-    console.log(attendeeList)
     const { practitionerId } = await context.params;
 
     // 1️⃣ Auth
@@ -53,7 +53,6 @@ export async function POST(
       appointmentType,
       pre_consultation,
       selectedDoctor,
-      attendeeCount,
       consent
     } = draftData;
 
@@ -269,11 +268,22 @@ export async function POST(
     room_key: appointment.room_key
   });
 }
-  
+
+  const cnx = getAuditContext(req, user);
+
+  await auditLog({
+    ...cnx,
+    action: "CREATED",
+    entityType: "APPOINTMENT",
+    entityId: appointment.id,
+    purpose: "treatment",
+    source: "user_portal",
+    metadata: { patient_id, practitionerId, appointment_id: appointment.id }
+  })
+
 
       return NextResponse.json({
         success: true,
-        // Changing message
         message: "Appointment initiated, payment pending.",
         appointment,
         paymentPayload

@@ -1,16 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
-export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching)
-
-// Endpoint: /api/analytics/transactions/practitioner/[transaction_id]
-export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+export const dynamic = "force-dynamic"; 
+export async function GET(req: NextRequest
+    , context: { params: Promise<{ id: string }> }) {
     const { authorized, response, user } = await requireUser();
     if (!authorized) return response;
 
-    // Check if the user has the 'practitioner' role
+        const cnx = getAuditContext(req, user);
     if (user?.profile?.role !== 'practitioner') {
+
+        await auditLog({
+            ...cnx,
+            action: "FORBIDDEN_ACCESS_ATTEMPT",
+            entityType : "TRANSACTION",
+            entityId: (await context.params).id,
+            purpose: "analytics",
+            metadata: {
+                description: `User ${user?.auth_user_id} with role ${user?.profile?.role} attempted to access practitioner transaction data.`,
+            }
+        })
         return NextResponse.json(
             { message: 'Access denied.' },
             { status: 403 }
@@ -24,8 +36,6 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     if (!practionerId) {
         return NextResponse.json({ error: "Practitioner ID not found for the user" }, { status: 403 });
     }
-
-    console.log(`🔍 Fetching transactions for practitioner ID: ${practionerId} (User: ${user?.auth_user_id}, Role: ${user?.role})`);
 
     try {
         // Fetch the transaction by ID
@@ -51,6 +61,16 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
         }
 
         if (String(transaction.practitioner_id) !== String(practionerId)) {
+            await auditLog({
+                ...cnx,
+                action: "FORBIDDEN_ACCESS_ATTEMPT",
+                entityType : "TRANSACTION",
+                entityId: transactionId,
+                purpose: "analytics",
+                metadata: {
+                    description: `Practitioner ${user?.auth_user_id} attempted to access transaction ${transactionId} not associated with them.`,
+                }
+            })
             console.warn(`SECURITY ALERT: Practitioner ${user.auth_user_id} attempted to access transaction ${transactionId} not associated with them.`);
 
             return NextResponse.json(
@@ -59,8 +79,20 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
             );
         }
 
+        await auditLog({
+            ...cnx,
+            action: "VIEWED",
+            entityType: "TRANSACTION",
+            entityId: transactionId,
+            purpose: "analytics",
+            source: "dashboard",
+            metadata: { 
+                transactionId
+              }
+        })
+
         return NextResponse.json({
-            message: `Transaction fetched successfully.`,
+            message: `Transaction fetched successfully`,
             count: 1,
             data: transaction
         })

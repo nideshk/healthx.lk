@@ -6,7 +6,6 @@ export async function GET(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
-    // ⬅️ Required for typed routes
     const { slug } = await context.params;
 
     if (!slug) {
@@ -15,12 +14,10 @@ export async function GET(
         { status: 400 }
       );
     }
-
-    // 🧩 Query practitioners whose specialization array contains the slug
     const { data, error } = await supabaseClient
       .from("practitioners")
       .select("*")
-      .contains("specialization", [slug])        // specialization = text[]
+      .contains("specialization", [slug])
       .order("created_at", { ascending: false });
 
     if (error) {

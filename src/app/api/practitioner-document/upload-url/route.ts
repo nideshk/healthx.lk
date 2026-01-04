@@ -1,15 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 import { s3 } from "@/lib/s3/s3";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { requireUser } from "@/lib/authGuard";
+import { auditLog } from "@/lib/audit/auditLog";
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET!;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    console.log("UPLOAD_URL BODY:", body);
     const {
       application_id,
       fileName,
@@ -74,8 +76,26 @@ export async function POST(req: Request) {
       expiresIn: 300,
     });
 
+    const { user } = await requireUser();
+
     /* ---------------- RESPONSE ---------------- */
-    console.log("uploadUrl", uploadUrl)
+    const cnx = getAuditContext(req, user);
+    await auditLog({
+      ...cnx,
+      entityType: "PRACTITIONER",
+      metadata: {
+        uploadUrl,
+        document: {
+          file_name: fileName,
+          file_url: s3Key,
+          file_type: fileType,
+          file_size: fileSize,
+          document_type: documentType,
+        },
+      },
+      source: "dashboard",
+      action: "CREATED"
+    })
     return NextResponse.json({
       uploadUrl,
       document: {
