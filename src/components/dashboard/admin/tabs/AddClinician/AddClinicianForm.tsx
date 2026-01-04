@@ -297,9 +297,9 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
 
       // 3. Notify backend that documents were added
       const attachRes = await fetch(
-        `/api/auth/practitioner-application/${applicationId}/document_added`,
+        `/api/auth/add-practitioner/${applicationId}/document-update`,
         {
-          method: "POST",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ documents: uploadedDocs }),
         }
@@ -344,7 +344,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
         }, {}),
       };
 
-      const res = await fetch("/api/auth/practitioner-application", {
+      const res = await fetch("/api/auth/add-practitioner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -352,11 +352,10 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
-
-      const applicationId = data.application_id;
+      const practitionerId = data.practitioner_id;
 
       try {
-        await uploadDocumentsAfterApplication(applicationId);
+        await uploadDocumentsAfterApplication(practitionerId);
       } catch (err) {
         setMessage(
           "Application submitted, but document upload failed. You can upload later."
@@ -499,22 +498,6 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                 )}
               />
 
-              <Controller
-                name="password"
-                control={control}
-                rules={{ required: "Password is required" }}
-                render={({ field, fieldState }) => (
-                  <Input
-                    type="password"
-                    placeholder="Password"
-                    required
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                    error={fieldState.error?.message}
-                    errorStatus={!!fieldState.error}
-                  />
-                )}
-              />
             </div>
 
             {/* Professional */}

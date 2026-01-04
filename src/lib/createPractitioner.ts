@@ -205,7 +205,7 @@ export async function createPractitioner(
     const { error: bankErr } = await supabaseAdmin
       .from("practitioner_bank_details")
       .insert({
-        practitioner_id: practitioner_id,
+        practitioner_id: finalPractitionerId,
         account_holder_name: bank_details.account_name,
         bank_name: bank_details.bank_name,
         account_number: bank_details.account_number,
@@ -217,7 +217,7 @@ export async function createPractitioner(
       });
 
     if (bankErr) {
-      return {
+      throw {
         success: false,
         message: "Failed to save practitioner bank details",
       };
