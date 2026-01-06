@@ -18,6 +18,7 @@ import FollowUpNeededTab from "./subtabs/FollowUpNeededTab";
 import RefundsRequestedTab from "./subtabs/RefundsRequestedTab";
 import CancellationsTab from "./subtabs/CancellationsTab";
 import AuditTrackingTab from "./subtabs/AuditTrackingTab";
+import TimestampTab from "./subtabs/Timestamp";
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
@@ -106,40 +107,6 @@ const AnalyticsTab: React.FC = () => {
     />
   ))}
 </div>
-
-      {/* FILTER SECTION (COMMON)                          */}
-      {/* ------------------------------------------------ */}
-      {/* <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Input type="date" label="From Date" />
-          <Input type="date" label="To Date" />
-
-          <div>
-            <label className="text-xs text-slate-600 mb-1 block">
-              Specialty
-            </label>
-            <select className="w-full border border-slate-300 rounded-xl p-2 text-sm">
-              <option>All Specialties</option>
-              <option>General Physician</option>
-              <option>Psychiatry</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="text-xs text-slate-600 mb-1 block">
-              Doctor
-            </label>
-            <select className="w-full border border-slate-300 rounded-xl p-2 text-sm">
-              <option>All doctors</option>
-              <option>Dr. Kumari Silva</option>
-              <option>Dr. Nimal Perera</option>
-            </select>
-          </div>
-        </div>
-      </div> */}
-
       {/* ------------------------------------------------ */}
       {/* TAB CONTENT                                     */}
       {/* ------------------------------------------------ */}
@@ -152,6 +119,8 @@ const AnalyticsTab: React.FC = () => {
       {activeTab === "Cancellations" && <CancellationsTab />}
 
       {activeTab === "Audit Tracking" && <AuditTrackingTab />}
+
+      {activeTab === "Timestamps" && <TimestampTab />}
 
     </div>
   );
