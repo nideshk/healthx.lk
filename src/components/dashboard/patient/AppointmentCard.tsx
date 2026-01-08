@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Calendar, Clock, Video, Lock } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Video,
+  Lock,
+} from "lucide-react";
 
 export function AppointmentCard({
   appt,
@@ -13,23 +18,25 @@ export function AppointmentCard({
 }: any) {
   const router = useRouter();
   const start = new Date(appt.starts_at);
-  console.log(appt)
-  const containerStyle = isCancelled
-    ? "bg-red-50 border border-red-200"
-    : isPending
-    ? "bg-yellow-50 border border-yellow-200 cursor-default"
-    : isOngoing
-    ? "bg-green-50 border border-green-300 shadow-green-200/40"
-    : isPast
-    ? "bg-gray-50 border border-gray-200"
-    : "bg-white/70 border border-gray-200 hover:shadow-lg";
 
-  // 🔒 Disable navigation for pending
-  const canNavigate = !isPending;
+  const canNavigate = !isPending && !isCancelled;
+
+  const hasBadge = isPending || isOngoing || isCancelled || isPast;
+
+  const containerStyle = isCancelled
+    ? "bg-red-50 border-red-200 opacity-75"
+    : isPending
+    ? "bg-yellow-50 border-yellow-200"
+    : isOngoing
+    ? "bg-green-50 border-green-300 shadow-green-200/40"
+    : isPast
+    ? "bg-gray-50 border-gray-200 opacity-80"
+    : "bg-white/80 border-gray-200 hover:shadow-lg";
 
   return (
     <article
       role={canNavigate ? "button" : undefined}
+      aria-disabled={!canNavigate}
       tabIndex={canNavigate ? 0 : -1}
       onClick={() => {
         if (!canNavigate) return;
@@ -42,45 +49,51 @@ export function AppointmentCard({
         }
       }}
       className={`
-        group relative p-5 rounded-2xl transition
+        group relative rounded-2xl border transition
         focus:outline-none focus:ring-2 focus:ring-blue-500
+        ${canNavigate ? "cursor-pointer" : "cursor-default"}
+        ${hasBadge ? "pt-10" : "pt-5"}
+        px-5 pb-5
         ${containerStyle}
       `}
     >
       {/* STATUS BADGE */}
-      {isPending && (
-        <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-600 text-white flex items-center gap-1">
-          <Lock className="w-3 h-3" />
-          Payment Pending
-        </span>
-      )}
-
-      {isOngoing && (
-        <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-600 text-white animate-pulse">
-          Live
-        </span>
-      )}
-
-      {isCancelled && (
-        <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-600 text-white">
-          Cancelled
-        </span>
-      )}
-
-      {isPast && !isCancelled && (
-        <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-500 text-white">
-          Completed
-        </span>
-      )}
+      <div className="absolute top-3 right-3">
+        {isPending && (
+          <Badge color="yellow" icon={<Lock className="w-3 h-3" />}>
+            Payment Pending
+          </Badge>
+        )}
+        {isOngoing && (
+          <Badge color="green" pulse>
+            Live
+          </Badge>
+        )}
+        {isCancelled && (
+          <Badge color="red">Cancelled</Badge>
+        )}
+        {isPast && !isCancelled && (
+          <Badge color="gray">Completed</Badge>
+        )}
+      </div>
 
       {/* HEADER */}
-      <div className="flex items-start gap-3">
-        <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-          <Video className="w-5 h-5 text-blue-700" />
+      <div className="flex items-start gap-4">
+        <div
+          className={`
+            w-12 h-12 rounded-xl flex items-center justify-center shrink-0
+            ${isOngoing ? "bg-green-100" : "bg-blue-50"}
+          `}
+        >
+          <Video
+            className={`w-5 h-5 ${
+              isOngoing ? "text-green-700" : "text-blue-700"
+            }`}
+          />
         </div>
 
-        <div className="flex-1">
-          <p className="text-base font-semibold text-gray-900">
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-semibold text-gray-900 truncate">
             {appt.practitioner?.full_name || "Practitioner"}
           </p>
 
@@ -92,7 +105,7 @@ export function AppointmentCard({
       </div>
 
       {/* DATE & TIME */}
-      <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
+      <div className="mt-4 flex items-center gap-5 text-xs text-gray-600">
         <div className="flex items-center gap-1">
           <Calendar className="w-3.5 h-3.5" />
           {start.toLocaleDateString()}
@@ -106,7 +119,7 @@ export function AppointmentCard({
         </div>
       </div>
 
-      {/* 🔥 PENDING PAYMENT CTA */}
+      {/* 🔒 PENDING PAYMENT CTA */}
       {isPending && (
         <button
           onClick={(e) => {
@@ -118,7 +131,7 @@ export function AppointmentCard({
           className="
             mt-5 w-full px-4 py-2 rounded-xl
             bg-yellow-600 text-white font-semibold
-            hover:bg-yellow-700
+            hover:bg-yellow-700 active:scale-[0.98]
             transition
           "
         >
@@ -126,7 +139,7 @@ export function AppointmentCard({
         </button>
       )}
 
-      {/* CTA — Ongoing only */}
+      {/* ▶️ JOIN APPOINTMENT */}
       {isOngoing && (
         <Link
           href={`/appointment/meeting?room=${appt.room_key}`}
@@ -135,7 +148,7 @@ export function AppointmentCard({
             mt-5 inline-flex items-center justify-center gap-2
             w-full px-4 py-2 rounded-xl
             bg-green-600 text-white font-semibold
-            hover:bg-green-700
+            hover:bg-green-700 active:scale-[0.98]
             shadow-md shadow-green-600/30
             transition
           "
@@ -144,5 +157,42 @@ export function AppointmentCard({
         </Link>
       )}
     </article>
+  );
+}
+
+/* ---------------------------------------
+   Badge Component
+--------------------------------------- */
+function Badge({
+  children,
+  color,
+  icon,
+  pulse,
+}: {
+  children: React.ReactNode;
+  color: "green" | "yellow" | "red" | "gray";
+  icon?: React.ReactNode;
+  pulse?: boolean;
+}) {
+  const colors = {
+    green: "bg-green-600",
+    yellow: "bg-yellow-600",
+    red: "bg-red-600",
+    gray: "bg-gray-500",
+  };
+
+  return (
+    <span
+      className={`
+        inline-flex items-center gap-1
+        text-xs font-semibold px-2 py-0.5
+        rounded-full text-white
+        ${colors[color]}
+        ${pulse ? "animate-pulse" : ""}
+      `}
+    >
+      {icon}
+      {children}
+    </span>
   );
 }

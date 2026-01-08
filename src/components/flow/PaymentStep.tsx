@@ -68,6 +68,7 @@ const releaseAppointmentSlot = async (appointmentId: string | null) => {
 
 const PaymentStep = forwardRef<StepRefHandle, Props>(
   ({ prevStep, updateData, bookingData, goToStep, bookingControllerRef, isManualCheckout = false, preExistingId = null }, stepRef) => {
+    console.log("booking data", bookingData)
     const [paymentDone, setPaymentDone] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
@@ -457,8 +458,13 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
                   <User className="w-5 h-5 text-blue-600" />
                   Doctor Details
                 </h3>
-                <p className="text-lg font-semibold">{doctor?.full_name}</p>
+                <div className='flex justify-between'>
+                <p className="text-lg font-semibold">{doctor?.name}, <span className='text-sm'>{doctor?.qualification}</span></p>
+                <p className='text-sm text-gray-600'>{doctor?.license_number}</p>
+                </div>
+                <div className='flex justify-between item-start'>
                 <p className="text-sm text-gray-600">{doctor?.profile_bio}</p>
+                </div>
               </div>
 
               <div className="p-6 rounded-2xl bg-white shadow">
@@ -479,26 +485,33 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
                 </h3>
                 <p>{service?.name}</p>
               </div>
+             <div className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
+  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+    Additional Attendees
+  </h3>
 
-              <div className="p-6 rounded-2xl bg-white shadow">
-                <h3 className="text-xl font-semibold mb-4">Consents</h3>
-                <p className="flex items-center gap-2">
-                  Telehealth:
-                  {consent.telehealth ? (
-                    <CheckCircle2 className="text-green-600" />
-                  ) : (
-                    <span className="text-red-600">✗</span>
-                  )}
-                </p>
-                <p className="flex items-center gap-2 mt-2">
-                  Terms:
-                  {consent.terms ? (
-                    <CheckCircle2 className="text-green-600" />
-                  ) : (
-                    <span className="text-red-600">✗</span>
-                  )}
-                </p>
-              </div>
+  {bookingData.selectedAttendees.length === 0 ? (
+    <p className="text-sm text-gray-500">
+      No additional attendees added.
+    </p>
+  ) : (
+    <ul className="flex flex-wrap gap-2">
+      {bookingData.selectedAttendees.map((attendee) => (
+        <li
+          key={`attendee-${attendee}`}
+          className="
+            px-3 py-1.5 rounded-full
+            bg-blue-50 text-blue-700
+            text-sm font-medium
+            border border-blue-100
+          "
+        >
+          {attendee}
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
 
             </div>
 
