@@ -16,52 +16,47 @@ export async function POST(req: Request) {
       );
     }
 
-    /* ---------------------------------------
-       1️⃣ Validate ACCESS TOKEN directly
-    --------------------------------------- */
-    const supabaseWithToken = createClient(
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: { persistSession: false },
-        global: {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
-        },
-      }
+      { auth: { persistSession: false } }
     );
 
+    /* ---------------------------------------
+       ✅ THIS is the missing piece
+    --------------------------------------- */
     const {
-      data: { user },
+      data: { session, user },
       error,
-    } = await supabaseWithToken.auth.getUser();
+    } = await supabase.auth.setSession({
+      access_token,
+      refresh_token,
+    });
 
-    if (!user || error) {
+    if (error || !session || !user) {
       return NextResponse.json(
-        { error: "Invalid access token" },
+        { error: "Invalid session" },
         { status: 401 }
       );
     }
 
-    /* ---------------------------------------
-       2️⃣ Set cookies (NOW possible)
-    --------------------------------------- */
     const cookieStore = await cookies();
     const isProd = process.env.NODE_ENV === "production";
 
-    cookieStore.set("sb-access-token", access_token, {
+    cookieStore.set("sb-access-token", session.access_token, {
       httpOnly: true,
       secure: isProd,
       sameSite: "lax",
       path: "/",
+      maxAge: session.expires_in, // IMPORTANT
     });
 
-    cookieStore.set("sb-refresh-token", refresh_token, {
+    cookieStore.set("sb-refresh-token", session.refresh_token!, {
       httpOnly: true,
       secure: isProd,
       sameSite: "lax",
       path: "/",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
     });
 
     return NextResponse.json({ success: true });
