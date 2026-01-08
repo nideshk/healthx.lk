@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
         cancellation_reason,
         cancelled_at,
         telehealth_url,
-
+        room_key,
         appointment_type:appointment_type_id (
           id, name, duration_mins
         ),
@@ -144,6 +144,7 @@ export async function GET(req: NextRequest) {
         starts_at: appt.starts_at,
         ends_at: appt.ends_at,
         status: appt.status,
+        room_key : appt.room_key,
         payment_status: appt.payment_status,
         expires_at: appt.expires_at,
         notes: appt.notes,

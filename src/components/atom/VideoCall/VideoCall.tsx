@@ -7,6 +7,7 @@ import { useVideoCall } from "./useVideoCall";
 import Toaster from "./Toaster";
 import { logCallEvent } from "@/lib/logCallEvent";
 import ConsultationPanel from "./ConsultationPanel";
+import { Camera } from "lucide-react";
 
 /* ---------------------------------------------------------
    COMPONENT
@@ -158,12 +159,12 @@ export default function VideoCallContainer({
       >
         {!joined ? (
           <div className="flex flex-col items-center justify-center h-full gap-6">
-            <h1 className="text-3xl font-bold">
-              🎥 Telehealth Consultation
+            <h1 className="text-3xl font-bold flex items-center gap-4">
+              <Camera size={36}/> Telehealth Consultation
             </h1>
             <button
               onClick={handleJoin}
-              className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-full text-lg font-semibold"
+              className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-2xl cursor-pointer text-lg font-semibold"
             >
               Join Consultation
             </button>

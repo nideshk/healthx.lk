@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { DateTime } from "luxon";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import { toast } from "react-toastify";
+import GenericTable, { Column } from "./GenericTable"; // Adjust path as needed
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                    */
@@ -21,7 +23,7 @@ type RefundItem = {
   doctor: string;
   amount: number;
   reason: string;
-  status: "Pending" | "refunded" | "rejected"; // Aligned with API responses
+  status: "Pending" | "refunded" | "rejected";
 };
 
 /* -------------------------------------------------------------------------- */
@@ -38,6 +40,10 @@ const RefundsRequestedTab: React.FC = () => {
   const [refunds, setRefunds] = useState<RefundItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRefund, setSelectedRefund] = useState<RefundItem | null>(null);
@@ -48,7 +54,6 @@ const RefundsRequestedTab: React.FC = () => {
   /* API CALLS                                   */
   /* -------------------------------------------------------------------------- */
 
-  // API 37: Fetch Refunds
   const fetchRefunds = async () => {
     setLoading(true);
     try {
@@ -56,7 +61,6 @@ const RefundsRequestedTab: React.FC = () => {
       const data = await response.json();
 
       if (data.status === "success") {
-        // Mapping API fields to our UI RefundItem type
         const apiRefunds = data.refunds.map((ref: any) => ({
           id: ref.refund_id || ref.id,
           transactionId: ref.transaction_id || "N/A",
@@ -86,7 +90,6 @@ const RefundsRequestedTab: React.FC = () => {
     fetchRefunds();
   }, [fromDate, toDate]);
 
-  // API 38: PATCH Action
   const processRefundAction = async () => {
     if (!selectedRefund || !actionType) return;
 
@@ -107,7 +110,7 @@ const RefundsRequestedTab: React.FC = () => {
         toast.success(`Refund successfully ${result.status}`);
         setModalOpen(false);
         setAdminNote("");
-        fetchRefunds(); // Refresh the table
+        fetchRefunds();
       } else {
         toast.error("Operation failed");
       }
@@ -122,6 +125,46 @@ const RefundsRequestedTab: React.FC = () => {
     setModalOpen(true);
   };
 
+  /* -------------------------------------------------------------------------- */
+  /* PAGINATION LOGIC                             */
+  /* -------------------------------------------------------------------------- */
+
+  const totalPages = Math.ceil(refunds.length / rowsPerPage);
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return refunds.slice(start, start + rowsPerPage);
+  }, [refunds, currentPage]);
+
+  /* -------------------------------------------------------------------------- */
+  /* TABLE COLUMNS CONFIG                         */
+  /* -------------------------------------------------------------------------- */
+
+  const columns: Column<RefundItem>[] = [
+    { header: "Requested Date", render: (item) => item.requestedDate },
+    { header: "Patient Name", render: (item) => <span className="font-medium">{item.patientName}</span> },
+    { header: "Email", render: (item) => item.email, className: "min-w-[220px]" },
+    { header: "Phone", render: (item) => item.phone },
+    { header: "Appointment Date", render: (item) => item.appointmentDate },
+    { header: "Transaction ID", render: (item) => <span className="font-mono text-xs text-slate-500">{item.transactionId}</span> },
+    { header: "Doctor", render: (item) => item.doctor },
+    { header: "Refund Amount", render: (item) => `LKR ${item.amount.toLocaleString()}`, className: "font-medium" },
+    { header: "Reason", render: (item) => item.reason, className: "min-w-[200px]" },
+    { header: "Status", render: (item) => <StatusBadge status={item.status} /> },
+    {
+      header: "Actions",
+      render: (item) => (
+        item.status === "Pending" ? (
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => openConfirmation(item, "mark_refunded")}>Approve</Button>
+            <Button size="sm" variant="danger" onClick={() => openConfirmation(item, "reject")}>Reject</Button>
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400 italic capitalize">{item.status}</span>
+        )
+      )
+    },
+  ];
+
   return (
     <div className="space-y-4">
       {/* ---------------- DATE FILTER ---------------- */}
@@ -130,73 +173,51 @@ const RefundsRequestedTab: React.FC = () => {
         <Input type="date" label="To Date" value={toDate ?? ""} onChange={(e) => setToDate(e.target.value)} />
       </div>
 
-      {/* ---------------- TABLE (SCROLLABLE) ---------------- */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[420px]">
-          <table className="min-w-[1200px] w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
-              <tr>
-                <th className="px-4 py-3 text-left whitespace-nowrap">Requested Date</th>
-                <th className="px-4 py-3 text-left whitespace-nowrap">Patient Name</th>
-                <th className="px-4 py-3 text-left min-w-[220px]">Email</th>
-                <th className="px-4 py-3 text-left whitespace-nowrap">Phone</th>
-                <th className="px-4 py-3 text-left whitespace-nowrap">Appointment Date</th>
-                <th className="px-4 py-3 text-left whitespace-nowrap">Transaction ID</th>
-                <th className="px-4 py-3 text-left whitespace-nowrap">Doctor</th>
-                <th className="px-4 py-3 text-left whitespace-nowrap">Refund Amount</th>
-                <th className="px-4 py-3 text-left min-w-[200px]">Reason</th>
-                <th className="px-4 py-3 text-left whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 text-left whitespace-nowrap">Actions</th>
-              </tr>
-            </thead>
+      {/* ---------------- GENERIC TABLE ---------------- */}
+      <GenericTable 
+        columns={columns} 
+        data={paginatedData} 
+        loading={loading} 
+        minWidth="1200px" 
+      />
 
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={11} className="p-10 text-center text-slate-500">Loading refunds...</td>
-                </tr>
-              ) : refunds.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="p-10 text-center text-slate-400">No refund requests found.</td>
-                </tr>
-              ) : (
-                refunds.map((item) => (
-                  <tr key={item.id} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="px-4 py-3 whitespace-nowrap">{item.requestedDate}</td>
-                    <td className="px-4 py-3 font-medium">{item.patientName}</td>
-                    <td className="px-4 py-3">{item.email}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{item.phone}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{item.appointmentDate}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-500">{item.transactionId}</td>
-                    <td className="px-4 py-3">{item.doctor}</td>
-                    <td className="px-4 py-3 font-medium whitespace-nowrap">
-                      LKR {item.amount.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">{item.reason}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={item.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      {item.status === "Pending" ? (
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => openConfirmation(item, "mark_refunded")}>
-                            Approve
-                          </Button>
-                          <Button size="sm" variant="danger" onClick={() => openConfirmation(item, "reject")}>
-                            Reject
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic capitalize">{item.status}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* ---------------- PAGINATION CONTROLS ---------------- */}
+      {!loading && refunds.length > 0 && (
+        <div className="flex items-center justify-between px-2 py-4 bg-white border border-slate-200 rounded-2xl">
+          <span className="text-xs text-slate-500">
+            Showing {((currentPage - 1) * rowsPerPage) + 1} to {Math.min(currentPage * rowsPerPage, refunds.length)} of {refunds.length} entries
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex items-center gap-1">
+              {[...Array(totalPages)].map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentPage(idx + 1)}
+                  className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${
+                    currentPage === idx + 1 ? "bg-blue-600 text-white" : "hover:bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ---------------- CONFIRMATION MODAL ---------------- */}
       {modalOpen && (

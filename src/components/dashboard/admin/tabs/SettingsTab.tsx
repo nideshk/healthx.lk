@@ -61,7 +61,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
     disableMfa,
   } = useMfaEnrollment();
 
-
   const [activeTab, setActiveTab] = useState<SettingsTabType>("Security");
 
   /* ---------------- SECURITY ---------------- */
@@ -147,14 +146,12 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
 
   const handleToggle2FA = () => {
     if (loading || twoFactorEnabled === null) return;
-
     if (!twoFactorEnabled) {
       startEnrollment();
     } else {
       disableMfa();
     }
   };
-
 
   const handleSaveAccount = async () => {
     setAccountError(null);
@@ -241,12 +238,24 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
   const confirmDelete = async () => {
     const { typeId, typeName } = deleteModal;
     try {
-      // API call would go here
-      toast.success(`Successfully deleted "${typeName}"`);
-      setDeleteModal({ isOpen: false, typeId: "", typeName: "" });
-      fetchFees();
+      const res = await fetch("/api/platform_fee", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: typeId }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success(data.message || `Successfully deleted "${typeName}"`);
+        setDeleteModal({ isOpen: false, typeId: "", typeName: "" });
+        fetchFees(); // Refresh table data
+      } else {
+        toast.error(data.error || "Failed to delete appointment type");
+      }
     } catch (err) {
-      toast.error("Failed to delete appointment type");
+      console.error("Delete Error:", err);
+      toast.error("An unexpected error occurred during deletion");
     }
   };
 
@@ -258,25 +267,30 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
     <div className="space-y-4 relative">
       {/* DELETE MODAL */}
       {deleteModal.isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Confirmation</h3>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-center">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
+              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Confirm Deactivation</h3>
             <p className="text-sm text-slate-500 mb-6">
-              Are you sure you want to delete <span className="font-bold">"{deleteModal.typeName}"</span>? 
-              This will remove it from the platform permanently.
+              Are you sure you want to deactivate <span className="font-bold">"{deleteModal.typeName}"</span>? 
+              This appointment type will no longer be available for booking.
             </p>
             <div className="flex gap-3">
               <button 
                 onClick={() => setDeleteModal({ isOpen: false, typeId: "", typeName: "" })}
-                className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg font-medium"
+                className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium"
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition"
               >
-                Delete
+                Deactivate
               </button>
             </div>
           </div>
@@ -284,7 +298,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
       )}
 
       {/* HEADER */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-md">
         <div className="text-lg font-semibold">Settings</div>
         <div className="text-xs opacity-90">Security, account preferences, and platform charges</div>
       </div>
@@ -304,172 +318,158 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
         ))}
       </div>
 
-      {/* ======================== SECURITY TAB ======================== */}
-    {activeTab === "Security" && (
-      <>
-        <div className="border border-slate-200 rounded-xl p-5 bg-white">
-          <div className="text-sm font-semibold text-slate-900 mb-1">Security</div>
-          <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
-            <div>
-              <div className="text-sm font-medium text-slate-900">Two-Factor Authentication (2FA)</div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={!!twoFactorEnabled}
-                disabled={loading}
-                onChange={handleToggle2FA}
-              />
-              <div className="w-11 h-6 bg-slate-300 rounded-full peer-checked:bg-blue-600 transition"></div>
-              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-5"></div>
-            </label>
-          </div>
-        </div>
-
-        {/* ENROLLMENT UI */}
-        {qr && (
-          <div className="mt-4 border rounded-lg p-4 bg-slate-50">
-            <div
-              dangerouslySetInnerHTML={{ __html: qr }}
-              className="mb-3"
-            />
-
-            {!challengeId ? (
-              <button
-                onClick={createChallenge}
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-2 rounded mb-2"
-              >
-                Enable 2FA
-              </button>
-            ) : (
-              <>
-                <input
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.trim())}
-                  placeholder="Enter 6-digit code"
-                  className="border rounded px-3 py-2 w-full mb-2"
-                />
-
-                <button
-                  onClick={verifyEnrollment}
-                  disabled={loading}
-                  className="w-full bg-blue-600 text-white py-2 rounded"
-                >
-                  Verify & Enable
-                </button>
-              </>
-            )}
-
-            {error && (
-              <div className="text-xs text-red-600 mt-2">
-                {error}
+      {/* SECURITY TAB */}
+      {activeTab === "Security" && (
+        <div className="space-y-4">
+          <div className="border border-slate-200 rounded-xl p-5 bg-white shadow-sm">
+            <div className="text-sm font-semibold text-slate-900 mb-1">Security</div>
+            <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
+              <div>
+                <div className="text-sm font-medium text-slate-900">Two-Factor Authentication (2FA)</div>
               </div>
-            )}
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={!!twoFactorEnabled}
+                  disabled={loading}
+                  onChange={handleToggle2FA}
+                />
+                <div className="w-11 h-6 bg-slate-300 rounded-full peer-checked:bg-blue-600 transition"></div>
+                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-5"></div>
+              </label>
+            </div>
           </div>
-        )}
-      </>
-    )}
 
+          {qr && (
+            <div className="border rounded-xl p-6 bg-white shadow-sm animate-in slide-in-from-top-2">
+              <div className="text-center">
+                <div className="inline-block p-2 bg-white border rounded-lg mb-4 shadow-sm" dangerouslySetInnerHTML={{ __html: qr }} />
+                <p className="text-sm text-slate-600 mb-4 font-medium">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
+              </div>
 
-
-      {activeTab === "Account" && (
-        <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-4">
-          <div className="text-sm font-semibold text-slate-900">Account</div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Username" value={email || "-"} disabled />
-            <Input label="New Password" type="password" value={accountForm.newPassword} onChange={(e) => setAccountForm({ ...accountForm, newPassword: e.target.value })} />
-          </div>
-          <Input label="Confirm New Password" type="password" value={accountForm.confirmPassword} onChange={(e) => setAccountForm({ ...accountForm, confirmPassword: e.target.value })} />
-          <Button onClick={handleSaveAccount} disabled={accountLoading}>{accountLoading ? "Saving..." : "Save Changes"}</Button>
+              {!challengeId ? (
+                <Button onClick={createChallenge} disabled={loading} className="w-full  bg-blue-600 text-white py-2 rounded mb-2">Enable 2FA</Button>
+              ) : (
+                <div className="space-y-3">
+                  <input
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.trim())}
+                    placeholder="Enter 6-digit code"
+                    className="border border-slate-300 rounded-lg px-3 py-2 w-full text-center tracking-widest font-mono text-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <Button onClick={verifyEnrollment} disabled={loading} className="w-full">Verify & Enable</Button>
+                </div>
+              )}
+              {error && <div className="text-xs text-red-600 mt-2 text-center font-medium">{error}</div>}
+            </div>
+          )}
         </div>
       )}
 
+      {/* ACCOUNT TAB */}
+      {activeTab === "Account" && (
+        <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-4 shadow-sm">
+          <div className="text-sm font-semibold text-slate-900">Account Profile</div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Username / Email" value={email || "-"} disabled />
+            <Input label="New Password" type="password" value={accountForm.newPassword} onChange={(e) => setAccountForm({ ...accountForm, newPassword: e.target.value })} />
+          </div>
+          <Input label="Confirm New Password" type="password" value={accountForm.confirmPassword} onChange={(e) => setAccountForm({ ...accountForm, confirmPassword: e.target.value })} />
+          <div className="flex justify-end pt-2">
+            <Button onClick={handleSaveAccount} disabled={accountLoading}>{accountLoading ? "Saving..." : "Update Security Credentials"}</Button>
+          </div>
+        </div>
+      )}
+
+      {/* PLATFORM CHARGES TAB */}
       {activeTab === "Platform" && (
-        <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-6">
-          <div className="text-sm font-semibold text-slate-900">Appointment Fees Configuration</div>
+        <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-6 shadow-sm">
+          <div className="text-sm font-semibold text-slate-900 flex justify-between items-center">
+            Appointment Fees Configuration
+          </div>
           
-          <div className="overflow-auto border border-slate-100 rounded-lg max-h-[500px] shadow-inner">
-            <table className="min-w-[1300px] w-full text-left text-sm border-collapse">
-              <thead className="bg-slate-50 sticky top-0 z-10">
+          {/* SCROLLABLE TABLE CONTAINER */}
+          <div className="overflow-auto border border-slate-200 rounded-xl max-h-[550px] shadow-inner bg-slate-50/30">
+            <table className="min-w-[1400px] w-full text-left text-sm border-collapse">
+              <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                 <tr>
-                  <th className="p-3 font-medium text-slate-600 border-b min-w-[180px]">Type Name</th>
-                  <th className="p-3 font-medium text-slate-600 border-b">Base Fee (LKR)</th>
-                  <th className="p-3 font-medium text-slate-600 border-b">Platform Fee (LKR)</th>
-                  <th className="p-3 font-medium text-slate-600 border-b">Extra Fee/Atnd.</th>
-                  <th className="p-3 font-medium text-slate-600 border-b">Max Attendees</th>
-                  <th className="p-3 font-medium text-slate-600 border-b">Duration (min)</th>
-                  <th className="p-3 font-medium text-slate-600 border-b min-w-[200px]">Description</th>
-                  <th className="p-3 font-medium text-slate-600 border-b text-center sticky right-0 bg-slate-50">Action</th>
+                  <th className="p-4 font-bold text-slate-700 border-b min-w-[200px]">Type Name</th>
+                  <th className="p-4 font-bold text-slate-700 border-b">Base Fee (LKR)</th>
+                  <th className="p-4 font-bold text-slate-700 border-b">Platform Fee (LKR)</th>
+                  <th className="p-4 font-bold text-slate-700 border-b">Extra Fee/Atnd.</th>
+                  <th className="p-4 font-bold text-slate-700 border-b">Max Attendees</th>
+                  <th className="p-4 font-bold text-slate-700 border-b">Duration (min)</th>
+                  <th className="p-4 font-bold text-slate-700 border-b min-w-[250px]">Description</th>
+                  <th className="p-4 font-bold text-slate-700 border-b text-center sticky right-0 bg-slate-50 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {fees.map((fee) => (
-                  <tr key={fee.id} className="hover:bg-slate-50 transition">
-                    <td className="p-3 border-b">
+                  <tr key={fee.id} className="hover:bg-blue-50/30 transition even:bg-slate-50/50">
+                    <td className="p-4 border-b">
                       <input 
                         type="text" 
-                        className="w-full bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500 transition font-medium" 
+                        className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium" 
                         value={fee.name} 
                         onChange={(e) => updateFeeField(fee.id, "name", e.target.value)} 
                       />
                     </td>
-                    <td className="p-3 border-b">
+                    <td className="p-4 border-b">
                       <input 
                         type="number" 
                         step="any"
-                        className="w-28 bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500" 
+                        className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 transition" 
                         value={fee.base_fee} 
                         onChange={(e) => updateFeeField(fee.id, "base_fee", Number(e.target.value))} 
                       />
                     </td>
-                    <td className="p-3 border-b">
+                    <td className="p-4 border-b">
                       <input 
                         type="number" 
                         step="any"
-                        className="w-28 bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500 text-blue-600 font-semibold" 
+                        className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 text-blue-700 font-bold" 
                         value={fee.platform_fee} 
                         onChange={(e) => updateFeeField(fee.id, "platform_fee", Number(e.target.value))} 
                       />
                     </td>
-                    <td className="p-3 border-b">
+                    <td className="p-4 border-b">
                       <input 
                         type="number" 
                         step="any"
-                        className="w-28 bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500" 
+                        className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 transition" 
                         value={fee.extra_fee_per_attendee ?? 0} 
                         onChange={(e) => updateFeeField(fee.id, "extra_fee_per_attendee", Number(e.target.value))} 
                       />
                     </td>
-                    <td className="p-3 border-b">
+                    <td className="p-4 border-b">
                       <input 
                         type="number" 
-                        className="w-20 bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500" 
+                        className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 transition" 
                         value={fee.max_attendee} 
                         onChange={(e) => updateFeeField(fee.id, "max_attendee", Number(e.target.value))} 
                       />
                     </td>
-                    <td className="p-3 border-b">
+                    <td className="p-4 border-b">
                       <input 
                         type="number" 
-                        className="w-20 bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500" 
+                        className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 transition" 
                         value={fee.duration_mins} 
                         onChange={(e) => updateFeeField(fee.id, "duration_mins", Number(e.target.value))} 
                       />
                     </td>
-                    <td className="p-3 border-b">
+                    <td className="p-4 border-b">
                       <input 
                         type="text" 
-                        className="w-full bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500 text-slate-500" 
+                        className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 italic" 
                         value={fee.description} 
                         onChange={(e) => updateFeeField(fee.id, "description", e.target.value)} 
                       />
                     </td>
-                    <td className="p-3 border-b text-center sticky right-0 bg-white/95 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                    <td className="p-4 border-b text-center sticky right-0 bg-white/95 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">
                       <button 
                         onClick={() => setDeleteModal({ isOpen: true, typeId: fee.id, typeName: fee.name })} 
-                        className="text-red-500 hover:text-red-700 transition"
+                        className="text-red-500 hover:text-red-700 transition hover:scale-110 active:scale-95 p-1 rounded-full hover:bg-red-50"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -488,9 +488,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
              </Button>
 
              {isAddingNew && (
-               <div className="bg-slate-50 p-6 rounded-lg space-y-4 mb-4 border border-slate-200">
+               <div className="bg-slate-50 p-6 rounded-xl space-y-4 mb-4 border border-slate-200 shadow-sm animate-in fade-in duration-300">
                  <div className="grid grid-cols-3 gap-4">
-                   <Input label="Name" value={newType.name} onChange={(e) => setNewType({...newType, name: e.target.value})} />
+                   <Input label="Name" placeholder="e.g. Specialists Consultation" value={newType.name} onChange={(e) => setNewType({...newType, name: e.target.value})} />
                    <Input label="Base Fee" type="number" value={newType.base_fee?.toString()} onChange={(e) => setNewType({...newType, base_fee: Number(e.target.value)})} />
                    <Input label="Platform Fee" type="number" value={newType.platform_fee?.toString()} onChange={(e) => setNewType({...newType, platform_fee: Number(e.target.value)})} />
                  </div>
@@ -499,17 +499,17 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
                    <Input label="Max Attendees" type="number" value={newType.max_attendee?.toString()} onChange={(e) => setNewType({...newType, max_attendee: Number(e.target.value)})} />
                    <Input label="Duration (mins)" type="number" value={newType.duration_mins?.toString()} onChange={(e) => setNewType({...newType, duration_mins: Number(e.target.value)})} />
                  </div>
-                 <Input label="Description" value={newType.description} onChange={(e) => setNewType({...newType, description: e.target.value})} />
-                 <div className="flex justify-end">
-                   <Button onClick={handleCreateNewType} className="px-8">Create</Button>
+                 <Input label="Description" placeholder="Provide a brief overview of this service type..." value={newType.description} onChange={(e) => setNewType({...newType, description: e.target.value})} />
+                 <div className="flex justify-end gap-3 pt-2">
+                   <Button onClick={handleCreateNewType} className="px-10">Create Appointment Type</Button>
                  </div>
                </div>
              )}
           </div>
 
-          <div className="flex justify-end">
-            <Button onClick={savePlatformCharges} disabled={platformLoading}>
-              {platformLoading ? "Saving..." : "Save All Service Charges"}
+          <div className="flex justify-end border-t border-slate-100 pt-6">
+            <Button onClick={savePlatformCharges} disabled={platformLoading} className="px-8 py-3 h-auto text-base">
+              {platformLoading ? "Saving Changes..." : "Save All Platform Charges"}
             </Button>
           </div>
         </div>

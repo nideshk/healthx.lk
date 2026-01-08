@@ -36,6 +36,19 @@ export async function GET(req: NextRequest) {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     const status = searchParams.get('status')?.toLowerCase();
+    const practitionerId = searchParams.get('practitionerId');
+
+    const isValidUUID = (uuid: string) => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(uuid);
+    };
+
+    if (practitionerId && !isValidUUID(practitionerId)) {
+        return NextResponse.json(
+            { message: "Invalid Practitioner ID format." },
+            { status: 400 }
+        );
+    }
 
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
@@ -94,6 +107,11 @@ export async function GET(req: NextRequest) {
 
         if (status) {
             query = query.eq('status', status);
+        }
+
+        if (practitionerId) {
+            analyticsQuery = analyticsQuery.eq('practitioner_id', practitionerId);
+            query = query.eq('practitioner_id', practitionerId);
         }
 
         query = query.order(dateColumn, { ascending: false }).range(start, end);

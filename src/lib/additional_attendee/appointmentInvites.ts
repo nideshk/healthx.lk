@@ -23,7 +23,7 @@ export async function sendAppointmentInvites({
       room_key
     });
 
-    const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/join?token=${token}`;
+    const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/appointment/meeting?token=${token}`;
 
     await notify({
       
