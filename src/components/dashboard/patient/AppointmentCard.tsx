@@ -13,7 +13,7 @@ export function AppointmentCard({
 }: any) {
   const router = useRouter();
   const start = new Date(appt.starts_at);
-
+  console.log(appt)
   const containerStyle = isCancelled
     ? "bg-red-50 border border-red-200"
     : isPending
@@ -129,7 +129,7 @@ export function AppointmentCard({
       {/* CTA — Ongoing only */}
       {isOngoing && (
         <Link
-          href={`/appointment/meeting?room=${appt.telehealth_url}`}
+          href={`/appointment/meeting?room=${appt.room_key}`}
           onClick={(e) => e.stopPropagation()}
           className="
             mt-5 inline-flex items-center justify-center gap-2
