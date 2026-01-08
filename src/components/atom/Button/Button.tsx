@@ -12,6 +12,7 @@ type ButtonProps = {
   icon?: React.ReactNode;
   iconPosition?: "left" | "right";
   theme?: "light" | "dark"; // 👈 new
+  loading?: boolean;
 };
 
 export default function Button({
@@ -22,6 +23,7 @@ export default function Button({
   disabled = false,
   type = "button",
   className,
+  loading,
   icon,
   iconPosition = "left",
   theme = "light", // 👈 default to light mode

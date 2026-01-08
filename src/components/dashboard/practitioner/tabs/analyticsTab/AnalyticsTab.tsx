@@ -1,4 +1,3 @@
-// src/components/dashboard/practitioner/tabs/analytics/AnalyticsTab.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -50,18 +49,23 @@ const AnalyticsTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  // Requirement 1: Set date range to current month by default
+  const [fromDate, setFromDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+  });
+  const [toDate, setToDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [timestampDate, setTimestampDate] = useState("");
 
   const [showRevenueModal, setShowRevenueModal] = useState(false);
 
-// mock for now – later comes from backend
-const revenueBreakdownMock = {
-  platformFees: 6800,
-  doctorEarnings: 10200,
-};
-
+  // Requirement 2 & 3: Dynamic data for the breakdown
+  const [revenueBreakdown, setRevenueBreakdown] = useState({
+    platformFees: 0,
+    consultationFees: 0,
+    serviceFees: 0,
+    taxes: 0,
+  });
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -73,19 +77,30 @@ const revenueBreakdownMock = {
         if (!res.ok) throw new Error("Auth failed");
 
         const me = await res.json();
-        const practitionerId =
-          me?.user?.practitioner_id ?? me?.practitioner_id;
+        const practitionerId = me?.user?.practitioner_id ?? me?.practitioner_id;
 
         if (!practitionerId) throw new Error("No practitioner id");
 
+        // Fetch General Analytics
         const analyticsRes = await fetch(
           `/api/practitioners/${practitionerId}/analytics`,
           { credentials: "include" }
         );
 
-        if (!analyticsRes.ok) throw new Error("Analytics fetch failed");
+        // Requirement 2: Fetch Transaction Revenue Data
+        const transactionRes = await fetch(
+          `http://localhost:3000/api/analytics/transactions/practitioner`,
+          { credentials: "include" }
+        );
 
+        if (!analyticsRes.ok) throw new Error("Analytics fetch failed");
+        
         const data = await analyticsRes.json();
+        let transactionData = { analytics: { totalGrossAmount: 0, totalPlatformFees: 0, totalConsultationFees: 0, totalServiceFees: 0, totalTaxes: 0 } };
+        
+        if (transactionRes.ok) {
+          transactionData = await transactionRes.json();
+        }
 
         setStats({
           totalBookings: data.total_bookings ?? 0,
@@ -93,9 +108,19 @@ const revenueBreakdownMock = {
           cancelled: data.cancelled ?? 0,
           refunds: data.refunds_requested ?? 0,
           upcoming: data.upcoming ?? 0,
-          revenue: data.total_revenue ?? 0,
+          // Requirement 2: Use totalGrossAmount from the new API
+          revenue: transactionData.analytics.totalGrossAmount ?? 0,
           currency: "LKR",
         });
+
+        // Requirement 3: Map API data to breakdown state
+        setRevenueBreakdown({
+          platformFees: transactionData.analytics.totalPlatformFees,
+          consultationFees: transactionData.analytics.totalConsultationFees,
+          serviceFees: transactionData.analytics.totalServiceFees,
+          taxes: transactionData.analytics.totalTaxes,
+        });
+
       } catch (e: any) {
         setError(e.message);
         setStats(EMPTY_BOOKING_STATS);
@@ -162,12 +187,11 @@ const revenueBreakdownMock = {
         />
       )}
       {showRevenueModal && (
-  <RevenueBreakdownModal
-    data={revenueBreakdownMock}
-    onClose={() => setShowRevenueModal(false)}
-  />
-)}
-
+        <RevenueBreakdownModal
+          data={revenueBreakdown}
+          onClose={() => setShowRevenueModal(false)}
+        />
+      )}
     </div>
   );
 };
@@ -269,12 +293,13 @@ const Stat = ({
   bg: string;
   onClick?: () => void;
 }) => (
- <div
+  <div
     onClick={onClick}
     className={`rounded-xl px-4 py-3 text-xs font-medium text-white ${bg} ${
       onClick ? "cursor-pointer hover:opacity-90" : ""
     }`}
-  >    <div className="text-[11px] opacity-90">{label}</div>
+  >
+    <div className="text-[11px] opacity-90">{label}</div>
     <div className="mt-1 text-sm">{value}</div>
   </div>
 );

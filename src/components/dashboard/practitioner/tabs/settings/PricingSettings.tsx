@@ -4,9 +4,11 @@ import React, { useState, useEffect } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import Loader from "@/components/atom/Loader/Loader";
+import { toast } from "react-toastify";
 
 interface FeeDetails {
   fee: number;
+  platform_fee: number;
   type: string;
   duration_mins: number;
   max_attendees: number;
@@ -52,7 +54,9 @@ const PricingSettings: React.FC = () => {
       setPricingData(data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -88,12 +92,18 @@ const PricingSettings: React.FC = () => {
           }),
         }
       );
+      
       if (!response.ok) throw new Error("Failed to save pricing data");
-      const data = await response.json();
-      setPricingData(data);
-      setError(null);
+      
+      toast.success("Pricing updated successfully");
+      
+      // Refresh data from server to ensure UI is in sync
+      await fetchPricingData();
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -126,16 +136,55 @@ const PricingSettings: React.FC = () => {
 
       {pricingData && (
         <Section title="Service Charges">
-          <ChargeRow
-            fees={pricingData.fees}
-            onChange={updateFee}
-          />
+          <div className="overflow-x-auto">
+            <div className="min-w-[600px]">
+              {/* Header */}
+              <div className="grid grid-cols-5 gap-4 pb-2 border-b border-slate-100 mb-4 items-center">
+                <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Appointment Type</div>
+                <div className="text-xs font-bold text-slate-800 uppercase tracking-wider text-center">Duration</div>
+                <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Base Fee (LKR)</div>
+                <div className="text-xs font-bold text-slate-800 uppercase tracking-wider text-center">Max Attendees</div>
+                <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Platform Fee (LKR)</div>
+              </div>
+
+              {/* Rows */}
+              <div className="space-y-4">
+                {Object.entries(pricingData.fees).map(([feeId, details]) => (
+                  <div key={feeId} className="grid grid-cols-5 gap-4 items-center py-2">
+                    <div className="text-sm font-medium text-slate-700">
+                      {details.type}
+                    </div>
+                    <div className="text-sm text-slate-700 text-center">
+                      {details.duration_mins}min
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        value={details.fee.toString()}
+                        onChange={(e) => updateFee(feeId, Number(e.target.value))}
+                        className="max-w-[120px]"
+                      />
+                    </div>
+                    <div className="text-sm text-slate-700 text-center">
+                      {details.max_attendees} attendee(s)
+                    </div>
+                    <div className="text-sm text-slate-700 text-center">
+                      {details.platform_fee}
+                    </div>
+                   
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </Section>
       )}
 
-      <Button onClick={savePricingData} disabled={saving}>
-        {saving ? "Saving..." : "Save Service Charges"}
-      </Button>
+      <div className="pt-4">
+        <Button onClick={savePricingData} disabled={saving}>
+          {saving ? "Saving..." : "Save Service Charges"}
+        </Button>
+      </div>
     </div>
   );
 };
@@ -152,30 +201,6 @@ const Section = ({
       {title}
     </div>
     {children}
-  </div>
-);
-
-const ChargeRow = ({
-  fees,
-  onChange,
-}: {
-  fees: Record<string, FeeDetails>;
-  onChange: (feeId: string, fee: number) => void;
-}) => (
-  <div className="grid grid-cols-3 gap-4">
-    {Object.entries(fees).map(([feeId, details]) => (
-      <div key={feeId}>
-        <Input
-          label={details.type}
-          type="number"
-          value={details.fee.toString()}
-          onChange={(e) => onChange(feeId, Number(e.target.value))}
-        />
-        <div className="text-xs text-slate-500 mt-1">
-          {details.duration_mins}min • Max {details.max_attendees} attendee(s)
-        </div>
-      </div>
-    ))}
   </div>
 );
 
