@@ -15,7 +15,7 @@ import { Patient } from "@/types/Dashboard";
 type AdminMenuId = "home" | "searchClinician" | "searchPatient" | "addClinician" | "manageAdmins" | "analytics" | "settings";
 
 const menuItems: DashboardMenuItem[] = [
-  { id: "home", label: "Dashboard Home" },
+  { id: "home", label: "Home" },
   { id: "searchClinician", label: "Search Clinician" },
   { id: "searchPatient", label: "Search Patient" },
   { id: "addClinician", label: "Add New Clinician" },

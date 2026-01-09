@@ -4,10 +4,11 @@ import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import Input from "@/components/atom/Input/Input";
-import Loader from "@/components/atom/Loader/Loader"; 
+import Loader from "@/components/atom/Loader/Loader";
 import PatientDetails from "./PatientDetails";
 import { Patient } from "@/types/Dashboard";
 import { toast } from "react-toastify";
+import { Trash2 } from "lucide-react";
 
 export interface AdminAppointment {
   id: string;
@@ -21,7 +22,7 @@ interface SearchPatientTabProps {
   search: string;
   onSearchChange: (v: string) => void;
   patients?: Patient[];
-  loading?: boolean; 
+  loading?: boolean;
   selectedPatient: Patient | null;
   onSelectPatient: (p: Patient) => void;
   onBackToDashboard: () => void;
@@ -34,7 +35,11 @@ const formatGlobalTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(":").map(Number);
     const date = new Date();
     date.setHours(hours, minutes, 0);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   } catch (e) {
     return timeStr;
   }
@@ -51,9 +56,10 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
 }) => {
   const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
-  
+
   // Local state management
-  const [localPatients, setLocalPatients] = useState<Patient[]>(initialPatients);
+  const [localPatients, setLocalPatients] =
+    useState<Patient[]>(initialPatients);
   const [localLoading, setLocalLoading] = useState(initialLoading);
 
   // Deletion States
@@ -72,13 +78,13 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
   const fetchPatientList = async () => {
     try {
       setLocalLoading(true);
-      const url = search 
-        ? `/api/patient?page=1&limit=20&q=${encodeURIComponent(search)}` 
+      const url = search
+        ? `/api/patient?page=1&limit=20&q=${encodeURIComponent(search)}`
         : `/api/patient?page=1&limit=20`;
-        
+
       const res = await fetch(url, { credentials: "include" });
       const data = await res.json();
-      
+
       if (data.success) {
         setLocalPatients(data.data || []);
       }
@@ -95,7 +101,10 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
     const fetchAppointments = async () => {
       try {
         setLoadingAppointments(true);
-        const res = await fetch(`/api/patient/${selectedPatient.id}/appointments`, { credentials: "include" });
+        const res = await fetch(
+          `/api/patient/${selectedPatient.id}/appointments`,
+          { credentials: "include" }
+        );
         if (!res.ok) throw new Error("Failed to fetch appointments");
         const json = await res.json();
 
@@ -103,14 +112,14 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
           ...(json.scheduled ?? []).map((a: any) => ({
             id: a.id,
             date: a.appointment_date,
-            time: formatGlobalTime(a.start_time), 
+            time: formatGlobalTime(a.start_time),
             doctorName: a.doctor?.name || "Unknown",
             category: "upcoming",
           })),
           ...(json.completed ?? []).map((a: any) => ({
             id: a.id,
             date: a.appointment_date,
-            time: formatGlobalTime(a.start_time), 
+            time: formatGlobalTime(a.start_time),
             doctorName: a.doctor?.name || "Unknown",
             category: "previous",
           })),
@@ -148,11 +157,13 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
 
       if (data.success) {
         // 1. Instant UI update: Filter out the deleted patient from local state
-        setLocalPatients(prev => prev.filter(p => p.id !== patientToDelete.id));
-        
+        setLocalPatients((prev) =>
+          prev.filter((p) => p.id !== patientToDelete.id)
+        );
+
         // 2. Success feedback
         toast.success(data.message || "Patient removed successfully ✨");
-        
+
         // 3. Close modal
         setPatientToDelete(null);
 
@@ -185,8 +196,12 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-1 w-full">
-            <div className="text-sm font-semibold text-slate-900">Search Patients</div>
-            <div className="text-xs text-slate-500">Find records and manage data.</div>
+            <div className="text-sm font-semibold text-slate-900">
+              Search Patients
+            </div>
+            <div className="text-xs text-slate-500">
+              Find records and manage data.
+            </div>
             <div className="mt-2">
               <Input
                 placeholder="Search by name, email, or phone"
@@ -206,27 +221,37 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
             <>
               {localPatients.length > 0 ? (
                 localPatients.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50">
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50"
+                  >
                     <div className="flex flex-col text-sm">
-                      <button type="button" className="text-blue-600 font-semibold text-left hover:underline" onClick={() => onSelectPatient(p)}>
+                      <button
+                        type="button"
+                        className="text-blue-600 font-semibold text-left hover:underline"
+                        onClick={() => onSelectPatient(p)}
+                      >
                         {p.name}
                       </button>
                       <span className="text-xs text-slate-500">{p.email}</span>
                       <span className="text-xs text-slate-500">{p.phone}</span>
                     </div>
-                    <Button 
-                      variant="danger" 
-                      size="sm" 
+                    <Button
+                      variant="danger"
+                      size="sm"
                       className="text-xs px-4"
                       onClick={() => confirmDelete(p)}
                     >
-                      🗑 Delete
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
                     </Button>
                   </div>
                 ))
               ) : (
                 <p className="text-xs text-slate-500 text-center py-10">
-                  {search.length > 0 ? "No patients found for this search." : "No patients available."}
+                  {search.length > 0
+                    ? "No patients found for this search."
+                    : "No patients available."}
                 </p>
               )}
             </>
@@ -237,18 +262,39 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
       {/* ---------------- DELETION MODAL ---------------- */}
       {patientToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => !isDeleting && setPatientToDelete(null)} />
+          <div
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+            onClick={() => !isDeleting && setPatientToDelete(null)}
+          />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
             <div className="flex items-center gap-3 mb-4 text-red-600">
               <div className="p-2 bg-red-100 rounded-full">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                </svg>
               </div>
               <h3 className="text-lg font-bold">Confirm Deletion</h3>
             </div>
-            
+
             <p className="text-sm text-slate-600 leading-relaxed mb-6">
-              Are you sure you want to permanently delete the record for <span className="font-bold text-slate-900">{patientToDelete.name}</span>? 
-              This will remove all associated appointment history and cannot be undone.
+              Are you sure you want to permanently delete the record for{" "}
+              <span className="font-bold text-slate-900">
+                {patientToDelete.name}
+              </span>
+              ? This will remove all associated appointment history and cannot
+              be undone.
             </p>
 
             <div className="flex gap-3">
