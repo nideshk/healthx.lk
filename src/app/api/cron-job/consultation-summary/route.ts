@@ -4,19 +4,28 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 /* ---------------------------------------------------------
    Types
 --------------------------------------------------------- */
+type Role = "patient" | "practitioner" | "guest" | "unknown";
+
 type AuditEvent = {
   appointment_id: string;
   event_type: "joined_call" | "left_call" | "heartbeat";
   created_at: string;
-  metadata?: { role?: "patient" | "practitioner" | "guest" };
+  metadata?: { role?: Role };
+};
+
+type Session = {
+  started_at: string;
+  ended_at: string;
+  inferred: boolean;
+  duration_seconds: number;
 };
 
 /* ---------------------------------------------------------
-   Utilities
+   Session Builder (MULTI-SESSION SAFE)
 --------------------------------------------------------- */
+function buildSessions(events: AuditEvent[]): Session[] {
+  const sessions: Session[] = [];
 
-// 🔑 Determine effective end (left_call > last heartbeat)
-function getEffectiveEnd(events: AuditEvent[]): Date | null {
   let joinedAt: Date | null = null;
   let lastSeen: Date | null = null;
 
@@ -26,48 +35,56 @@ function getEffectiveEnd(events: AuditEvent[]): Date | null {
     if (e.event_type === "joined_call") {
       joinedAt = ts;
       lastSeen = ts;
+      continue;
     }
 
     if (e.event_type === "heartbeat" && joinedAt) {
       lastSeen = ts;
+      continue;
     }
 
     if (e.event_type === "left_call" && joinedAt) {
-      return ts;
+      sessions.push({
+        started_at: joinedAt.toISOString(),
+        ended_at: ts.toISOString(),
+        inferred: false,
+        duration_seconds: Math.max(
+          0,
+          Math.round((ts.getTime() - joinedAt.getTime()) / 1000)
+        ),
+      });
+      joinedAt = null;
+      lastSeen = null;
     }
   }
 
-  return joinedAt && lastSeen ? lastSeen : null;
-}
-
-// 🔑 Correct duration calculation (NO cron-time inflation)
-function calculateDuration(events: AuditEvent[]): number {
-  let joinedAt: Date | null = null;
-  let lastSeen: Date | null = null;
-
-  for (const e of events) {
-    const ts = new Date(e.created_at);
-
-    if (e.event_type === "joined_call") {
-      joinedAt = ts;
-      lastSeen = ts;
-    }
-
-    if (e.event_type === "heartbeat" && joinedAt) {
-      lastSeen = ts;
-    }
-
-    if (e.event_type === "left_call" && joinedAt) {
-      return Math.round((ts.getTime() - joinedAt.getTime()) / 1000);
-    }
-  }
-
+  // Dangling session (no explicit leave)
   if (joinedAt && lastSeen) {
-    return Math.round((lastSeen.getTime() - joinedAt.getTime()) / 1000);
+    sessions.push({
+      started_at: joinedAt.toISOString(),
+      ended_at: lastSeen.toISOString(),
+      inferred: true,
+      duration_seconds: Math.max(
+        0,
+        Math.round((lastSeen.getTime() - joinedAt.getTime()) / 1000)
+      ),
+    });
   }
 
-  return 0;
+  return sessions;
 }
+
+/* ---------------------------------------------------------
+   Helpers
+--------------------------------------------------------- */
+const totalDuration = (sessions: Session[]) =>
+  sessions.reduce((sum, s) => sum + s.duration_seconds, 0);
+
+const firstStart = (sessions: Session[]) =>
+  sessions[0]?.started_at ?? null;
+
+const lastEnd = (sessions: Session[]) =>
+  sessions.at(-1)?.ended_at ?? null;
 
 /* ---------------------------------------------------------
    CRON HANDLER
@@ -75,7 +92,7 @@ function calculateDuration(events: AuditEvent[]): number {
 export async function GET(_req: NextRequest) {
   try {
     /* -----------------------------------------------------
-       1️⃣ Fetch logs
+       1️⃣ Fetch audit logs
     ----------------------------------------------------- */
     const { data: logs, error } = await supabaseAdmin
       .from("consultation_audit_log")
@@ -88,7 +105,7 @@ export async function GET(_req: NextRequest) {
     }
 
     /* -----------------------------------------------------
-       2️⃣ Group logs by appointment
+       2️⃣ Group by appointment
     ----------------------------------------------------- */
     const grouped: Record<string, AuditEvent[]> = {};
     for (const log of logs as AuditEvent[]) {
@@ -115,28 +132,54 @@ export async function GET(_req: NextRequest) {
       if (!appointment || appointment.call_ended_at) continue;
 
       /* -----------------------------------------------
-         Group by role
+         Group events by role
       ----------------------------------------------- */
-      const byRole: Record<string, AuditEvent[]> = {};
+      const byRole: Record<Role, AuditEvent[]> = {
+        practitioner: [],
+        patient: [],
+        guest: [],
+        unknown: [],
+      };
+
       for (const e of events) {
         const role = e.metadata?.role ?? "unknown";
-        byRole[role] ||= [];
         byRole[role].push(e);
       }
 
-      const practitionerEvents = byRole["practitioner"] || [];
-      const patientEvents = byRole["patient"] || [];
+      /* -----------------------------------------------
+         Build sessions
+      ----------------------------------------------- */
+      const practitionerSessions = buildSessions(byRole.practitioner);
+      const patientSessions = buildSessions(byRole.patient);
 
       /* -----------------------------------------------
-         Practitioner defines meeting lifecycle
+         Participant summary
       ----------------------------------------------- */
-      const practitionerJoin =
-        practitionerEvents.find(e => e.event_type === "joined_call") ??
-        null;
+      const participantSummary = {
+        practitioner: {
+          sessions: practitionerSessions,
+          started_at: firstStart(practitionerSessions),
+          ended_at: lastEnd(practitionerSessions),
+          total_duration_seconds: totalDuration(practitionerSessions),
+          session_count: practitionerSessions.length,
+        },
+        patient: {
+          sessions: patientSessions,
+          started_at: firstStart(patientSessions),
+          ended_at: lastEnd(patientSessions),
+          total_duration_seconds: totalDuration(patientSessions),
+          session_count: patientSessions.length,
+        },
+      };
 
-      const meetingStartedAt = practitionerJoin?.created_at ?? null;
+      /* -----------------------------------------------
+         Meeting lifecycle (defined by practitioner)
+      ----------------------------------------------- */
+      const meetingStartedAt =
+        participantSummary.practitioner.started_at;
+
       const meetingEndedAt =
-        getEffectiveEnd(practitionerEvents)?.toISOString() ?? null;
+        participantSummary.practitioner.ended_at;
 
       const meetingDurationSeconds =
         meetingStartedAt && meetingEndedAt
@@ -148,34 +191,7 @@ export async function GET(_req: NextRequest) {
           : null;
 
       /* -----------------------------------------------
-         Participant summaries
-      ----------------------------------------------- */
-      const patientEnd = getEffectiveEnd(patientEvents);
-      const practitionerEnd = getEffectiveEnd(practitionerEvents);
-
-      const participantSummary = {
-        practitioner: {
-          started_at: practitionerJoin?.created_at ?? null,
-          ended_at: practitionerEnd?.toISOString() ?? null,
-          duration_seconds: calculateDuration(practitionerEvents),
-          event_count: practitionerEvents.filter(
-            e => e.event_type !== "heartbeat"
-          ).length,
-        },
-        patient: {
-          started_at:
-            patientEvents.find(e => e.event_type === "joined_call")
-              ?.created_at ?? null,
-          ended_at: patientEnd?.toISOString() ?? null,
-          duration_seconds: calculateDuration(patientEvents),
-          event_count: patientEvents.filter(
-            e => e.event_type !== "heartbeat"
-          ).length,
-        },
-      };
-
-      /* -----------------------------------------------
-         Persist audit summary (always)
+         Persist audit summary
       ----------------------------------------------- */
       await supabaseAdmin
         .from("consultation_audit_summary")
@@ -194,13 +210,16 @@ export async function GET(_req: NextRequest) {
         );
 
       /* -----------------------------------------------
-         No-show logic ONLY after scheduled end
+         No-show logic (ONLY after scheduled end)
       ----------------------------------------------- */
-      if (appointment.ends_at && Date.now() >= new Date(appointment.ends_at).getTime()) {
+      if (
+        appointment.ends_at &&
+        Date.now() >= new Date(appointment.ends_at).getTime()
+      ) {
         const practitionerJoined =
-          participantSummary.practitioner.started_at !== null;
+          participantSummary.practitioner.session_count > 0;
         const patientJoined =
-          participantSummary.patient.started_at !== null;
+          participantSummary.patient.session_count > 0;
 
         let practitionerNoShow = false;
         let patientNoShow = false;
@@ -228,7 +247,8 @@ export async function GET(_req: NextRequest) {
             practitioner_no_show: practitionerNoShow,
             patient_no_show: patientNoShow,
             status,
-            call_ended_at: meetingEndedAt ?? new Date().toISOString(),
+            call_ended_at:
+              meetingEndedAt ?? new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq("id", appointmentId)
@@ -241,6 +261,9 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ success: true, processed });
   } catch (err) {
     console.error("❌ Consultation finalizer failed:", err);
-    return NextResponse.json({ error: "Cron failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Cron failed" },
+      { status: 500 }
+    );
   }
 }
