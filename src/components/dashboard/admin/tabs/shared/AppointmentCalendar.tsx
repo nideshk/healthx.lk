@@ -66,9 +66,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             <div className="text-sm font-semibold text-slate-900">
               Appointment Calendar
             </div>
-            <div className="text-xs text-slate-500">
-              Your weekly schedule
-            </div>
           </div>
 
           {/* Weekly / Daily toggle */}

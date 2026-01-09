@@ -7,16 +7,6 @@ import ClinicianCard from "./ClinicianCard";
 import ClinicianProfileModal from "./ClinicianProfileModal";
 import Loader from "@/components/atom/Loader/Loader";
 
-const mapFees = (fees: any[] = []) => {
-  const standard = fees.find((f) => f.code === "standard_consultation");
-  const quick = fees.find((f) => f.code === "quick_consultation");
-
-  return {
-    standard: standard?.amount ?? 0,
-    quick: quick?.amount ?? 0,
-  };
-};
-
 const SearchClinicianTab: React.FC = () => {
   const [search, setSearch] = useState("");
   const [clinicians, setClinicians] = useState<any[]>([]);
@@ -28,7 +18,6 @@ const SearchClinicianTab: React.FC = () => {
 
   useEffect(() => {
     const fetchClinicians = async () => {
-      // Logic: Initial load/clear (length 0) OR search when length >= 3
       if (search.length > 0 && search.length < 3) return;
 
       setLoading(true);
@@ -74,10 +63,7 @@ const SearchClinicianTab: React.FC = () => {
       branch: string;
       accountNumber: string;
     };
-    fees: {
-      solo: number;
-      family: number;
-    };
+    fees: any[];
     ratings: {
       overall: number;
       advice: number;
@@ -101,7 +87,6 @@ const SearchClinicianTab: React.FC = () => {
       const p = data.practitioner || {};
       const bank = data.bank_details?.[0] || {};
 
-      // Kept your existing bank and profile mapping intact
       setSelectedClinician({
         id: p.id,
         name: p.full_name ?? "",
@@ -116,10 +101,7 @@ const SearchClinicianTab: React.FC = () => {
           branch: bank.branch_name ?? "",
           accountNumber: bank.account_number ?? "",
         },
-        fees: {
-          solo: p.fees?.solo || 0,
-          family: p.fees?.family || 0,
-        },
+        fees: p.fees || [],
         ratings: { overall: 0, advice: 0, punctuality: 0 },
         tags: p.specialization ?? [],
       });
@@ -160,7 +142,6 @@ const SearchClinicianTab: React.FC = () => {
           )}
 
           <div className="space-y-3 min-h-[100px] relative">
-            {/* Custom Loader Component integration */}
             {loading ? (
               <div className="flex justify-center py-10">
                 <Loader />
@@ -178,14 +159,12 @@ const SearchClinicianTab: React.FC = () => {
                         registration: c.license_number,
                         tags: c.specialization,
                         experience: c.experience_years,
-                        // Fix: Using mapFees to transform the raw array for the card
-                        fees: mapFees(c.fees),
+                        fees: c.fees ?? [],
                       }}
                       onViewProfile={handleViewProfile}
                     />
                   ))
                 ) : (
-                  /* Message shows when search results are empty */
                   <div className="text-xs text-slate-500 py-10 text-center">
                     No clinicians found.
                   </div>
