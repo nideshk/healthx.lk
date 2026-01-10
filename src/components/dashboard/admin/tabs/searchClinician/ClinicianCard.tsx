@@ -4,16 +4,18 @@ import React, { useState } from "react";
 import Button from "@/components/atom/Button/Button";
 import Loader from "@/components/atom/Loader/Loader";
 
+interface Fee {
+  label: string;
+  amount: number;
+}
+
 interface ClinicianCardProps {
   clinician: {
     id: string;
     name: string;
     specialty: string;
     registration: string;
-    fees: {
-      standard: number;
-      quick: number;
-    };
+    fees: Fee[];
     experience: number;
     tags: string[];
   };
@@ -33,24 +35,19 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
     try {
       await onViewProfile(clinician.id);
     } finally {
-      // If navigation happens, this component unmounts
-      // If not, loader safely resets
       setLoading(false);
     }
   };
 
-  console.log("Rendering ClinicianCard for:", clinician);
-
   return (
     <div className="relative border border-slate-200 rounded-xl p-4 bg-white">
-      {/* 🔄 Loader overlay */}
       {loading && (
         <div className="absolute inset-0 z-10 bg-white/70 flex items-center justify-center rounded-xl">
           <Loader />
         </div>
       )}
 
-      {/* NAME + SPECIALTY */}
+      {/* NAME */}
       <div className="flex justify-between items-start">
         <div>
           <div
@@ -86,11 +83,16 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
 
       {/* FEES */}
       <div className="mt-1 text-xs text-slate-600">
-        Standard:{" "}
-        <span className="font-medium">{clinician.fees.standard} LKR </span>
-        &nbsp; | &nbsp;
-        Quick:{" "}
-        <span className="font-medium">{clinician.fees.quick} LKR </span>
+        {clinician.fees && clinician.fees.length > 0 ? (
+          clinician.fees.map((f, idx) => (
+            <span key={idx}>
+              {f.label}: <span className="font-medium">{f.amount} LKR</span>
+              {idx !== clinician.fees.length - 1 && "  |  "}
+            </span>
+          ))
+        ) : (
+          <span className="italic text-slate-400">No fee set</span>
+        )}
       </div>
 
       {/* TAGS */}
@@ -109,18 +111,3 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
 };
 
 export default ClinicianCard;
-
-const extractFees = (fees: any[]) => {
-  const standard = fees.find(
-    (f) => f.code === "standard_consultation"
-  );
-
-  const quick = fees.find(
-    (f) => f.code === "quick_consultation"
-  );
-
-  return {
-    standard: standard?.amount ?? 0,
-    quick: quick?.amount ?? 0,
-  };
-};

@@ -7,6 +7,7 @@ import Input from "@/components/atom/Input/Input";
 import Loader from "@/components/atom/Loader/Loader";
 import { Patient, Appointment } from "@/types/Dashboard";
 import PatientDetails from "./PatientDetailView";
+import { Trash2 } from "lucide-react"; // ⭐ Added icon
 
 interface SearchPatientsTabProps {
   search: string;
@@ -29,7 +30,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
+  useEffect(() => {
     const fetchAppointments = async () => {
       setLoading(true);
       setError(null);
@@ -45,7 +46,6 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
 
         const json = await res.json();
 
-        // Merge all appointment buckets
         const mergedAppointments = [
           ...(json.ongoing || []),
           ...(json.upcoming || []),
@@ -55,9 +55,6 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
 
         setAllAppointments(mergedAppointments);
 
-        /* ---------------------------------------------
-           Group appointments by patient.id
-        ---------------------------------------------- */
         const patientMap = new Map<string, Patient>();
 
         mergedAppointments.forEach((appt: any) => {
@@ -73,13 +70,11 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
             age: p.age ?? 0,
             gender: p.gender ?? "",
             dob: p.dob ?? "",
-            allergies: Array.isArray(p.allergies)
-              ? p.allergies.join(", ")
-              : "",
+            allergies: Array.isArray(p.allergies) ? p.allergies.join(", ") : "",
             lastConsultation: "",
             consentGiven: false,
-            city:p.city,
-            country : p.country
+            city: p.city,
+            country: p.country,
           });
         });
 
@@ -95,9 +90,6 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
     fetchAppointments();
   }, []);
 
-  /* -------------------------------------------------
-     Search filter (name / email / phone)
-  -------------------------------------------------- */
   const filteredPatients = useMemo(() => {
     const q = search.toLowerCase();
 
@@ -109,9 +101,6 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
     );
   }, [patients, search]);
 
-  /* -------------------------------------------------
-     Patient details view
-  -------------------------------------------------- */
   if (selectedPatient) {
     const patientAppointments: Appointment[] = allAppointments
       .filter((a) => a.patient?.id === selectedPatient.id)
@@ -162,9 +151,6 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
     );
   }
 
-  /* -------------------------------------------------
-     Search + patient list view
-  -------------------------------------------------- */
   return (
     <div className="space-y-4">
       <Card>
@@ -189,19 +175,14 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
         </CardHeader>
 
         <CardBody className="space-y-2">
-          {/* Loader */}
           {loading && (
             <div className="flex justify-center py-10">
               <Loader />
             </div>
           )}
 
-          {/* Error */}
-          {error && (
-            <div className="text-xs text-red-600">{error}</div>
-          )}
+          {error && <div className="text-xs text-red-600">{error}</div>}
 
-          {/* Patient list */}
           {!loading &&
             !error &&
             filteredPatients.map((p) => (
@@ -222,12 +203,12 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
                 </div>
 
                 <Button variant="danger" size="sm" className="text-xs px-4">
-                  🗑 Delete Permanent
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
                 </Button>
               </div>
             ))}
 
-          {/* Empty state */}
           {!loading && !error && filteredPatients.length === 0 && (
             <p className="text-xs text-slate-500">
               No patients found. Try a different search.
