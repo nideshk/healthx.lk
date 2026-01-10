@@ -14,14 +14,26 @@ export function computeRefund({
   appointment: any;
   transaction: any;
 }): RefundDecision {
+  const ctx = {
+    appointment_id: appointment?.id,
+    transaction_id: transaction?.id,
+  };
+
+  console.log("[RefundRules] 🔍 Evaluating refund", ctx);
+
   // --------------------
   // Guard rails
   // --------------------
-  if (!transaction || transaction.status !== "success") {
+  if (!transaction) {
+    console.log("[RefundRules] ⛔ No transaction", ctx);
     return { eligible: false };
   }
 
-  if (transaction.refund_status !== "none") {
+  if (transaction.status !== "success") {
+    console.log("[RefundRules] ⛔ Transaction not successful", {
+      ...ctx,
+      status: transaction.status,
+    });
     return { eligible: false };
   }
 
@@ -32,6 +44,11 @@ export function computeRefund({
     appointment.practitioner_no_show === true &&
     appointment.patient_no_show === false
   ) {
+    console.log("[RefundRules] ✅ Practitioner no-show → FULL refund", {
+      ...ctx,
+      amount: transaction.amount,
+    });
+
     return {
       eligible: true,
       type: "full",
@@ -44,6 +61,11 @@ export function computeRefund({
   // 2️⃣ Practitioner CANCELLED
   // --------------------
   if (appointment.cancelled_by === "practitioner") {
+    console.log("[RefundRules] ✅ Practitioner cancelled → FULL refund", {
+      ...ctx,
+      amount: transaction.amount,
+    });
+
     return {
       eligible: true,
       type: "full",
@@ -57,6 +79,10 @@ export function computeRefund({
   // --------------------
   if (appointment.cancelled_by === "patient") {
     if (!appointment.cancelled_at || !appointment.starts_at) {
+      console.log(
+        "[RefundRules] ⛔ Missing cancelled_at or starts_at",
+        ctx
+      );
       return { eligible: false };
     }
 
@@ -66,7 +92,17 @@ export function computeRefund({
     const diffHours =
       (startsAt.getTime() - cancelledAt.getTime()) / (1000 * 60 * 60);
 
+    console.log("[RefundRules] ⏱ Patient cancellation timing", {
+      ...ctx,
+      diffHours,
+    });
+
     if (diffHours >= 24) {
+      console.log(
+        "[RefundRules] ✅ Patient cancelled ≥24h → FULL refund",
+        ctx
+      );
+
       return {
         eligible: true,
         type: "full",
@@ -76,6 +112,14 @@ export function computeRefund({
     }
 
     if (diffHours >= 2) {
+      console.log(
+        "[RefundRules] ✅ Patient cancelled ≥2h → PARTIAL refund (50%)",
+        {
+          ...ctx,
+          amount: Math.floor(transaction.amount * 0.5),
+        }
+      );
+
       return {
         eligible: true,
         type: "partial",
@@ -83,10 +127,16 @@ export function computeRefund({
         reason: "PATIENT_CANCELLED_LATE_50",
       };
     }
+
+    console.log(
+      "[RefundRules] ⛔ Patient cancelled too late (<2h)",
+      ctx
+    );
   }
 
   // --------------------
   // No refund
   // --------------------
+  console.log("[RefundRules] ❌ No refund applicable", ctx);
   return { eligible: false };
 }
