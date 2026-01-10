@@ -52,7 +52,6 @@ export async function runRefundEligibilityCron() {
       continue;
     }
 
-    
     console.log(
       `[RefundCron] 💳 Transaction found`,
       {
