@@ -8,20 +8,18 @@ import {
   ChevronLeft, 
   Clock, 
   CalendarDays, 
+  Video, 
   CheckCircle2, 
   ShieldCheck, 
   Star, 
   Languages, 
-  Stethoscope,
-  ChevronRight,
-  Loader2,
-  ArrowLeft
+  Stethoscope 
 } from "lucide-react";
 import Calendar from "../atom/Calendar/Calendar";
 import { AppointmentFormInputs } from "@/types/FormType";
 import Loader from "@/components/atom/Loader/Loader";
 
-const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
+const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: any, ref) => {
   const practitionerId = bookingData?.selectedDoctor?.id;
 
   // --- State Management ---
@@ -32,7 +30,6 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   const [availability, setAvailability] = useState<any>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   const timeRef = useRef<HTMLDivElement>(null);
 
@@ -65,34 +62,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
     }
   }
 
-  // --- Finalize Selection and Move Next ---
-  const handleSlotSelection = async (time: string) => {
-    setSelectedTime(time);
-    const [H, M] = time.split(":").map(Number);
-    const [y, m, d] = selectedDate!.split("-").map(Number);
-    
-    const start = DateTime.fromObject(
-      { year: y, month: m, day: d, hour: H, minute: M }, 
-      { zone: availability?.timezone || "UTC" }
-    );
-
-    const override = { 
-      starts_at: start.toUTC().toISO(), 
-      ends_at: start.toUTC().plus({ minutes: selectedType.duration_mins }).toISO(),
-      appointmentType: selectedType
-    };
-
-    updateData(override);
-    
-    // Auto-advance
-    setIsSaving(true);
-    try {
-      await nextStep({ override });
-    } catch {
-      setIsSaving(false);
-    }
-  };
-
+  // --- Form Validation for Parent ---
   useImperativeHandle(ref, () => ({
     validateStep: () => {
       if (!selectedType) return toast.error("Please select an appointment type"), false;
@@ -110,22 +80,24 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   if (loadingInfo) return <div className="flex justify-center py-20"><Loader size="lg" /></div>;
 
   return (
-    <div className="py-6 md:py-12 bg-[#FBFDFF] min-h-screen pb-32">
+    <div className="py-6 md:py-12 bg-[#FBFDFF] min-h-screen">
       <div className="max-w-6xl mx-auto px-4">
         
         {/* Navigation Header */}
         <div className="flex items-center justify-between mb-10">
-          <button
-                onClick={() => prevStep()}
-                className="flex items-center gap-1.5 text-slate-400 hover:text-teal-600 font-bold text-xs mb-3 transition-colors uppercase tracking-wider group"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" /> 
-                Back to Selecting Practitioner
-              </button>
+          <button 
+            onClick={() => prevStep()} 
+            className="group flex items-center gap-2 text-slate-400 hover:text-teal-600 transition-all"
+          >
+            <div className="p-2 rounded-full bg-white shadow-sm border border-slate-100 group-hover:bg-teal-50 group-hover:border-teal-100 transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </div>
+            <span className="text-xs font-black uppercase tracking-[0.15em]">Change Practitioner</span>
+          </button>
           
           <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-100 shadow-sm">
             <ShieldCheck className="w-4 h-4 text-teal-500" />
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Secure Booking</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">HIPAA Secured</span>
           </div>
         </div>
 
@@ -154,11 +126,11 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
               </div>
 
               <div className="mt-8 grid grid-cols-2 gap-3">
-                <div className="bg-slate-50 p-4 rounded-2xl text-center border border-slate-100">
+                <div className="bg-slate-50 p-4 rounded-2xl text-center">
                   <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Experience</p>
                   <p className="text-sm font-black text-slate-700">{practitioner.experience_years || '10'}+ Yrs</p>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl text-center border border-slate-100">
+                <div className="bg-slate-50 p-4 rounded-2xl text-center">
                   <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Rating</p>
                   <div className="flex items-center justify-center gap-1">
                     <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
@@ -177,11 +149,29 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                 </div>
               </div>
             </div>
+
+            {/* Selection Summary Tooltip */}
+            {selectedTime && (
+              <div className="bg-teal-600 rounded-[2rem] p-6 text-white shadow-xl shadow-teal-100/50 animate-in zoom-in-95 duration-300">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 mb-4 block">Confirming Appointment</label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <CalendarDays className="w-5 h-5 opacity-80" />
+                    <span className="font-bold text-sm">{DateTime.fromISO(selectedDate!).toLocaleString(DateTime.DATE_MED)}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 opacity-80" />
+                    <span className="font-bold text-sm">{selectedTime} ({selectedType?.duration_mins} min)</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* RIGHT SIDE: Selection Workspace */}
           <div className="lg:col-span-8 space-y-6">
             
+            {/* 1. Appointment Type */}
             <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
                 <span className="w-6 h-6 rounded-lg bg-teal-500 text-white flex items-center justify-center text-[10px]">01</span>
@@ -199,7 +189,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                     }}
                     className={`group relative p-6 rounded-3xl border-2 text-left transition-all ${
                       selectedType?.id === type.id 
-                        ? "border-teal-500 bg-teal-50/30 shadow-lg shadow-teal-100/20" 
+                        ? "border-teal-500 bg-teal-50/30" 
                         : "border-slate-100 hover:border-teal-200 bg-white"
                     }`}
                   >
@@ -211,17 +201,19 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                     </p>
                     <div className="flex items-center gap-2 mt-2 text-slate-400 group-hover:text-teal-600 transition-colors">
                       <Clock className="w-3.5 h-3.5" />
-                      <span className="text-xs font-bold uppercase tracking-tight">{type.duration_mins} Min Session</span>
+                      <span className="text-xs font-bold uppercase tracking-tight">{type.duration_mins} Minute Session</span>
                     </div>
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* 2 & 3: Calendar & Time (Visible after Step 1) */}
             {selectedType && (
               <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50 animate-in fade-in slide-in-from-bottom-6 duration-700">
                 <div className="grid md:grid-cols-2 gap-12">
                   
+                  {/* Calendar Column */}
                   <div>
                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
                       <span className="w-6 h-6 rounded-lg bg-teal-500 text-white flex items-center justify-center text-[10px]">02</span>
@@ -242,6 +234,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                     </div>
                   </div>
 
+                  {/* Time Column */}
                   <div ref={timeRef}>
                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
                       <span className="w-6 h-6 rounded-lg bg-teal-500 text-white flex items-center justify-center text-[10px]">03</span>
@@ -262,11 +255,23 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                         {slots.map((time: string) => (
                           <button
                             key={time}
-                            onClick={() => handleSlotSelection(time)}
+                            onClick={() => {
+                              setSelectedTime(time);
+                              const [H, M] = time.split(":").map(Number);
+                              const [y, m, d] = selectedDate!.split("-").map(Number);
+                              const start = DateTime.fromObject(
+                                { year: y, month: m, day: d, hour: H, minute: M }, 
+                                { zone: availability?.timezone || "UTC" }
+                              );
+                              updateData({ 
+                                starts_at: start.toUTC().toISO(), 
+                                ends_at: start.toUTC().plus({ minutes: selectedType.duration_mins }).toISO() 
+                              });
+                            }}
                             className={`py-4 rounded-2xl text-[13px] font-black transition-all ${
                               selectedTime === time 
                                 ? "bg-teal-500 text-white shadow-lg shadow-teal-100 ring-2 ring-teal-500 ring-offset-2" 
-                                : "bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-700 border border-transparent hover:border-teal-100"
+                                : "bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-700"
                             }`}
                           >
                             {time}
@@ -275,58 +280,10 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                       </div>
                     )}
                   </div>
+
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* --- FIXED NAVIGATION FOOTER --- */}
-      <div className="fixed bottom-0 inset-x-0 bg-white/80 backdrop-blur-lg border-t border-slate-100 p-4 md:p-6 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="hidden md:block">
-            {selectedTime ? (
-              <div className="flex items-center gap-4">
-                <div className="bg-teal-50 p-2 rounded-xl border border-teal-100">
-                  <CalendarDays className="w-5 h-5 text-teal-600" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scheduled For</p>
-                  <p className="text-sm font-bold text-slate-900">
-                    {DateTime.fromISO(selectedDate!).toLocaleString(DateTime.DATE_MED)} at {selectedTime}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm font-bold text-slate-400">Please select a time slot to continue</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <button
-              type="button"
-              onClick={prevStep}
-              className="flex-1 md:flex-none px-6 py-3 rounded-2xl text-sm font-bold text-slate-400 border border-slate-100 hover:bg-slate-50"
-            >
-              Back
-            </button>
-
-            <button
-              type="button"
-              onClick={() => selectedTime && handleSlotSelection(selectedTime)}
-              disabled={!selectedTime || isSaving}
-              className="flex-[2] md:flex-none px-10 py-3 bg-slate-900 hover:bg-black text-white rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400 shadow-xl shadow-slate-200"
-            >
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  Continue
-                  <ChevronRight size={16} />
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>

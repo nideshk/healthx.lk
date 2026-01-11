@@ -71,7 +71,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     const [isExpired, setIsExpired] = useState(false);
     const appointmentIdRef = useRef<string | null>(null);
     const router = useRouter();
-
+console.log(bookingData)
     useEffect(() => { setMounted(true) }, []);
 
     const handleExpiry = async () => {
@@ -265,7 +265,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="text-xl font-bold text-slate-900">{bookingData.selectedDoctor?.name}</h3>
+                        <h3 className="text-xl font-bold text-slate-900">{bookingData.selectedDoctor?.name || bookingData.selectedDoctor?.full_name}</h3>
                         <p className="text-blue-600 font-medium text-sm">{bookingData.selectedDoctor?.qualification}</p>
                       </div>
                       <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-md uppercase tracking-widest">
