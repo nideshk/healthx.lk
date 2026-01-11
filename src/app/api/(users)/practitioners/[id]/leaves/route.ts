@@ -353,6 +353,63 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       return NextResponse.json({ error: "You are not authorized to delete this leave entry." }, { status: 403 });
     }
 
+     /* ----------------------------------------------------
+       1️⃣ Load leave record
+    ---------------------------------------------------- */
+    const { data: leave, error: leave_error } = await supabaseAdmin
+      .from("practitioner_leaves")
+      .select("id, applied_windows")
+      .eq("id", leaveId)
+      .eq("practitioner_id", practitionerId)
+      .maybeSingle();
+
+    if (leave_error || !leave) {
+      return NextResponse.json(
+        { error: "Leave entry not found." },
+        { status: 404 }
+      );
+    }
+
+    /* ----------------------------------------------------
+       2️⃣ Compute earliest leave start (SERVER TIME)
+    ---------------------------------------------------- */
+    const now = new Date(); // ⬅️ auto-calculated HERE
+
+    let earliestStart: Date | null = null;
+
+    for (const day of leave.applied_windows ?? []) {
+      for (const w of day.windows ?? []) {
+        const from = new Date(w.from);
+        if (!earliestStart || from < earliestStart) {
+          earliestStart = from;
+        }
+      }
+    }
+
+    if (!earliestStart) {
+      return NextResponse.json(
+        { error: "Invalid leave timing data." },
+        { status: 400 }
+      );
+    }
+
+    /* ----------------------------------------------------
+       3️⃣ Block deletion if leave has started
+    ---------------------------------------------------- */
+    if (now >= earliestStart) {
+      return NextResponse.json(
+        {
+          error:
+            "You cannot delete a leave that has already started or completed.",
+        },
+        { status: 409 } // Conflict
+      );
+    }
+
+    /* ----------------------------------------------------
+       4️⃣ Safe to delete
+    ---------------------------------------------------- */
+
     const { error } = await supabaseAdmin
       .from("practitioner_leaves")
       .delete()
