@@ -8,18 +8,19 @@ import {
   ChevronLeft, 
   Clock, 
   CalendarDays, 
-  Video, 
   CheckCircle2, 
   ShieldCheck, 
   Star, 
   Languages, 
-  Stethoscope 
+  Stethoscope,
+  ArrowRight,
+  Loader2
 } from "lucide-react";
 import Calendar from "../atom/Calendar/Calendar";
 import { AppointmentFormInputs } from "@/types/FormType";
 import Loader from "@/components/atom/Loader/Loader";
 
-const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: any, ref) => {
+const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
   const practitionerId = bookingData?.selectedDoctor?.id;
 
   // --- State Management ---
@@ -30,6 +31,7 @@ const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: a
   const [availability, setAvailability] = useState<any>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const timeRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +64,22 @@ const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: a
     }
   }
 
-  // --- Form Validation for Parent ---
+  // --- Final Confirmation Logic ---
+  const handleFinalConfirm = async () => {
+    if (!selectedTime || !selectedDate || !selectedType) {
+        return toast.error("Please complete all selection steps");
+    }
+    
+    setIsConfirming(true);
+    // Data is already updated in updateData via sub-selections
+    // but we call nextStep to move to the summary/payment step
+    try {
+        await nextStep();
+    } catch (err) {
+        setIsConfirming(false);
+    }
+  };
+
   useImperativeHandle(ref, () => ({
     validateStep: () => {
       if (!selectedType) return toast.error("Please select an appointment type"), false;
@@ -80,7 +97,7 @@ const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: a
   if (loadingInfo) return <div className="flex justify-center py-20"><Loader size="lg" /></div>;
 
   return (
-    <div className="py-6 md:py-12 bg-[#FBFDFF] min-h-screen">
+    <div className="pb-32 pt-6 md:pt-12 bg-[#FBFDFF] min-h-screen relative">
       <div className="max-w-6xl mx-auto px-4">
         
         {/* Navigation Header */}
@@ -149,23 +166,6 @@ const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: a
                 </div>
               </div>
             </div>
-
-            {/* Selection Summary Tooltip */}
-            {selectedTime && (
-              <div className="bg-teal-600 rounded-[2rem] p-6 text-white shadow-xl shadow-teal-100/50 animate-in zoom-in-95 duration-300">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 mb-4 block">Confirming Appointment</label>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <CalendarDays className="w-5 h-5 opacity-80" />
-                    <span className="font-bold text-sm">{DateTime.fromISO(selectedDate!).toLocaleString(DateTime.DATE_MED)}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-5 h-5 opacity-80" />
-                    <span className="font-bold text-sm">{selectedTime} ({selectedType?.duration_mins} min)</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* RIGHT SIDE: Selection Workspace */}
@@ -208,7 +208,7 @@ const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: a
               </div>
             </div>
 
-            {/* 2 & 3: Calendar & Time (Visible after Step 1) */}
+            {/* 2 & 3: Calendar & Time */}
             {selectedType && (
               <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50 animate-in fade-in slide-in-from-bottom-6 duration-700">
                 <div className="grid md:grid-cols-2 gap-12">
@@ -250,6 +250,12 @@ const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: a
                       </div>
                     ) : loadingAvailability ? (
                       <div className="h-64 flex items-center justify-center"><Loader size="md" /></div>
+                    ) : slots.length === 0 ? (
+                        <div className="h-64 flex flex-col items-center justify-center text-center p-8 bg-amber-50/50 rounded-[2rem] border-2 border-dashed border-amber-100">
+                            <Clock className="w-8 h-8 text-amber-300 mb-3" />
+                            <p className="text-xs font-bold text-amber-800 uppercase tracking-tighter">Fully Booked</p>
+                            <p className="text-[10px] text-amber-600 mt-1">Try another date</p>
+                        </div>
                     ) : (
                       <div className="grid grid-cols-3 gap-2.5">
                         {slots.map((time: string) => (
@@ -270,7 +276,7 @@ const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: a
                             }}
                             className={`py-4 rounded-2xl text-[13px] font-black transition-all ${
                               selectedTime === time 
-                                ? "bg-teal-500 text-white shadow-lg shadow-teal-100 ring-2 ring-teal-500 ring-offset-2" 
+                                ? "bg-teal-500 text-white shadow-lg shadow-teal-100" 
                                 : "bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-700"
                             }`}
                           >
@@ -280,11 +286,47 @@ const BookAppointmentStep = forwardRef(({ prevStep, updateData, bookingData }: a
                       </div>
                     )}
                   </div>
-
                 </div>
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* --- STICKY CONFIRMATION BAR --- */}
+      <div className={`fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 p-4 z-50 transition-all duration-500 ${selectedTime ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-6">
+                <div className="hidden sm:flex w-14 h-14 rounded-2xl bg-teal-50 items-center justify-center border border-teal-100">
+                    <CalendarDays className="w-6 h-6 text-teal-600" />
+                </div>
+                <div>
+                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mb-1">Appointment Summary</p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span className="text-sm font-black text-slate-900">
+                            {selectedDate && DateTime.fromISO(selectedDate).toLocaleString(DateTime.DATE_HUGE)}
+                        </span>
+                        <div className="w-1 h-1 rounded-full bg-slate-300 hidden md:block" />
+                        <span className="text-sm font-bold text-slate-500 flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" /> {selectedTime}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button 
+                    disabled={isConfirming}
+                    onClick={handleFinalConfirm}
+                    className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-50"
+                >
+                    {isConfirming ? (
+                        <>Confirming... <Loader2 className="w-4 h-4 animate-spin" /></>
+                    ) : (
+                        <>Continue to Payment <ArrowRight className="w-4 h-4" /></>
+                    )}
+                </button>
+            </div>
         </div>
       </div>
     </div>
