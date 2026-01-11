@@ -199,7 +199,7 @@ function ReschedulePage() {
             draftData={appointment}
             prevStep={() => router.back()}
             nextStep={() => {}}
-            updateData={(newData) =>
+            updateData={(newData:any) =>
               setBookingData((prev: any) => ({ ...prev, ...newData }))
             }
           />
