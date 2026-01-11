@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
-import { sendAppointmentInvites } from "@/lib/additional_attendee/appointmentInvites";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
@@ -13,7 +12,7 @@ export async function POST(
 ) {
   try {
 
-    const {attendeeList} = await req.json();
+    const { attendeeList } = await req.json();
     const { practitionerId } = await context.params;
 
     // 1️⃣ Auth
@@ -185,7 +184,8 @@ export async function POST(
         status: "pending", // Changing this from confirmed to pending payment, will update this to confirm once the payment is received
         notes: pre_consultation?.note?.concern || null,
         source: "web",
-        room_key : crypto.randomUUID,
+        room_key: crypto.randomUUID,
+        additional_attendees: attendeeList,
         // 🟦 NEW — STORE HISTORICAL PRICING
         fee_charged: resolvedFee,
         currency: selectedDoctor.currency ?? "LKR",
@@ -258,27 +258,18 @@ export async function POST(
         console.error("⚠️ Failed to delete appointment draft:", draftErr);
         // Do not rethrow: draft cleanup failure should not break a successful booking
       }
-     if (Array.isArray(attendeeList) && attendeeList.length > 0) {
-  await sendAppointmentInvites({
-    appointmentId:appointment.id,
-    practitionerId,
-    attendees: attendeeList,
-    meetingStartISO: starts_at,
-    room_key: appointment.room_key
-  });
-}
 
-  const cnx = getAuditContext(req, user);
+      const cnx = getAuditContext(req, user);
 
-  await auditLog({
-    ...cnx,
-    action: "CREATED",
-    entityType: "APPOINTMENT",
-    entityId: appointment.id,
-    purpose: "treatment",
-    source: "user_portal",
-    metadata: { patient_id, practitionerId, appointment_id: appointment.id }
-  })
+      await auditLog({
+        ...cnx,
+        action: "CREATED",
+        entityType: "APPOINTMENT",
+        entityId: appointment.id,
+        purpose: "treatment",
+        source: "user_portal",
+        metadata: { patient_id, practitionerId, appointment_id: appointment.id }
+      })
 
 
       return NextResponse.json({

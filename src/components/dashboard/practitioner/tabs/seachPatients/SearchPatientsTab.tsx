@@ -8,6 +8,7 @@ import Loader from "@/components/atom/Loader/Loader";
 import { Patient, Appointment } from "@/types/Dashboard";
 import PatientDetails from "./PatientDetailView";
 import { toast } from "react-toastify";
+import { Trash2 } from "lucide-react"; // ⭐ Added icon
 
 interface SearchPatientsTabProps {
   search: string;

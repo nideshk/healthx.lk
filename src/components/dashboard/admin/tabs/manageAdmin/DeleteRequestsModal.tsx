@@ -23,7 +23,7 @@ const DeleteRequestsModal = ({ onClose }: { onClose: () => void }) => {
 
   const fetchRequests = async () => {
     try {
-      const res = await fetch("/api/manage-admin/delete-requests");
+      const res = await fetch("/api/manage-admin/delete-requested");
       const json = await res.json();
       if (json.success) {
         setRequests(json.data);
