@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { DateTime } from "luxon";
 import {
@@ -19,8 +19,9 @@ import {
   ExternalLink,
   Hash,
   RefreshCcw,
+  Copy
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "sonner"; // Switched to sonner for consistency with previous steps
 import Loader from "@/components/atom/Loader/Loader";
 
 export default function AppointmentDetailsPage() {
@@ -37,25 +38,67 @@ export default function AppointmentDetailsPage() {
       .finally(() => setLoading(false));
   }, [params.id]);
 
-  if (loading) return <div className="h-screen flex items-center justify-center"><Loader size="lg" /></div>;
+  // --- Safe Sharing Feature ---
+  const handleShare = useCallback(async () => {
+    const date = DateTime.fromISO(appointment.starts_at).toFormat("EEEE, dd MMMM yyyy");
+    const time = DateTime.fromISO(appointment.starts_at).toFormat("hh:mm a");
+    
+    // Abstracted data for sharing - NO links or IDs
+    const shareText = `Appointment Summary:
+🩺 Professional: Dr. ${appointment.practitioner.full_name}
+📅 Date: ${date}
+⏰ Time: ${time}
+✅ Service: ${appointment.appointment_type.name}
+Status: Confirmed via Secure Portal`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Appointment Details',
+          text: shareText,
+        });
+      } catch (err) {
+        console.error("Error sharing:", err);
+      }
+    } else {
+      // Fallback: Copy to Clipboard
+      try {
+        await navigator.clipboard.writeText(shareText);
+        toast.success("Summary copied to clipboard");
+      } catch (err) {
+        toast.error("Could not copy summary");
+      }
+    }
+  }, [appointment]);
+
+  if (loading) return <div className="h-screen flex items-center justify-center bg-[#FBFDFF]"><Loader size="lg" /></div>;
   if (!appointment) return <div className="p-10 text-center">Appointment not found</div>;
 
   const start = DateTime.fromISO(appointment.starts_at);
   const end = DateTime.fromISO(appointment.ends_at);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
+    <div className="min-h-screen bg-[#FBFDFF] pb-12">
       {/* 1. TOP UTILITY BAR */}
-      <nav className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+      <nav className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-medium text-sm">
-            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+          <button 
+            onClick={() => router.back()} 
+            className="flex items-center gap-2 text-slate-400 hover:text-teal-600 transition-all font-bold text-xs uppercase tracking-widest"
+          >
+            <ArrowLeft className="w-4 h-4" /> Dashboard
           </button>
+          
           <div className="flex items-center gap-4">
-            <button className="text-slate-400 hover:text-slate-600"><Share2 className="w-4 h-4" /></button>
+            <button 
+              onClick={handleShare}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-600 transition-all text-[10px] font-black uppercase tracking-widest border border-slate-100"
+            >
+              <Share2 className="w-3.5 h-3.5" /> Share Summary
+            </button>
             <div className="h-4 w-[1px] bg-slate-200" />
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> Encrypted Session
+              <ShieldCheck className="w-3 h-3 text-teal-500" /> HIPAA Secure
             </span>
           </div>
         </div>
@@ -68,40 +111,43 @@ export default function AppointmentDetailsPage() {
           <div className="lg:col-span-2 space-y-6">
             
             {/* STATUS HEADER */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="bg-emerald-600 px-6 py-2 flex justify-between items-center">
-                <span className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+            <div className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
+              <div className="bg-teal-600 px-8 py-3 flex justify-between items-center">
+                <span className="text-white text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" /> Consultation {appointment.status}
                 </span>
-                <span className="text-emerald-100 text-[10px] font-medium">Ref: {appointment.id.split('-')[0]}</span>
+                <span className="text-teal-100 text-[10px] font-bold opacity-80">Ref: {appointment.id.split('-')[0]}</span>
               </div>
               
-              <div className="p-6 md:p-8">
-                <div className="flex flex-col md:flex-row gap-6 items-start">
-                  <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200">
-                    {appointment.practitioner.profile_picture_url ? (
-                      <img src={appointment.practitioner.profile_picture_url} className="w-full h-full rounded-2xl object-cover" />
-                    ) : (
-                      <User className="w-8 h-8 text-slate-400" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Stethoscope className="w-4 h-4 text-blue-500" />
-                      <span className="text-xs font-bold text-blue-600 uppercase tracking-tighter">Medical Professional</span>
+              <div className="p-8 md:p-10">
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  <div className="relative">
+                    <div className="w-24 h-24 bg-slate-50 rounded-[2rem] flex items-center justify-center border-2 border-slate-100 overflow-hidden ring-8 ring-slate-50/50">
+                      {appointment.practitioner.profile_picture_url ? (
+                        <img src={appointment.practitioner.profile_picture_url} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-10 h-10 text-slate-300" />
+                      )}
                     </div>
-                    <h1 className="text-2xl font-black text-slate-900 leading-tight">
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Stethoscope className="w-4 h-4 text-teal-500" />
+                      <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Medical Specialist</span>
+                    </div>
+                    <h1 className="text-3xl font-black text-slate-900 leading-tight">
                       Dr. {appointment.practitioner.full_name}
                     </h1>
-                    <p className="text-slate-500 font-medium capitalize mt-1">
+                    <p className="text-slate-500 font-bold text-sm mt-1">
                       {appointment.practitioner.specialization?.join(", ")}
                     </p>
 
-                    <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-                      <DataPoint icon={<Calendar />} label="Date" value={start.toFormat("EEEE, dd MMMM yyyy")} />
-                      <DataPoint icon={<Clock />} label="Time Slot" value={`${start.toFormat("hh:mm a")} - ${end.toFormat("hh:mm a")}`} />
-                      <DataPoint icon={<Hash />} label="Service" value={appointment.appointment_type.name} />
-                      <DataPoint icon={<CheckCircle2 />} label="Duration" value={`${appointment.appointment_type.duration_mins} Minutes`} />
+                    <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-12 border-t border-slate-50 pt-8">
+                      <DataPoint icon={<Calendar className="w-4 h-4" />} label="Date" value={start.toFormat("EEEE, dd MMMM yyyy")} />
+                      <DataPoint icon={<Clock className="w-4 h-4" />} label="Time Slot" value={`${start.toFormat("hh:mm a")} - ${end.toFormat("hh:mm a")}`} />
+                      <DataPoint icon={<Hash className="w-4 h-4" />} label="Session Type" value={appointment.appointment_type.name} />
+                      <DataPoint icon={<CheckCircle2 className="w-4 h-4" />} label="Scheduled Duration" value={`${appointment.appointment_type.duration_mins} Minutes`} />
                     </div>
                   </div>
                 </div>
@@ -109,27 +155,29 @@ export default function AppointmentDetailsPage() {
             </div>
 
             {/* MEDICAL NOTES & ATTACHMENTS */}
-            <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-slate-900 mb-6 flex items-center gap-2 border-b pb-4">
-                <FileText className="w-4 h-4 text-slate-400" /> Consultation Intake & Attachments
+            <section className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
+                <FileText className="w-4 h-4 text-teal-500" /> 
+                Intake Information
               </h3>
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Patient Notes</label>
-                  <div className="mt-3 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                    <p className="text-sm text-slate-600 leading-relaxed italic">
-                      {appointment.notes || "No additional clinical notes were provided for this specific consultation."}
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-3">Pre-Consultation Notes</label>
+                  <div className="p-6 bg-slate-50/50 rounded-3xl border border-slate-100 relative">
+                    <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
+                      "{appointment.notes || "No additional clinical notes were provided for this specific consultation."}"
                     </p>
                   </div>
                 </div>
+                
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Uploaded Documents</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-3">Patient Attachments</label>
                   {appointment.attachments.length === 0 ? (
-                    <div className="mt-3 flex items-center gap-2 text-slate-400 text-xs">
-                       <ShieldCheck className="w-4 h-4" /> No files attached to this record.
+                    <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-bold uppercase tracking-widest">
+                       <ShieldCheck className="w-4 h-4 opacity-50" /> No files shared
                     </div>
                   ) : (
-                    <div className="mt-3 grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 gap-3">
                        {/* Map through attachments here */}
                     </div>
                   )}
@@ -140,59 +188,57 @@ export default function AppointmentDetailsPage() {
 
           {/* RIGHT: FINANCIAL & ACTIONS */}
           <div className="space-y-6">
-            {/* BILLING CARD */}
-            <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-2">
-                 <div className="rotate-12 translate-x-4 -translate-y-1 opacity-[0.03]">
-                    <CreditCard size={80} />
-                 </div>
+            <section className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 rotate-12 translate-x-4 -translate-y-4 opacity-[0.03] text-teal-900 pointer-events-none">
+                <CreditCard size={120} />
               </div>
               
-              <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-slate-400" /> Payment Confirmation
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
+                <CreditCard className="w-4 h-4" /> Billing Summary
               </h3>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex justify-between items-end">
-                  <span className="text-xs text-slate-500">Total Fee Paid</span>
-                  <span className="text-xl font-black text-slate-900">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Paid</span>
+                  <span className="text-2xl font-black text-slate-900">
                     {appointment.currency} {appointment.fee_charged.toLocaleString()}
                   </span>
                 </div>
                 
-                <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                  <span className="text-[10px] font-bold text-emerald-700 uppercase">Transaction Status</span>
-                  <span className="text-[10px] font-black text-emerald-700 uppercase flex items-center gap-1">
+                <div className="flex items-center justify-between p-4 bg-teal-50 rounded-2xl border border-teal-100">
+                  <span className="text-[10px] font-black text-teal-700 uppercase tracking-tighter">Status</span>
+                  <span className="text-[10px] font-black text-teal-700 uppercase flex items-center gap-1 bg-white px-2 py-1 rounded-md shadow-sm">
                     <CheckCircle2 className="w-3 h-3" /> {appointment.payment_status}
                   </span>
                 </div>
 
-                <button className="w-full py-3 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors">
-                  <Download className="w-3.5 h-3.5" /> Get Receipt (PDF)
+                <button className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-teal-600 transition-all shadow-xl shadow-slate-200">
+                  <Download className="w-4 h-4" /> Download Receipt
                 </button>
               </div>
             </section>
 
             {/* REBOOK ACTION */}
-            <section className="bg-blue-600 rounded-2xl p-6 shadow-lg shadow-blue-100 text-white">
-              <h4 className="font-bold text-sm mb-2">Need a follow up?</h4>
-              <p className="text-blue-100 text-[11px] leading-relaxed mb-4">
-                You can book another Quick Consultation with Dr. {appointment.practitioner.full_name.split(' ')[0]} if you have further questions.
+            <section className="bg-teal-600 rounded-[2.5rem] p-8 shadow-xl shadow-teal-100 text-white relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform duration-700" />
+              <h4 className="font-black text-sm uppercase tracking-widest mb-2 relative z-10">Follow up needed?</h4>
+              <p className="text-teal-100 text-[11px] font-medium leading-relaxed mb-6 relative z-10">
+                You can easily rebook a session with Dr. {appointment.practitioner.full_name.split(' ')[0]} to discuss your progress.
               </p>
               <button 
-                onClick={() => router.push(`/book/${appointment.practitioner.id}`)}
-                className="w-full py-3 bg-white text-blue-600 rounded-xl text-xs font-black flex items-center justify-center gap-2 hover:bg-blue-50 transition-all active:scale-95"
+                onClick={() => router.push(`/appointment`)}
+                className="w-full py-4 bg-white text-teal-600 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-teal-50 transition-all active:scale-95 relative z-10"
               >
-                <RefreshCcw className="w-3.5 h-3.5" /> Book Again
+                <RefreshCcw className="w-4 h-4" /> Schedule New
               </button>
             </section>
 
-            {/* TECHNICAL METADATA */}
-            <div className="px-2">
-              <p className="text-[9px] text-slate-400 font-mono uppercase tracking-tighter leading-tight">
-                Unique ID: {appointment.id}<br/>
-                Type ID: {appointment.appointment_type.id}<br/>
-                Provider ID: {appointment.practitioner.id}
+            {/* TECHNICAL METADATA (FOOTER) */}
+            <div className="px-6 py-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+              <p className="text-[9px] text-slate-400 font-mono uppercase tracking-tighter leading-loose">
+                <span className="block border-b border-slate-100 pb-1 mb-1 font-bold">Audit Trail</span>
+                ID: {appointment.id}<br/>
+                PRV: {appointment.practitioner.id}
               </p>
             </div>
           </div>
@@ -203,15 +249,15 @@ export default function AppointmentDetailsPage() {
   );
 }
 
-/* --- REUSABLE DATA ROW --- */
 function DataPoint({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="mt-1 text-slate-300">
+    <div className="flex items-start gap-4 group">
+      <div className="mt-0.5 text-slate-300 group-hover:text-teal-500 transition-colors">
+        {icon}
       </div>
       <div>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">{label}</p>
-        <p className="text-sm font-semibold text-slate-700">{value}</p>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">{label}</p>
+        <p className="text-sm font-bold text-slate-700">{value}</p>
       </div>
     </div>
   );
