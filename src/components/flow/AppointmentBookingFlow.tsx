@@ -163,7 +163,7 @@ export default function AppointmentBookingFlow() {
   const CurrentComponent = stepComponents[currentStep];
 
   return (
-    <div className="bg-blue-50 min-h-screen pb-28">
+    <div className="min-h-screen pb-28">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {CurrentComponent && (
           <CurrentComponent
@@ -176,38 +176,6 @@ export default function AppointmentBookingFlow() {
             goToStep={goToStep}
           />
         )}
-
-        <div className="fixed bottom-0 left-0 w-full bg-white border-t py-4 px-6 flex items-center justify-between shadow-md">
-          <div className="text-sm text-gray-700">
-            Step {currentStep + 1} of 6 — {Step[currentStep].replace(/_/g, " ")}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => prevStep()}
-              disabled={currentStep === Step.SERVICE_SELECTION || isSaving}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 disabled:opacity-40"
-            >
-              ← Back
-            </button>
-
-            <button
-              onClick={() => nextStep()}
-              disabled={isSaving || currentStep === Step.PAYMENT}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
-            >
-              {isSaving ? "Saving..." : currentStep === Step.PAYMENT ? "Finish" : "Next →"}
-            </button>
-          </div>
-        </div>
-
-        <ConfirmBookingModal
-          resetFlow={() => {}}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          bookingData={bookingData}
-          updateData={updateData}
-        />
       </div>
     </div>
   );
