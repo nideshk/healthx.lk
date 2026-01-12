@@ -7,6 +7,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "@/lib/s3/s3";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
+import { notify } from "@/lib/notify";
 
 /* -------------------------------------------------------------
    CONFLICT CHECKER → prevents overlapping appointments
@@ -358,7 +359,10 @@ export async function PATCH(
     --------------------------------------------------------------*/
     const { data: appt } = await supabaseAdmin
       .from("appointments")
-      .select("id, status")
+      .select(`id, status, patient_id, practitioner_id,
+              patient:patient_id ( id, full_name, email ),
+              practitioner:practitioner_id ( id, full_name, contact_email )
+      `)
       .eq("id", id)
       .maybeSingle();
 
@@ -370,6 +374,33 @@ export async function PATCH(
        ACTION: CANCEL
     --------------------------------------------------------------*/
     if (action === "cancel") {
+
+      let cancelledBy: "patient" | "practitioner" | null = null;
+
+      if (user?.patient_id && appt.patient_id === user.patient_id) {
+        cancelledBy = "patient";
+      }
+
+      if (user?.practitioner_id && appt.practitioner_id === user.practitioner_id) {
+        cancelledBy = "practitioner";
+      }
+
+      if (!cancelledBy) {
+        await auditLog({
+          ...cnx,
+          action: "UNAUTHORIZED_ATTEMPT",
+          entityType: "APPOINTMENT",
+          entityId: id,
+          purpose: "operations",
+          source: "user_portal",
+          metadata: { reason: "not appointment owner" },
+        });
+
+        return NextResponse.json(
+          { error: "You are not allowed to cancel this appointment" },
+          { status: 403 }
+        );
+      }
       const reason = body.reason || null;
 
       const { error } = await supabaseAdmin
@@ -378,6 +409,7 @@ export async function PATCH(
           status: "cancelled",
           cancellation_reason: reason,
           cancelled_at: new Date().toISOString(),
+          cancelled_by: cancelledBy,
           updated_at: new Date().toISOString(),
         })
         .eq("id", id);
@@ -389,6 +421,70 @@ export async function PATCH(
         );
       }
 
+      /* -------------------------------------------------------------
+        NOTIFICATIONS
+      --------------------------------------------------------------*/
+
+      const patient = Array.isArray(appt.patient)
+      ? appt.patient[0]
+      : appt.patient;
+
+    const practitioner = Array.isArray(appt.practitioner)
+      ? appt.practitioner[0]
+      : appt.practitioner;
+
+      // Notify patient
+      if (patient?.id) {
+        await notify({
+          userId: patient.id,
+          role: "patient",
+          eventType: "appointment_cancelled",
+          title: "Appointment Cancelled",
+          message: `
+    Hello ${patient.full_name},
+
+    Your appointment has been cancelled by the ${cancelledBy}.
+
+    Reason:
+    ${reason || "No reason provided"}
+
+    Regards,
+    Clinico Team
+          `.trim(),
+          channels: ["email"],
+          payload: {
+            email: patient.email,
+            appointment_id: id,
+          },
+        });
+      }
+
+      // Notify practitioner
+      if (practitioner?.id) {
+        await notify({
+          userId: practitioner.id,
+          role: "practitioner",
+          eventType: "appointment_cancelled",
+          title: "Appointment Cancelled",
+          message: `
+    Hello Dr. ${practitioner.full_name},
+
+    An appointment has been cancelled by the ${cancelledBy}.
+
+    Reason:
+    ${reason || "No reason provided"}
+
+    Regards,
+    Clinico Team
+          `.trim(),
+          channels: ["email"],
+          payload: {
+            email: practitioner.contact_email,
+            appointment_id: id,
+          },
+        });
+      }
+
 
       await auditLog({        
         ...cnx,
@@ -397,7 +493,10 @@ export async function PATCH(
         entityId: id,
         purpose: "treatment",
         source: "dashboard",
-        metadata: { cancellation_reason: reason }
+        metadata: {
+          cancellation_reason: reason,
+          cancelled_by: cancelledBy,
+        },
       })
 
       return NextResponse.json({

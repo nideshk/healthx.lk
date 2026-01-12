@@ -19,7 +19,13 @@ export async function GET(req: NextRequest) {
     if (!authorized) return response;
 
     /** RBAC */
-    if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
+    const isAdmin =
+      user?.admin && ["admin", "superadmin"].includes(user.admin.role);
+
+    const isPractitioner =
+      user?.role === "practitioner" && user?.practitioner_id;
+
+    if (!isAdmin && !isPractitioner) {
       return NextResponse.json(
         { success: false, message: "Forbidden" },
         { status: 403 }
@@ -78,8 +84,13 @@ export async function GET(req: NextRequest) {
   .gte("starts_at", `${fromDate}T00:00:00`)
   .lte("starts_at", `${toDate}T23:59:59`)
   .in("status", statuses)
-  .range(from, to);
+  // .range(from, to);
 
+  if (isPractitioner) {
+    query = query.eq("practitioner_id", user.practitioner_id);
+  }
+
+  query = query.range(from, to);
 
   const cnx = getAuditContext(req, user);
     await auditLog({
