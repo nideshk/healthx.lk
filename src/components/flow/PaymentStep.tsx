@@ -25,6 +25,9 @@ import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
 import { uploadAttachmentAfterBooking } from '@/lib/s3/uploadAttachmentAfterBooking';
 import { createPortal } from 'react-dom';
+import { syncAppointmentDraft } from "@/lib/syncAppointmentDraft";
+import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
+
 
 interface StepRefHandle {
   validateStep?: () => boolean;
@@ -132,7 +135,8 @@ console.log(bookingData)
         if (!isManualCheckout || !currentAppointmentId) {
           const date = bookingData.starts_at?.split('T')[0];
           const time = new Date(bookingData.starts_at || '').toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-
+          // 🔒 Ensure local draft is fully synced before booking
+          await syncAppointmentDraft.flush();
           const res = await fetch(`/api/booking/${bookingData.selectedDoctor?.id}/book-appointment`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -226,6 +230,8 @@ console.log(bookingData)
     };
 
     const handlePostBookingActions = async (appointmentId: string) => {
+      syncAppointmentDraft.cancel();
+      await useBookingDraftStore.getState().reset();
       const file = bookingControllerRef.current?.getAttachment?.();
       if (file instanceof File) await uploadAttachmentAfterBooking(file, appointmentId);
       updateData({ payment_status: 'completed', appointment_id: appointmentId });
