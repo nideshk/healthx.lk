@@ -59,7 +59,6 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
       <div className="flex gap-2 text-xs bg-slate-50 rounded-full p-1 border border-slate-200">
         {renderTab("overview", "Overview", activeTab, setActiveTab)}
         {renderTab("appointments", "Appointments", activeTab, setActiveTab)}
-        {renderTab("audit", "Audit Log", activeTab, setActiveTab)}
       </div>
 
       {/* 4. Tab content */}
@@ -67,7 +66,6 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
       {activeTab === "appointments" && (
         <AppointmentsTab appointments={appointments} patient={patient} />
       )}
-      {activeTab === "audit" && <AuditLogTab />}
     </div>
   );
 };
@@ -317,6 +315,7 @@ const AppointmentRow: React.FC<{
   const [appointmentForm, setAppointmentForm] = React.useState({
     clinicianNotes: appointment.clinicianNotes || "",
     followUpDate: appointment.followUpDate || "",
+    followUpTime: "", // Added for time selection
     prescriptions: appointment.prescriptions || "",
     followUpNeeded: appointment.followUpNeeded || false,
   });
@@ -336,13 +335,19 @@ const AppointmentRow: React.FC<{
 
   const handleSave = async () => {
     try {
+      let formattedFollowUp = null;
+      
+      // REQUIREMENT: Format as 2026-01-13T04:30:00+00:00
+      if (appointmentForm.followUpNeeded && appointmentForm.followUpDate) {
+        const time = appointmentForm.followUpTime || "00:00";
+        formattedFollowUp = `${appointmentForm.followUpDate}T${time}:00+00:00`;
+      }
+
       const payload = {
         clinician_notes: appointmentForm.clinicianNotes,
         prescriptions: appointmentForm.prescriptions,
         follow_up_needed: appointmentForm.followUpNeeded,
-        follow_up_date: appointmentForm.followUpNeeded
-          ? appointmentForm.followUpDate
-          : null,
+        follow_up_date: formattedFollowUp,
       };
 
       await fetch(`/api/booking/appointment/${appointment.id}/consultation`, {
@@ -426,9 +431,27 @@ const AppointmentRow: React.FC<{
       appointment.clinicianNotes = data.encounter?.clinician_notes || "";
       appointment.prescriptions = data.encounter?.prescriptions || "";
       appointment.followUpNeeded = !!data.encounter?.follow_up_needed;
-      appointment.followUpDate = data.encounter?.follow_up_date?.slice(0, 10);
+      
+      const rawDate = data.encounter?.follow_up_date;
+      if (rawDate) {
+        appointment.followUpDate = rawDate.slice(0, 10);
+        // Extract time if it exists in the string
+        if (rawDate.includes("T")) {
+           setAppointmentForm(prev => ({ ...prev, followUpTime: rawDate.split("T")[1].slice(0, 5) }));
+        }
+      }
 
       setConsultationFetched(true);
+      
+      // Update local form state with fetched data
+      setAppointmentForm(prev => ({
+        ...prev,
+        clinicianNotes: data.encounter?.clinician_notes || "",
+        prescriptions: data.encounter?.prescriptions || "",
+        followUpNeeded: !!data.encounter?.follow_up_needed,
+        followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || ""
+      }));
+
       forceUpdate((v) => v + 1);
     } catch (err) {
       console.error("Failed to load consultation", err);
@@ -549,20 +572,50 @@ const AppointmentRow: React.FC<{
                 <InfoRow label="Clinician Notes" value={appointment.clinicianNotes || "-"} />
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div className="flex items-center gap-2 text-[11px] text-slate-600">
                   {isEditingAppointment ? (
                     <input
                       type="checkbox"
                       checked={appointmentForm.followUpNeeded}
                       onChange={(e) => updateAppointmentField("followUpNeeded", e.target.checked)}
-                      className="h-4 w-4"
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                   ) : (
-                    <span className="inline-flex h-3 w-3 rounded-full border-4 border-blue-500 bg-white" />
+                    <span className={`inline-flex h-3 w-3 rounded-full border-4 ${appointment.followUpNeeded ? 'border-blue-500' : 'border-slate-300'} bg-white`} />
                   )}
                   <span>Follow-up appointment needed</span>
                 </div>
+
+                {/* REQUIREMENT: Show date and time field when checked */}
+                {appointmentForm.followUpNeeded && isEditingAppointment && (
+                  <div className="flex flex-wrap gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-top-1">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Follow-up Date</span>
+                      <input 
+                        type="date"
+                        className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                        value={appointmentForm.followUpDate}
+                        onChange={(e) => updateAppointmentField("followUpDate", e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Follow-up Time</span>
+                      <input 
+                        type="time"
+                        className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                        value={appointmentForm.followUpTime}
+                        onChange={(e) => updateAppointmentField("followUpTime", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {!isEditingAppointment && appointment.followUpNeeded && appointment.followUpDate && (
+                   <div className="text-[11px] text-blue-600 font-medium">
+                     Scheduled for: {appointment.followUpDate}
+                   </div>
+                )}
               </div>
             </div>
           )}
@@ -665,12 +718,3 @@ const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     </div>
   );
 };
-
-const AuditLogTab: React.FC = () => (
-  <div className="mt-2 space-y-2">
-    <h2 className="text-sm font-semibold text-slate-900">Audit Log</h2>
-    <div className="mt-2 rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
-      No activity logs found for this patient.
-    </div>
-  </div>
-);

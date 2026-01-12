@@ -85,9 +85,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             <div className="text-sm font-semibold text-slate-900">
               Appointment Calendar
             </div>
-            <div className="text-xs text-slate-500">
-              Your {viewMode} schedule
-            </div>
+            
           </div>
 
           <div className="flex gap-2 text-xs">
@@ -406,15 +404,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
               </Button>
             </Link>
           )}
-          <Button
-            variant="primary"
-            size="sm"
-            className="text-xs"
-            onClick={onMarkCompleted}
-            disabled={isCompleted}
-          >
-            {isCompleted ? "Already Completed" : "Appt. Completed"}
-          </Button>
+         
           <Button
             variant="outline"
             size="sm"

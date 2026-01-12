@@ -3,9 +3,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Button from "@/components/atom/Button/Button";
 import Loader from "@/components/atom/Loader/Loader";
+import { toast } from "react-toastify";
 
 /* -------------------------------------------------------------------------- */
-/*                                   TYPES                                    */
+/* TYPES                                    */
 /* -------------------------------------------------------------------------- */
 
 type LeaveType = "full_day" | "first_half" | "second_half";
@@ -38,7 +39,7 @@ interface ApiResponse {
   warning?: string;
   conflicts?: ConflictAppointment[];
   leave?: LeaveRequest;
-  cancelled_appointments?: CancelledAppointment[];
+  cancelled_appointments?: any[];
   error?: string;
   explanation?: string;
 }
@@ -47,14 +48,10 @@ interface ConflictAppointment {
   id: string;
   starts_at: string;
   status: string;
-  patient_name: string;
-}
-
-interface CancelledAppointment {
-  id: string;
-  starts_at: string;
-  patient_name: string;
-  reason?: string;
+  patient: {
+    full_name: string;
+    email: string;
+  };
 }
 
 interface UndoState {
@@ -70,7 +67,7 @@ interface CancelModalState {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                               CONSTANTS                                    */
+/* CONSTANTS                                  */
 /* -------------------------------------------------------------------------- */
 
 const LEAVE_TYPES: {
@@ -85,10 +82,10 @@ const LEAVE_TYPES: {
 ];
 
 const MAX_DAYS_AHEAD = 45;
-const UNDO_TIMEOUT = 30000; // 30 seconds
+const UNDO_TIMEOUT = 30000;
 
 /* -------------------------------------------------------------------------- */
-/*                               HELPERS                                      */
+/* HELPERS                                   */
 /* -------------------------------------------------------------------------- */
 
 const formatDate = (date: Date): string => {
@@ -134,7 +131,7 @@ const getDaysDifference = (startDate: string, endDate: string): number => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                        CANCEL LEAVE MODAL COMPONENT                        */
+/* CANCEL LEAVE MODAL COMPONENT                      */
 /* -------------------------------------------------------------------------- */
 
 interface CancelLeaveModalProps {
@@ -158,89 +155,61 @@ const CancelLeaveModal: React.FC<CancelLeaveModalProps> = ({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Aesthetic Blur Backdrop */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-all duration-300"
         onClick={onCancel}
       />
 
-      {/* Modal */}
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md mx-4 animate-in fade-in zoom-in-95">
-        <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className="bg-red-50 border-b border-red-200 px-6 py-4">
-            <h2 className="text-lg font-bold text-red-900 flex items-center gap-2">
-              <span className="text-2xl">⚠️</span>
-              Cancel Leave Request
+      {/* Modal Container */}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-sm mx-auto p-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+          
+          {/* Header - Soft and Clean */}
+          <div className="px-6 pt-6 pb-2 text-center">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Cancel Leave?
             </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Are you sure you want to remove this from your schedule?
+            </p>
           </div>
 
-          {/* Body */}
-          <div className="px-6 py-4 space-y-4">
-            <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-              <div className="space-y-3">
-                <div>
-                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                    Leave Period
-                  </div>
-                  <div className="text-sm font-semibold text-gray-800 mt-1">
-                    {leave.start_date === leave.end_date
-                      ? leave.start_date
-                      : `${leave.start_date} → ${leave.end_date}`}
-                  </div>
-                  <div className="text-xs text-slate-600 mt-0.5">
-                    {dayCount} {dayCount === 1 ? "day" : "days"} • {formatLeaveType(leave.leave_type)}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-red-200">
-                    <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                    Reason*
-                    </div>
-                  <div className="text-sm text-gray-700 mt-1 italic">"{leave.reason}"</div>
-                </div>
+          {/* Body - Details Card */}
+          <div className="px-6 py-4">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Period</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white ${getLeaveColor(leave.leave_type)}`}>
+                  {formatLeaveType(leave.leave_type)}
+                </span>
               </div>
-            </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <div className="text-xs text-yellow-900 font-semibold flex items-start gap-2">
-                <span>⚠️</span>
-                <div>
-                  <div>This action cannot be undone.</div>
-                  <div className="font-normal mt-0.5">
-                    The leave will be permanently removed from your schedule.
-                  </div>
-                </div>
+              <div className="text-sm font-medium text-slate-800">
+                {leave.start_date === leave.end_date
+                  ? leave.start_date
+                  : `${leave.start_date} → ${leave.end_date}`}
               </div>
-            </div>
-
-            <div className="text-xs text-slate-600">
-              Are you sure you want to cancel this leave request?
+              <div className="text-xs text-slate-500 italic border-t border-slate-200 pt-2 mt-2">
+                "{leave.reason}"
+              </div>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex gap-3">
-            <button
-              onClick={onCancel}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
+          {/* Footer - Modern Action Buttons */}
+          <div className="px-6 pb-6 flex flex-col gap-2">
             <button
               onClick={onConfirm}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isLoading ? (
-                <>
-                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Cancelling...
-                </>
-              ) : (
-                "Yes, Cancel Leave"
-              )}
+              {isLoading ? <Loader /> : "Confirm Cancellation"}
+            </button>
+            <button
+              onClick={onCancel}
+              disabled={isLoading}
+              className="w-full py-2.5 bg-white text-slate-500 font-medium rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              Keep Leave
             </button>
           </div>
         </div>
@@ -248,9 +217,8 @@ const CancelLeaveModal: React.FC<CancelLeaveModalProps> = ({
     </>
   );
 };
-
 /* -------------------------------------------------------------------------- */
-/*                              MAIN COMPONENT                                */
+/* MAIN COMPONENT                               */
 /* -------------------------------------------------------------------------- */
 
 const Availability: React.FC = () => {
@@ -259,20 +227,13 @@ const Availability: React.FC = () => {
 
   const maxAllowedDate = new Date();
   maxAllowedDate.setDate(today.getDate() + MAX_DAYS_AHEAD);
-  maxAllowedDate.setHours(23, 59, 59, 999);
 
-  const [currentMonth, setCurrentMonth] = useState(
-    new Date(today.getFullYear(), today.getMonth(), 1)
-  );
-
-  // Date selection
+  const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedStartDate, setSelectedStartDate] = useState<string>("");
   const [selectedEndDate, setSelectedEndDate] = useState<string>("");
   const [selectingPhase, setSelectingPhase] = useState<"start" | "end">("start");
-
   const [leaveType, setLeaveType] = useState<LeaveType>("full_day");
   const [reason, setReason] = useState("");
-
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -281,93 +242,56 @@ const Availability: React.FC = () => {
   const [conflicts, setConflicts] = useState<ConflictAppointment[]>([]);
   const [forceApply, setForceApply] = useState(false);
   const [practitionerId, setPractitionerId] = useState<string>("");
-  const [successMessage, setSuccessMessage] = useState<string>("");
-
-  // New states for undo and cancelled appointments
   const [undoState, setUndoState] = useState<UndoState | null>(null);
   const [undoTimeLeft, setUndoTimeLeft] = useState<number>(0);
-  const [cancelledAppointments, setCancelledAppointments] = useState<CancelledAppointment[]>([]);
-
-  // Cancel leave modal state
-  const [cancelModal, setCancelModal] = useState<CancelModalState>({
-    isOpen: false,
-    leaveId: null,
-    leaveDetails: null,
-  });
-
-  /* -------- GET PRACTITIONER ID FROM AUTH -------- */
-
-  const getPractitionerId = async (): Promise<string> => {
-    try {
-      const response = await fetch("/api/auth/me");
-      if (!response.ok) throw new Error("Failed to fetch practitioner info");
-      const data = await response.json();
-      return data?.user?.practitioner_id || "";
-    } catch (err) {
-      console.error("Failed to get practitioner ID:", err);
-      throw err;
-    }
-  };
-
-  /* -------- FETCH PRACTITIONER ID & LEAVES -------- */
+  const [cancelModal, setCancelModal] = useState<CancelModalState>({ isOpen: false, leaveId: null, leaveDetails: null });
 
   useEffect(() => {
     const fetchPractitionerData = async () => {
       try {
-        setInitialLoading(true);
-
-        const id = await getPractitionerId();
-
-        if (!id) {
-          setError("Unable to fetch practitioner information");
-          return;
-        }
-
+        const authRes = await fetch("/api/auth/me");
+        const authData = await authRes.json();
+        const id = authData?.user?.practitioner_id;
+        if (!id) throw new Error("No practitioner ID found");
         setPractitionerId(id);
-        console.log("✓ Practitioner ID:", id);
-
         const res = await fetch(`/api/practitioners/${id}/leaves`);
-        if (!res.ok) throw new Error("Failed to fetch leaves");
-
-        const data: ApiResponse = await res.json();
-        console.log("✓ Leaves fetched:", data);
-
-        if (data.leaves) {
-          setLeaveRequests(data.leaves);
-        }
-        setError("");
+        const data = await res.json();
+        if (data.leaves) setLeaveRequests(data.leaves);
       } catch (err) {
-        console.error("Failed to load leaves", err);
-        setError("Failed to load leave requests");
+        setError("Failed to load availability data");
       } finally {
         setInitialLoading(false);
       }
     };
-
     fetchPractitionerData();
   }, []);
 
-  /* -------- UNDO TIMER -------- */
-
   useEffect(() => {
     if (!undoState) return;
-
     const interval = setInterval(() => {
-      setUndoTimeLeft((prev) => {
-        if (prev <= 1) {
-          setUndoState(null);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setUndoTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
+      if (undoTimeLeft <= 1) setUndoState(null);
     }, 1000);
-
     return () => clearInterval(interval);
-  }, [undoState]);
+  }, [undoState, undoTimeLeft]);
 
-  /* -------- HANDLE DATE SELECTION -------- */
+  const { calendarDays, emptyDaysBefore } = useMemo(() => {
+    const days: Date[] = [];
+    const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+    const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+    for (let i = 1; i <= lastDay; i++) {
+      const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
+      d.setHours(0, 0, 0, 0);
+      days.push(d);
+    }
+    return { calendarDays: days, emptyDaysBefore: Array(firstDayOfMonth).fill(null) };
+  }, [currentMonth]);
 
   const handleDateClick = (dateStr: string) => {
+    setWarning("");
+    setConflicts([]);
+    setForceApply(false);
+
     if (selectingPhase === "start") {
       setSelectedStartDate(dateStr);
       setSelectedEndDate(dateStr);
@@ -376,699 +300,238 @@ const Availability: React.FC = () => {
       if (dateStr < selectedStartDate) {
         setSelectedEndDate(selectedStartDate);
         setSelectedStartDate(dateStr);
-        setSelectingPhase("end");
       } else {
         setSelectedEndDate(dateStr);
-        setSelectingPhase("start");
       }
+      setSelectingPhase("start");
     }
   };
-
-  const resetDateSelection = () => {
-    setSelectedStartDate("");
-    setSelectedEndDate("");
-    setSelectingPhase("start");
-    setWarning("");
-    setConflicts([]);
-    setForceApply(false);
-  };
-
-  /* -------- UNDO FORCE APPLY -------- */
-
-  const undoForceApply = async () => {
-    if (!undoState) return;
-
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/practitioners/${practitionerId}/leaves/${undoState.leaveId}/undo-force`,
-        { method: "POST" }
-      );
-
-      if (!res.ok) throw new Error("Failed to undo force apply");
-
-      setLeaveRequests((prev) => prev.filter((l) => l.id !== undoState.leaveId));
-      setUndoState(null);
-      setUndoTimeLeft(0);
-      setCancelledAppointments([]);
-      setSuccessMessage("Force apply undone. Appointments restored.");
-      setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (err) {
-      console.error("Failed to undo:", err);
-      setError("Failed to undo force apply. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* -------- CONFIRM FORCE APPLY -------- */
-
-  const confirmForceApply = () => {
-    const confirmed = window.confirm(
-      `This will cancel ${conflicts.length} appointment(s) for your leave from ${selectedStartDate} to ${selectedEndDate}.\n\nPatients will be notified of the cancellation.\n\nDo you want to proceed?`
-    );
-
-    if (confirmed) {
-      setForceApply(true);
-    }
-  };
-
-  /* -------- OPEN CANCEL LEAVE MODAL -------- */
-
-  const openCancelModal = (leave: LeaveRequest) => {
-    setCancelModal({
-      isOpen: true,
-      leaveId: leave.id,
-      leaveDetails: leave,
-    });
-  };
-
-  /* -------- CLOSE CANCEL LEAVE MODAL -------- */
-
-  const closeCancelModal = () => {
-    setCancelModal({
-      isOpen: false,
-      leaveId: null,
-      leaveDetails: null,
-    });
-  };
-
-  /* -------- CONFIRM CANCEL LEAVE -------- */
-
-  const confirmCancelLeave = async () => {
-    if (!cancelModal.leaveId) return;
-
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/practitioners/${practitionerId}/leaves?leave_id=${cancelModal.leaveId}`,
-        { method: "DELETE" }
-      );
-
-      if (!res.ok) throw new Error("Failed to cancel leave");
-
-      setLeaveRequests((prev) => prev.filter((l) => l.id !== cancelModal.leaveId));
-      closeCancelModal();
-      setSuccessMessage("Leave cancelled successfully");
-      setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (err) {
-      console.error("Failed to cancel leave", err);
-      setError("Failed to cancel leave");
-      closeCancelModal();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* -------- APPLY LEAVE WITH CONFLICT HANDLING -------- */
 
   const applyLeave = async () => {
-    setError("");
-    setSuccessMessage("");
-
-    if (!selectedStartDate || !selectedEndDate || !reason.trim()) {
-      setError("Please select dates and fill in all fields");
-      return;
-    }
-
-    if (leaveType !== "full_day" && selectedStartDate !== selectedEndDate) {
-      setError("Half-day leave can only be applied for a single date");
-      return;
-    }
-
     setLoading(true);
-
+    setError("");
     try {
-      const payload = {
-        start_date: selectedStartDate,
-        end_date: selectedEndDate,
-        leave_type: leaveType,
-        reason,
-        force: forceApply,
-      };
-
       const res = await fetch(`/api/practitioners/${practitionerId}/leaves`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          start_date: selectedStartDate,
+          end_date: selectedEndDate,
+          leave_type: leaveType,
+          reason,
+          force: forceApply,
+        }),
       });
-
+      
       const data: ApiResponse = await res.json();
-
-      if (!res.ok) {
-        if (data.error) {
-          setError(data.error);
-          if (data.explanation) setError(`${data.error}\n${data.explanation}`);
-        }
-        return;
-      }
-
-      if (data.warning && data.conflicts && !forceApply) {
-        setWarning(data.warning);
-        setConflicts(data.conflicts);
-        return;
-      }
-
-      if (data.success && data.leave) {
-        setLeaveRequests((prev) => [...prev, data.leave!]);
-
+      
+      if (res.status === 409) {
+        setWarning(data.warning || "Conflicts detected.");
+        setConflicts(data.conflicts || []);
+        toast.warning("Appointment conflicts detected.");
+      } else if (!res.ok) {
+        throw new Error(data.error || "Failed to apply leave");
+      } else {
+        setLeaveRequests(prev => [...prev, data.leave!]);
+        
+        // Handle Undo State if appointments were cancelled
         if (data.cancelled_appointments && data.cancelled_appointments.length > 0) {
-          setCancelledAppointments(data.cancelled_appointments);
-
-          const appointmentIds = data.cancelled_appointments.map((a) => a.id);
-          setUndoState({
-            leaveId: data.leave.id,
-            appointmentIds,
-            timestamp: Date.now(),
-          });
-          setUndoTimeLeft(Math.ceil(UNDO_TIMEOUT / 1000));
-
-          setSuccessMessage(
-            `Leave applied successfully! ${data.cancelled_appointments.length} appointment(s) cancelled.`
-          );
-        } else {
-          setSuccessMessage(
-            `Leave applied successfully for ${getDaysDifference(
-              data.leave.start_date,
-              data.leave.end_date
-            )} day(s)`
-          );
+            setUndoState({
+                leaveId: data.leave!.id,
+                appointmentIds: data.cancelled_appointments.map(a => a.id),
+                timestamp: Date.now()
+            });
+            setUndoTimeLeft(30);
         }
 
-        resetDateSelection();
+        toast.success("Leave applied successfully!");
+        setWarning("");
+        setConflicts([]);
+        setForceApply(false);
+        setSelectedStartDate("");
+        setSelectedEndDate("");
         setReason("");
-        setTimeout(() => setSuccessMessage(""), 5000);
       }
-    } catch (err) {
-      console.error("Failed to apply leave", err);
-      setError("An error occurred while applying leave");
+    } catch (err: any) {
+      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  /* -------- DERIVED DATA -------- */
-
-  const daysInMonth = useMemo(() => {
-    const days: Date[] = [];
-    const lastDay = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth() + 1,
-      0
-    ).getDate();
-
-    for (let i = 1; i <= lastDay; i++) {
-      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
-      date.setHours(0, 0, 0, 0);
-      days.push(date);
+  const undoForceApply = async () => {
+    if (!undoState) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/practitioners/${practitionerId}/leaves/${undoState.leaveId}/undo-force`, { method: "POST" });
+      if (!res.ok) throw new Error("Undo failed");
+      setLeaveRequests(prev => prev.filter(l => l.id !== undoState.leaveId));
+      setUndoState(null);
+      toast.success("Restored appointments successfully.");
+    } catch (err) {
+      toast.error("Could not undo action.");
+    } finally {
+      setLoading(false);
     }
-    return days;
-  }, [currentMonth]);
-
-  const getLeaveForDate = (dateStr: string): LeaveRequest[] => {
-    return leaveRequests.filter((l) => {
-      const start = parseDate(l.start_date);
-      const end = parseDate(l.end_date);
-      const current = parseDate(dateStr);
-      return current >= start && current <= end;
-    });
   };
 
-  const navigateMonth = (direction: number) => {
-    setCurrentMonth(
-      new Date(
-        currentMonth.getFullYear(),
-        currentMonth.getMonth() + direction,
-        1
-      )
-    );
+  const confirmCancelLeave = async () => {
+    if (!cancelModal.leaveId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/practitioners/${practitionerId}/leaves?leave_id=${cancelModal.leaveId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Deletion failed");
+      setLeaveRequests(prev => prev.filter(l => l.id !== cancelModal.leaveId));
+      toast.success("Leave cancelled successfully");
+      setCancelModal({ isOpen: false, leaveId: null, leaveDetails: null });
+    } catch (err) {
+      toast.error("Unable to cancel leave");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const totalLeaveDays = useMemo(() => {
-    return leaveRequests.reduce((sum, leave) => {
-      return sum + getDaysDifference(leave.start_date, leave.end_date);
-    }, 0);
-  }, [leaveRequests]);
+  const canCancelLeave = (leave: LeaveRequest): { can: boolean; msg?: string } => {
+    const end = parseDate(leave.end_date);
+    const now = new Date();
+    if (end < today) return { can: false, msg: "Past data cannot be deleted" };
+    if (formatDate(today) === leave.start_date && leave.leave_type === "first_half" && now.getHours() >= 12) {
+      return { can: false, msg: "First half has already passed" };
+    }
+    return { can: true };
+  };
 
-  /* ---------- LOADING STATE ---------- */
-
-  if (initialLoading) {
-    return (
-      <div className="border rounded-xl p-6 bg-white shadow-sm">
-        <div className="flex items-center justify-center py-12">
-          <Loader />
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------- ERROR STATE ---------- */
-
-  if (error && leaveRequests.length === 0) {
-    return (
-      <div className="border rounded-xl p-6 bg-white shadow-sm">
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          {error}
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------- MAIN UI ---------- */
+  if (initialLoading) return <div className="p-12 flex justify-center"><Loader /></div>;
 
   return (
-    <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* -------- CALENDAR -------- */}
-        <div className="lg:col-span-2 border rounded-xl p-6 bg-white shadow-sm">
-          <div className="text-lg font-bold mb-1 text-gray-800">
-            Manage Availability
-          </div>
-          <div className="text-sm text-slate-500 mb-6">
-            Apply leave for up to 45 days from today
-          </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 border border-slate-200 rounded-xl p-6 bg-white shadow-sm">
+        <div className="text-lg font-bold mb-1 text-gray-800">Manage Availability</div>
+        <div className="text-sm text-slate-500 mb-6">Apply leave for up to {MAX_DAYS_AHEAD} days ahead</div>
 
-          {/* Month Navigation */}
-          <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={() => navigateMonth(-1)}
-              className="p-2 hover:bg-slate-100 rounded-lg transition"
-            >
-              ← Prev
-            </button>
-            <div className="font-semibold text-gray-800">
-              {currentMonth.toLocaleString("default", {
-                month: "long",
-                year: "numeric",
-              })}
-            </div>
-            <button
-              onClick={() => navigateMonth(1)}
-              className="p-2 hover:bg-slate-100 rounded-lg transition"
-            >
-              Next →
-            </button>
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2 text-center mb-6">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-              <div key={d} className="text-xs font-semibold text-slate-600 py-2">
-                {d}
-              </div>
-            ))}
-
-            {daysInMonth.map((date) => {
-              const dateStr = formatDate(date);
-              const isDisabled = !isDateInRange(date, today, maxAllowedDate);
-              const leaves = getLeaveForDate(dateStr);
-              const isStartDate = selectedStartDate === dateStr;
-              const isEndDate = selectedEndDate === dateStr;
-              const isInRange =
-                selectedStartDate &&
-                selectedEndDate &&
-                parseDate(selectedStartDate) <= date &&
-                date <= parseDate(selectedEndDate);
-              const isToday = formatDate(today) === dateStr;
-
-              return (
-                <button
-                  key={dateStr}
-                  disabled={isDisabled}
-                  onClick={() => !isDisabled && handleDateClick(dateStr)}
-                  className={`relative h-10 rounded-lg text-sm font-medium transition ${
-                    isStartDate || isEndDate
-                      ? "bg-blue-600 text-white shadow-md"
-                      : isInRange
-                        ? "bg-blue-100 text-blue-900"
-                        : isToday
-                        ? "border-2 border-blue-400"
-                        : "hover:bg-slate-100"
-                  } ${isDisabled ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}`}
-                >
-                  {date.getDate()}
-                  {leaves.length > 0 && (
-                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                      {leaves.slice(0, 2).map((l, i) => (
-                        <span
-                          key={i}
-                          title={`${formatLeaveType(l.leave_type)} - ${l.reason}`}
-                          className={`h-1.5 w-1.5 rounded-full ${getLeaveColor(
-                            l.leave_type
-                          )}`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Selection Status */}
-          {(selectedStartDate || selectedEndDate) && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
-              <div className="font-semibold mb-1">
-                {selectingPhase === "start"
-                  ? "📍 Click to select start date"
-                  : "📍 Click to select end date"}
-              </div>
-              {selectedStartDate && (
-                <div className="text-blue-600">
-                  Start: <span className="font-semibold">{selectedStartDate}</span>
-                  {selectedEndDate && (
-                    <>
-                      {" "} → End: <span className="font-semibold">{selectedEndDate}</span>
-                    </>
-                  )}
-                </div>
-              )}
-              <button
-                onClick={resetDateSelection}
-                className="text-xs text-blue-600 hover:text-blue-700 font-semibold mt-1 underline"
-              >
-                Clear Selection
-              </button>
-            </div>
-          )}
-
-          {/* Leave Form */}
-          <div className="space-y-4 border-t pt-6">
-            {/* Manual Date Input */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  value={selectedStartDate}
-                  onChange={(e) => {
-                    setSelectedStartDate(e.target.value);
-                    if (e.target.value > selectedEndDate) {
-                      setSelectedEndDate(e.target.value);
-                    }
-                  }}
-                  min={formatDate(today)}
-                  max={formatDate(maxAllowedDate)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  value={selectedEndDate}
-                  onChange={(e) => setSelectedEndDate(e.target.value)}
-                  min={selectedStartDate}
-                  max={formatDate(maxAllowedDate)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-700 block mb-2">
-                Leave Type
-              </label>
-              <div className="flex gap-2">
-                {LEAVE_TYPES.map((t) => (
-                  <button
-                    key={t.value}
-                    onClick={() => setLeaveType(t.value)}
-                    className={`px-4 py-2 rounded-lg text-xs font-medium border transition ${
-                      leaveType === t.value
-                        ? `border-blue-500 text-blue-700 ${t.bgColor}`
-                        : "border-slate-200 hover:border-slate-300"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-700 block mb-1">
-                Reason
-              </label>
-              <textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="E.g., Medical appointment, Personal work..."
-                rows={2}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Success Message with Undo */}
-            {successMessage && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700 font-medium">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2">
-                    <span>✓</span>
-                    <div>{successMessage}</div>
-                  </div>
-                </div>
-
-                {/* Cancelled Appointments Details */}
-                {cancelledAppointments.length > 0 && (
-                  <details className="mt-2 text-[10px] cursor-pointer">
-                    <summary className="font-semibold hover:text-green-800">
-                      📋 View {cancelledAppointments.length} cancelled appointment(s)
-                    </summary>
-                    <div className="mt-2 space-y-1 pl-2 bg-white rounded p-2 border border-green-100">
-                      {cancelledAppointments.map((a) => (
-                        <div key={a.id} className="text-green-700">
-                          • {a.patient_name} - {new Date(a.starts_at).toLocaleString()}
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                )}
-
-                {/* Undo Button */}
-                {undoState && undoTimeLeft > 0 && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      onClick={undoForceApply}
-                      disabled={loading}
-                      className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-semibold transition disabled:opacity-50"
-                    >
-                      ↶ Undo ({undoTimeLeft}s)
-                    </button>
-                    <span className="text-[10px] text-green-600">
-                      Undo available for {undoTimeLeft} seconds
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Error Messages */}
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 whitespace-pre-line font-medium flex items-start gap-2">
-                <span>✕</span>
-                <div>{error}</div>
-              </div>
-            )}
-
-            {/* Warning & Conflict Handling */}
-            {warning && conflicts.length > 0 && (
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-3">
-                <div className="text-xs font-semibold text-yellow-900 flex items-start gap-2">
-                  <span className="text-lg">⚠️</span>
-                  <div>
-                    <div>{warning}</div>
-                    <div className="text-yellow-800 text-[10px] font-normal mt-1">
-                      The following appointments will be cancelled if you proceed.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 bg-white rounded-lg p-3 border border-yellow-100 max-h-40 overflow-y-auto">
-                  {conflicts.map((c) => (
-                    <div key={c.id} className="flex items-start justify-between text-xs">
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-800">{c.patient_name}</div>
-                        <div className="text-yellow-700 text-[10px]">
-                          {new Date(c.starts_at).toLocaleString()}
-                        </div>
-                        <div className="text-slate-500 text-[10px] mt-0.5">
-                          Status: {c.status}
-                        </div>
-                      </div>
-                      <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-[10px] font-semibold whitespace-nowrap ml-2">
-                        Will Cancel
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {!forceApply ? (
-                  <div className="p-3 bg-yellow-100 rounded-lg">
-                    <div className="text-xs text-yellow-900 mb-2">
-                      ⚠️ This action will cancel patient appointments. Patients will be notified.
-                    </div>
-                    <button
-                      onClick={confirmForceApply}
-                      disabled={loading}
-                      className="w-full px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
-                    >
-                      I Understand, Proceed to Cancel Appointments
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex items-center gap-3 p-3 bg-yellow-100 rounded-lg cursor-pointer hover:bg-yellow-150 transition">
-                    <input
-                      type="checkbox"
-                      checked={forceApply}
-                      onChange={(e) => setForceApply(e.target.checked)}
-                      className="w-4 h-4 rounded accent-yellow-600 cursor-pointer"
-                    />
-                    <div>
-                      <div className="text-xs font-semibold text-yellow-900">
-                        ✓ I confirm cancellation of {conflicts.length} appointment(s)
-                      </div>
-                      <div className="text-[10px] text-yellow-700">
-                        Patients will receive cancellation notifications
-                      </div>
-                    </div>
-                  </label>
-                )}
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={resetDateSelection}
-                    className="px-3 py-2 border border-yellow-300 text-yellow-900 rounded-lg text-xs font-semibold hover:bg-yellow-100 transition"
-                  >
-                    Choose Different Dates
-                  </button>
-                  <Button
-                    disabled={!forceApply || loading}
-                    onClick={applyLeave}
-                    className="bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50"
-                  >
-                    {loading ? "Processing..." : "Force Apply Leave"}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Apply Button - Normal State */}
-            {!warning && (
-              <Button
-                disabled={loading || !reason.trim() || !selectedStartDate || !selectedEndDate}
-                onClick={applyLeave}
-                className="w-full"
-              >
-                {loading ? "Processing..." : "Apply Leave"}
-              </Button>
-            )}
-          </div>
+        <div className="flex justify-between items-center mb-6">
+          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-slate-100 rounded-lg transition">← Prev</button>
+          <div className="font-semibold text-gray-800">{currentMonth.toLocaleString("default", { month: "long", year: "numeric" })}</div>
+          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-slate-100 rounded-lg transition">Next →</button>
         </div>
 
-        {/* -------- LEAVE DETAILS -------- */}
-        <div className="border rounded-xl p-6 bg-white shadow-sm flex flex-col">
-          <div className="mb-4">
-            <div className="text-lg font-bold text-gray-800 mb-1">
-              Leave Details
+        <div className="grid grid-cols-7 gap-2 text-center mb-6">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => <div key={d} className="text-xs font-semibold text-slate-600 py-2">{d}</div>)}
+          {emptyDaysBefore.map((_, i) => <div key={`empty-${i}`} className="h-10" />)}
+          {calendarDays.map(date => {
+            const ds = formatDate(date);
+            const leaves = leaveRequests.filter(l => ds >= l.start_date && ds <= l.end_date);
+            const isActive = ds === selectedStartDate || ds === selectedEndDate;
+            const inRange = selectedStartDate && selectedEndDate && ds >= selectedStartDate && ds <= selectedEndDate;
+            return (
+              <button
+                key={ds}
+                disabled={!isDateInRange(date, today, maxAllowedDate)}
+                onClick={() => handleDateClick(ds)}
+                className={`relative h-10 rounded-lg text-sm font-medium transition flex items-center justify-center
+                  ${isActive ? "bg-blue-600 text-white shadow-md" : inRange ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100"}
+                  ${!isDateInRange(date, today, maxAllowedDate) ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}
+                  ${formatDate(today) === ds ? "border-2 border-blue-400" : ""}`}
+              >
+                {date.getDate()}
+                <div className="absolute bottom-1 flex gap-0.5">
+                  {leaves.map((l, i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${getLeaveColor(l.leave_type)}`} />)}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="space-y-4 border-t pt-6">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Start Date</label>
+                <input type="date" value={selectedStartDate} onChange={e => setSelectedStartDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
             </div>
-            <div className="text-xs text-slate-500">
-              Total leave days: <span className="font-semibold text-gray-700">{totalLeaveDays}</span>
+            <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">End Date</label>
+                <input type="date" value={selectedEndDate} onChange={e => setSelectedEndDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
             </div>
           </div>
 
-          {leaveRequests.length === 0 ? (
-            <div className="text-sm text-slate-500 text-center py-8 flex-1 flex items-center justify-center">
-              No leave requests yet
-            </div>
-          ) : (
-            <div className="space-y-3 flex-1 overflow-y-auto">
-              {leaveRequests
-                .sort(
-                  (a, b) =>
-                    parseDate(a.start_date).getTime() -
-                    parseDate(b.start_date).getTime()
-                )
-                .map((leave) => {
-                  const dayCount = getDaysDifference(
-                    leave.start_date,
-                    leave.end_date
-                  );
+          <div className="flex gap-2">
+            {LEAVE_TYPES.map(t => (
+              <button key={t.value} onClick={() => setLeaveType(t.value)} className={`flex-1 py-2 rounded-lg text-xs font-medium border transition ${leaveType === t.value ? `border-blue-500 text-blue-700 ${t.bgColor}` : "border-slate-200"}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-                  return (
-                    <div
-                      key={leave.id}
-                      className={`rounded-lg p-3 border transition hover:shadow-sm ${getLeaveByTypeColor(
-                        leave.leave_type
-                      )} border-slate-200`}
-                    >
-                      <div className="flex justify-between items-start gap-2 mb-2">
-                        <div className="flex-1">
-                          <div className="font-semibold text-sm text-gray-800">
-                            {leave.start_date === leave.end_date
-                              ? leave.start_date
-                              : `${leave.start_date} → ${leave.end_date}`}
-                          </div>
-                          <div className="text-xs text-slate-600 mt-0.5">
-                            {dayCount} {dayCount === 1 ? "day" : "days"} • {formatLeaveType(leave.leave_type)}
-                          </div>
-                        </div>
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-semibold text-white ${getLeaveColor(
-                            leave.leave_type
-                          )}`}
-                        >
-                          {getLeaveShorthand(leave.leave_type)}
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-600 mb-2 line-clamp-2 italic">
-                        "{leave.reason}"
-                      </div>
-                      <div className="text-[10px] text-slate-500 mb-2">
-                        Applied on{" "}
-                        {parseDate(leave.created_at).toLocaleDateString()}
-                      </div>
-                      <button
-                        onClick={() => openCancelModal(leave)}
-                        disabled={loading}
-                        className="text-xs text-red-600 hover:text-red-700 font-semibold transition disabled:opacity-50"
-                      >
-                        Cancel Leave
-                      </button>
-                    </div>
-                  );
-                })}
+          <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Reason for leave..." rows={2} className="w-full px-3 py-2 border rounded-lg text-sm resize-none" />
+
+          {/* UNDO BANNER */}
+          {undoState && undoTimeLeft > 0 && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex justify-between items-center animate-pulse">
+                  <span className="text-xs font-bold text-green-800">Leave Applied & Appointments Cancelled</span>
+                  <button onClick={undoForceApply} className="text-xs bg-green-600 text-white px-3 py-1 rounded font-bold">Undo ({undoTimeLeft}s)</button>
+              </div>
+          )}
+
+          {/* CONFLICT UI SECTION */}
+          {warning && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-3">
+              <div className="text-xs font-bold text-yellow-900 flex items-start gap-2">⚠️ {warning}</div>
+              <div className="max-h-32 overflow-y-auto space-y-1 bg-white p-2 rounded border border-yellow-100">
+                {conflicts.map(c => (
+                  <div key={c.id} className="text-[10px] flex justify-between p-1 border-b last:border-0">
+                    <span className="font-semibold text-slate-700">{c.patient?.full_name || "Patient"}</span>
+                    <span className="text-slate-500">{new Date(c.starts_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  </div>
+                ))}
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer p-2 bg-yellow-100 rounded border border-yellow-200">
+                <input type="checkbox" checked={forceApply} onChange={e => setForceApply(e.target.checked)} className="w-4 h-4 rounded accent-yellow-600" />
+                <span className="text-xs font-semibold text-yellow-900">Confirm cancellation of these appointments</span>
+              </label>
             </div>
           )}
 
-          {/* Legend */}
-          <div className="border-t mt-4 pt-4">
-            <div className="text-xs font-semibold text-gray-700 mb-2">Legend</div>
-            <div className="space-y-1">
-              {LEAVE_TYPES.map((t) => (
-                <div key={t.value} className="flex items-center gap-2 text-xs">
-                  <span className={`h-2 w-2 rounded-full ${t.color}`} />
-                  <span className="text-slate-600">{t.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Apply Button - Normal State */}
+{!warning && (
+  <Button
+    disabled={loading || !!(!reason.trim()) || !selectedStartDate || !selectedEndDate}
+    onClick={applyLeave}
+    className="w-full"
+  >
+    {loading ? "Processing..." : "Apply Leave"}
+  </Button>
+)}
         </div>
       </div>
 
-      {/* Cancel Leave Modal */}
-      <CancelLeaveModal
-        isOpen={cancelModal.isOpen}
-        leave={cancelModal.leaveDetails}
-        onConfirm={confirmCancelLeave}
-        onCancel={closeCancelModal}
-        isLoading={loading}
-      />
-    </>
+      <div className="border rounded-xl p-6 bg-white shadow-sm flex flex-col h-fit">
+        <div className="text-lg font-bold text-gray-800 mb-4">Leave Details</div>
+        <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+          {leaveRequests.length === 0 ? <div className="text-sm text-slate-500 text-center py-8">No leaves recorded</div> : 
+            leaveRequests.sort((a, b) => b.start_date.localeCompare(a.start_date)).map(l => {
+              const { can, msg } = canCancelLeave(l);
+              return (
+                <div key={l.id} className={`rounded-lg p-3 border ${getLeaveByTypeColor(l.leave_type)} border-slate-200`}>
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="font-bold text-sm text-gray-800">{l.start_date === l.end_date ? l.start_date : `${l.start_date} → ${l.end_date}`}</div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${getLeaveColor(l.leave_type)}`}>{getLeaveShorthand(l.leave_type)}</span>
+                  </div>
+                  <div className="text-xs text-slate-600 italic mb-2">"{l.reason}"</div>
+                  {can ? (
+                    <button onClick={() => setCancelModal({ isOpen: true, leaveId: l.id, leaveDetails: l })} className="text-xs text-red-600 font-bold hover:underline">Cancel Leave</button>
+                  ) : (
+                    <div className="text-[10px] text-slate-400 font-medium italic">{msg}</div>
+                  )}
+                </div>
+              );
+            })
+          }
+        </div>
+      </div>
+
+      <CancelLeaveModal isOpen={cancelModal.isOpen} leave={cancelModal.leaveDetails} onConfirm={confirmCancelLeave} onCancel={() => setCancelModal({ isOpen: false, leaveId: null, leaveDetails: null })} isLoading={loading} />
+    </div>
   );
 };
 
