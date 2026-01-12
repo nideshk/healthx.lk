@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { notify } from '@/lib/notify';
+import { sendAppointmentInvites } from '@/lib/additional_attendee/appointmentInvites';
 
 const MERCHANT_SECRET = process.env.PAYHERE_MERCHANT_SECRET!;
 
@@ -132,6 +133,21 @@ export async function POST(request: NextRequest) {
                     phone: patientData.contact_number,
                 },
             });
+
+            if(Array.isArray(appointment?.additional_attendees) && appointment.additional_attendees?.length > 0)
+            {
+                try {   
+                    await sendAppointmentInvites({
+                              appointmentId: appointment.id,
+                              practitionerId: appointment?.practitioner_id,
+                              attendees: appointment?.additional_attendees,
+                              meetingStartISO: appointment?.starts_at,
+                              room_key: appointment.room_key
+                            });
+                } catch (attendeeInviteError) {
+                    console.log("Attendee invites failed : ", attendeeInviteError);
+                }
+            }
 
             console.log(`✅ Webhook Processed: Appointment ${order_id} confirmed and user notified.`);
 

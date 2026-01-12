@@ -20,6 +20,7 @@ const SecuritySettings: React.FC = () => {
     createChallenge,
     verifyEnrollment,
     disableMfa,
+    cancelEnrollment,
   } = useMfaEnrollment();
   /* --------------------------------
      STATE
@@ -102,13 +103,23 @@ const SecuritySettings: React.FC = () => {
           />
 
           {!challengeId ? (
-            <button
-              onClick={createChallenge}
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded mb-2"
-            >
-              Enable 2FA
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={createChallenge}
+                disabled={loading}
+                className="flex-1 bg-blue-600 text-white py-2 rounded"
+              >
+                Enable 2FA
+              </button>
+
+              <button
+                onClick={cancelEnrollment}
+                disabled={loading}
+                className="flex-1 border border-slate-300 text-slate-700 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
           ) : (
             <>
               <input
@@ -118,13 +129,23 @@ const SecuritySettings: React.FC = () => {
                 className="border rounded px-3 py-2 w-full mb-2"
               />
 
-              <button
-                onClick={verifyEnrollment}
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-2 rounded"
-              >
-                Verify & Enable
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={verifyEnrollment}
+                  disabled={loading}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded"
+                >
+                  Verify & Enable
+                </button>
+
+                <button
+                  onClick={cancelEnrollment}
+                  disabled={loading}
+                  className="flex-1 border border-slate-300 text-slate-700 py-2 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
             </>
           )}
 

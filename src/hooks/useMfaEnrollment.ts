@@ -47,6 +47,24 @@ export const useMfaEnrollment = () => {
   });
 
   /* --------------------------------
+   CP-0: CLEANUP ON UNMOUNT
+    Cancel ONLY unfinished enrollment
+  --------------------------------- */
+  useEffect(() => {
+    return () => {
+      // Only cancel if enrollment was started but NOT completed
+      if (qr && twoFactorEnabled === false && factorId) {
+        supabaseClient.auth.mfa
+          .unenroll({ factorId })
+          .catch(() => {
+            // ignore errors during unmount
+          });
+      }
+    };
+  }, [qr, twoFactorEnabled, factorId]);
+
+
+  /* --------------------------------
      CP-2: ENROLL (QR CODE)
   --------------------------------- */
   const startEnrollment = async () => {
@@ -160,6 +178,31 @@ export const useMfaEnrollment = () => {
     setTwoFactorEnabled(false);
   };
 
+  /* --------------------------------
+    CP-8: CANCEL ENROLLMENT (USER ACTION)
+  --------------------------------- */
+  const cancelEnrollment = async () => {
+    // Only cancel if enrollment is actually in progress
+    if (!factorId || !qr || twoFactorEnabled === true) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await supabaseClient.auth.mfa.unenroll({ factorId });
+      toast.info("MFA enrollment cancelled");
+    } catch {
+      toast.error("Unable to cancel MFA enrollment");
+    } finally {
+      // Reset local state
+      setFactorId(null);
+      setChallengeId(null);
+      setQr(null);
+      setOtp("");
+      setLoading(false);
+    }
+  };
+
   return {
     twoFactorEnabled,
     factorId,
@@ -175,5 +218,6 @@ export const useMfaEnrollment = () => {
     createChallenge,
     verifyEnrollment,
     disableMfa,
+    cancelEnrollment,
   };
 };
