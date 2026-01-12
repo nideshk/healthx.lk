@@ -54,12 +54,14 @@ export async function POST(
       consent
     } = draftData;
 
+    console.log(draftData)
 
+    console.log("data", starts_at , ends_at , appointmentType , selectedDoctor)
     // 3️⃣ Validate
     if (!starts_at || !ends_at || !appointmentType?.id || !selectedDoctor?.id) {
       return NextResponse.json(
         {
-          error: "Draft is incomplete",
+        error: `Draft is incomplete , ${starts_at} ${ends_at} ${appointmentType?.id} ${selectedDoctor?.id}`,
           missing: {
             starts_at,
             ends_at,
@@ -259,6 +261,7 @@ export async function POST(
         // Do not rethrow: draft cleanup failure should not break a successful booking
       }
 
+      
       const cnx = getAuditContext(req, user);
 
       await auditLog({

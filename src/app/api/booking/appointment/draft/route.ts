@@ -29,13 +29,20 @@ export async function PATCH(req: Request) {
   // locked or completed → ignore
   if (existing.status !== "DRAFT") {
     return NextResponse.json(existing);
+  
   }
+
+  const mergedData = {
+    ...existing,
+    data
+  }
+
+  console.log(mergedData)
 
   const { data: updated } = await supabaseAdmin
     .from("appointment_draft")
     .update({
-      data,
-      version: existing.version + 1,
+      mergedData,
     })
     .eq("patient_id", user?.patient_id)
     .select()

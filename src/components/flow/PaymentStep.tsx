@@ -18,22 +18,23 @@ import {
   Info,
   Lock,
   ChevronLeft,
-  CheckCircle2,
   AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
 import { uploadAttachmentAfterBooking } from '@/lib/s3/uploadAttachmentAfterBooking';
 import { createPortal } from 'react-dom';
-import { syncAppointmentDraft } from "@/lib/syncAppointmentDraft";
-import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
+import { syncAppointmentDraft } from '@/lib/syncAppointmentDraft';
+import { useBookingDraftStore } from '@/stores/useBookingDraftStore';
 
+const TEST_MODE = false; // 🔁 turn OFF in production
 
 interface StepRefHandle {
   validateStep?: () => boolean;
 }
+
 interface Props {
-  prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
+  prevStep: () => void;
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
   goToStep: (step: number) => void;
@@ -51,62 +52,33 @@ declare global {
   }
 }
 
-const releaseAppointmentSlot = async (appointmentId: string | null) => {
-  if (!appointmentId) return;
-  try {
-    await fetch('/api/booking/release-slot', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appointmentId })
-    });
-  } catch (err) {
-    console.error("Error releasing slot:", err);
-  }
-};
-
 const PaymentStep = forwardRef<StepRefHandle, Props>(
-  ({ prevStep, updateData, bookingData, goToStep, bookingControllerRef, isManualCheckout = false, preExistingId = null }, stepRef) => {
+  (
+    {
+      prevStep,
+      updateData,
+      bookingData,
+      goToStep,
+      bookingControllerRef,
+      isManualCheckout = false,
+      preExistingId = null
+    },
+    stepRef
+  ) => {
+    console.log(bookingData)
     const [paymentDone, setPaymentDone] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [timeLeft, setTimeLeft] = useState(600);
     const [mounted, setMounted] = useState(false);
     const [isExpired, setIsExpired] = useState(false);
+
     const appointmentIdRef = useRef<string | null>(null);
     const router = useRouter();
-console.log(bookingData)
-    useEffect(() => { setMounted(true) }, []);
-
-    const handleExpiry = async () => {
-      setIsExpired(true);
-      setIsPaymentProcessing(false);
-      setIsVerifying(true);
-      releaseAppointmentSlot(appointmentIdRef.current);
-      setTimeout(() => { window.location.href = '/dashboard/appointment'; }, 2300);
-    };
-
+    console.log(useBookingDraftStore.getState())
     useEffect(() => {
-      let timer: NodeJS.Timeout;
-      if (isPaymentProcessing || isVerifying) {
-        timer = setInterval(() => {
-          setTimeLeft((prev) => {
-            if (prev <= 1) {
-              clearInterval(timer);
-              handleExpiry();
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      }
-      return () => { if (timer) clearInterval(timer); };
-    }, [isPaymentProcessing, isVerifying]);
-
-    // Pricing Logic
-    const consultationFee = bookingData.appointmentType?.fee ?? 1450;
-    const serviceFee = Math.round(consultationFee * 0.05);
-    const tax = Math.round((consultationFee + serviceFee) * 0.08);
-    const totalAmount = consultationFee + serviceFee + tax;
+      setMounted(true);
+    }, []);
 
     useImperativeHandle(stepRef, () => ({
       validateStep: () => {
@@ -115,111 +87,145 @@ console.log(bookingData)
           return false;
         }
         return true;
-      },
+      }
     }));
+
+    // Pricing
+    const consultationFee = bookingData.appointmentType?.fee ?? 1450;
+    const serviceFee = Math.round(consultationFee * 0.05);
+    const tax = Math.round((consultationFee + serviceFee) * 0.08);
+    const totalAmount = consultationFee + serviceFee + tax;
+
+    const handlePostBookingActions = async (appointmentId: string) => {
+      // 🧹 stop any late draft sync & clear local draft
+      syncAppointmentDraft.cancel();
+      await useBookingDraftStore.getState().reset();
+
+      // upload attachment if exists
+      const file = bookingControllerRef.current?.getAttachment?.();
+      if (file instanceof File) {
+        await uploadAttachmentAfterBooking(file, appointmentId);
+      }
+
+      updateData({
+        payment_status: 'completed',
+        appointment_id: appointmentId
+      });
+
+      router.push('/dashboard/appointment');
+    };
 
     const handlePayment = async () => {
       if (isPaymentProcessing || isVerifying) return;
-      if (typeof window === "undefined" || !window.payhere) {
-        toast.error("Payment system is loading...");
-        return;
-      }
-
-      const mainLayout = document.getElementById('main-app-layout');
-      let currentAppointmentId = preExistingId;
 
       try {
         setIsPaymentProcessing(true);
-        let first_name = "", last_name = "", email = "", phone = "", address = "", city = "", country = "", finalPrice;
 
-        if (!isManualCheckout || !currentAppointmentId) {
-          const date = bookingData.starts_at?.split('T')[0];
-          const time = new Date(bookingData.starts_at || '').toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-          // 🔒 Ensure local draft is fully synced before booking
-          await syncAppointmentDraft.flush();
-          const res = await fetch(`/api/booking/${bookingData.selectedDoctor?.id}/book-appointment`, {
+        // 🔒 Ensure draft is fully synced before booking
+        await syncAppointmentDraft.flush();
+
+        const date = bookingData.starts_at?.split('T')[0];
+        const time = new Date(bookingData.starts_at || '').toLocaleTimeString(
+          'en-GB',
+          { hour: '2-digit', minute: '2-digit' }
+        );  
+
+        console.log({
+          date,
+              time,
+              appointment_type_id: bookingData.appointmentType?.id,
+              attendeeList: bookingData.selectedAttendees
+        })
+
+        const res = await fetch(
+          `/api/booking/${bookingData.selectedDoctor?.id}/book-appointment`,
+          {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date, time, appointment_type_id: bookingData.appointmentType?.id, attendeeList: bookingData.selectedAttendees }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            setIsPaymentProcessing(false);
-            toast.error(data.error || 'Slot no longer available');
-            if (res.status === 409 || res.status === 404) goToStep(2);
-            return;
+            body: JSON.stringify({
+              starts_at: bookingData.starts_at,
+              ends_at : bookingData.ends_at,
+              appointment_type : bookingData.appointmentType,
+              attendeeList: bookingData.selectedAttendees
+            })
           }
-          currentAppointmentId = data?.appointment?.id;
-          first_name = data?.paymentPayload?.first_name;
-          last_name = data?.paymentPayload?.last_name;
-          phone = data?.paymentPayload?.phone;
-          email = data?.paymentPayload?.email;
-          address = data?.paymentPayload?.address;
-          city = data?.paymentPayload?.city;
-          country = data?.paymentPayload?.country;
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setIsPaymentProcessing(false);
+          toast.error(data.error || 'Slot no longer available');
+          if (res.status === 409 || res.status === 404) goToStep(2);
+          return;
         }
 
-        appointmentIdRef.current = currentAppointmentId;
+        const appointmentId = data?.appointment?.id;
+        appointmentIdRef.current = appointmentId;
 
-        // Manual Checkout mapping if applicable
-        if (bookingData && isManualCheckout) {
-          const [f, l] = (bookingData.fullName || "").split(" ");
-          first_name = f; last_name = l;
-          email = email || bookingData.email || "";
-          phone = phone || bookingData.phone || "";
+        // 🧪 TEST MODE — skip PayHere entirely
+        if (TEST_MODE) {
+          setTimeout(async () => {
+            await handlePostBookingActions(appointmentId);
+            setPaymentDone(true);
+            setIsPaymentProcessing(false);
+            toast.success('Appointment successfully booked! (Test Mode)');
+          }, 800);
+          return;
+        }
+
+        // -----------------------------
+        // REAL PAYMENT FLOW (unchanged)
+        // -----------------------------
+        if (!window.payhere) {
+          toast.error('Payment system not loaded');
+          setIsPaymentProcessing(false);
+          return;
         }
 
         const payRes = await fetch('/api/payhere', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            first_name, last_name, email, phone, address: address || "N/A", city: city || "N/A", country: country || "Sri Lanka",
-            appointment_id: currentAppointmentId, practitioner_id: bookingData.selectedDoctor?.id,
-            platform_fee: serviceFee, consultation_fee: consultationFee
-          }),
+            appointment_id: appointmentId,
+            practitioner_id: bookingData.selectedDoctor?.id,
+            platform_fee: serviceFee,
+            consultation_fee: consultationFee
+          })
         });
 
         if (!payRes.ok) {
           setIsPaymentProcessing(false);
-          if (currentAppointmentId) releaseAppointmentSlot(currentAppointmentId);
-          toast.error("Payment initialization failed.");
+          toast.error('Payment initialization failed.');
           return;
         }
 
         const { payment } = await payRes.json();
-        mainLayout?.classList.add('blur-sm', 'brightness-90', 'pointer-events-none');
 
-        window.payhere.onCompleted = async function () {
-          setIsPaymentProcessing(false);
-          mainLayout?.classList.remove('blur-sm', 'brightness-90', 'pointer-events-none');
+        window.payhere.onCompleted = async () => {
           setIsVerifying(true);
 
           let attempts = 0;
-          const checkInterval = setInterval(async () => {
+          const interval = setInterval(async () => {
             attempts++;
-            const res = await fetch(`/api/booking/check-status?appointmentId=${currentAppointmentId}`);
-            const data = await res.json();
-            if (data.status === 'confirmed') {
-              clearInterval(checkInterval);
-              await handlePostBookingActions(currentAppointmentId!);
+            const r = await fetch(
+              `/api/booking/check-status?appointmentId=${appointmentId}`
+            );
+            const d = await r.json();
+
+            if (d.status === 'confirmed') {
+              clearInterval(interval);
+              await handlePostBookingActions(appointmentId);
               setIsVerifying(false);
               setPaymentDone(true);
-              toast.success("Appointment successfully booked!");
+              toast.success('Appointment successfully booked!');
             } else if (attempts >= 5) {
-              clearInterval(checkInterval);
-              releaseAppointmentSlot(currentAppointmentId);
+              clearInterval(interval);
               setIsVerifying(false);
-              toast.error("Verification failed.");
+              toast.error('Payment verification failed.');
               router.push('/dashboard/appointment');
             }
           }, 3000);
-        };
-
-        window.payhere.onDismissed = function () {
-          mainLayout?.classList.remove('blur-sm', 'brightness-90', 'pointer-events-none');
-          setIsPaymentProcessing(false);
-          releaseAppointmentSlot(currentAppointmentId);
-          toast.warn("Payment Cancelled.");
         };
 
         window.payhere.startPayment(payment);
@@ -229,19 +235,10 @@ console.log(bookingData)
       }
     };
 
-    const handlePostBookingActions = async (appointmentId: string) => {
-      syncAppointmentDraft.cancel();
-      await useBookingDraftStore.getState().reset();
-      const file = bookingControllerRef.current?.getAttachment?.();
-      if (file instanceof File) await uploadAttachmentAfterBooking(file, appointmentId);
-      updateData({ payment_status: 'completed', appointment_id: appointmentId });
-      router.push('/dashboard/appointment');
-    };
-
     const formatTime = (seconds: number) => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
     return (
