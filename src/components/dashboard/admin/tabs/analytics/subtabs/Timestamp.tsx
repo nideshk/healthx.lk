@@ -1,21 +1,18 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { DateTime } from "luxon";
-import * as XLSX from "xlsx"; // Ensure you have installed: npm install xlsx
-import { toast } from "react-toastify"; // Ensure you have installed: npm install react-toastify
+import * as XLSX from "xlsx";
+import { toast } from "react-toastify";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
+import GenericTable, { Column } from "./GenericTable";
 import {
-  ShieldCheck,
   Download,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
 } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
-/* TYPES                                    */
+/* TYPES                                                                      */
 /* -------------------------------------------------------------------------- */
 
 type ParticipantDetail = {
@@ -55,25 +52,27 @@ type AuditLogItem = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* MAIN COMPONENT                                */
+/* MAIN COMPONENT                                                             */
 /* -------------------------------------------------------------------------- */
 
 const TimestampTab: React.FC = () => {
-  // Default to current month
+  // Filters & State
   const [fromDate, setFromDate] = useState<string>(
     DateTime.now().startOf("month").toISODate() || ""
   );
   const [toDate, setToDate] = useState<string>(
     DateTime.now().endOf("month").toISODate() || ""
   );
-  const [userType, setUserType] = useState<
-    "All" | "Doctor" | "Admin" | "System"
-  >("All");
+  const [userType] = useState<"All" | "Doctor" | "Admin" | "System">("All");
 
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Pagination State
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
 
   const fetchAuditLogs = useCallback(async () => {
     setLoading(true);
@@ -83,17 +82,21 @@ const TimestampTab: React.FC = () => {
         toDate,
         userType,
         page: page.toString(),
-        limit: "10",
+        limit: limit.toString(),
       });
 
-      const response = await fetch(
-        `/api/consultation/audit-log?${queryParams}`
-      );
+      const response = await fetch(`/api/consultation/audit-log?${queryParams}`);
       const result = await response.json();
 
       if (result?.data) {
-        setLogs(result.data);
+        // Map the data to ensure every item has an 'id' for GenericTable's requirement
+        const formattedData = result.data.map((item: AuditLogItem) => ({
+          ...item,
+          id: item.appointment_id, 
+        }));
+        setLogs(formattedData);
         setTotalPages(result.totalPages || 1);
+        setTotalResults(result.totalCount || result.data.length); 
       }
     } catch (error) {
       console.error("Failed to fetch audit logs:", error);
@@ -101,11 +104,15 @@ const TimestampTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate, userType, page]);
+  }, [fromDate, toDate, userType, page, limit]);
 
   useEffect(() => {
     fetchAuditLogs();
   }, [fetchAuditLogs]);
+
+  /* -------------------------------------------------------------------------- */
+  /* HELPERS                                                                    */
+  /* -------------------------------------------------------------------------- */
 
   const formatDuration = (seconds: number | null) => {
     if (seconds === null || seconds === undefined) return "0s";
@@ -120,7 +127,80 @@ const TimestampTab: React.FC = () => {
   };
 
   /* -------------------------------------------------------------------------- */
-  /* EXCEL DOWNLOAD LOGIC                           */
+  /* TABLE COLUMNS CONFIGURATION                                                */
+  /* -------------------------------------------------------------------------- */
+
+  const columns: Column<AuditLogItem>[] = useMemo(
+    () => [
+      {
+        header: "Appointment ID",
+        className: "font-mono text-[10px] text-slate-500",
+        render: (item) => item.appointment_id,
+      },
+      {
+        header: "Status",
+        render: (item) => <StatusBadge status={item.appointment.status} />,
+      },
+      {
+        header: "Schedule Start",
+        className: "whitespace-nowrap",
+        render: (item) => formatTimestamp(item.appointment.starts_at),
+      },
+      {
+        header: "Patient Activity",
+        render: (item) => (
+          <div>
+            <div className="text-xs">
+              <span className="font-semibold">Joined:</span>{" "}
+              {formatTimestamp(item.participant_summary.patient.started_at)}
+            </div>
+            <div className="text-xs text-slate-500">
+              Dur: {formatDuration(item.participant_summary.patient.duration_seconds)} | Events: {item.participant_summary.patient.event_count}
+            </div>
+          </div>
+        ),
+      },
+      {
+        header: "Practitioner Activity",
+        render: (item) => (
+          <div>
+            <div className="text-xs">
+              <span className="font-semibold">Joined:</span>{" "}
+              {formatTimestamp(item.participant_summary.practitioner.started_at)}
+            </div>
+            <div className="text-xs text-slate-500">
+              Dur: {formatDuration(item.participant_summary.practitioner.duration_seconds)} | Events: {item.participant_summary.practitioner.event_count}
+            </div>
+          </div>
+        ),
+      },
+      {
+        header: "No Show",
+        render: (item) => (
+          <div className="flex flex-col gap-1">
+            {item.appointment.patient_no_show && (
+              <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-100 w-fit">Patient NS</span>
+            )}
+            {item.appointment.practitioner_no_show && (
+              <span className="text-[10px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100 w-fit">Dr NS</span>
+            )}
+            {!item.appointment.patient_no_show && !item.appointment.practitioner_no_show && (
+              <span className="text-slate-400 text-xs">-</span>
+            )}
+          </div>
+        ),
+      },
+      {
+        header: "Meeting Duration",
+        className: "font-medium",
+        render: (item) => formatDuration(item.meeting_duration_seconds),
+      },
+    ],
+    []
+  );
+
+  /* -------------------------------------------------------------------------- */
+  /* EXCEL DOWNLOAD LOGIC                                                       */
   /* -------------------------------------------------------------------------- */
   const handleDownloadExcel = async () => {
     try {
@@ -129,35 +209,24 @@ const TimestampTab: React.FC = () => {
         return;
       }
 
-      // Map data to Excel-friendly format
       const excelRows = logs.map((log) => ({
         "Appointment ID": log.appointment_id,
         Status: log.appointment.status,
         "Scheduled Start": formatTimestamp(log.appointment.starts_at),
         "Meeting Duration": formatDuration(log.meeting_duration_seconds),
-        "Patient Join Time": formatTimestamp(
-          log.participant_summary.patient.started_at
-        ),
-        "Patient Duration (s)":
-          log.participant_summary.patient.duration_seconds,
+        "Patient Join Time": formatTimestamp(log.participant_summary.patient.started_at),
+        "Patient Duration (s)": log.participant_summary.patient.duration_seconds,
         "Patient Events": log.participant_summary.patient.event_count,
-        "Practitioner Join Time": formatTimestamp(
-          log.participant_summary.practitioner.started_at
-        ),
-        "Practitioner Duration (s)":
-          log.participant_summary.practitioner.duration_seconds,
+        "Practitioner Join Time": formatTimestamp(log.participant_summary.practitioner.started_at),
+        "Practitioner Duration (s)": log.participant_summary.practitioner.duration_seconds,
         "Practitioner Events": log.participant_summary.practitioner.event_count,
         "Patient No Show": log.appointment.patient_no_show ? "Yes" : "No",
-        "Practitioner No Show": log.appointment.practitioner_no_show
-          ? "Yes"
-          : "No",
+        "Practitioner No Show": log.appointment.practitioner_no_show ? "Yes" : "No",
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(excelRows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Audit Logs");
-
-      // Trigger Browser Download
       XLSX.writeFile(workbook, `AuditLogs_${fromDate}_to_${toDate}.xlsx`);
       toast.success("Excel file downloaded successfully");
     } catch (error) {
@@ -174,16 +243,22 @@ const TimestampTab: React.FC = () => {
           type="date"
           label="From Date"
           value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
+          onChange={(e) => {
+            setPage(1);
+            setFromDate(e.target.value);
+          }}
         />
         <Input
           type="date"
           label="To Date"
           value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
+          onChange={(e) => {
+            setPage(1);
+            setToDate(e.target.value);
+          }}
         />
 
-        <div className="flex items-end justify-end">
+        <div className="flex items-end justify-end md:col-start-4">
           <Button
             icon={<Download size={14} />}
             size="sm"
@@ -194,143 +269,49 @@ const TimestampTab: React.FC = () => {
         </div>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white border border-slate-200 rounded-2xl relative">
-        {loading && (
-          <div className="absolute inset-0 bg-white/50 z-20 flex items-center justify-center rounded-2xl">
-            <Loader2 className="animate-spin text-blue-600" />
-          </div>
-        )}
-        <div className="overflow-x-auto max-h-[500px]">
-          <table className="min-w-[1400px] w-full text-sm">
-            <thead className="bg-blue-600 text-white sticky top-0 z-10">
-              <tr>
-                <th className="px-4 py-3 text-left">Appointment ID</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Schedule Start</th>
-                <th className="px-4 py-3 text-left">Patient Activity</th>
-                <th className="px-4 py-3 text-left">Practitioner Activity</th>
-                <th className="px-4 py-3 text-left">Meeting Duration</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {logs.length > 0 ? (
-                logs.map((log) => (
-                  <tr
-                    key={log.appointment_id}
-                    className="border-t border-slate-100 hover:bg-slate-50"
-                  >
-                    <td className="px-4 py-3 font-mono text-[10px] text-slate-500">
-                      {log.appointment_id}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={log.appointment.status} />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {formatTimestamp(log.appointment.starts_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-xs">
-                        <span className="font-semibold">Joined:</span>{" "}
-                        {formatTimestamp(
-                          log.participant_summary.patient.started_at
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        Dur:{" "}
-                        {formatDuration(
-                          log.participant_summary.patient.duration_seconds
-                        )}{" "}
-                        | Events: {log.participant_summary.patient.event_count}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-xs">
-                        <span className="font-semibold">Joined:</span>{" "}
-                        {formatTimestamp(
-                          log.participant_summary.practitioner.started_at
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        Dur:{" "}
-                        {formatDuration(
-                          log.participant_summary.practitioner.duration_seconds
-                        )}{" "}
-                        | Events:{" "}
-                        {log.participant_summary.practitioner.event_count}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-medium">
-                      {formatDuration(log.meeting_duration_seconds)}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="text-center py-10 text-slate-400 italic"
-                  >
-                    No data found for the selected period.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* PAGINATION */}
-      <div className="flex items-center justify-between px-2">
-        <div className="text-xs text-slate-500">
-          Showing Page {page} of {totalPages}
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-            icon={<ChevronLeft size={14} />}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            icon={<ChevronRight size={14} />}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      {/* DYNAMIC GENERIC TABLE */}
+      <GenericTable
+        data={logs as any} // Cast because GenericTable expects T extends {id: ...}
+        columns={columns as any}
+        loading={loading}
+        minWidth="1400px"
+        pagination={{
+          currentPage: page,
+          totalPages: totalPages,
+          totalResults: totalResults,
+          perPage: limit,
+          onPageChange: (newPage) => setPage(newPage),
+          onLimitChange: (newLimit) => {
+            setLimit(newLimit);
+            setPage(1); // Reset to page 1 when limit changes
+          },
+        }}
+      />
     </div>
   );
 };
 
-export default TimestampTab;
-
 /* -------------------------------------------------------------------------- */
-/* HELPERS                                       */
+/* INTERNAL HELPERS                                                           */
 /* -------------------------------------------------------------------------- */
 
 const StatusBadge = ({ status }: { status: string }) => {
   const colorMap: Record<string, string> = {
-    confirmed: "bg-green-100 text-green-700",
-    cancelled: "bg-red-100 text-red-700",
-    pending: "bg-amber-100 text-amber-700",
+    confirmed: "bg-green-100 text-green-700 border-green-200",
+    completed: "bg-blue-100 text-blue-700 border-blue-200",
+    cancelled: "bg-red-100 text-red-700 border-red-200",
+    pending: "bg-amber-100 text-amber-700 border-amber-200",
   };
 
   return (
     <span
       className={`${
         colorMap[status.toLowerCase()] || "bg-slate-100 text-slate-600"
-      } px-2 py-1 rounded-full text-[10px] font-bold uppercase`}
+      } px-2 py-1 rounded-full text-[10px] font-bold uppercase border`}
     >
       {status}
     </span>
   );
 };
+
+export default TimestampTab;
