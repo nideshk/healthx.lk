@@ -9,7 +9,7 @@ import SearchPatientTab from "./tabs/searchPatient/SearchPatientTab";
 import AddClinicianTab from "./tabs/AddClinician/AddClinician";
 import ManageAdminsTab from "./tabs/manageAdmin/ManageAdminsTab";
 import AnalyticsTab from "./tabs/analytics/AnalyticsTab";
-import SettingsTab from "./tabs/SettingsTab";
+import SettingsTab from "./tabs/settings/SettingsTab";
 import { Patient } from "@/types/Dashboard";
 
 type AdminMenuId = "home" | "searchClinician" | "searchPatient" | "addClinician" | "manageAdmins" | "analytics" | "settings";
@@ -118,6 +118,16 @@ const AdminDashboard: React.FC = () => {
     }
   }, [activeMenu]);
 
+  const menuComponent = (
+  <DashboardMenuCard
+    title="Admin Menu"
+    subtitle="Quick access"
+    items={menuItems as any}
+    activeId={activeMenu as any}
+    onChange={(id) => setActiveMenu(id as AdminMenuId)}
+  />
+);
+
   return (
     <DashboardShell
       title="Admin Dashboard"
@@ -125,19 +135,14 @@ const AdminDashboard: React.FC = () => {
       profileName={profileName}
       profileRole={profileRole}
       onLogout={() => console.log("admin logout")}
+      sidebar={menuComponent}
     >
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-3 max-w-xs">
-          <DashboardMenuCard
-            title="Admin Menu"
-            subtitle="Quick access"
-            items={menuItems as any}
-            activeId={activeMenu as any}
-            onChange={(id) => setActiveMenu(id as AdminMenuId)}
-          />
-        </div>
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="hidden md:block w-full md:w-64 shrink-0">
+        {menuComponent}
+      </div>
 
-        <div className="col-span-9">
+        <div className="flex-1 min-w-0">
           {activeMenu === "home" && <HomeTab />}
           {activeMenu === "searchClinician" && <SearchClinicianTab />}
           {activeMenu === "searchPatient" && (
@@ -145,7 +150,7 @@ const AdminDashboard: React.FC = () => {
               search={search}
               onSearchChange={setSearch}
               patients={patients}
-              loading={loadingPatients} // ✅ Passing loading state
+              loading={loadingPatients} 
               selectedPatient={selectedPatient}
               onSelectPatient={setSelectedPatient}
               onBackToDashboard={() => setSelectedPatient(null)}

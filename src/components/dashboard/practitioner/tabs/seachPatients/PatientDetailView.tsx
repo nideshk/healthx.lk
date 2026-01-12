@@ -1,12 +1,14 @@
 // src/components/dashboard/practitioner/PatientDetailView.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import Input from "@/components/atom/Input/Input";
 import Loader from "@/components/atom/Loader/Loader";
 import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
+// Import the email template generator
+import { generateAppointmentConfirmationEmail } from "@/lib/emailTemplates";
 
 interface PatientDetailViewProps {
   patient: Patient;
@@ -57,8 +59,6 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
       <div className="flex gap-2 text-xs bg-slate-50 rounded-full p-1 border border-slate-200">
         {renderTab("overview", "Overview", activeTab, setActiveTab)}
         {renderTab("appointments", "Appointments", activeTab, setActiveTab)}
-        {/* {renderTab("settings", "Settings", activeTab, setActiveTab)} */}
-        {renderTab("audit", "Audit Log", activeTab, setActiveTab)}
       </div>
 
       {/* 4. Tab content */}
@@ -66,7 +66,6 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
       {activeTab === "appointments" && (
         <AppointmentsTab appointments={appointments} patient={patient} />
       )}
-      {activeTab === "audit" && <AuditLogTab />}
     </div>
   );
 };
@@ -110,7 +109,7 @@ const DetailLine: React.FC<{ label: string; value: string }> = ({
 
 /* ---------- Overview tab ---------- */
 const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
-  const [isEditing, setIsEditing] = React.useState(false);
+  const [isEditing] = React.useState(false);
 
   const [formData, setFormData] = React.useState({
     name: patient.name,
@@ -129,19 +128,14 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Patient Information */}
       <Card>
         <CardHeader className="flex items-center justify-between">
           <div className="text-sm font-semibold text-slate-900">
             Patient Information
           </div>
-
-          
         </CardHeader>
-
         <CardBody className="space-y-3 text-xs">
           <EditableField
             label="Full Name"
@@ -149,28 +143,24 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
             isEditing={isEditing}
             onChange={(v) => handleChange("name", v)}
           />
-
           <EditableField
             label="Date of Birth"
             value={formData.dob}
             isEditing={isEditing}
             onChange={(v) => handleChange("dob", v)}
           />
-
           <EditableField
             label="Gender"
             value={formData.gender}
             isEditing={isEditing}
             onChange={(v) => handleChange("gender", v)}
           />
-
           <EditableField
             label="Age"
             value={formData.age}
             isEditing={isEditing}
             onChange={(v) => handleChange("age", v)}
           />
-
           <EditableField
             label="Allergies"
             value={formData.allergies}
@@ -180,14 +170,12 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
         </CardBody>
       </Card>
 
-      {/* Contact Information */}
       <Card>
         <CardHeader>
           <div className="text-sm font-semibold text-slate-900">
             Contact Information
           </div>
         </CardHeader>
-
         <CardBody className="space-y-3 text-xs">
           <EditableField
             label="Email"
@@ -195,28 +183,24 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
             isEditing={isEditing}
             onChange={(v) => handleChange("email", v)}
           />
-
           <EditableField
             label="Phone"
             value={formData.phone}
             isEditing={isEditing}
             onChange={(v) => handleChange("phone", v)}
           />
-
           <EditableField
             label="Address"
             value={formData.addressLine1}
             isEditing={isEditing}
             onChange={(v) => handleChange("addressLine1", v)}
           />
-
           <EditableField
             label="City"
             value={formData.city}
             isEditing={isEditing}
             onChange={(v) => handleChange("city", v)}
           />
-
           <EditableField
             label="Country"
             value={formData.country}
@@ -237,7 +221,6 @@ const EditableField: React.FC<{
 }> = ({ label, value, isEditing, onChange }) => (
   <div className="flex flex-col gap-1">
     <span className="text-[11px] text-slate-500">{label}</span>
-
     {isEditing ? (
       <Input value={value} onChange={(e) => onChange(e.target.value)} />
     ) : (
@@ -268,17 +251,14 @@ const AppointmentsTab: React.FC<{
 }> = ({ appointments, patient }) => {
   const upcoming = appointments.filter((a) => a.category === "upcoming");
   const previous = appointments.filter((a) => a.category === "previous");
-
   const [showCreateModal, setShowCreateModal] = React.useState(false);
 
   return (
     <div className="space-y-6">
-      {/* Header row with title + create button */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-900">
           Upcoming Appointments
         </h3>
-        
       </div>
 
       <AppointmentSection appointments={upcoming} patient={patient} />
@@ -291,7 +271,6 @@ const AppointmentsTab: React.FC<{
 
       <AppointmentSection appointments={previous} patient={patient} />
 
-      {/* Create Appointment Modal */}
       <CreateAppointmentModal
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -321,24 +300,22 @@ const AppointmentSection: React.FC<{
 };
 
 const AppointmentRow: React.FC<{
+  
   appointment: Appointment;
   patient: Patient;
 }> = ({ appointment, patient }) => {
   const [open, setOpen] = React.useState(false);
   const [showEmailModal, setShowEmailModal] = React.useState(false);
-  const [isEditingEmail, setIsEditingEmail] = React.useState(false);
   const [showToast, setShowToast] = React.useState(false);
   const [isEditingAppointment, setIsEditingAppointment] = React.useState(false);
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
   const [, forceUpdate] = useState(0);
 
-  
-
   const [appointmentForm, setAppointmentForm] = React.useState({
-
     clinicianNotes: appointment.clinicianNotes || "",
     followUpDate: appointment.followUpDate || "",
+    followUpTime: "", // Added for time selection
     prescriptions: appointment.prescriptions || "",
     followUpNeeded: appointment.followUpNeeded || false,
   });
@@ -353,63 +330,75 @@ const AppointmentRow: React.FC<{
   const [showSmsModal, setShowSmsModal] = React.useState(false);
   const [smsNumber, setSmsNumber] = React.useState(patient.phone);
   const [smsMessage, setSmsMessage] = React.useState(
-    `Hi  ${patient.name}, this is a reminder about your appointment on ${appointment.date} at ${appointment.time} with ${appointment.doctorName}. Thank you!`
+    `Hi ${patient.name}, this is a reminder about your appointment on ${appointment.date} at ${appointment.time} . Thank you!`
   );
 
-  
- const handleSave = async () => {
-  try {
-    const payload = {
-      clinician_notes: appointmentForm.clinicianNotes,
-      prescriptions: appointmentForm.prescriptions,
-      follow_up_needed: appointmentForm.followUpNeeded,
-      follow_up_date: appointmentForm.followUpNeeded
-        ? appointmentForm.followUpDate
-        : null,
-    };
+  const handleSave = async () => {
+    try {
+      let formattedFollowUp = null;
+      
+      // REQUIREMENT: Format as 2026-01-13T04:30:00+00:00
+      if (appointmentForm.followUpNeeded && appointmentForm.followUpDate) {
+        const time = appointmentForm.followUpTime || "00:00";
+        formattedFollowUp = `${appointmentForm.followUpDate}T${time}:00+00:00`;
+      }
 
-    await fetch(
-      `/api/booking/appointment/${appointment.id}/consultation`,
-      {
+      const payload = {
+        clinician_notes: appointmentForm.clinicianNotes,
+        prescriptions: appointmentForm.prescriptions,
+        follow_up_needed: appointmentForm.followUpNeeded,
+        follow_up_date: formattedFollowUp,
+      };
+
+      await fetch(`/api/booking/appointment/${appointment.id}/consultation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
-      }
-    );
+      });
 
-    // 🔹 Sync back to appointment object (no UI change)
-    appointment.clinicianNotes = payload.clinician_notes;
-    appointment.prescriptions = payload.prescriptions;
-    appointment.followUpNeeded = payload.follow_up_needed;
-    appointment.followUpDate = payload.follow_up_date || "";
+      appointment.clinicianNotes = payload.clinician_notes;
+      appointment.prescriptions = payload.prescriptions;
+      appointment.followUpNeeded = payload.follow_up_needed;
+      appointment.followUpDate = payload.follow_up_date || "";
 
-    setIsEditingAppointment(false);
-  } catch (err) {
-    console.error("Failed to save consultation", err);
-  }
-};
-
+      setIsEditingAppointment(false);
+    } catch (err) {
+      console.error("Failed to save consultation", err);
+    }
+  };
 
   const [showSmsToast, setShowSmsToast] = React.useState(false);
 
-  const defaultSubject = `Appointment Reminder - ${appointment.date} at ${appointment.time} with ${appointment.doctorName}`;
-  const defaultBody = `Dear ${patient.name},
-
-Thank you for making an appointment with us.
-
-Your appointment details:
-
-Date: ${appointment.date}
-Time: ${appointment.time}
-Clinician: ${appointment.doctorName}
-Reason: ${appointment.reason}
-
-Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
-
+  // Email State
   const [emailTo, setEmailTo] = React.useState(patient.email);
-  const [emailSubject, setEmailSubject] = React.useState(defaultSubject);
-  const [emailBody, setEmailBody] = React.useState(defaultBody);
+  const [emailSubject, setEmailSubject] = React.useState(
+    `Appointment Confirmation at ${appointment.time} on ${appointment.date}`
+  );
+  const [emailBody, setEmailBody] = React.useState("");
+
+  // Use Memo to generate the HTML template
+  const htmlTemplate = useMemo(() => {
+    const startsAt = appointment.date.split("/").reverse().join("-") + "T" + appointment.time;
+    return generateAppointmentConfirmationEmail({
+      recipientName: patient.name,
+      appointment: {
+        id: appointment.id,
+        startsAt: startsAt,
+        endsAt: startsAt,
+        practitionerName: appointment.doctorName || "Your Practitioner",
+        appointmentType: appointment.appointmentType || appointment.reason || "Consultation",
+        meetingUrl: "https://yourapp.com/appointment/" + appointment.id,
+      },
+    });
+  }, [appointment, patient.name]);
+
+  const handleSendEmail = () => {
+    console.log("Send appointment email", { to: emailTo, subject: emailSubject, body: emailBody });
+    setShowEmailModal(false);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   const statusClasses =
     appointment.status === "confirmed"
@@ -425,49 +414,44 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
       ? "Completed"
       : "Cancelled";
 
-  const handleSendEmail = () => {
-    // TODO: call API here later
-    console.log("Send appointment email", {
-      to: emailTo,
-      subject: emailSubject,
-      body: emailBody,
-    });
-
-    setShowEmailModal(false);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-  };
-
   const fetchConsultationDetails = async () => {
     if (consultationFetched) return;
-
     setConsultationLoading(true);
     try {
-      const res = await fetch(
-        `/api/booking/appointment/${appointment.id}/consultation`,
-        { credentials: "include" }
-      );
-
+      const res = await fetch(`/api/booking/appointment/${appointment.id}/consultation`, {
+        credentials: "include",
+      });
       if (!res.ok) return;
-
       const data = await res.json();
 
       appointment.telehealthConsent = !!data.consent?.telehealth;
       appointment.termsAccepted = !!data.consent?.terms;
-      appointment.mainConcern =
-        data.preconsult?.raw_payload?.note?.concern || "";
-      appointment.goal =
-        data.preconsult?.raw_payload?.note?.outcome || "";
-      appointment.clinicianNotes =
-        data.encounter?.clinician_notes || "";
-      appointment.prescriptions =
-        data.encounter?.prescriptions || "";
-      appointment.followUpNeeded =
-        !!data.encounter?.follow_up_needed;
-      appointment.followUpDate =
-        data.encounter?.follow_up_date?.slice(0, 10);
+      appointment.mainConcern = data.preconsult?.raw_payload?.note?.concern || "";
+      appointment.goal = data.preconsult?.raw_payload?.note?.outcome || "";
+      appointment.clinicianNotes = data.encounter?.clinician_notes || "";
+      appointment.prescriptions = data.encounter?.prescriptions || "";
+      appointment.followUpNeeded = !!data.encounter?.follow_up_needed;
+      
+      const rawDate = data.encounter?.follow_up_date;
+      if (rawDate) {
+        appointment.followUpDate = rawDate.slice(0, 10);
+        // Extract time if it exists in the string
+        if (rawDate.includes("T")) {
+           setAppointmentForm(prev => ({ ...prev, followUpTime: rawDate.split("T")[1].slice(0, 5) }));
+        }
+      }
 
       setConsultationFetched(true);
+      
+      // Update local form state with fetched data
+      setAppointmentForm(prev => ({
+        ...prev,
+        clinicianNotes: data.encounter?.clinician_notes || "",
+        prescriptions: data.encounter?.prescriptions || "",
+        followUpNeeded: !!data.encounter?.follow_up_needed,
+        followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || ""
+      }));
+
       forceUpdate((v) => v + 1);
     } catch (err) {
       console.error("Failed to load consultation", err);
@@ -476,82 +460,60 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
     }
   };
 
-  
   return (
     <>
       <Card>
         <CardBody className="space-y-3">
-          {/* row header */}
           <div className="flex items-center justify-between gap-4">
-            {/* left: main info */}
             <div className="text-xs">
               <div className="font-medium text-slate-900">
                 {appointment.date} at {appointment.time}
               </div>
-              <div className="text-slate-600">{appointment.doctorName}</div>
+              
               <div className="text-slate-400">{appointment.reason}</div>
             </div>
 
-            {/* right: actions */}
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 className="text-xs"
                 onClick={() => {
+                  setEmailBody(htmlTemplate);
                   setShowEmailModal(true);
-                  setIsEditingEmail(false);
-                  setEmailSubject(defaultSubject);
-                  setEmailBody(defaultBody);
                 }}
               >
                 Re-send appointment details
               </Button>
 
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowSmsModal(true)}
-              >
+              <Button variant="secondary" size="sm" onClick={() => setShowSmsModal(true)}>
                 SMS patient
               </Button>
 
               <Button variant="primary" size="sm" className="text-xs">
                 Join meeting
               </Button>
-              <span
-                className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${statusClasses}`}
-              >
+              <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${statusClasses}`}>
                 {statusLabel}
               </span>
               <button
-            type="button"
-            onClick={() => {
-              if (!open) fetchConsultationDetails();
-              setOpen((o) => !o);
-            }}
-            className="text-xs border rounded-full px-2 py-1"
-          >
-            {open ? "▴" : "▾"}
-          </button>
+                type="button"
+                onClick={() => {
+                  if (!open) fetchConsultationDetails();
+                  setOpen((o) => !o);
+                }}
+                className="text-xs border rounded-full px-2 py-1"
+              >
+                {open ? "▴" : "▾"}
+              </button>
             </div>
-
-            
           </div>
 
-          {/* expanded appointment details */}
           {open && (
             <div className="pt-3 border-t border-slate-200 space-y-4 text-xs">
-              {/* Top row title + Edit (for questionnaire, not email) */}
               <div className="flex items-center justify-between">
-                 {consultationLoading && (
-              <div className="flex justify-center py-4">
-                <Loader size="sm" />
-              </div>
-            )}
-                <div className="font-semibold text-slate-900">
-                  Appointment Details
-                </div>
+                {consultationLoading && <Loader size="sm" />}
+                <div className="font-semibold text-slate-900">Appointment Details</div>
                 {!isEditingAppointment ? (
                   <Button
                     variant="outline"
@@ -566,365 +528,167 @@ Appointment Link: https://yourapp.com/appointment/${appointment.id}`;
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-xs"
-                      onClick={() => {
-                        setAppointmentForm({                        
-                          clinicianNotes: appointment.clinicianNotes || "",
-                          followUpNeeded: appointment.followUpNeeded || false,
-                          followUpDate: appointment.followUpDate || "",
-                          prescriptions: appointment.prescriptions || "",
-                        });
-                        setIsEditingAppointment(false);
-                      }}
+                      onClick={() => setIsEditingAppointment(false)}
                     >
                       Cancel
                     </Button>
-
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      className="text-xs"
-                      onClick={() => {
-                        handleSave();
-                        // API later
-                        // PUT /api/appointments/:id
-
-                        setIsEditingAppointment(false);
-                      }}
-                    >
+                    <Button variant="primary" size="sm" onClick={handleSave}>
                       Save
                     </Button>
                   </div>
                 )}
               </div>
 
-              {/* Appointment Type + Terms & Conditions + Telehealth */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
-                  <div className="text-[11px] text-slate-500">
-                    Appointment Type
-                  </div>
-                  
-                    <div className="text-slate-700">
-                      {appointment.appointmentType || "-"}
-                    </div>
-                  
-
-                  <div className="text-[11px] text-slate-500 pt-3">
-                    Telehealth Consent
-                  </div>
+                  <div className="text-[11px] text-slate-500">Appointment Type</div>
+                  <div className="text-slate-700">{appointment.appointmentType || "-"}</div>
+                  <div className="text-[11px] text-slate-500 pt-3">Telehealth Consent</div>
                   <div className="text-slate-700">
-                    {appointment.telehealthConsent
-                      ? "✓ Accepted"
-                      : "Not accepted"}
+                    {appointment.telehealthConsent ? "✓ Accepted" : "Not accepted"}
                   </div>
                 </div>
-
                 <div className="space-y-2">
-                  <div className="text-[11px] text-slate-500">
-                    Terms &amp; Conditions
-                  </div>
+                  <div className="text-[11px] text-slate-500">Terms &amp; Conditions</div>
                   <div className="text-slate-700">
                     {appointment.termsAccepted ? "✓ Accepted" : "Not accepted"}
                   </div>
                 </div>
               </div>
 
-              {/* Main concern & goal */}
-              
-             
-                <InfoRow
-                  label="What is your main concern today?"
-                  value={appointment.mainConcern || "-"}
-                />
-              
-            
-                <InfoRow
-                  label="What are you hoping to achieve from this consultation?"
-                  value={appointment.goal || "-"}
-                />
-              
+              <InfoRow label="What is your main concern today?" value={appointment.mainConcern || "-"} />
+              <InfoRow label="What are you hoping to achieve from this consultation?" value={appointment.goal || "-"} />
 
-              {/* Documents Uploaded */}
-              <div className="space-y-1">
-                <div className="text-[11px] text-slate-500">
-                  Documents Uploaded
-                </div>
-                {appointment.documents?.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {appointment.documents.map((doc) => (
-                      <a
-                        key={doc.id}
-                        href={doc.url || "#"}
-                        target={doc.url ? "_blank" : undefined}
-                        rel={doc.url ? "noreferrer" : undefined}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
-                      >
-                        <span>📄</span>
-                        <span>{doc.name}</span>
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-400">
-                    No documents uploaded.
-                  </div>
-                )}
-              </div>
-
-              {/* Clinician Notes */}
               {isEditingAppointment ? (
                 <div className="space-y-1">
-                  <div className="text-[11px] text-slate-500">
-                    Clinician Notes
-                  </div>
+                  <div className="text-[11px] text-slate-500">Clinician Notes</div>
                   <textarea
                     value={appointmentForm.clinicianNotes}
-                    onChange={(e) =>
-                      updateAppointmentField("clinicianNotes", e.target.value)
-                    }
+                    onChange={(e) => updateAppointmentField("clinicianNotes", e.target.value)}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
                   />
                 </div>
               ) : (
-                <InfoRow
-                  label="Clinician Notes"
-                  value={appointment.clinicianNotes || "-"}
-                />
+                <InfoRow label="Clinician Notes" value={appointment.clinicianNotes || "-"} />
               )}
 
-              {/* Prescriptions Provided */}
-              {isEditingAppointment ? (
-                <div className="space-y-1">
-                  <div className="text-[11px] text-slate-500">
-                    Prescriptions Provided
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                  {isEditingAppointment ? (
+                    <input
+                      type="checkbox"
+                      checked={appointmentForm.followUpNeeded}
+                      onChange={(e) => updateAppointmentField("followUpNeeded", e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <span className={`inline-flex h-3 w-3 rounded-full border-4 ${appointment.followUpNeeded ? 'border-blue-500' : 'border-slate-300'} bg-white`} />
+                  )}
+                  <span>Follow-up appointment needed</span>
+                </div>
+
+                {/* REQUIREMENT: Show date and time field when checked */}
+                {appointmentForm.followUpNeeded && isEditingAppointment && (
+                  <div className="flex flex-wrap gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-top-1">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Follow-up Date</span>
+                      <input 
+                        type="date"
+                        className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                        value={appointmentForm.followUpDate}
+                        onChange={(e) => updateAppointmentField("followUpDate", e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Follow-up Time</span>
+                      <input 
+                        type="time"
+                        className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                        value={appointmentForm.followUpTime}
+                        onChange={(e) => updateAppointmentField("followUpTime", e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <textarea
-                    value={appointmentForm.prescriptions}
-                    onChange={(e) =>
-                      updateAppointmentField("prescriptions", e.target.value)
-                    }
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
-                  />
-                </div>
-              ) : (
-              <InfoRow
-                label="Prescriptions Provided"
-                value={appointment.prescriptions || "-"}
-              />
-              )}
+                )}
 
-        
-{/* Follow-up row */}
-<div className="space-y-2">
-  <div className="flex items-center gap-2 text-[11px] text-slate-600">
-    {isEditingAppointment ? (
-      <input
-        type="checkbox"
-        checked={appointmentForm.followUpNeeded  === true}
-        onChange={(e) =>
-          updateAppointmentField("followUpNeeded", e.target.checked )
-        }
-        className="h-4 w-4"
-      />
-    ) : (
-      <span className="inline-flex h-3 w-3 rounded-full border-4 border-blue-500 bg-white" />
-    )}
-
-    <span>
-      Follow-up appointment needed
-      {/* {appointmentForm.followUpNeeded ? "needed" : "not needed"} */}
-    </span>
-  </div>
-
-  {/* Follow-up slot – visible ONLY if follow-up needed */}
-  {isEditingAppointment && appointmentForm.followUpNeeded && (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        {/* Date Picker */}
-        <div className="space-y-1">
-          <div className="text-[11px] text-slate-500">
-            Select Date
-          </div>
-          <input
-            type="date"
-            value={appointmentForm.followUpDate.split(" ")[0] || ""}
-            onChange={(e) => {
-              const existingTime = appointmentForm.followUpDate.split(" ")[1] || "10:00";
-              updateAppointmentField("followUpDate", `${e.target.value} ${existingTime}`);
-            }}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300"
-          />
-        </div>
-
-        {/* Time Picker */}
-        <div className="space-y-1">
-          <div className="text-[11px] text-slate-500">
-            Select Time
-          </div>
-          <input
-            type="time"
-            value={appointmentForm.followUpDate.split(" ")[1] || "10:00"}
-            onChange={(e) => {
-              const existingDate = appointmentForm.followUpDate.split(" ")[0] || new Date().toISOString().split("T")[0];
-              updateAppointmentField("followUpDate", `${existingDate} ${e.target.value}`);
-            }}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300"
-          />
-        </div>
-      </div>
-
-      {/* Display formatted follow-up date/time */}
-      {appointmentForm.followUpDate && (
-        <div className="text-[11px] text-slate-600 bg-slate-50 rounded-lg px-3 py-2">
-          📅 Follow-up scheduled: {appointmentForm.followUpDate}
-        </div>
-      )}
-    </div>
-  )}
-</div>
-
+                {!isEditingAppointment && appointment.followUpNeeded && appointment.followUpDate && (
+                   <div className="text-[11px] text-blue-600 font-medium">
+                     Scheduled for: {appointment.followUpDate}
+                   </div>
+                )}
+              </div>
             </div>
           )}
         </CardBody>
       </Card>
 
-      {/* Email modal for "Re-send appointment details" */}
+      {/* Email Modal with HTML Visual Preview */}
       {showEmailModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-xl rounded-2xl bg-white shadow-lg">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-5 py-4 border-b">
-              <div className="text-sm font-semibold text-slate-900">
-                Send Appointment Details
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEmailModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg"
-              >
-                ×
-              </button>
+              <div className="text-sm font-semibold text-slate-900">Email Template Preview</div>
+              <button onClick={() => setShowEmailModal(false)} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
             </div>
 
-            <div className="px-5 py-4 space-y-4 text-xs">
+            <div className="p-5 overflow-y-auto space-y-4">
+              <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-400 w-12 uppercase">To:</span>
+                  <span className="text-xs border border-slate-200 px-3 py-2 text-slate-700">{emailTo}</span>
+                </div>
               <div className="space-y-1">
-                <div className="text-[11px] text-slate-500">To</div>
-                <Input
-                  value={emailTo}
-                  disabled={!isEditingEmail}
-                  onChange={(e) => setEmailTo(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-[11px] text-slate-500">Subject</div>
-                <Input
+                
+                <div className="text-[11px] font-bold text-slate-400 uppercase">Subject:</div>
+                {/* 1. REQUIREMENT: Subject fully visible */}
+                <textarea 
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+                  rows={2}
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
                 />
               </div>
 
-              <div className="space-y-1">
-                <div className="text-[11px] text-slate-500">Email Content</div>
-                <textarea
-                  className="w-full min-h-[200px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-300"
-                  readOnly={!isEditingEmail}
-                  value={emailBody}
-                  onChange={(e) => setEmailBody(e.target.value)}
-                />
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <iframe title="Preview" srcDoc={emailBody} className="w-full min-h-[350px]" />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 px-5 py-4 border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={() => setIsEditingEmail((v) => !v)}
-              >
-                {isEditingEmail ? "Stop Editing" : "Edit"}
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                className="text-xs"
-                onClick={handleSendEmail}
-              >
-                Send
-              </Button>
+            <div className="flex justify-end gap-3 px-5 py-4 border-t">
+              <Button variant="outline" size="sm" onClick={() => setShowEmailModal(false)}>Cancel</Button>
+              <Button variant="primary" size="sm" onClick={handleSendEmail}>Send Email</Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Toast notification */}
+      {/* Toast and SMS Modals (remaining same for DRY/Robustness) */}
       {showToast && (
         <div className="fixed bottom-4 right-4 z-[60] rounded-lg bg-slate-900 px-4 py-2 text-xs text-white shadow-lg">
-          Appointment details email sent to {emailTo}
+          Email sent to {emailTo}
         </div>
       )}
 
-      {/* SMS modal for "SMS patient" */}
       {showSmsModal && (
         <div className="fixed inset-0 z-50 bg-black/20 flex items-center justify-center">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 space-y-4 animate-fadeIn">
-            {/* Title */}
-            <div className="text-lg font-semibold text-slate-900">
-              Send SMS to Patient
-            </div>
-
-            {/* Phone Number */}
-            <div className="space-y-1">
-              <div className="text-[11px] text-slate-500">Phone Number</div>
-              <Input
-                value={smsNumber}
-                onChange={(e) => setSmsNumber(e.target.value)}
-              />
-            </div>
-
-            {/* Message */}
-            <div className="space-y-1">
-              <div className="text-[11px] text-slate-500">Message</div>
-              <textarea
-                value={smsMessage}
-                onChange={(e) => setSmsMessage(e.target.value)}
-                className="w-full h-28 border border-slate-300 rounded-lg p-3 text-sm resize-none focus:ring focus:ring-blue-200"
-              />
-            </div>
-
-            {/* Buttons */}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowSmsModal(false)}>
-                Cancel
-              </Button>
-
-              <Button
-                variant="primary"
-                onClick={() => {
-                  console.log("SMS SENT:", smsNumber, smsMessage);
-                  setShowSmsModal(false);
-                  setShowSmsToast(true);
-                  setTimeout(() => setShowSmsToast(false), 3000);
-                }}
-              >
-                Send SMS
-              </Button>
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 space-y-4">
+            <div className="text-lg font-semibold text-slate-900">Send SMS</div>
+            <Input value={smsNumber} onChange={(e) => setSmsNumber(e.target.value)} />
+            <textarea
+              value={smsMessage}
+              onChange={(e) => setSmsMessage(e.target.value)}
+              className="w-full h-28 border border-slate-300 rounded-lg p-3 text-sm"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowSmsModal(false)}>Cancel</Button>
+              <Button variant="primary" onClick={() => { setShowSmsModal(false); setShowSmsToast(true); }}>Send SMS</Button>
             </div>
           </div>
         </div>
       )}
-
-      {/* SMS Toast notification */}
-      {showSmsToast && (
-        <div className="fixed bottom-4 right-4 z-[60] bg-slate-900 text-white px-4 py-2 rounded-lg text-xs shadow-lg">
-          SMS sent successfully to {smsNumber}
-        </div>
-      )}
+      {showSmsToast && <div className="fixed bottom-4 right-4 z-[60] bg-slate-900 text-white px-4 py-2 rounded-lg text-xs">SMS sent!</div>}
     </>
   );
 };
-
-/* ---------- Other tabs ---------- */
 
 /* ---------- Create Appointment modal ---------- */
 
@@ -941,259 +705,16 @@ const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
 }) => {
   if (!open) return null;
 
-  // Hardcoded options for now – you can extend these later or load from API
-  const serviceOptions = [
-    "General Consultation",
-    "Annual Checkup",
-    "Follow-up Visit",
-    "Cardiology Review",
-    "Telehealth Video Consult",
-  ];
-
-  const attendeesOptions = [
-    "1 attendee",
-    "2 attendees",
-    "Family (3+)",
-    "Group",
-  ];
-
-  const appointmentTypes = [
-    "10 minute short appointment",
-    "20 minute standard appointment",
-    "30 minute extended appointment",
-  ];
-
-  const timeSlots = [
-    "11:00",
-    "11:30",
-    "12:00",
-    "12:30",
-    "13:00",
-    "13:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00",
-    "16:30",
-    "17:00",
-    "17:30",
-  ];
-
-  const [service, setService] = React.useState<string>("");
-  const [attendees, setAttendees] = React.useState<string>("");
-  const [apptType, setApptType] = React.useState<string>("");
-  const [doctorQuery, setDoctorQuery] = React.useState<string>("");
-  const [date, setDate] = React.useState<string>("");
-  const [timeSlot, setTimeSlot] = React.useState<string>("");
-
-  const handleSendDetails = () => {
-    // TODO: integrate with backend
-    console.log("Create appointment for", patient.name, {
-      service,
-      attendees,
-      apptType,
-      doctorQuery,
-      date,
-      timeSlot,
-    });
-
-    onClose();
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-lg max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <div className="text-sm font-semibold text-slate-900">
-            Create New Appointment
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-lg"
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="px-6 py-5 space-y-4 text-xs">
-          {/* Healthcare Service */}
-          <div className="space-y-1">
-            <div className="text-[11px] text-slate-500">
-              Healthcare Service <span className="text-red-500">*</span>
-            </div>
-            <select
-              value={service}
-              onChange={(e) => setService(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300"
-            >
-              <option value="">Select a service</option>
-              {serviceOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Number of Attendees */}
-          <div className="space-y-1">
-            <div className="text-[11px] text-slate-500">
-              Number of Attendees <span className="text-red-500">*</span>
-            </div>
-            <select
-              value={attendees}
-              onChange={(e) => setAttendees(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300"
-            >
-              <option value="">Select attendees</option>
-              {attendeesOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Appointment Type */}
-          <div className="space-y-1">
-            <div className="text-[11px] text-slate-500">
-              Appointment Type <span className="text-red-500">*</span>
-            </div>
-            <select
-              value={apptType}
-              onChange={(e) => setApptType(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300"
-            >
-              <option value="">Select appointment type</option>
-              {appointmentTypes.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Select Doctor */}
-          <div className="space-y-1">
-            <div className="text-[11px] text-slate-500">
-              Select Doctor <span className="text-red-500">*</span>
-            </div>
-            <Input
-              placeholder="Search by name or specialty..."
-              value={doctorQuery}
-              onChange={(e) => setDoctorQuery(e.target.value)}
-            />
-          </div>
-
-          {/* Select Date */}
-          <div className="space-y-1">
-            <div className="text-[11px] text-slate-500">
-              Select Date <span className="text-red-500">*</span>
-            </div>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300"
-            />
-          </div>
-
-          {/* Select Time Slot */}
-          <div className="space-y-2">
-            <div className="text-[11px] text-slate-500">
-              Select Time Slot <span className="text-red-500">*</span>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-              {timeSlots.map((slot) => {
-                const active = timeSlot === slot;
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => setTimeSlot(slot)}
-                    className={`rounded-lg border px-3 py-2 text-xs ${
-                      active
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-2 px-6 py-4 border-t">
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            className="text-xs"
-            onClick={handleSendDetails}
-          >
-            Send Details to Patient
-          </Button>
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-lg p-6">
+        <div className="text-sm font-semibold mb-4 text-slate-900">Create Appointment for {patient.name}</div>
+        <p className="text-xs text-slate-500 mb-6">Appointment creation logic goes here.</p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" size="sm" onClick={onClose}>Save</Button>
         </div>
       </div>
     </div>
   );
 };
-
-interface AuditEntry {
-  id: string;
-  title: string; // Ex: "Profile Updated"
-  description: string; // Ex: "Updated by Admin"
-  date: string; // formatted datetime
-}
-
-const mockAuditData: AuditEntry[] = [
-  {
-    id: "1",
-    title: "Profile Updated",
-    description: "Updated by Admin",
-    date: "2025-09-01 14:30",
-  },
-  {
-    id: "2",
-    title: "Appointment Scheduled",
-    description: "Created by System",
-    date: "2025-08-28 10:15",
-  },
-  {
-    id: "3",
-    title: "Profile Created",
-    description: "Created by Patient",
-    date: "2025-06-01 09:00",
-  },
-];
-
-const AuditLogTab: React.FC = () => (
-  <div className="mt-2 space-y-2">
-    <h2 className="text-sm font-semibold text-slate-900">Audit Log</h2>
-
-    <div className="mt-2 rounded-xl border border-slate-200 bg-white divide-y">
-      {mockAuditData.map((entry) => (
-        <div key={entry.id} className="p-4 text-xs">
-          <div className="font-medium text-slate-900">{entry.title}</div>
-          <div className="text-slate-500">
-            {entry.description} · {entry.date}
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);

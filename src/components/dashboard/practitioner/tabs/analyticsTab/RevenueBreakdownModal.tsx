@@ -5,7 +5,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
   ResponsiveContainer,
 } from "recharts";
 import Button from "@/components/atom/Button/Button";
@@ -13,7 +12,9 @@ import Button from "@/components/atom/Button/Button";
 interface RevenueBreakdownModalProps {
   data: {
     platformFees: number;
-    doctorEarnings: number;
+    consultationFees: number;
+    serviceFees: number;
+    taxes: number;
   };
   onClose: () => void;
 }
@@ -22,20 +23,15 @@ const RevenueBreakdownModal: React.FC<RevenueBreakdownModalProps> = ({
   data,
   onClose,
 }) => {
-  const total = data.platformFees + data.doctorEarnings;
+  const total = data.platformFees + data.consultationFees + data.serviceFees + data.taxes;
 
+  // Requirement 3: 4 distinct colors and data segments
   const chartData = [
-    {
-      name: "Platform Fees",
-      value: data.platformFees,
-      percent: ((data.platformFees / total) * 100).toFixed(1),
-    },
-    {
-      name: "Doctor Earnings",
-      value: data.doctorEarnings,
-      percent: ((data.doctorEarnings / total) * 100).toFixed(1),
-    },
-  ];
+    { name: "Platform Fees", value: data.platformFees, color: "#2DD4BF" }, // Teal
+    { name: "Consultation Fees", value: data.consultationFees, color: "#3B82F6" }, // Blue
+    { name: "Service Fees", value: data.serviceFees, color: "#F59E0B" }, // Amber
+    { name: "Taxes", value: data.taxes, color: "#EF4444" }, // Red
+  ].filter(item => item.value > 0); // Hide 0 value items to prevent chart glitches
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
@@ -47,98 +43,67 @@ const RevenueBreakdownModal: React.FC<RevenueBreakdownModalProps> = ({
         </div>
 
         {/* CHART AREA */}
-        <div className="flex items-center justify-between gap-4">
-
-          {/* LEFT LABEL */}
-          <div className="text-left">
-            <div className="text-2xl font-semibold">
-              {chartData[0].percent}%
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-300">
-              <span className="w-2.5 h-2.5 rounded-full bg-teal-400" />
-              Platform
-            </div>
-          </div>
+        <div className="flex flex-col items-center justify-center gap-6">
 
           {/* DONUT CHART */}
-          <div className="w-[160px] h-[160px]">
+          <div className="w-[200px] h-[200px] relative">
             <ResponsiveContainer>
               <PieChart>
-                <defs>
-                  {/* Platform Fees Gradient */}
-                  <linearGradient id="tealLight" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#5EEAD4" />
-                    <stop offset="100%" stopColor="#14B8A6" />
-                  </linearGradient>
-
-                  {/* Doctor Earnings Gradient */}
-                  <linearGradient id="tealDark" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#2DD4BF" />
-                    <stop offset="100%" stopColor="#0F766E" />
-                  </linearGradient>
-                </defs>
-
                 <Pie
                   data={chartData}
                   dataKey="value"
-                  innerRadius={58}
-                  outerRadius={72}
-                  paddingAngle={3}
+                  innerRadius={65}
+                  outerRadius={85}
+                  paddingAngle={5}
                   startAngle={90}
                   endAngle={-270}
                   animationDuration={800}
-                  animationEasing="ease-out"
                   stroke="none"
                 >
-                  <Cell fill="url(#tealLight)" />
-                  <Cell fill="url(#tealDark)" />
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
                 </Pie>
-                <Tooltip
-                contentStyle={{
-                    backgroundColor: "#111827",
-                    borderRadius: 8,
-                    border: "none",
-                    color: "#fff",
-                    fontSize: 12,
-                }}
-                formatter={(value, name) => {
-                    if (typeof value !== "number") return ["", name];
-                    return [`LKR ${value.toLocaleString()}`, name];
-                }}
-                />
-
               </PieChart>
             </ResponsiveContainer>
-          </div>
-
-          {/* RIGHT LABEL */}
-          <div className="text-right">
-            <div className="text-2xl font-semibold">
-              {chartData[1].percent}%
-            </div>
-            <div className="flex items-center justify-end gap-2 text-sm text-slate-300">
-              <span className="w-2.5 h-2.5 rounded-full bg-teal-700" />
-              Doctors
+            {/* Total display in center of donut */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider">Total Gross</span>
+                <span className="text-lg font-bold">LKR {total.toLocaleString()}</span>
             </div>
           </div>
         </div>
 
-        {/* LEGEND */}
-        <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
+        {/* LEGEND - Requirement 3: 4 items with diff colors */}
+        <div className="mt-8 space-y-3">
           <LegendItem
-            color="bg-teal-400"
+            color="bg-[#2DD4BF]"
             label="Platform Fees"
             value={`LKR ${data.platformFees.toLocaleString()}`}
+            percent={total > 0 ? ((data.platformFees / total) * 100).toFixed(1) : "0"}
           />
           <LegendItem
-            color="bg-teal-700"
-            label="Doctor Earnings"
-            value={`LKR ${data.doctorEarnings.toLocaleString()}`}
+            color="bg-[#3B82F6]"
+            label="Consultation Fees"
+            value={`LKR ${data.consultationFees.toLocaleString()}`}
+            percent={total > 0 ? ((data.consultationFees / total) * 100).toFixed(1) : "0"}
+          />
+          <LegendItem
+            color="bg-[#F59E0B]"
+            label="Service Fees"
+            value={`LKR ${data.serviceFees.toLocaleString()}`}
+            percent={total > 0 ? ((data.serviceFees / total) * 100).toFixed(1) : "0"}
+          />
+          <LegendItem
+            color="bg-[#EF4444]"
+            label="Taxes"
+            value={`LKR ${data.taxes.toLocaleString()}`}
+            percent={total > 0 ? ((data.taxes / total) * 100).toFixed(1) : "0"}
           />
         </div>
 
         {/* ACTION */}
-        <Button className="mt-6 w-full" onClick={onClose}>
+        <Button className="mt-8 w-full bg-blue-600 hover:bg-blue-700 border-none" onClick={onClose}>
           Close
         </Button>
       </div>
@@ -146,26 +111,29 @@ const RevenueBreakdownModal: React.FC<RevenueBreakdownModalProps> = ({
   );
 };
 
-export default RevenueBreakdownModal;
-
 /* -------------------------------------------------------------------------- */
-/*                              LEGEND ITEM                                   */
+/* LEGEND ITEM                                   */
 /* -------------------------------------------------------------------------- */
 
 const LegendItem = ({
   color,
   label,
   value,
+  percent,
 }: {
   color: string;
   label: string;
   value: string;
+  percent: string;
 }) => (
-  <div className="flex items-center justify-between">
-    <div className="flex items-center gap-2">
+  <div className="flex items-center justify-between text-sm">
+    <div className="flex items-center gap-3">
       <span className={`w-3 h-3 rounded-full ${color}`} />
-      <span className="text-slate-300">{label}</span>
+      <span className="text-slate-300 w-32">{label}</span>
+      <span className="text-slate-500 text-xs">{percent}%</span>
     </div>
-    <span className="font-medium">{value}</span>
+    <span className="font-semibold">{value}</span>
   </div>
 );
+
+export default RevenueBreakdownModal;

@@ -1,18 +1,25 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { DateTime } from "luxon";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
-import { X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { X } from "lucide-react";
+import GenericTable, { Column } from "./GenericTable";
+import { start } from "repl";
 
 type CancellationItem = {
   id: string;
-  cancellationDate: string;
+  // cancellationDate: string;
   appointmentDate: string;
+  Time?: string;
   patientName: string;
   email: string;
+  paymentStatus: string;
+  appointmentType: string;
   doctor: string;
+  docEmail: string;
+  notes:string;
   transactionId: string;
   reason: string;
   refundEligible: boolean;
@@ -20,19 +27,26 @@ type CancellationItem = {
 };
 
 const CancellationsTab: React.FC = () => {
-  const [fromDate, setFromDate] = useState(DateTime.now().startOf("month").toISODate() || "");
-  const [toDate, setToDate] = useState(DateTime.now().endOf("month").toISODate() || "");
-  
+  const [fromDate, setFromDate] = useState(
+    DateTime.now().startOf("month").toISODate() || ""
+  );
+  const [toDate, setToDate] = useState(
+    DateTime.now().endOf("month").toISODate() || ""
+  );
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const perPage = 10;
+  const [totalResults, setTotalResults] = useState(0);
+  const [perPage, setPerPage] = useState(10);
 
   const [data, setData] = useState<CancellationItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<CancellationItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<CancellationItem | null>(
+    null
+  );
 
-  const fetchCancellations = async () => {
+  const fetchCancellations = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(
@@ -45,121 +59,152 @@ const CancellationsTab: React.FC = () => {
           id: item.id,
           cancellationDate: item.appointment_date,
           appointmentDate: item.appointment_date,
-          patientName: item.patient.name,
-          email: item.patient.email,
-          doctor: item.practitioner.name,
+          // FIX: Added optional chaining to handle null patients
+          patientName: item.patient?.name || "N/A",
+          email: item.patient?.email || "No email provided",
+          doctor: item.practitioner?.name || "Unknown Doctor",
+          docEmail: item.practitioner?.email || "No email provided",
+          Time: item.start_time + " - " + item.end_time,
           transactionId: item.id.split("-")[0].toUpperCase(),
+          paymentStatus: item.payment_status || "unknown",
+          appointmentType: item.appointment_type || "N/A",
           reason: item.cancellation_reason || "No reason provided",
           refundEligible: item.payment_status === "paid",
-          status: "Cancelled",
+          status:item.status,
+          notes :item.notes || "No notes provided",
         }));
         setData(mappedData);
         setTotalPages(json.meta.total_pages || 1);
+        setTotalResults(json.meta.total || 0);
       }
     } catch (error) {
       console.error("Error fetching cancellations:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [fromDate, toDate, currentPage, perPage]);
 
   useEffect(() => {
     fetchCancellations();
-  }, [fromDate, toDate, currentPage]);
+  }, [fetchCancellations]);
+
+  const columns: Column<CancellationItem>[] = [
+    {
+      header: "Appointment Date & Time",
+      render: (item) => (
+        <div>
+          <div className="font-medium text-slate-700">
+            {item.appointmentDate}
+          </div>
+          <div className="text-xs text-slate-500">
+            {item.Time} 
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: "Patient",
+      render: (item) => (
+        <div>
+          <div className="font-medium text-slate-700">{item.patientName}</div>
+          <div className="text-xs text-slate-500">{item.email}</div>
+        </div>
+      ),
+    },
+    {
+      header: "Doctor",
+      render: (item) => (
+        <div>
+          <div className="font-medium text-slate-700">{item.doctor}</div>
+          <div className="text-xs text-slate-500">{item.docEmail}</div>
+        </div>
+      ),
+    },
+    {
+      header: "Appointment Type",
+      render: (item) => item.appointmentType,
+    },
+     {
+      header: "Cancellation Reason",
+      render: (item) => item.reason,
+    },
+    {
+       header: "Appointment reason",
+       render: (item) => item.notes,
+     },
+    {
+      header: "Status",
+      render: (item) => (
+        <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase">
+          {item.status}
+        </span>
+      ),
+    },
+   {
+  header: "Payment Status",
+  render: (item) => {
+    const isPaid = item.paymentStatus?.toLowerCase() === "paid";
+    return (
+      <span
+        className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
+          isPaid 
+            ? "bg-green-100 text-green-700" 
+            : "bg-red-100 text-red-700"
+        }`}
+      >
+        {item.paymentStatus || "N/A"}
+      </span>
+    );
+  },
+},
+  ];
 
   return (
     <div className="space-y-6">
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Input type="date" label="From Date" value={fromDate} onChange={(e) => {setFromDate(e.target.value); setCurrentPage(1);}} />
-          <Input type="date" label="To Date" value={toDate} onChange={(e) => {setToDate(e.target.value); setCurrentPage(1);}} />
+          <Input
+            type="date"
+            label="From Date"
+            value={fromDate}
+            onChange={(e) => {
+              setFromDate(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          <Input
+            type="date"
+            label="To Date"
+            value={toDate}
+            onChange={(e) => {
+              setToDate(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600 font-medium border-b">
-              <tr>
-                <th className="px-4 py-3">Cancellation Date</th>
-                <th className="px-4 py-3">Patient</th>
-                <th className="px-4 py-3">Doctor</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr><td colSpan={5} className="text-center py-10"><Loader2 className="animate-spin inline mr-2 text-blue-600" /></td></tr>
-              ) : data.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-10 text-slate-500">No records found.</td></tr>
-              ) : (
-                data.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">{item.cancellationDate}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-slate-700">{item.patientName}</div>
-                      <div className="text-xs text-slate-500">{item.email}</div>
-                    </td>
-                    <td className="px-4 py-3">{item.doctor}</td>
-                    <td className="px-4 py-3">
-                      <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase">{item.status}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button size="sm" onClick={() => setSelectedItem(item)}>View</Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <GenericTable
+        columns={columns}
+        data={data}
+        loading={loading}
+        minWidth="800px"
+        pagination={{
+          currentPage,
+          totalPages,
+          totalResults,
+          perPage,
+          onPageChange: (page) => setCurrentPage(page),
+          onLimitChange: (limit) => {
+            setPerPage(limit);
+            setCurrentPage(1);
+          },
+        }}
+      />
 
-        {/* PAGINATION FOOTER */}
-        <div className="px-4 py-3 bg-slate-50 border-t flex items-center justify-between">
-          <div className="text-xs text-slate-500">
-            Page {currentPage} of {totalPages}
-          </div>
-          <div className="flex gap-2">
-            <button
-              disabled={currentPage === 1 || loading}
-              onClick={() => setCurrentPage(prev => prev - 1)}
-              className="p-1 rounded border bg-white disabled:opacity-50"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              disabled={currentPage === totalPages || loading}
-              onClick={() => setCurrentPage(prev => prev + 1)}
-              className="p-1 rounded border bg-white disabled:opacity-50"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {selectedItem && <DetailModal data={selectedItem} onClose={() => setSelectedItem(null)} />}
     </div>
   );
 };
 
-const DetailModal = ({ data, onClose }: { data: CancellationItem; onClose: () => void }) => (
-  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl w-full max-w-lg p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-bold">Details</h3>
-        <button onClick={onClose}><X size={20} /></button>
-      </div>
-      <div className="space-y-3 text-sm">
-        <p><strong>Patient:</strong> {data.patientName}</p>
-        <p><strong>Doctor:</strong> {data.doctor}</p>
-        <p><strong>Reason:</strong> {data.reason}</p>
-        <p><strong>Refund Eligible:</strong> {data.refundEligible ? "Yes" : "No"}</p>
-      </div>
-      <Button className="mt-6 w-full" onClick={onClose}>Close</Button>
-    </div>
-  </div>
-);
 
 export default CancellationsTab;

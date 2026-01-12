@@ -31,100 +31,6 @@ const menuItems: DashboardMenuItem[] = [
   { id: "settings", label: "Settings" },
 ];
 
-const MOCK_PATIENTS: Patient[] = [
-  {
-    id: "1",
-    patientId: "PT-001",
-    name: "John Doe",
-    email: "john.doe@email.com",
-    phone: "+1 234 567 8900",
-    age: 40,
-    gender: "Male",
-    dob: "15/03/1985",
-    allergies: "Penicillin, Peanuts",
-    lastConsultation: "Oct 18, 2025",
-    consentGiven: true,
-    addressLine1: "123 Main Street",
-    city: "Los Angeles",
-    country: "United States",
-  },
-  {
-    id: "2",
-    patientId: "PT-002",
-    name: "Jane Smith",
-    email: "jane.smith@email.com",
-    phone: "+1 111 222 3333",
-    age: 38,
-    gender: "Female",
-    dob: "20/07/1987",
-    lastConsultation: "Oct 10, 2025",
-    consentGiven: false,
-    addressLine1: "456 Second Ave",
-    city: "New York",
-    country: "United States",
-  },
-];
-
-const MOCK_APPOINTMENTS: Appointment[] = [
-  {
-    id: "m1",
-    category: "upcoming",
-    date: "20/01/2025",
-    time: "09:00 AM",
-    doctorName: "Dr. Kumari Silva",
-    reason: "General Health Checkup",
-    status: "confirmed",
-    appointmentType: "Short (10 min)",
-    telehealthConsent: true,
-    termsAccepted: true,
-    mainConcern: "Headaches during work",
-    goal: "Relief and guidance",
-    durationOfConcern: "2 weeks",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-  {
-    id: "m2",
-    category: "upcoming",
-    date: "20/01/2025",
-    time: "11:30 AM",
-    doctorName: "Dr. Kumari Silva",
-    reason: "Follow-up Visit",
-    status: "confirmed",
-    appointmentType: "Long (20 min)",
-    telehealthConsent: true,
-    termsAccepted: true,
-    mainConcern: "",
-    goal: "",
-    durationOfConcern: "",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-  {
-    id: "m3",
-    category: "upcoming",
-    date: "21/01/2025",
-    time: "02:00 PM",
-    doctorName: "Dr. Kumari Silva",
-    reason: "Dermatology Consultation",
-    status: "confirmed",
-    appointmentType: "Short (10 min)",
-    telehealthConsent: true,
-    termsAccepted: true,
-    mainConcern: "",
-    goal: "",
-    durationOfConcern: "",
-    documents: [],
-    clinicianNotes: "",
-    prescriptions: "",
-    followUpNeeded: false,
-  },
-];
-
 /* ------------ Main dashboard component ------------ */
 
 const PractitionerDashboard: React.FC = () => {
@@ -169,25 +75,33 @@ const PractitionerDashboard: React.FC = () => {
 
   const effectiveProfileName = profileName || "Clinician";
 
+  // Define the menu as a variable to keep it DRY (used in desktop sidebar and mobile drawer)
+  const menuContent = (
+    <DashboardMenuCard
+      items={menuItems}
+      activeId={activeMenu}
+      onChange={setActiveMenu}
+    />
+  );
+
   return (
     <DashboardShell
       title="Clinician Dashboard"
       subtitle="Manage patients and appointments"
       profileName={effectiveProfileName}
       profileRole="Clinician"
+      sidebar={menuContent} // This enables the mobile hamburger menu functionality
     >
-      <div className="grid grid-cols-12 gap-6">
-        {/* LEFT MENU CARD */}
-        <div className="col-span-3 max-w-xs">
-          <DashboardMenuCard
-            items={menuItems}
-            activeId={activeMenu}
-            onChange={setActiveMenu}
-          />
+      {/* Changed from grid to flex for better responsiveness */}
+      <div className="flex flex-col md:flex-row gap-6">
+        
+        {/* LEFT MENU CARD - Hidden on mobile, width fixed on desktop */}
+        <div className="hidden md:block w-full md:w-64 shrink-0">
+          {menuContent}
         </div>
 
-        {/* RIGHT SIDE */}
-        <div className="col-span-9">
+        {/* MAIN CONTENT AREA - Full width on mobile */}
+        <div className="flex-1 min-w-0">
           {activeMenu === "home" && (
             <HomeTab clinicianName={effectiveProfileName} />
           )}
