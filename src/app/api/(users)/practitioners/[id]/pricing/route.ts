@@ -29,6 +29,37 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     if (error) throw error;
     if (!data) return NextResponse.json({ error: "Practitioner not found." }, { status: 404 });
 
+    const fees = data.fees ?? {};
+    const configuredTypeIds = Object.keys(fees);
+
+    const { data: allTypes, error: typeError } = await supabaseAdmin
+      .from("appointment_type")
+      .select(`
+        id,
+        name,
+        base_fee,
+        platform_fee,
+        duration_mins,
+        max_attendee,
+        extra_fee_per_attendee
+      `)
+      .eq("is_active", true);
+
+    if (typeError) throw typeError;
+
+    const availablePricingTypes = (allTypes ?? [])
+      .filter((t) => !configuredTypeIds.includes(t.id))
+      .map((t) => ({
+        appointment_type_id: t.id,
+        name: t.name,
+        base_fee: t.base_fee,
+        platform_fee: t.platform_fee,
+        duration_mins: t.duration_mins,
+        max_attendee: t.max_attendee,
+        extra_fee_per_attendee: t.extra_fee_per_attendee,
+      }));
+
+
     const cnx = getAuditContext(request, user);
 
     await auditLog({
@@ -47,7 +78,8 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
 
     return NextResponse.json({
       practitioner_id: data.id,
-      fees: data.fees ?? {}
+      fees: data.fees ?? {},
+      available_pricing_types: availablePricingTypes,
     });
   } catch (err: any) {
     console.error("GET /pricing error:", err);
@@ -78,6 +110,22 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     const { fees, available_services } = body ?? {};
     if (fees === undefined && available_services === undefined) {
       return NextResponse.json({ error: "Nothing to update. Provide at least one fee field." }, { status: 400 });
+    }
+
+    // ------------------------------------
+    // VALIDATION: services must have fees
+    // ------------------------------------
+    if (available_services && fees) {
+      for (const serviceId of available_services) {
+        if (!fees[serviceId]) {
+          return NextResponse.json(
+            {
+              error: `Missing fee details for service ${serviceId}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Validate

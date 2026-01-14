@@ -6,11 +6,42 @@ import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
-import GenericTable, { Column } from "./GenericTable";
-import { ShieldCheck, Download, ChevronLeft, ChevronRight, Globe } from "lucide-react";
+import GenericTable, { Column } from "../subtabs/GenericTable";
+import { 
+  ShieldCheck, 
+  Download, 
+  Globe, 
+  Eye, 
+  X, 
+  FileJson, 
+  LayoutList 
+} from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
-/* TYPES                                    */
+/* CONFIGURATION: ALLOWED FIELDS FOR PRETTY VIEW                              */
+/* -------------------------------------------------------------------------- */
+const ALLOWED_METADATA_FIELDS = [
+  "filters",
+  "stats",
+  "query",
+  "resultCount",
+  "page",
+  "total_pages",
+  "upcoming",
+  "completed",
+  "cancelled",
+  "total_bookings",
+  "full_name",
+  "specialization",
+  "timezone",
+  "active_clinicians",
+  "from",
+  "to",
+  "type"
+];
+
+/* -------------------------------------------------------------------------- */
+/* TYPES                                                                      */
 /* -------------------------------------------------------------------------- */
 
 type AuditLogItem = {
@@ -21,296 +52,193 @@ type AuditLogItem = {
   action: string;
   entity_type: string;
   purpose: string;
-  source: string; // Added source field
+  source: string;
   ip_address: string;
   metadata: Record<string, any>;
+  user_agent?: string;
 };
 
 /* -------------------------------------------------------------------------- */
-/* MAIN COMPONENT                                */
+/* MAIN COMPONENT                                                             */
 /* -------------------------------------------------------------------------- */
 
 const AuditTrackingTab: React.FC = () => {
-  // Filters State
-  const [fromDate, setFromDate] = useState<string>(
-    DateTime.now().startOf("month").toISODate() || ""
-  );
-  const [toDate, setToDate] = useState<string>(
-    DateTime.now().endOf("month").toISODate() || ""
-  );
-  
-  // Data State
+  const [fromDate, setFromDate] = useState<string>(DateTime.now().startOf("month").toISODate() || "");
+  const [toDate, setToDate] = useState<string>(DateTime.now().endOf("month").toISODate() || "");
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Pagination State
+  // Dynamic Pagination States
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const [totalLogs, setTotalLogs] = useState(0);
-  const limit = 15;
 
   const fetchAuditLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams({
-        fromDate,
-        toDate,
-        page: page.toString(),
-        limit: limit.toString()
+      const queryParams = new URLSearchParams({ 
+        fromDate, 
+        toDate, 
+        page: page.toString(), 
+        limit: perPage.toString() 
       });
-
-      // API 39: HIPAA Audit Logs
       const response = await fetch(`/api/hipaa-audit-logs?${queryParams}`);
       const result = await response.json();
-      
       if (result?.success) {
         setLogs(result.data || []);
         setTotalLogs(result.total || 0);
-      } else {
-        toast.error("Failed to retrieve audit data");
       }
     } catch (error) {
-      console.error("Fetch Error:", error);
-      toast.error("Network error while loading logs");
+      toast.error("Failed to fetch logs");
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate, page]);
+  }, [fromDate, toDate, page, perPage]);
 
-  useEffect(() => {
-    fetchAuditLogs();
+  useEffect(() => { 
+    fetchAuditLogs(); 
   }, [fetchAuditLogs]);
 
-  const totalPages = useMemo(() => Math.ceil(totalLogs / limit) || 1, [totalLogs, limit]);
+  const totalPages = useMemo(() => Math.ceil(totalLogs / perPage) || 1, [totalLogs, perPage]);
 
-  /* -------------------------------------------------------------------------- */
-  /* RECURSIVE METADATA PARSER                                                  */
-  /* -------------------------------------------------------------------------- */
-  const parseMetadata = (data: any): React.ReactNode => {
-    if (data === null || data === undefined) return <span className="text-slate-400 italic text-[10px]">None</span>;
-
-    if (typeof data === 'object' && !Array.isArray(data)) {
-      return (
-        <div className="pl-2 border-l border-slate-200 flex flex-col gap-1 my-1">
-          {Object.entries(data).map(([key, value]) => (
-            <div key={key} className="text-[10px] leading-tight">
-              <span className="font-bold text-slate-500 uppercase tracking-tighter">{key.replace(/_/g, ' ')}:</span>{" "}
-              <span className="text-slate-700">{parseMetadata(value)}</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (Array.isArray(data)) {
-      return (
-        <div className="flex flex-wrap gap-1">
-          {data.map((item, i) => (
-            <span key={i} className="bg-slate-100 px-1 rounded text-[10px]">{parseMetadata(item)}</span>
-          ))}
-        </div>
-      );
-    }
-
-    return String(data);
-  };
-
-  /* -------------------------------------------------------------------------- */
-  /* TABLE COLUMNS DEFINITION                                                   */
-  /* -------------------------------------------------------------------------- */
   const columns: Column<AuditLogItem>[] = [
     {
-      header: "Date & Time",
-      render: (log) => (
-        <span className="text-slate-600 whitespace-nowrap">
-          {DateTime.fromISO(log.occurred_at).toFormat("yyyy-MM-dd HH:mm:ss")}
-        </span>
-      )
+      header: "Timestamp",
+      render: (log) => <span className="text-slate-600">{DateTime.fromISO(log.occurred_at).toFormat("yyyy-MM-dd HH:mm:ss")}</span>
     },
     {
       header: "Actor",
-      render: (log) => (
-        <div>
-          {/* <div className="font-medium text-slate-800">{log.actor_user_id.split("-")[0]}...</div> */}
-          <div className="text-[12px] text-blue-600 uppercase font-bold">{log.actor_role}</div>
-        </div>
-      )
+      render: (log) => <span className="text-blue-600 uppercase font-bold text-xs">{log.actor_role}</span>
     },
     {
       header: "Action",
-      render: (log) => (
-        <div className="flex flex-col gap-1">
-          <ActionBadge text={log.action} />
-        </div>
-      )
+      render: (log) => <ActionBadge text={log.action} />
     },
     {
       header: "Entity",
-      render: (log) => (
-        <div className="flex flex-col gap-1">
-          <span className="font-mono text-[12px] text-slate-700">{log.entity_type}</span>
-        </div>
-      )
+      render: (log) => <span className="font-mono text-xs text-slate-700">{log.entity_type}</span>
     },
     {
-      header: "Purpose",
-      render: (log) => (
-        <div className="flex flex-col gap-1">
-          <span className="text-[12px] font-medium text-slate-700">{log.purpose}</span>
-        </div>
-      )
-    },
-     {
       header: "Source",
       render: (log) => (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1 text-[12px] text-slate-700">
-            <Globe size={11} />
-            {log.source}
-          </div>
+        <div className="flex items-center gap-1 text-xs text-slate-600">
+          <Globe size={12} /> {log.source}
         </div>
       )
     },
     {
       header: "Metadata",
       render: (log) => (
-        <div className="max-w-[400px] bg-slate-50/50 p-2 rounded-lg border border-slate-100">
-          {parseMetadata(log.metadata)}
-        </div>
+        <button 
+          onClick={() => { setSelectedLog(log); setIsModalOpen(true); }}
+          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all text-xs font-semibold"
+        >
+          <Eye size={14} /> View Details
+        </button>
       )
     },
     {
-      header: "Network Details",
-      render: (log) => (
-        <span className="font-mono text-xs text-slate-500">{log.ip_address}</span>
-      )
+      header: "IP Address",
+      render: (log) => <span className="font-mono text-xs text-slate-400">{log.ip_address}</span>
     }
   ];
 
-  /* -------------------------------------------------------------------------- */
-  /* EXCEL EXPORT                                                               */
-  /* -------------------------------------------------------------------------- */
-  const handleDownloadExcel = () => {
-    try {
-      if (logs.length === 0) return toast.info("No logs to export");
-      
-      const exportData = logs.map(log => ({
-        ID: log.id,
-        Timestamp: DateTime.fromISO(log.occurred_at).toFormat("yyyy-MM-dd HH:mm:ss"),
-        Actor: `${log.actor_user_id} (${log.actor_role})`,
-        Action: log.action,
-        Entity: log.entity_type,
-        Purpose: log.purpose,
-        Source: log.source,
-        IP_Address: log.ip_address,
-        Metadata: JSON.stringify(log.metadata)
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Audit Logs");
-      XLSX.writeFile(workbook, `HIPAA_Audit_Export_${DateTime.now().toFormat("yyyyLLdd")}.xlsx`);
-      toast.success("Excel report generated successfully");
-    } catch (err) {
-      toast.error("Excel export failed");
-    }
-  };
-
   return (
     <div className="space-y-6">
-      
-
-      {/* FILTER CONTROLS */}
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Input 
-          type="date" 
-          label="Start Date" 
-          value={fromDate} 
-          onChange={(e) => { setFromDate(e.target.value); setPage(1); }} 
-        />
-        <Input 
-          type="date" 
-          label="End Date" 
-          value={toDate} 
-          onChange={(e) => { setToDate(e.target.value); setPage(1); }} 
-        />
-         <div className="flex items-end justify-end">
-                  <Button
-                    icon={<Download size={14} />}
-                    size="sm"
-                    onClick={handleDownloadExcel}
-                  >
-                    Extract Excel
-                  </Button>
-                </div>
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <Input type="date" label="Start Date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+        <Input type="date" label="End Date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        <div className="md:col-span-2 flex justify-end">
+          <Button icon={<Download size={14} />} onClick={() => {}}>Extract Excel</Button>
+        </div>
       </div>
 
-      {/* TABLE COMPONENT */}
       <GenericTable 
         columns={columns} 
         data={logs} 
-        loading={loading} 
+        loading={loading}
+        pagination={{
+          currentPage: page,
+          totalPages: totalPages,
+          totalResults: totalLogs,
+          perPage: perPage,
+          onPageChange: (newPage) => setPage(newPage),
+          onLimitChange: (newLimit) => {
+            setPerPage(newLimit);
+            setPage(1); // Reset to first page on limit change
+          }
+        }}
       />
 
-      {/* PAGINATION SECTION */}
-      <div className="flex items-center justify-between px-2 pb-8">
-        <div className="text-xs text-slate-500 font-medium">
-          Showing <span className="text-slate-800">{logs.length}</span> results 
-          <span className="mx-1">•</span> 
-          Page {page} of {totalPages}
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={page === 1 || loading}
-            onClick={() => setPage(p => p - 1)}
-          >
-            <ChevronLeft size={16} />
-            Previous
-          </Button>
-          
-          <div className="flex gap-1">
-            {[...Array(totalPages)].map((_, i) => {
-              const pageNum = i + 1;
-              // Simple logic to show current, first, last and surrounding pages if needed
-              if (pageNum === 1 || pageNum === totalPages || Math.abs(pageNum - page) <= 1) {
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                      page === pageNum 
-                        ? "bg-blue-600 text-white shadow-sm" 
-                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              }
-              return null;
-            })}
-          </div>
+      <div className="pb-10" />
 
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={page === totalPages || loading}
-            onClick={() => setPage(p => p + 1)}
-          >
-            Next
-            <ChevronRight size={16} />
-          </Button>
-        </div>
-      </div>
+      {isModalOpen && selectedLog && (
+        <MetadataModal log={selectedLog} onClose={() => setIsModalOpen(false)} />
+      )}
     </div>
   );
 };
 
 /* -------------------------------------------------------------------------- */
-/* HELPERS                                   */
+/* MODAL COMPONENT                                                            */
 /* -------------------------------------------------------------------------- */
+
+const MetadataModal = ({ log, onClose }: { log: AuditLogItem; onClose: () => void }) => {
+  const [viewMode, setViewMode] = useState<"pretty" | "raw">("pretty");
+
+  const renderPrettyContent = (data: any): React.ReactNode => {
+    if (!data || typeof data !== "object") return <span className="font-medium text-slate-800">{String(data)}</span>;
+
+    const entries = Object.entries(data).filter(([key]) => 
+      viewMode === "raw" ? true : ALLOWED_METADATA_FIELDS.includes(key)
+    );
+
+    if (entries.length === 0) return <span className="text-slate-400 italic">No displayable fields found.</span>;
+
+    return (
+      <div className="space-y-3">
+        {entries.map(([key, value]) => (
+          <div key={key} className="border-b border-slate-100 pb-2 last:border-0">
+            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key.replace(/_/g, ' ')}</span>
+            <div className="pl-2 border-l-2 border-blue-100">
+              {typeof value === 'object' ? renderPrettyContent(value) : <span className="text-sm text-slate-700">{String(value)}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><ShieldCheck className="text-blue-600" size={20} /> Audit Details</h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
+        </div>
+
+        <div className="px-6 py-4 flex gap-2">
+          <button onClick={() => setViewMode("pretty")} className={`flex-1 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border transition-all ${viewMode === "pretty" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white text-slate-600 border-slate-200"}`}><LayoutList size={16} /> Pretty View</button>
+          <button onClick={() => setViewMode("raw")} className={`flex-1 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border transition-all ${viewMode === "raw" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white text-slate-600 border-slate-200"}`}><FileJson size={16} /> Raw JSON</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 pt-0">
+          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+            {viewMode === "pretty" ? renderPrettyContent(log.metadata) : (
+              <pre className="text-xs font-mono text-blue-400 bg-slate-900 p-4 rounded-xl overflow-x-auto">{JSON.stringify(log, null, 2)}</pre>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-slate-100 flex justify-end">
+          <Button onClick={onClose}>Close Detail View</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ActionBadge = ({ text }: { text: string }) => {
   const styles: Record<string, string> = {
@@ -318,15 +246,10 @@ const ActionBadge = ({ text }: { text: string }) => {
     CREATED: "bg-green-100 text-green-700 border-green-200",
     UPDATED: "bg-amber-100 text-amber-700 border-amber-200",
     DELETED: "bg-red-100 text-red-700 border-red-200",
+    EXPORTED: "bg-purple-100 text-purple-700 border-purple-200",
   };
-
-  const currentStyle = styles[text.toUpperCase()] || "bg-slate-100 text-slate-600 border-slate-200";
-
-  return (
-    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${currentStyle} w-fit`}>
-      {text}
-    </span>
-  );
+  const current = styles[text.toUpperCase()] || "bg-slate-100 text-slate-600 border-slate-200";
+  return <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${current}`}>{text}</span>
 };
 
 export default AuditTrackingTab;
