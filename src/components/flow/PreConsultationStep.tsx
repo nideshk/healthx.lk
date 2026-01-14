@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { 
-  Paperclip, 
-  X, 
-  UserPlus, 
-  CheckCircle2, 
-  ChevronDown, 
-  Users, 
-  MessageSquare, 
+import {
+  Paperclip,
+  X,
+  UserPlus,
+  CheckCircle2,
+  ChevronDown,
+  Users,
+  MessageSquare,
   Target,
   ChevronRight,
   ShieldCheck,
@@ -69,10 +69,6 @@ export default function PreConsultationStep({
       toast.error("Please let us know how you heard about us", { icon: <AlertCircle className="text-red-500" /> });
       return false;
     }
-    if (maxAttendees > 1 && selectedAttendees.length === 0) {
-      toast.error(`Please add at least one attendee (Max ${maxAttendees})`);
-      return false;
-    }
     return true;
   };
 
@@ -112,7 +108,7 @@ export default function PreConsultationStep({
   return (
     <div className="min-h-screen bg-[#FBFDFF] py-12 px-4 md:px-8 pb-32">
       <div className="max-w-4xl mx-auto">
-        
+
         {/* Step Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
           <div>
@@ -163,8 +159,8 @@ export default function PreConsultationStep({
                   value={isCustomReferral ? "Other" : (pre.referral || "")}
                   onChange={(e) => {
                     const val = e.target.value;
-                    updateData({ 
-                      pre_consultation: { ...pre, referral: val === "Other" ? "" : val } 
+                    updateData({
+                      pre_consultation: { ...pre, referral: val === "Other" ? "" : val }
                     });
                   }}
                   className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-teal-500 bg-slate-50/50 appearance-none cursor-pointer outline-none transition-all font-bold text-slate-700"
@@ -218,8 +214,8 @@ export default function PreConsultationStep({
             {maxAttendees > 1 && (
               <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
                 <div className="flex items-center justify-between mb-4">
-                   <label className="text-xs font-black uppercase tracking-widest text-slate-400">Attendees</label>
-                   <span className="px-2 py-0.5 bg-teal-50 text-teal-600 text-[10px] font-black rounded-lg border border-teal-100">MAX {maxAttendees}</span>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400">Attendees</label>
+                  <span className="px-2 py-0.5 bg-teal-50 text-teal-600 text-[10px] font-black rounded-lg border border-teal-100">MAX {maxAttendees}</span>
                 </div>
                 <div className="flex gap-2">
                   <input
@@ -255,7 +251,7 @@ export default function PreConsultationStep({
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <button
             type="button"
-            onClick={()=>prevStep()}
+            onClick={() => prevStep()}
             className="px-8 py-3 rounded-2xl text-sm font-bold text-slate-400 hover:bg-slate-50 transition-all"
           >
             Back
