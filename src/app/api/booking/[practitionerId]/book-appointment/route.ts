@@ -51,17 +51,18 @@ export async function POST(
       appointmentType,
       pre_consultation,
       selectedDoctor,
-      consent
+      consent,
+      selectedAttendees
     } = draftData;
 
     console.log(draftData)
 
-    console.log("data", starts_at , ends_at , appointmentType , selectedDoctor)
+    console.log("data", starts_at, ends_at, appointmentType, selectedDoctor)
     // 3️⃣ Validate
     if (!starts_at || !ends_at || !appointmentType?.id || !selectedDoctor?.id) {
       return NextResponse.json(
         {
-        error: `Draft is incomplete , ${starts_at} ${ends_at} ${appointmentType?.id} ${selectedDoctor?.id}`,
+          error: `Draft is incomplete , ${starts_at} ${ends_at} ${appointmentType?.id} ${selectedDoctor?.id}`,
           missing: {
             starts_at,
             ends_at,
@@ -96,7 +97,9 @@ export async function POST(
     let platformFee!: number;
     let serviceFee: number;
     let tax: number;
+    let additionalAttendeesFee: number;
 
+    additionalAttendeesFee = selectedAttendees?.length * 100 || 0;
     // 1️⃣ Fetch practitioner fees JSON
     const { data: practitionerRow, error: feeErr } = await supabaseClient
       .from("practitioners")
@@ -146,6 +149,8 @@ export async function POST(
       consultationFee = Number(typeRow.base_fee);
       platformFee = Number(typeRow.platform_fee);
     }
+
+    consultationFee = consultationFee + additionalAttendeesFee;
 
     serviceFee = Math.round(consultationFee * 0.05);
     tax = Math.round((consultationFee + serviceFee) * 0.08);
@@ -261,7 +266,7 @@ export async function POST(
         // Do not rethrow: draft cleanup failure should not break a successful booking
       }
 
-      
+
       const cnx = getAuditContext(req, user);
 
       await auditLog({

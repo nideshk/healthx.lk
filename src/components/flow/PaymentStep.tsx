@@ -18,7 +18,8 @@ import {
   Info,
   Lock,
   ChevronLeft,
-  AlertCircle
+  AlertCircle,
+  Users
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
@@ -27,7 +28,7 @@ import { createPortal } from 'react-dom';
 import { syncAppointmentDraft } from '@/lib/syncAppointmentDraft';
 import { useBookingDraftStore } from '@/stores/useBookingDraftStore';
 
-const TEST_MODE = false; // 🔁 turn OFF in production
+const TEST_MODE = false;
 
 interface StepRefHandle {
   validateStep?: () => boolean;
@@ -65,7 +66,6 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     },
     stepRef
   ) => {
-    console.log(bookingData)
     const [paymentDone, setPaymentDone] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
@@ -75,9 +75,29 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
     const appointmentIdRef = useRef<string | null>(null);
     const router = useRouter();
-    console.log(useBookingDraftStore.getState())
+
+    // 💰 PRICING LOGIC
+    const baseFee = bookingData.appointmentType?.fee ?? 1450;
+    const attendeeSurcharge = (bookingData.selectedAttendees?.length || 0) * 100;
+    const consultationFee = baseFee + attendeeSurcharge;
+
+    const serviceFee = Math.round(consultationFee * 0.05);
+    const tax = Math.round((consultationFee + serviceFee) * 0.08);
+    const totalAmount = consultationFee + serviceFee + tax;
+
     useEffect(() => {
       setMounted(true);
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setIsExpired(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
     }, []);
 
     useImperativeHandle(stepRef, () => ({
@@ -90,18 +110,10 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
       }
     }));
 
-    // Pricing
-    const consultationFee = bookingData.appointmentType?.fee ?? 1450;
-    const serviceFee = Math.round(consultationFee * 0.05);
-    const tax = Math.round((consultationFee + serviceFee) * 0.08);
-    const totalAmount = consultationFee + serviceFee + tax;
-
     const handlePostBookingActions = async (appointmentId: string) => {
-      // 🧹 stop any late draft sync & clear local draft
       syncAppointmentDraft.cancel();
       await useBookingDraftStore.getState().reset();
 
-      // upload attachment if exists
       const file = bookingControllerRef.current?.getAttachment?.();
       if (file instanceof File) {
         await uploadAttachmentAfterBooking(file, appointmentId);
@@ -116,27 +128,13 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     };
 
     const handlePayment = async () => {
-      if (isPaymentProcessing || isVerifying) return;
+      if (isPaymentProcessing || isVerifying || isExpired) return;
 
       try {
         setIsPaymentProcessing(true);
-
-        // 🔒 Ensure draft is fully synced before booking
         await syncAppointmentDraft.flush();
 
-        const date = bookingData.starts_at?.split('T')[0];
-        const time = new Date(bookingData.starts_at || '').toLocaleTimeString(
-          'en-GB',
-          { hour: '2-digit', minute: '2-digit' }
-        );  
-
-        console.log({
-          date,
-              time,
-              appointment_type_id: bookingData.appointmentType?.id,
-              attendeeList: bookingData.selectedAttendees
-        })
-
+        // 1. Create Appointment
         const res = await fetch(
           `/api/booking/${bookingData.selectedDoctor?.id}/book-appointment`,
           {
@@ -144,8 +142,8 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               starts_at: bookingData.starts_at,
-              ends_at : bookingData.ends_at,
-              appointment_type : bookingData.appointmentType,
+              ends_at: bookingData.ends_at,
+              appointment_type: bookingData.appointmentType,
               attendeeList: bookingData.selectedAttendees
             })
           }
@@ -163,7 +161,6 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         const appointmentId = data?.appointment?.id;
         appointmentIdRef.current = appointmentId;
 
-        // 🧪 TEST MODE — skip PayHere entirely
         if (TEST_MODE) {
           setTimeout(async () => {
             await handlePostBookingActions(appointmentId);
@@ -174,15 +171,13 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           return;
         }
 
-        // -----------------------------
-        // REAL PAYMENT FLOW (unchanged)
-        // -----------------------------
         if (!window.payhere) {
           toast.error('Payment system not loaded');
           setIsPaymentProcessing(false);
           return;
         }
 
+        // 2. Initialize PayHere
         const payRes = await fetch('/api/payhere', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -204,13 +199,10 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
         window.payhere.onCompleted = async () => {
           setIsVerifying(true);
-
           let attempts = 0;
           const interval = setInterval(async () => {
             attempts++;
-            const r = await fetch(
-              `/api/booking/check-status?appointmentId=${appointmentId}`
-            );
+            const r = await fetch(`/api/booking/check-status?appointmentId=${appointmentId}`);
             const d = await r.json();
 
             if (d.status === 'confirmed') {
@@ -219,10 +211,10 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
               setIsVerifying(false);
               setPaymentDone(true);
               toast.success('Appointment successfully booked!');
-            } else if (attempts >= 5) {
+            } else if (attempts >= 10) {
               clearInterval(interval);
               setIsVerifying(false);
-              toast.error('Payment verification failed.');
+              toast.error('Verification timeout.');
               router.push('/dashboard/appointment');
             }
           }, 3000);
@@ -244,66 +236,42 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     return (
       <div className="min-h-screen py-12 px-4 bg-[#F8FAFC]">
         <div className="max-w-5xl mx-auto">
-          {/* Header */}
           <div className="flex flex-col items-center mb-10 text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wider mb-4 border border-blue-100">
               <Lock size={12} /> Secure Checkout
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-              Review & Pay
-            </h1>
-            <p className="text-slate-500 mt-2">Please double-check your session details before proceeding.</p>
+            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Review & Pay</h1>
           </div>
 
           <div className="grid lg:grid-cols-12 gap-8 items-start">
-            {/* Left Column: Details */}
             <div className="lg:col-span-7 space-y-6">
-              
-              {/* Doctor Card */}
-              <div className="group relative overflow-hidden bg-white rounded-3xl p-6 shadow-sm border border-slate-100 transition-all hover:shadow-md">
+              {/* Doctor Details */}
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                 <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center text-white">
                     <User size={32} />
                   </div>
                   <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-xl font-bold text-slate-900">{bookingData.selectedDoctor?.name || bookingData.selectedDoctor?.full_name}</h3>
-                        <p className="text-blue-600 font-medium text-sm">{bookingData.selectedDoctor?.qualification}</p>
-                      </div>
-                      <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-md uppercase tracking-widest">
-                        Practitioner
-                      </span>
-                    </div>
+                    <h3 className="text-xl font-bold text-slate-900">{bookingData.selectedDoctor?.name || bookingData.selectedDoctor?.full_name}</h3>
+                    <p className="text-blue-600 font-medium text-sm">{bookingData.selectedDoctor?.qualification}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Appointment Detail Grid */}
+              {/* Time Details */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex items-center gap-4">
-                  <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
-                    <Calendar size={24} />
-                  </div>
+                  <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Calendar size={24} /></div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Date & Time</p>
-                    <p className="font-bold text-slate-800">
-                      {bookingData.starts_at ? new Date(bookingData.starts_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {bookingData.starts_at ? new Date(bookingData.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
-                    </p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Date</p>
+                    <p className="font-bold text-slate-800">{bookingData.starts_at ? new Date(bookingData.starts_at).toLocaleDateString() : '—'}</p>
                   </div>
                 </div>
-
                 <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex items-center gap-4">
-                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                    <Clock size={24} />
-                  </div>
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Clock size={24} /></div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Type & Duration</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Type</p>
                     <p className="font-bold text-slate-800">{bookingData.appointmentType?.name}</p>
-                    <p className="text-sm text-slate-500">{bookingData.appointmentType?.duration_mins} Minutes</p>
                   </div>
                 </div>
               </div>
@@ -311,130 +279,85 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
               {/* Attendees */}
               <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold">
-                  <ClipboardList size={20} className="text-blue-600" />
-                  <h3>Booking For</h3>
+                  <Users size={20} className="text-blue-600" />
+                  <h3>Attendees</h3>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                   <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-700">
-                    Primary Patient (You)
-                   </div>
-                   {bookingData.selectedAttendees.map((attendee) => (
-                    <div key={attendee} className="px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl text-sm font-medium text-blue-700 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                      {attendee}
+                  <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium">Primary Patient</div>
+                  {bookingData.selectedAttendees.map((name) => (
+                    <div key={name} className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-700">
+                      + {name}
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Pricing Summary */}
+            {/* Price Summary */}
             <div className="lg:col-span-5">
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-blue-900/5 border border-slate-100 sticky top-24">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-black text-slate-900">Summary</h3>
-                  <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-                    <ShieldCheck size={20} />
-                  </div>
-                </div>
+              <div className="bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100 sticky top-24">
+                <h3 className="text-xl font-black text-slate-900 mb-6">Summary</h3>
 
                 <div className="space-y-4">
                   <div className="flex justify-between text-slate-500 text-sm">
-                    <span>Consultation Fee</span>
-                    <span className="font-bold text-slate-900">LKR {(consultationFee+950).toLocaleString()}</span>
+                    <span>Base Consultation Fee</span>
+                    <span className="font-bold text-slate-900">LKR {baseFee.toLocaleString()}</span>
                   </div>
+
+                  {attendeeSurcharge > 0 && (
+                    <div className="flex justify-between text-slate-500 text-sm">
+                      <span>Additional Attendees ({bookingData.selectedAttendees.length})</span>
+                      <span className="font-bold text-slate-900">LKR {attendeeSurcharge.toLocaleString()}</span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between text-slate-500 text-sm">
                     <span>Platform Service Fee</span>
                     <span className="font-bold text-slate-900">LKR {serviceFee.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500 text-sm pb-4 border-b border-slate-50">
-                    <span>Estimated Tax (VAT)</span>
+
+                  <div className="flex justify-between text-slate-500 text-sm pb-4 border-b">
+                    <span>VAT (8%)</span>
                     <span className="font-bold text-slate-900">LKR {tax.toLocaleString()}</span>
                   </div>
 
                   <div className="flex justify-between items-center pt-2">
                     <span className="text-slate-900 font-bold">Total Payable</span>
-                    <span className="text-3xl font-black text-blue-600 tracking-tight">
-                      LKR {(totalAmount+950).toLocaleString()}
-                    </span>
+                    <span className="text-3xl font-black text-blue-600">LKR {totalAmount.toLocaleString()}</span>
                   </div>
                 </div>
 
                 <div className="mt-8 space-y-3">
                   <button
                     onClick={handlePayment}
-                    disabled={isPaymentProcessing}
-                    className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl font-bold shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:bg-slate-300"
+                    disabled={isPaymentProcessing || isExpired}
+                    className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-3 disabled:bg-slate-300"
                   >
-                    {isPaymentProcessing ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <>Confirm & Pay <ChevronLeft size={18} className="rotate-180" /></>
-                    )}
+                    {isPaymentProcessing ? <Loader2 className="animate-spin" /> : "Confirm & Pay"}
                   </button>
-                  <button
-                    onClick={() => prevStep()}
-                    disabled={isPaymentProcessing}
-                    className="w-full py-3 bg-white text-slate-500 text-sm font-bold rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all"
-                  >
-                    Modify Session Details
-                  </button>
-                </div>
-
-                <div className="mt-6 p-4 bg-blue-50/50 rounded-2xl flex gap-3">
-                  <Info className="w-5 h-5 text-blue-500 shrink-0" />
-                  <p className="text-[11px] text-blue-700 leading-relaxed">
-                    By clicking pay, you agree to our <strong>Terms of Service</strong>. You will be redirected to PayHere to complete the transaction securely.
-                  </p>
+                  <button onClick={prevStep} className="w-full py-3 text-slate-500 text-sm font-bold">Back</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Portals */}
         {mounted && createPortal(
           <div className="relative z-[10001]">
-            {/* Countdown Banner */}
-            {(isPaymentProcessing || isExpired) && !paymentDone && (
-              <div className={`fixed top-0 inset-x-0 z-[10001] py-3 text-white font-bold transition-all duration-500 ${isExpired || timeLeft < 60 ? "bg-red-600" : "bg-slate-900"}`}>
-                <div className="max-w-5xl mx-auto px-6 flex justify-between items-center">
-                   <div className="flex items-center gap-2 text-xs md:text-sm">
-                    <Clock size={16} className={isExpired ? "animate-pulse" : ""} />
-                    <span>{isExpired ? "SESSION EXPIRED" : "SECURE CHECKOUT WINDOW"}</span>
-                   </div>
-                   <span className="font-mono text-xl">{isExpired ? "00:00" : formatTime(timeLeft)}</span>
+            {(isPaymentProcessing || isExpired) && (
+              <div className={`fixed top-0 inset-x-0 py-3 text-white font-bold text-center ${isExpired ? "bg-red-600" : "bg-slate-900"}`}>
+                {isExpired ? "SESSION EXPIRED" : `CHECKOUT WINDOW: ${formatTime(timeLeft)}`}
+              </div>
+            )}
+            {isVerifying && (
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center">
+                <div className="bg-white p-10 rounded-3xl text-center">
+                  <Loader2 className="w-12 h-12 animate-spin mx-auto text-blue-600 mb-4" />
+                  <h3 className="text-xl font-bold">Verifying Payment...</h3>
                 </div>
               </div>
             )}
-
-            {/* Status Overlays */}
-            {(isVerifying || isExpired) && (
-              <div className="fixed inset-0 z-[20000] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6">
-                <div className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full text-center shadow-2xl border border-white/20">
-                  <div className="flex justify-center mb-6">
-                    {isExpired ? (
-                      <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
-                        <AlertCircle size={40} />
-                      </div>
-                    ) : (
-                      <div className="relative w-20 h-20">
-                        <div className="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    )}
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-900 mb-2">
-                    {isExpired ? "Time's Up" : "Verifying..."}
-                  </h3>
-                  <p className="text-slate-500 text-sm leading-relaxed mb-2">
-                    {isExpired ? "Your 10-minute booking window has expired. Returning to dashboard." : "Finalizing your appointment with the provider."}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>,
-          document.body
+          </div>, document.body
         )}
       </div>
     );
