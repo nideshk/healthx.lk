@@ -28,7 +28,7 @@ import { createPortal } from 'react-dom';
 import { syncAppointmentDraft } from '@/lib/syncAppointmentDraft';
 import { useBookingDraftStore } from '@/stores/useBookingDraftStore';
 
-const TEST_MODE = false;
+const TEST_MODE = true;
 
 interface StepRefHandle {
   validateStep?: () => boolean;
