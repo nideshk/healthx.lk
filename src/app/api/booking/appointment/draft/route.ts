@@ -3,50 +3,67 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextResponse } from "next/server";
 
 export async function PATCH(req: Request) {
-  const {user} = await requireUser();
-  const { data } = await req.json();
+  const { user } = await requireUser();
+  if (!user?.patient_id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  const { data: existing } = await supabaseAdmin
+  const body = await req.json();
+  const incoming = body?.data;
+
+  // 🔒 Validate payload
+  if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
+    return NextResponse.json(
+      { error: "Invalid draft payload" },
+      { status: 400 }
+    );
+  }
+
+  // 🔥 HARD GUARD: never allow nested `data`
+  if ("data" in incoming) {
+    delete incoming.data;
+  }
+
+  // Fetch existing draft (if any)
+  const { data: existing, error: fetchError } = await supabaseAdmin
     .from("appointment_draft")
-    .select("*")
-    .eq("patient_id", user?.patient_id)
+    .select("id, data, status")
+    .eq("patient_id", user.patient_id)
     .single();
 
-  if (!existing) {
-    const { data: created } = await supabaseAdmin
-      .from("appointment_draft")
-      .insert({
-        patient_id: user?.patient_id,
-        data,
-        status: "DRAFT",
-      })
-      .select()
-      .single();
-
-    return NextResponse.json(created);
-  }
-
-  // locked or completed → ignore
-  if (existing.status !== "DRAFT") {
+  // If exists but locked → return as-is
+  if (existing && existing.status !== "DRAFT") {
     return NextResponse.json(existing);
-  
   }
 
+  // ✅ Correct JSON merge (JSON → JSON only)
   const mergedData = {
-    ...existing,
-    data
-  }
+    ...(existing?.data ?? {}),
+    ...incoming,
+  };
 
-  console.log(mergedData)
-
-  const { data: updated } = await supabaseAdmin
+  // ✅ UPSERT (safe with unique(patient_id))
+  const { data: saved, error } = await supabaseAdmin
     .from("appointment_draft")
-    .update({
-      mergedData,
-    })
-    .eq("patient_id", user?.patient_id)
+    .upsert(
+      {
+        patient_id: user.patient_id,
+        data: mergedData,
+        status: "DRAFT",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "patient_id" }
+    )
     .select()
     .single();
 
-  return NextResponse.json(updated);
+  if (error) {
+    console.error("Draft save failed:", error);
+    return NextResponse.json(
+      { error: "Failed to save draft" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json(saved);
 }
