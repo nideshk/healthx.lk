@@ -9,6 +9,7 @@ import PatientDetails from "./PatientDetails";
 import { Patient } from "@/types/Dashboard";
 import { toast } from "react-toastify";
 import { Trash2 } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 export interface AdminAppointment {
   id: string;
@@ -82,7 +83,10 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
         ? `/api/patient?page=1&limit=20&q=${encodeURIComponent(search)}`
         : `/api/patient?page=1&limit=20`;
 
-      const res = await fetch(url, { credentials: "include" });
+      const res = await authFetch(url, { credentials: "include" });
+      if (!res.ok) {
+          throw new Error(`Failed to fetch Patients: ${res.status}`);
+      }
       const data = await res.json();
 
       if (data.success) {
@@ -101,7 +105,7 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
     const fetchAppointments = async () => {
       try {
         setLoadingAppointments(true);
-        const res = await fetch(
+        const res = await authFetch(
           `/api/patient/${selectedPatient.id}/appointments`,
           { credentials: "include" }
         );
@@ -148,10 +152,14 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
 
     try {
       setIsDeleting(true);
-      const res = await fetch(`/api/patient/${patientToDelete.id}/delete`, {
+      const res = await authFetch(`/api/patient/${patientToDelete.id}/delete`, {
         method: "DELETE",
         credentials: "include",
       });
+
+      if (!res.ok) {
+          throw new Error(`Failed to delete patient: ${res.status}`);
+      }
 
       const data = await res.json();
 

@@ -7,6 +7,7 @@ import AppointmentCalendar from "@/components/dashboard/admin/tabs/shared/Appoin
 import { Appointment } from "@/types/Dashboard";
 import Loader from "@/components/atom/Loader/Loader";
 import { ChevronLeft, ChevronRight, User, Stethoscope } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                    */
@@ -81,9 +82,13 @@ const HomeTab: React.FC = () => {
   useEffect(() => {
     const fetchOverview = async () => {
       try {
-        const res = await fetch("/api/overview", {
+        const res = await authFetch("/api/overview", {
           credentials: "include",
         });
+
+        if (!res.ok) {
+          throw new Error(`Overview fetch failed: ${res.status}`);
+        }
 
         const data = await res.json();
 
@@ -115,7 +120,10 @@ const HomeTab: React.FC = () => {
           ? `/api/practitioner-list?q=${encodeURIComponent(search)}`
           : `/api/practitioner-list`;
 
-        const res = await fetch(url, { credentials: "include" });
+        const res = await authFetch(url, { credentials: "include" });
+        if (!res.ok) {
+          throw new Error(`practitioner-list fetch failed: ${res.status}`);
+        }
         const data = await res.json();
 
         if (!data.success) return;
@@ -153,7 +161,10 @@ const HomeTab: React.FC = () => {
           ? `/api/practitioner/${practitionerId}/appointments?view=weekly&week_start=${date}`
           : `/api/practitioner/${practitionerId}/appointments?view=daily&date=${date}`;
 
-      const res = await fetch(url, { credentials: "include" });
+      const res = await authFetch(url, { credentials: "include" });
+      if (!res.ok) {
+          throw new Error(`Appointments view fetch failed: ${res.status}`);
+        }
       const data = await res.json();
       if (!data.success) return;
 

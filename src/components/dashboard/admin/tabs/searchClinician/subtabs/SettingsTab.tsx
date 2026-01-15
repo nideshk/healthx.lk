@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
-
+import { authFetch } from "@/lib/authFetch";
 interface SettingsTabProps {
   clinician: {
     id: string;
@@ -20,7 +20,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ clinician }) => {
     try {
       setIsDeactivating(true);
 
-      const res = await fetch(`/api/practitioners/${clinician.id}`, {
+      const res = await authFetch(`/api/practitioners/${clinician.id}`, {
         method: "DELETE",
         credentials: "include",
       });

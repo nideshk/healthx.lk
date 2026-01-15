@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Input from "@/components/atom/Input/Input";
+import { authFetch } from "@/lib/authFetch";
 
 /* -------------------- API TYPES -------------------- */
 
@@ -43,7 +44,7 @@ const PricingTab: React.FC<PricingTabProps> = ({ clinicianId }) => {
       try {
         setLoading(true);
 
-        const res = await fetch(
+        const res = await authFetch(
           `/api/practitioners/${clinicianId}/pricing`,
           { credentials: "include" }
         );

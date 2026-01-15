@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { DateTime } from "luxon";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
+import { authFetch } from "@/lib/authFetch";
 
 interface EarningsSummary {
   completedAppointments: number;
@@ -39,7 +40,7 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
       // Note: Assuming the backend filters by practitioner_id when passed as a query param
       const url = `http://localhost:3000/api/analytics/transactions?from=${startDate}&to=${endDate}&practitionerId=${clinicianId}`;
       
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         credentials: "include",
       });
 

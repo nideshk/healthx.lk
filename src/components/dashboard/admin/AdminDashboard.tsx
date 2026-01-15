@@ -11,6 +11,7 @@ import ManageAdminsTab from "./tabs/manageAdmin/ManageAdminsTab";
 import AnalyticsTab from "./tabs/analytics/AnalyticsTab";
 import SettingsTab from "./tabs/settings/SettingsTab";
 import { Patient } from "@/types/Dashboard";
+import { authFetch } from "@/lib/authFetch";
 
 type AdminMenuId = "home" | "searchClinician" | "searchPatient" | "addClinician" | "manageAdmins" | "analytics" | "settings";
 
@@ -48,8 +49,11 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchMe = async () => {
       try {
-        const res = await fetch("/api/auth/me", { credentials: "include" });
-        if (!res.ok) return;
+        const res = await authFetch("/api/auth/me", { credentials: "include" });
+        if (!res.ok) {
+          throw new Error("Unauthorized");
+        }
+
         const json = await res.json();
         setProfileName(json?.user?.profile?.display_name ?? json?.user?.display_name ?? "Admin");
         setProfileRole(json?.user?.role ?? "Administrator");
@@ -79,7 +83,7 @@ const AdminDashboard: React.FC = () => {
           params.set("q", search.trim());
         }
 
-        const res = await fetch(`/api/patient?${params.toString()}`, { credentials: "include" });
+        const res = await authFetch(`/api/patient?${params.toString()}`, { credentials: "include" });
         if (!res.ok) throw new Error("Failed to fetch patients");
 
         const json = await res.json();
