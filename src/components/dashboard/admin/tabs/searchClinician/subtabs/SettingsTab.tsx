@@ -29,7 +29,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ clinician }) => {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data?.message || "Failed to deactivate clinician");
+        throw new Error(data?.message || "Failed to deactivate clinicians");
       }
 
       // Success feedback
