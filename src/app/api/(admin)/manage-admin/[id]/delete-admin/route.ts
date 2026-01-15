@@ -11,7 +11,8 @@ export async function DELETE(
   // 1️⃣ Auth
   const { id: targetAdminId } = await context.params;
   const { authorized, user } = await requireUser(_req);
-  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!authorized)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!user?.admin) {
     auditLog({
       ...getAuditContext(_req as any, user),
@@ -21,8 +22,8 @@ export async function DELETE(
       purpose: "operations",
       source: "dashboard",
       metadata: {
-        reason: "insufficient_privileges"
-      }
+        reason: "insufficient_privileges",
+      },
     });
     return NextResponse.json(
       { success: false, message: "Not an admin" },
@@ -67,10 +68,7 @@ export async function DELETE(
    */
 
   // 5️⃣ NORMAL ADMIN → CANNOT TOUCH SUPER ADMIN (AT ALL)
-  if (
-    user.admin.role === "admin" &&
-    target.role === "superadmin"
-  ) {
+  if (user.admin.role === "admin" && target.role === "superadmin") {
     auditLog({
       ...getAuditContext(_req as any, user),
       action: "FAILED_ACCESS",
@@ -79,8 +77,8 @@ export async function DELETE(
       purpose: "operations",
       source: "dashboard",
       metadata: {
-        reason: "insufficient_privileges"
-      }
+        reason: "insufficient_privileges",
+      },
     });
 
     return NextResponse.json(
@@ -112,8 +110,8 @@ export async function DELETE(
         purpose: "operations",
         source: "dashboard",
         metadata: {
-          reason: "insufficient_privileges"
-        }
+          reason: "insufficient_privileges",
+        },
       });
 
       return NextResponse.json(
@@ -156,10 +154,9 @@ export async function DELETE(
       purpose: "operations",
       source: "dashboard",
       metadata: {
-        event: "delete_requested"
-      }
+        event: "delete_requested",
+      },
     });
-
 
     return NextResponse.json({
       success: true,

@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import GenericTable, { Column } from "./GenericTable"; // Adjust path as needed
+import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                    */
@@ -55,15 +56,17 @@ const RefundsRequestedTab: React.FC = () => {
   /* API CALLS                                  */
   /* -------------------------------------------------------------------------- */
 
-  // API 37: Fetch Refunds
   const fetchRefunds = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/api/refunds");
+      const response = await authFetch("/api/refunds");
+
+      if (!response.ok) {
+          throw new Error(`Failed to fetch refunds: ${response.status}`);
+        }
       const data = await response.json();
 
       if (data.status === "success") {
-        // Mapping the exact structure provided in your requirements
         const mappedData: RefundItem[] = data.refunds.map((item: any) => ({
           id: item.id,
           transaction_id: item.transaction_id,
@@ -74,7 +77,7 @@ const RefundsRequestedTab: React.FC = () => {
           refund_amount: item.refund_amount || 0,
           currency: item.currency || "LKR",
           reason: item.reason || "N/A",
-          status: item.status, // e.g. "requested"
+          status: item.status, 
         }));
 
         setRefunds(mappedData);
@@ -93,12 +96,11 @@ const RefundsRequestedTab: React.FC = () => {
     fetchRefunds();
   }, [fetchRefunds]);
 
-  // API 38: PATCH Action
   const handleProcessAction = async () => {
     if (!selectedRefund || !actionType) return;
 
     try {
-      const response = await fetch("http://localhost:3000/api/refunds", {
+      const response = await fetch("/api/refunds", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

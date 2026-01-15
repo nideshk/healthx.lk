@@ -16,6 +16,7 @@ import {
   FileJson, 
   LayoutList 
 } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
 /* CONFIGURATION: ALLOWED FIELDS FOR PRETTY VIEW                              */
@@ -84,7 +85,10 @@ const AuditTrackingTab: React.FC = () => {
         page: page.toString(), 
         limit: perPage.toString() 
       });
-      const response = await fetch(`/api/hipaa-audit-logs?${queryParams}`);
+      const response = await authFetch(`/api/hipaa-audit-logs?${queryParams}`);
+      if (!response.ok) {
+          throw new Error(`Failed to fetch logs: ${response.status}`);
+        }
       const result = await response.json();
       if (result?.success) {
         setLogs(result.data || []);

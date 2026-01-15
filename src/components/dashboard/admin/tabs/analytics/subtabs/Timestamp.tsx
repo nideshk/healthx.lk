@@ -7,9 +7,8 @@ import { toast } from "react-toastify";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import GenericTable, { Column } from "./GenericTable";
-import {
-  Download,
-} from "lucide-react";
+import { Download } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
@@ -86,7 +85,14 @@ const TimestampTab: React.FC = () => {
         limit: limit.toString(),
       });
 
-      const response = await authFetch(`/api/consultation/audit-log?${queryParams}`);
+      const response = await authFetch(
+        `/api/consultation/audit-log?${queryParams}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audit logs: ${response.status}`);
+      }
+
       const result = await response.json();
 
       if (result?.data) {
@@ -156,7 +162,11 @@ const TimestampTab: React.FC = () => {
               {formatTimestamp(item.participant_summary.patient.started_at)}
             </div>
             <div className="text-xs text-slate-500">
-              Dur: {formatDuration(item.participant_summary.patient.duration_seconds)} | Events: {item.participant_summary.patient.event_count}
+              Dur:{" "}
+              {formatDuration(
+                item.participant_summary.patient.duration_seconds
+              )}{" "}
+              | Events: {item.participant_summary.patient.event_count}
             </div>
           </div>
         ),
@@ -167,10 +177,16 @@ const TimestampTab: React.FC = () => {
           <div>
             <div className="text-xs">
               <span className="font-semibold">Joined:</span>{" "}
-              {formatTimestamp(item.participant_summary.practitioner.started_at)}
+              {formatTimestamp(
+                item.participant_summary.practitioner.started_at
+              )}
             </div>
             <div className="text-xs text-slate-500">
-              Dur: {formatDuration(item.participant_summary.practitioner.duration_seconds)} | Events: {item.participant_summary.practitioner.event_count}
+              Dur:{" "}
+              {formatDuration(
+                item.participant_summary.practitioner.duration_seconds
+              )}{" "}
+              | Events: {item.participant_summary.practitioner.event_count}
             </div>
           </div>
         ),
@@ -180,14 +196,19 @@ const TimestampTab: React.FC = () => {
         render: (item) => (
           <div className="flex flex-col gap-1">
             {item.appointment.patient_no_show && (
-              <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-100 w-fit">Patient NS</span>
+              <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-100 w-fit">
+                Patient NS
+              </span>
             )}
             {item.appointment.practitioner_no_show && (
-              <span className="text-[10px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100 w-fit">Dr NS</span>
+              <span className="text-[10px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100 w-fit">
+                Dr NS
+              </span>
             )}
-            {!item.appointment.patient_no_show && !item.appointment.practitioner_no_show && (
-              <span className="text-slate-400 text-xs">-</span>
-            )}
+            {!item.appointment.patient_no_show &&
+              !item.appointment.practitioner_no_show && (
+                <span className="text-slate-400 text-xs">-</span>
+              )}
           </div>
         ),
       },
@@ -215,14 +236,22 @@ const TimestampTab: React.FC = () => {
         Status: log.appointment.status,
         "Scheduled Start": formatTimestamp(log.appointment.starts_at),
         "Meeting Duration": formatDuration(log.meeting_duration_seconds),
-        "Patient Join Time": formatTimestamp(log.participant_summary.patient.started_at),
-        "Patient Duration (s)": log.participant_summary.patient.duration_seconds,
+        "Patient Join Time": formatTimestamp(
+          log.participant_summary.patient.started_at
+        ),
+        "Patient Duration (s)":
+          log.participant_summary.patient.duration_seconds,
         "Patient Events": log.participant_summary.patient.event_count,
-        "Practitioner Join Time": formatTimestamp(log.participant_summary.practitioner.started_at),
-        "Practitioner Duration (s)": log.participant_summary.practitioner.duration_seconds,
+        "Practitioner Join Time": formatTimestamp(
+          log.participant_summary.practitioner.started_at
+        ),
+        "Practitioner Duration (s)":
+          log.participant_summary.practitioner.duration_seconds,
         "Practitioner Events": log.participant_summary.practitioner.event_count,
         "Patient No Show": log.appointment.patient_no_show ? "Yes" : "No",
-        "Practitioner No Show": log.appointment.practitioner_no_show ? "Yes" : "No",
+        "Practitioner No Show": log.appointment.practitioner_no_show
+          ? "Yes"
+          : "No",
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(excelRows);
