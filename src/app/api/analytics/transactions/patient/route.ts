@@ -5,10 +5,10 @@ import { get } from "http";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
-export const dynamic = "force-dynamic"; 
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-    const { authorized, response, user } = await requireUser();
+    const { authorized, response, user } = await requireUser(req);
 
     if (!authorized) return response;
 
@@ -55,17 +55,17 @@ export async function GET(req: NextRequest) {
             );
         }
 
-           await auditLog({
+        await auditLog({
             ...cnx,
             action: "VIEWED",
             entityType: "TRANSACTION",
             purpose: "operations",
             source: "user_portal",
             metadata: {
-            message: "Patient transactions fetched successfully.",
-            count: transactions?.length || 0,
-            data: transactions || []
-        }
+                message: "Patient transactions fetched successfully.",
+                count: transactions?.length || 0,
+                data: transactions || []
+            }
         })
 
         return NextResponse.json({

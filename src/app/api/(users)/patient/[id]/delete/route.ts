@@ -6,10 +6,10 @@ import { auditLog } from "@/lib/audit/auditLog";
 
 export async function DELETE(
   req: Request,
-   context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { authorized, user, response } = await requireUser();
+    const { authorized, user, response } = await requireUser(req);
     if (!authorized) return response;
 
     const patientId = (await context.params).id;
@@ -42,7 +42,7 @@ export async function DELETE(
         .eq("practitioner_id", practitionerId);
 
       if (error) throw error;
-      
+
       return NextResponse.json({
         success: true,
         message: "Patient removed from your appointments",
@@ -89,9 +89,9 @@ export async function DELETE(
         entityId: patientId,
         metadata: {
           patientId,
-          message : "Patient soft deleted by admin/superadmin",
-          id : patientId
-          }
+          message: "Patient soft deleted by admin/superadmin",
+          id: patientId
+        }
       });
 
 

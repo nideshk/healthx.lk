@@ -107,7 +107,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const { id: practitionerId } = await context.params;
     if (!practitionerId) return NextResponse.json({ error: "Practitioner identifier is required." }, { status: 400 });
 
-    const { authorized, user, role } = await requireUser();
+    const { authorized, user, role } = await requireUser(request);
     if (!authorized) return NextResponse.json({ error: "You are not authorized to access this resource." }, { status: 401 });
 
     const isSelf = user?.practitioner_id === practitionerId;
@@ -136,20 +136,20 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     if (error) throw error;
 
-       const cnx = getAuditContext(request, user);
-    
-        await auditLog({
-          ...cnx,
-          action: "VIEWED",
-          entityType: "PRACTITIONER",
-          entityId: practitionerId,
-          purpose: "operations",
-          source: "dashboard",
-          metadata: {
-            leaves : data ?? []
-          }
-        })
-    
+    const cnx = getAuditContext(request, user);
+
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        leaves: data ?? []
+      }
+    })
+
 
     return NextResponse.json({ leaves: data ?? [] });
   } catch (err: any) {
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       }, { status: 400 });
     }
 
-    const { authorized, user } = await requireUser();
+    const { authorized, user } = await requireUser(request);
     if (!authorized || user?.practitioner_id !== practitionerId) {
       return NextResponse.json({ error: "You are not authorized to apply leave for this profile." }, { status: 403 });
     }
@@ -252,8 +252,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     // collect conflicts
     const { data: appts, error: apptErr } = await supabaseAdmin
-  .from("appointments")
-  .select(`
+      .from("appointments")
+      .select(`
     id,
     starts_at,
     ends_at,
@@ -264,8 +264,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       email
     )
   `)
-  .eq("practitioner_id", practitionerId)
-  .in("status", ["scheduled", "confirmed"]);
+      .eq("practitioner_id", practitionerId)
+      .in("status", ["scheduled", "confirmed"]);
 
     if (apptErr) throw apptErr;
 
@@ -339,7 +339,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
    DELETE handler
    Expects ?leave_id=... query param
 ------------------------------------------------------------- */
-export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> })  {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id: practitionerId } = await context.params;
     if (!practitionerId) return NextResponse.json({ error: "Practitioner identifier is required." }, { status: 400 });
@@ -348,14 +348,14 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     const leaveId = url.searchParams.get("leave_id");
     if (!leaveId) return NextResponse.json({ error: "Leave ID is required to delete a leave entry." }, { status: 400 });
 
-    const { authorized, user } = await requireUser();
+    const { authorized, user } = await requireUser(request);
     if (!authorized || user?.practitioner_id !== practitionerId) {
       return NextResponse.json({ error: "You are not authorized to delete this leave entry." }, { status: 403 });
     }
 
-     /* ----------------------------------------------------
-       1️⃣ Load leave record
-    ---------------------------------------------------- */
+    /* ----------------------------------------------------
+      1️⃣ Load leave record
+   ---------------------------------------------------- */
     const { data: leave, error: leave_error } = await supabaseAdmin
       .from("practitioner_leaves")
       .select("id, applied_windows")

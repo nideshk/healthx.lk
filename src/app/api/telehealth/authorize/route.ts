@@ -11,7 +11,7 @@ type InviteTokenPayload = {
   email: string;
   role: "guest" | "attendee";
   scope: "appointment:join";
-  room_key:  string;
+  room_key: string;
 };
 
 export async function POST(req: Request) {
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const {user , authorized} = await requireUser();
+    const { user, authorized } = await requireUser(req);
     if (!authorized) {
       return NextResponse.json(
         { authorized: false, error: "Unauthorized" },

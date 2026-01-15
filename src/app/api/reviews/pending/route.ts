@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
         /* ---------------- AUTH ---------------- */
-        const { authorized, user } = await requireUser();
+        const { authorized, user } = await requireUser(req);
 
         if (!authorized) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

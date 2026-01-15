@@ -20,7 +20,7 @@ export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { authorized, user, response } = await requireUser();
+  const { authorized, user, response } = await requireUser(req);
   if (!authorized) return response;
 
   const supabase = supabaseClient;

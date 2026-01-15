@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       expiresIn: 300,
     });
 
-    const { user } = await requireUser();
+    const { user } = await requireUser(req);
 
     /* ---------------- RESPONSE ---------------- */
     const cnx = getAuditContext(req, user);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/authGuard";    
+import { requireUser } from "@/lib/authGuard";
 import { cookies } from 'next/headers'
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   }
 
   // Get authenticated user
-  const { authorized, user } = await requireUser();
+  const { authorized, user } = await requireUser(request);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!user?.auth_user_id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -57,8 +57,8 @@ export async function POST(request: Request) {
   try {
     // Update user's password using admin API (server-side)
     const { data, error } = await supabase.auth.updateUser({
-    password: new_password,
-  });
+      password: new_password,
+    });
 
     if (error) {
       console.error("Password update failed:", error);

@@ -23,7 +23,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const { user } = await requireUser();
+    const { user } = await requireUser(_request);
 
     /* Ownership check */
     const { data: attachment } = await supabaseAdmin
@@ -83,7 +83,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await context.params;
-    const { user } = await requireUser();
+    const { user } = await requireUser(_request);
 
     /* 1️⃣ Ownership check */
     const { data: attachment } = await supabaseAdmin

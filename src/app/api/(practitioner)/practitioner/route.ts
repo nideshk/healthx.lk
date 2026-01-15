@@ -42,8 +42,8 @@ export async function GET(req: NextRequest) {
     /* ------------------------------------------------
      * 🔐 Auth check (optional – may be guest)
      * ------------------------------------------------ */
-    const authResult = await requireUser();
-    const { user } = await requireUser();
+    const authResult = await requireUser(req);
+    const { user } = await requireUser(req);
     const isAdmin =
       authResult.authorized && authResult.role === "admin";
 
@@ -207,17 +207,17 @@ export async function GET(req: NextRequest) {
       );
     }
     await auditLog({
-        ...cnx,
-        action: "VIEWED",
-        entityType: "PRACTITIONER",
-        purpose: "operations",
-        metadata: {
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PRACTITIONER",
+      purpose: "operations",
+      metadata: {
         success: true,
         role: "guest",
         count: data?.length ?? 0,
         data: data ?? [],
       }
-      })
+    })
 
     return NextResponse.json(
       {

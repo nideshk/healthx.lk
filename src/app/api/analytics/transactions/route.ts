@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching
 // Endpoint: /api/analytics/transactions
 export async function GET(req: NextRequest) {
 
-    const { authorized, response, user } = await requireUser();
+    const { authorized, response, user } = await requireUser(req);
     if (!authorized) {
         return response;
     }

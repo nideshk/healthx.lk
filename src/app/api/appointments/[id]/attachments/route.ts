@@ -16,7 +16,7 @@ export async function POST(
     /* ------------------------------------------------
      * AUTH
      * ------------------------------------------------ */
-    const auth = await requireUser();
+    const auth = await requireUser(req);
 
     const cnx = getAuditContext(req, auth.user);
 
@@ -25,7 +25,7 @@ export async function POST(
       await auditLog({
         ...cnx,
         action: "UNAUTHORIZED_ATTACHMENT_META_ATTEMPT",
-        entityType : "ATTACHMENT",
+        entityType: "ATTACHMENT",
         purpose: "treatment",
         source: "user_portal",
         metadata: {
@@ -87,14 +87,14 @@ export async function POST(
 
     if (appointment.patient_id !== auth.user.patient_id) {
 
-       await auditLog({
+      await auditLog({
         ...cnx,
         action: "UNAUTHORIZED_ATTACHMENT_META_ATTEMPT",
-        entityType : "ATTACHMENT",
+        entityType: "ATTACHMENT",
         purpose: "treatment",
         source: "user_portal",
         metadata: {
-          data : `${auth.user.patient_id} tried to access attachment meta for appointment ${appointmentId} owned by patient ${appointment.patient_id}`,
+          data: `${auth.user.patient_id} tried to access attachment meta for appointment ${appointmentId} owned by patient ${appointment.patient_id}`,
         }
       })
 
@@ -112,7 +112,7 @@ export async function POST(
       .insert({
         appointment_id: appointmentId,
         patient_id: appointment.patient_id,
-        practitioner_id : appointment.practitioner_id,
+        practitioner_id: appointment.practitioner_id,
         file_url: file_key,
         file_name,
         file_type,

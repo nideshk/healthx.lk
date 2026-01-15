@@ -18,7 +18,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   // 🔐 AUTH
-  const { authorized, response, user } = await requireUser();
+  const { authorized, response, user } = await requireUser(req);
   if (!authorized) return response;
   const cnx = getAuditContext(req, user);
   const { id: practitionerId } = await context.params;

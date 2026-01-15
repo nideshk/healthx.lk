@@ -7,7 +7,7 @@ import { auditLog } from "@/lib/audit/auditLog";
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const appointmentId = searchParams.get('appointmentId');
-    const { authorized, user } = await requireUser();
+    const { authorized, user } = await requireUser(req);
     const cnx = getAuditContext(req, user);
     if (!authorized) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -10,7 +10,7 @@ export async function GET(_req: NextRequest) {
     /* ---------------------------------------------------------
        1️⃣ Authentication
     --------------------------------------------------------- */
-    const { user } = await requireUser();
+    const { user } = await requireUser(_req);
     const cnx = getAuditContext(_req, user);
     if (!user?.auth_user_id || !user?.patient_id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -56,7 +56,7 @@ export async function GET(_req: NextRequest) {
     /* ---------------------------------------------------------
        3️⃣ Audit log (non-blocking)
     --------------------------------------------------------- */
-   
+
     await auditLog({
       ...cnx,
       action: "VIEWED",
@@ -65,7 +65,7 @@ export async function GET(_req: NextRequest) {
       purpose: "operations",
       source: "dashboard",
       metadata: {
-        data : data,
+        data: data,
         follow_up_count: data?.length || 0
       }
     })

@@ -3,9 +3,9 @@
 import { requireUser } from "@/lib/authGuard";
 import { supabaseClient } from "@/lib/supabaseClient";
 
-export async function GET() {
+export async function GET(req) {
   try {
-    const { authorized, response, user } = await requireUser();
+    const { authorized, response, user } = await requireUser(req);
     if (!authorized) return response;
 
     // Fetch all appointment types from your DB
@@ -41,7 +41,7 @@ export async function GET() {
         user: user.email
       }
     });
-    
+
     // Final response
     return Response.json(
       {

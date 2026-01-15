@@ -8,7 +8,7 @@ import { auditLog } from "@/lib/audit/auditLog";
 const supabase = supabaseClient;
 
 export async function GET(req: NextRequest) {
-  const { user, authorized } = await requireUser();
+  const { user, authorized } = await requireUser(req);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const cnx = getAuditContext(req, user);
   const patientId = user?.patient_id;
@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const { draft_id, data: newData } = body ?? {};
 
-  const { user, authorized } = await requireUser();
+  const { user, authorized } = await requireUser(req);
   const cnx = getAuditContext(req, user);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest) {
       entityType: "APPOINTMENT_DRAFT",
       purpose: "operations",
       source: "user_portal",
-      metadata:{ data :  `no_patient_id : patient_id_missing`}
+      metadata: { data: `no_patient_id : patient_id_missing` }
     })
     return NextResponse.json({ error: "Only patients can save drafts" }, { status: 403 });
   }
@@ -116,20 +116,20 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { data: newData } = body ?? {};
 
-  const { user, authorized } = await requireUser();
+  const { user, authorized } = await requireUser(req);
   const cnx = getAuditContext(req, user);
 
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const patientId = user?.patient_id;
-  if (!patientId){ 
+  if (!patientId) {
     await auditLog({
       ...cnx,
       action: "UNAUTHORIZED_ATTEMPT",
       entityType: "APPOINTMENT_DRAFT",
       purpose: "operations",
       source: "user_portal",
-      metadata:{ data :  `no_patient_id : patient_id_missing`}
+      metadata: { data: `no_patient_id : patient_id_missing` }
     })
     return NextResponse.json({ error: "Only patients can create drafts" }, { status: 403 });
   }
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
           patient_id: patientId,
           data: newData,
         },
-        { onConflict: "patient_id"}
+        { onConflict: "patient_id" }
       )
       .select()
       .single();

@@ -19,7 +19,7 @@ export async function GET(
         { status: 400 }
       );
     }
-    const { user } = await requireUser();
+    const { user } = await requireUser(req);
 
     const { data: practitioner, error: dbError } = await supabaseClient
       .from("practitioners")
@@ -178,7 +178,7 @@ export async function DELETE(
       );
     }
 
-    const { authorized, role, user } = await requireUser();
+    const { authorized, role, user } = await requireUser(request);
 
     if (!authorized) {
       return NextResponse.json(

@@ -10,7 +10,7 @@ export async function PATCH(
     /* -------------------------------------------
      * AUTH
      * ----------------------------------------- */
-    const { authorized, user, response } = await requireUser();
+    const { authorized, user, response } = await requireUser(_req);
     if (!authorized || !user) return response;
 
     /* -------------------------------------------
