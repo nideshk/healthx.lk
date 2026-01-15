@@ -5,8 +5,9 @@ import { supabaseClient } from "@/lib/supabaseClient";
 
 export async function GET(req) {
   try {
-    const { authorized, response, user } = await requireUser(req);
-    if (!authorized) return response;
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
 
     // Fetch all appointment types from your DB
     const { data: appointmentTypes, error } = await supabaseClient

@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
 
     if (calculatedMd5Sig !== md5sig) {
         console.error(`IPN FAILED: Hash mismatch for Order ID ${order_id}`);
-        return new NextResponse(null, { status: 200 });
+        return NextResponse.json({ message: "Hash mismatch" }, { status: 400 });
     }
 
     // Updating step to handle update transaction, update appointment record and send notifications once the payment is verified from payhere side
     if (status_code === '2') {
         try {
-            const {data: updatedTransaction, error: transactionError} = await supabaseAdmin
+            const { data: updatedTransaction, error: transactionError } = await supabaseAdmin
                 .from('transactions')
                 .update({
                     status: 'paid',
@@ -49,11 +49,11 @@ export async function POST(request: NextRequest) {
                 .eq('order_id', order_id)
                 .neq('status', 'paid')
                 .select();
-            
+
             // Case where transaction was already PAID so return from here ealry
-            if(!updatedTransaction || updatedTransaction.length === 0){
+            if (!updatedTransaction || updatedTransaction.length === 0) {
                 console.log(`Transaction ${order_id} already marked as PAID. Skipping.`);
-                return new NextResponse(null, { status: 200 });
+                return NextResponse.json({ message: "Transaction already marked as PAID" }, { status: 200 });
             }
 
             // Check if Appointment is already confirmed (Idempotency)
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
             if (currentApp?.status === 'confirmed' && currentApp?.payment_status == 'paid') {
                 console.log(`Appointment ${order_id} already confirmed. Skipping notify.`);
-                return new NextResponse(null, { status: 200 });
+                return NextResponse.json({ message: "Appointment already confirmed" }, { status: 200 });
             }
 
             // Update booking and payment status for appointment
@@ -134,16 +134,15 @@ export async function POST(request: NextRequest) {
                 },
             });
 
-            if(Array.isArray(appointment?.additional_attendees) && appointment.additional_attendees?.length > 0)
-            {
-                try {   
+            if (Array.isArray(appointment?.additional_attendees) && appointment.additional_attendees?.length > 0) {
+                try {
                     await sendAppointmentInvites({
-                              appointmentId: appointment.id,
-                              practitionerId: appointment?.practitioner_id,
-                              attendees: appointment?.additional_attendees,
-                              meetingStartISO: appointment?.starts_at,
-                              room_key: appointment.room_key
-                            });
+                        appointmentId: appointment.id,
+                        practitionerId: appointment?.practitioner_id,
+                        attendees: appointment?.additional_attendees,
+                        meetingStartISO: appointment?.starts_at,
+                        room_key: appointment.room_key
+                    });
                 } catch (attendeeInviteError) {
                     console.log("Attendee invites failed : ", attendeeInviteError);
                 }
@@ -181,5 +180,5 @@ export async function POST(request: NextRequest) {
     }
 
     // Always respond with 200 OK
-    return new NextResponse(null, { status: 200 });
+    return NextResponse.json({ message: "Webhook processed successfully" }, { status: 200 });
 }

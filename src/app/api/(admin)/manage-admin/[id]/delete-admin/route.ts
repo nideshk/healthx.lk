@@ -10,9 +10,8 @@ export async function DELETE(
 ) {
   // 1️⃣ Auth
   const { id: targetAdminId } = await context.params;
-  const { authorized, user, response } = await requireUser();
-  if (!authorized) return response;
-  console.log(user)
+  const { authorized, user } = await requireUser(_req);
+  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!user?.admin) {
     auditLog({
       ...getAuditContext(_req as any, user),

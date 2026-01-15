@@ -15,8 +15,8 @@ const STATUS_MAP: Record<string, string[]> = {
 
 export async function GET(req: NextRequest) {
   try {
-    const { authorized, response, user } = await requireUser();
-    if (!authorized) return response;
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     /** RBAC */
     const isAdmin =
@@ -62,9 +62,9 @@ export async function GET(req: NextRequest) {
     const from = (page - 1) * perPage;
     const to = from + perPage - 1;
     let query = supabaseAdmin
-  .from("appointments")
-  .select(
-    `
+      .from("appointments")
+      .select(
+        `
     id,
     starts_at,
     ends_at,
@@ -79,27 +79,27 @@ export async function GET(req: NextRequest) {
       name
     )
     `,
-    { count: "exact" }
-  )
-  .gte("starts_at", `${fromDate}T00:00:00`)
-  .lte("starts_at", `${toDate}T23:59:59`)
-  .in("status", statuses)
-  // .range(from, to);
+        { count: "exact" }
+      )
+      .gte("starts_at", `${fromDate}T00:00:00`)
+      .lte("starts_at", `${toDate}T23:59:59`)
+      .in("status", statuses)
+    // .range(from, to);
 
-  if (isPractitioner) {
-    query = query.eq("practitioner_id", user.practitioner_id);
-  }
+    if (isPractitioner) {
+      query = query.eq("practitioner_id", user.practitioner_id);
+    }
 
-  query = query.range(from, to);
+    query = query.range(from, to);
 
-  const cnx = getAuditContext(req, user);
+    const cnx = getAuditContext(req, user);
     await auditLog({
       ...cnx,
-      action      : "VIEWED",
-      entityType  : "APPOINTMENT",
-      purpose     : "operations",
-      source      : "dashboard",
-      metadata    : { filters: { from: fromDate, to: toDate, type  }}
+      action: "VIEWED",
+      entityType: "APPOINTMENT",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: { filters: { from: fromDate, to: toDate, type } }
     })
 
 
@@ -145,10 +145,10 @@ export async function GET(req: NextRequest) {
 
         end_time: end
           ? end.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          })
           : null,
 
         status: a.status,
@@ -156,16 +156,16 @@ export async function GET(req: NextRequest) {
 
         patient: a.patient
           ? {
-              name: a.patient.full_name,
-              email: a.patient.email,
-            }
+            name: a.patient.full_name,
+            email: a.patient.email,
+          }
           : null,
 
         practitioner: a.practitioner
           ? {
-              name: a.practitioner.full_name,
-              email: a.practitioner.contact_email,
-            }
+            name: a.practitioner.full_name,
+            email: a.practitioner.contact_email,
+          }
           : null,
 
         appointment_type: a.appointment_type?.name ?? null,
@@ -177,11 +177,11 @@ export async function GET(req: NextRequest) {
 
     await auditLog({
       ...cnx,
-      action      : "VIEWED",
-      entityType  : "APPOINTMENT",
-      purpose     : "operations",
-      source      : "dashboard",
-      metadata    :  {
+      action: "VIEWED",
+      entityType: "APPOINTMENT",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
         total: count ?? 0,
         page,
         per_page: perPage,
@@ -202,10 +202,12 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("❌ Appointments Fetch Error:", error);
     return NextResponse.json(
-      { success: false,message:
-        typeof error?.message === "string"
-          ? error.message
-          : "Internal server error" },
+      {
+        success: false, message:
+          typeof error?.message === "string"
+            ? error.message
+            : "Internal server error"
+      },
       { status: 500 }
     );
   }
@@ -214,7 +216,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // 1️⃣ Auth check
-    const {user} = await requireUser();
+    const { user } = await requireUser(req);
     console.log("User creating appointment:", user);
     // const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 

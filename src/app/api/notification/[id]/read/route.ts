@@ -10,8 +10,8 @@ export async function PATCH(
     /* -------------------------------------------
      * AUTH
      * ----------------------------------------- */
-    const { authorized, user, response } = await requireUser(_req);
-    if (!authorized || !user) return response;
+    const { authorized, user } = await requireUser(_req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     /* -------------------------------------------
      * PARAMS (ASYNC)
@@ -41,7 +41,7 @@ export async function PATCH(
       );
     }
 
-    if (notification.user_id !== user.auth_user_id) {
+    if (notification.user_id !== user?.auth_user_id) {
       return NextResponse.json(
         { error: "Forbidden" },
         { status: 403 }

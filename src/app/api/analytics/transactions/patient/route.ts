@@ -8,9 +8,9 @@ import { auditLog } from "@/lib/audit/auditLog";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-    const { authorized, response, user } = await requireUser(req);
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!authorized) return response;
 
     // Check if the user has the 'patient' role
 

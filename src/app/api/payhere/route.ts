@@ -6,11 +6,11 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
 export async function POST(request: NextRequest) {
-    const { authorized, response, user } = await requireUser(request);
+    const { authorized, user } = await requireUser(request);
 
     if (!authorized) {
         console.log("Not authorized access to /api/payhere");
-        return response;
+        return NextResponse.json({ error: "User not authenticated." }, { status: 401 });
     }
 
     if (!user) {

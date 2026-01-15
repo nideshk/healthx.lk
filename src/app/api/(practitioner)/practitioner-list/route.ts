@@ -6,8 +6,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   // 🔐 AUTH
-  const { authorized, response, user } = await requireUser(req);
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const cnx = getAuditContext(req, user);
 
   const role = user?.profile?.role;

@@ -12,8 +12,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   // 🔐 Auth check (admin / staff recommended)
-  const { authorized, response, user } = await requireUser();
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
 
   const role = user?.profile?.role;
 
@@ -106,8 +107,8 @@ export async function GET(req: NextRequest) {
 ------------------------------------------ */
 export async function PATCH(req: NextRequest) {
   // 1️⃣ Auth
-  const { authorized, response, user } = await requireUser();
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // 2️⃣ Role check
   if (!["admin", "superadmin"].includes(user?.role)) {

@@ -34,8 +34,8 @@ function getAvailablePoliciesForRole(
  * ========================================= */
 export async function GET(req: NextRequest) {
   // 1️⃣ Auth
-  const { authorized, user, response } = await requireUser();
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   // 2️⃣ Must be superadmin
   if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
   }
 
   const isSuperAdmin = user.admin.role === "superadmin";
-  
+
   //  Fetch all policies (source of truth)
   const { data: allPoliciesRaw, error: policyError } = await supabaseAdmin
     .from("policies")
@@ -87,9 +87,9 @@ export async function GET(req: NextRequest) {
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
-    /**
-     * Admins should NOT see superadmins
-     */
+  /**
+   * Admins should NOT see superadmins
+   */
   if (!isSuperAdmin) {
     adminQuery = adminQuery.eq("role", "admin");
   }
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
     );
 
     if (!isSuperAdmin) {
-  // Admin view — NO policies
+      // Admin view — NO policies
       return {
         id: admin.id,
         full_name: admin.full_name,
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
     purpose: "operations",
     source: "dashboard",
     metadata: {
-      data : result,
+      data: result,
       count: result.length
     }
   });
@@ -165,8 +165,8 @@ export async function GET(req: NextRequest) {
  * ========================================= */
 export async function PUT(req: NextRequest) {
   // 1️⃣ Auth
-  const { authorized, user, response } = await requireUser();
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   // 2️⃣ Must be superadmin
   if (!user?.admin || user.admin.role !== "superadmin") {
@@ -274,7 +274,7 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  
+
   const cnx = getAuditContext(req, user);
 
   await auditLog({

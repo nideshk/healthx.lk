@@ -11,7 +11,7 @@ const TIMEZONE = "Asia/Colombo";
 
 export async function GET(req: NextRequest) {
   try {
-    const { authorized, role, user } = await requireUser();
+    const { authorized, role, user } = await requireUser(req);
 
     if (!authorized || role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
