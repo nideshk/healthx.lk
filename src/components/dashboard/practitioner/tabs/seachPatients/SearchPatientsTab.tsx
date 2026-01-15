@@ -191,6 +191,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
           prescriptions: "",
           followUpNeeded: false,
           followUpDate: undefined,
+          room_key: a?.room_key,
         };
       });
 

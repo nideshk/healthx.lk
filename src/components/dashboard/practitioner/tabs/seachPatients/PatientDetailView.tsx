@@ -10,6 +10,7 @@ import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
 // Import the email template generator
 import { generateAppointmentConfirmationEmail } from "@/lib/emailTemplates";
 import { authFetch } from "@/lib/authFetch";
+import Link from "next/link";
 
 interface PatientDetailViewProps {
   patient: Patient;
@@ -252,7 +253,7 @@ const AppointmentsTab: React.FC<{
   const upcoming = appointments.filter((a) => a.category === "upcoming");
   const previous = appointments.filter((a) => a.category === "previous");
   const [showCreateModal, setShowCreateModal] = React.useState(false);
-
+  console.log("upcoming", upcoming)
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -319,6 +320,10 @@ const AppointmentRow: React.FC<{
     prescriptions: appointment.prescriptions || "",
     followUpNeeded: appointment.followUpNeeded || false,
   });
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  ).replace(/\/$/, "");
+
 
   const updateAppointmentField = (
     key: keyof typeof appointmentForm,
@@ -388,7 +393,7 @@ const AppointmentRow: React.FC<{
         endsAt: startsAt,
         practitionerName: appointment.doctorName || "Your Practitioner",
         appointmentType: appointment.appointmentType || appointment.reason || "Consultation",
-        meetingUrl: "https://yourapp.com/appointment/" + appointment.id,
+        meetingUrl: `${baseUrl}/appointment/meeting?room=${appointment?.room_key}`,
       },
     });
   }, [appointment, patient.name]);
@@ -487,10 +492,16 @@ const AppointmentRow: React.FC<{
               <Button variant="secondary" size="sm" onClick={() => setShowSmsModal(true)}>
                 SMS patient
               </Button>
-
-              <Button variant="primary" size="sm" className="text-xs">
+              <Link
+                href={`/appointment/meeting?room=${appointment.room_key}`}
+              >
+                <Button variant="primary" size="sm" className="text-xs">
+                  Join meeting
+                </Button>
+              </Link>
+              {/* <Button variant="primary" size="sm" className="text-xs">
                 Join meeting
-              </Button>
+              </Button> */}
               <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${statusClasses}`}>
                 {statusLabel}
               </span>
