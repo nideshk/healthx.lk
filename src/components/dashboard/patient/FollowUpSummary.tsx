@@ -1,6 +1,7 @@
 // components/FollowUpSummary.tsx
 "use client";
 
+import { authFetch } from "@/lib/authFetch";
 import axios from "axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -10,18 +11,45 @@ export default function FollowUpSummary() {
   const [overdue, setOverdue] = useState(0);
 
   useEffect(() => {
-    axios.get("/api/follow-up").then((res) => {
-      const items = res.data?.data ?? [];
-      setCount(items.length);
-      setOverdue(
-        items.filter(
-          (i: any) =>
-            i.follow_up_date &&
-            new Date(i.follow_up_date) < new Date()
-        ).length
-      );
-    });
+    let mounted = true;
+
+    async function fetchFollowUpStats() {
+      try {
+        const res = await authFetch("/api/follow-up");
+
+        if (!res.ok) {
+          throw new Error(`Follow-up fetch failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+        const items = data?.data ?? [];
+
+        if (!mounted) return;
+
+        setCount(items.length);
+        setOverdue(
+          items.filter(
+            (i: any) =>
+              i.follow_up_date &&
+              new Date(i.follow_up_date) < new Date()
+          ).length
+        );
+      } catch (err) {
+        console.error("Failed to load follow-up stats:", err);
+        if (mounted) {
+          setCount(0);
+          setOverdue(0);
+        }
+      }
+    }
+
+    fetchFollowUpStats();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
 
   if (count === null || count === 0) return null;
 

@@ -4,12 +4,13 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import PaymentStep from '@/components/flow/PaymentStep';
 import { Loader2 } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const appointmentId = searchParams.get('appointment_id');
-  
+
   const [bookingData, setBookingData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -21,15 +22,13 @@ function CheckoutContent() {
       }
 
       try {
-        const res = await fetch(`/api/booking/details?id=${appointmentId}`);
-        console.log("RES: ", res);
-        
-        if (!res.ok) 
-        {
+        const res = await authFetch(`/api/booking/details?id=${appointmentId}`);
+
+        if (!res.ok) {
           const errorBody = await res.json();
           throw new Error(errorBody?.error || "Failed to load");
         }
-        
+
         const data = await res.json();
         // console.log("Data from booking-details : ", data);
 
@@ -42,11 +41,11 @@ function CheckoutContent() {
           appointmentType: data.appointmentType
         };
         // console.log("Mapped Data | Booking data : ", mappedData);
-        
+
         setBookingData(mappedData);
       } catch (error) {
         console.error("Error fetching appointment:", error);
-        router.push('/dashboard/appointment'); 
+        router.push('/dashboard/appointment');
       } finally {
         setLoading(false);
       }
@@ -66,13 +65,13 @@ function CheckoutContent() {
 
   return (
     <div className="container mx-auto">
-      <PaymentStep 
-        bookingData={bookingData} 
-        isManualCheckout={true} 
+      <PaymentStep
+        bookingData={bookingData}
+        isManualCheckout={true}
         preExistingId={appointmentId}
-        prevStep={() => router.back()} 
-        updateData={() => {}}
-        goToStep={() => {}}
+        prevStep={() => router.back()}
+        updateData={() => { }}
+        goToStep={() => { }}
         bookingControllerRef={{ current: {} } as any}
       />
     </div>
@@ -82,9 +81,9 @@ function CheckoutContent() {
 export default function CheckoutPage() {
   return (
     <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center">
-            <Loader2 className="animate-spin text-blue-600" />
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-600" />
+      </div>
     }>
       <CheckoutContent />
     </Suspense>

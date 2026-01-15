@@ -9,6 +9,7 @@ import PaymentStep from "./PaymentStep";
 import ConfirmBookingModal from "./ConfirmBookingModal";
 import { AppointmentFormInputs } from "@/types/FormType";
 import { toast } from "sonner";
+import { authFetch } from "@/lib/authFetch";
 
 enum Step {
   SERVICE_SELECTION = 0,
@@ -27,10 +28,10 @@ export default function AppointmentBookingFlow() {
   const stepRef = useRef<{ validateStep?: () => boolean }>(null);
 
   const bookingControllerRef = useRef<{
-  validatePreConsult?: () => boolean;
-  validatePayment?: () => boolean;
-  getAttachment?: () => File | null;
-}>({});
+    validatePreConsult?: () => boolean;
+    validatePayment?: () => boolean;
+    getAttachment?: () => File | null;
+  }>({});
 
   const [bookingData, setBookingData] = useState<AppointmentFormInputs>({
     selectedServiceId: "",
@@ -50,13 +51,13 @@ export default function AppointmentBookingFlow() {
   });
 
   const goToStep = (stepNumber: number) => {
-  setCurrentStep(stepNumber);
-};
+    setCurrentStep(stepNumber);
+  };
   // Hydrate draft on mount
   useEffect(() => {
     async function fetchDraft() {
       try {
-        const res = await fetch("/api/booking/appointment/draft");
+        const res = await authFetch("/api/booking/appointment/draft");
         const result = await res.json();
 
         const wrapper = result?.draft || result?.data;
@@ -94,7 +95,7 @@ export default function AppointmentBookingFlow() {
     };
     console.log("💾 Saving draft with payload:", payload);
 
-    const res = await fetch("/api/booking/appointment/draft", {
+    const res = await authFetch("/api/booking/appointment/draft", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -202,7 +203,7 @@ export default function AppointmentBookingFlow() {
         </div>
 
         <ConfirmBookingModal
-          resetFlow={() => {}}
+          resetFlow={() => { }}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           bookingData={bookingData}

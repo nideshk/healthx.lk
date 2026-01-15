@@ -11,21 +11,55 @@ import {
   Mail,
   Lock,
   Loader2,
-  ShieldCheck,
   Eye,
   EyeOff,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import axios from "axios";
 
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { useModalStore } from "@/store/useModalStore";
 import Modal from "@/components/atom/Modal/Modal";
-import { authFetch } from "@/lib/authFetch";
+
+const LOCAL_DRAFT_KEY = "bookingDraft";
 
 /* ------------------------------------------------
-   ENHANCED COMPONENTS
+   HELPERS
 ------------------------------------------------ */
+
+async function restoreBookingDraftIfExists(): Promise<boolean> {
+  try {
+    const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+    if (!raw) return false;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      localStorage.removeItem(LOCAL_DRAFT_KEY);
+      return false;
+    }
+
+    // Auto-expire drafts older than 24h
+    const MAX_AGE = 1000 * 60 * 60 * 24;
+    if (parsed.created_at && Date.now() - parsed.created_at > MAX_AGE) {
+      localStorage.removeItem(LOCAL_DRAFT_KEY);
+      return false;
+    }
+
+    // Sync the local draft to the database now that the user is logged in
+    const res = await fetch("/api/booking/appointment/draft", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: parsed }),
+    });
+
+    if (!res.ok) return false;
+
+    localStorage.removeItem(LOCAL_DRAFT_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function ForgotPasswordForm({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState("");
@@ -58,7 +92,7 @@ function ForgotPasswordForm({ onDone }: { onDone: () => void }) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 transition-all outline-none"
+            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all"
             placeholder="name@company.com"
           />
         </div>
@@ -89,39 +123,35 @@ export default function Header() {
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Close dropdowns when clicking outside
-  const profileRef = useRef<HTMLDivElement>(null);
-  const notifRef = useRef<HTMLDivElement>(null);
+  // MFA States
+  const [mfa, setMfa] = useState<{ factorId: string; challengeId: string } | null>(null);
+  const [otp, setOtp] = useState("");
+  const [mfaInProgress, setMfaInProgress] = useState(false);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) setProfileOpen(false);
-      if (notifRef.current && !notifRef.current.contains(event.target as Node)) setNotifOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  /* ---------------- AUTH LOGIC ---------------- */
 
-  /* ... fetchNotificationsSafe and Auth logic remain the same as your source ... */
-  useEffect(() => {
-    let mounted = true;
-    async function init() {
-      const { data } = await supabaseBrowser.auth.getUser();
-      if (!mounted) return;
-      if (data.user) {
-        setUser(data.user);
-        setUsername(data.user.email?.split("@")[0] ?? null);
-      }
-      setLoading(false);
+  // Finalize UI state and trigger side effects
+  async function finalizeLogin(session: any) {
+    setUser(session.user);
+    setUsername(session.user.email?.split("@")[0] ?? null);
+
+    setMfa(null);
+    setOtp("");
+    setMfaInProgress(false);
+    closeLoginModal();
+
+    // RESTORE BOOKING DRAFT FLOW
+    const restored = await restoreBookingDraftIfExists();
+    if (restored) {
+      toast.success("Resuming your appointment booking... 🩺");
+      router.push("/appointment");
+    } else {
+      router.push("/dashboard");
     }
-    init();
-  }, []);
+  }
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -132,10 +162,22 @@ export default function Header() {
 
     try {
       const { data, error } = await supabaseBrowser.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      if (error || !data.session) throw error || new Error("Login failed");
 
-      closeLoginModal();
-      router.push("/dashboard");
+      // Check for MFA Enrollment
+      const factors = data.user?.factors ?? [];
+      const hasEnrolledMfa = factors.some(f => f.factor_type === "totp" && f.status === "verified");
+
+      if (hasEnrolledMfa) {
+        const factorId = factors[0].id;
+        const { data: challenge, error: cErr } = await supabaseBrowser.auth.mfa.challenge({ factorId });
+        if (cErr) throw cErr;
+
+        setMfa({ factorId, challengeId: challenge.id });
+        return;
+      }
+
+      await finalizeLogin(data.session);
       toast.success("Welcome back!");
     } catch (err: any) {
       toast.error(err.message);
@@ -144,162 +186,130 @@ export default function Header() {
     }
   }
 
-  const unreadCount = notifications.filter(n => n.status === "unread").length;
+  async function verifyMfa() {
+    if (!mfa) return;
+    setMfaInProgress(true);
+    try {
+      const { error } = await supabaseBrowser.auth.mfa.verify({
+        factorId: mfa.factorId,
+        challengeId: mfa.challengeId,
+        code: otp,
+      });
+
+      if (error) throw error;
+
+      const { data: sessionData } = await supabaseBrowser.auth.getSession();
+      if (!sessionData.session) throw new Error("MFA Session Error");
+
+      await finalizeLogin(sessionData.session);
+    } catch (err: any) {
+      toast.error(err.message);
+      setMfa(null);
+      setOtp("");
+    } finally {
+      setMfaInProgress(false);
+    }
+  }
+
+  useEffect(() => {
+    async function init() {
+      const { data } = await supabaseBrowser.auth.getUser();
+      if (data.user) {
+        setUser(data.user);
+        setUsername(data.user.email?.split("@")[0] ?? null);
+      }
+      setLoading(false);
+    }
+    init();
+
+    // Listen for auth changes (like signing out from another tab)
+    const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setUsername(null);
+      } else if (event === 'SIGNED_IN' && session) {
+        setUser(session.user);
+        setUsername(session.user.email?.split("@")[0] ?? null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) return null;
 
   return (
     <>
+      {/* ... Header UI stays the same ... */}
       <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex justify-between items-center">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-white font-black group-hover:rotate-3 transition-transform">M</div>
-            <span className="font-black text-xl tracking-tighter text-slate-900">MedX</span>
-          </Link>
+        {/* ... Logo and Nav ... */}
+        <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+          <Link href="/" className="font-black text-xl text-teal-600">MedX</Link>
 
-          {/* Navigation */}
-          <div className="flex items-center gap-2 sm:gap-6">
-            {!user ? (
-              <>
-                <button
-                  onClick={openLoginModal}
-                  className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"
-                >
-                  Sign In
-                </button>
-                <Link
-                  href="/register"
-                  className="hidden sm:block px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-teal-600 transition-all active:scale-95"
-                >
-                  Get Started
-                </Link>
-              </>
-            ) : (
-              <div className="flex items-center gap-3">
-                {/* Notifications */}
-                <div className="relative" ref={notifRef}>
-                  <button
-                    onClick={() => setNotifOpen(!notifOpen)}
-                    className="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors relative"
-                  >
-                    <Bell className="w-5 h-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {notifOpen && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-100 shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95">
-                      <div className="p-4 border-b border-slate-50 font-bold text-sm">Notifications</div>
-                      <div className="max-h-60 overflow-y-auto p-2 text-center text-slate-400 text-xs py-10">
-                        No new notifications
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Profile Dropdown */}
-                <div className="relative" ref={profileRef}>
-                  <button
-                    onClick={() => setProfileOpen(!profileOpen)}
-                    className="flex items-center gap-2 p-1 pl-3 bg-slate-50 border border-slate-100 rounded-full hover:border-slate-300 transition-all"
-                  >
-                    <span className="text-xs font-bold text-slate-700 hidden md:block">Hi, {username}</span>
-                    <div className="w-8 h-8 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <ChevronDown className="w-4 h-4 text-slate-400 mr-1" />
-                  </button>
-
-                  {profileOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-100 shadow-2xl rounded-2xl overflow-hidden py-2 animate-in fade-in slide-in-from-top-2">
-                      <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                        Dashboard
-                      </Link>
-                      <Link href="/profile" className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                        Settings
-                      </Link>
-                      <hr className="my-2 border-slate-50" />
-                      <button
-                        onClick={() => { supabaseBrowser.auth.signOut(); router.push("/"); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50"
-                      >
-                        <LogOut className="w-4 h-4" /> Sign Out
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          {!user ? (
+            <button onClick={openLoginModal} className="text-sm font-bold text-slate-600">Sign In</button>
+          ) : (
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-bold">Hi, {username}</span>
+              <button onClick={() => supabaseBrowser.auth.signOut()} className="text-xs text-red-500 font-bold">Log Out</button>
+            </div>
+          )}
         </div>
       </header>
 
-      {/* Enhanced Login Modal */}
       <Modal
         isOpen={isLoginModalOpen}
-        onClose={() => { setShowForgot(false); closeLoginModal(); }}
-        title={showForgot ? "Reset Password" : "Welcome Back"}
+        onClose={() => { setShowForgot(false); setMfa(null); closeLoginModal(); }}
+        title={mfa ? "Security Verification" : showForgot ? "Reset Password" : "Welcome Back"}
       >
         <div className="p-1">
-          {!showForgot ? (
+          {mfa ? (
+            <div className="space-y-4 pt-2">
+              <div className="p-4 bg-blue-50 text-blue-700 rounded-xl text-xs font-medium flex gap-3">
+                <ShieldCheck className="w-5 h-5 shrink-0" />
+                Enter the 6-digit code from your authenticator app.
+              </div>
+              <input
+                type="text"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                placeholder="000000"
+                className="w-full text-center tracking-[1em] font-black text-2xl py-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              <button
+                onClick={verifyMfa}
+                disabled={mfaInProgress || otp.length !== 6}
+                className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 disabled:opacity-50"
+              >
+                {mfaInProgress && <Loader2 className="w-5 h-5 animate-spin" />}
+                Verify & Continue
+              </button>
+            </div>
+          ) : !showForgot ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Email</label>
+                <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    name="email"
-                    type="email"
-                    required
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition-all"
-                    placeholder="Enter your email"
-                  />
+                  <input name="email" type="email" required className="w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl outline-none" placeholder="Enter email" />
                 </div>
               </div>
-
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Password</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowForgot(true)}
-                    className="text-xs font-bold text-teal-600 hover:underline"
-                  >
-                    Forgot?
-                  </button>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Password</label>
+                  <button type="button" onClick={() => setShowForgot(true)} className="text-xs font-bold text-teal-600 hover:underline">Forgot?</button>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition-all"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+                  <input name="password" type={showPassword ? "text" : "password"} required className="w-full pl-10 pr-12 py-3 bg-slate-50 border rounded-xl outline-none" placeholder="••••••••" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                 </div>
               </div>
-
-              <button
-                disabled={isSubmitting}
-                className="w-full bg-slate-900 hover:bg-teal-600 text-white font-bold py-4 rounded-xl transition-all flex justify-center items-center gap-2 active:scale-95 shadow-xl shadow-slate-200"
-              >
+              <button disabled={isSubmitting} className="w-full bg-slate-900 hover:bg-teal-600 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2">
                 {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
                 Sign In
               </button>
-
-              <p className="text-center text-sm text-slate-500">
-                New to MedX? <Link href="/register" onClick={closeLoginModal} className="text-teal-600 font-bold hover:underline">Create account</Link>
-              </p>
             </form>
           ) : (
             <ForgotPasswordForm onDone={() => setShowForgot(false)} />

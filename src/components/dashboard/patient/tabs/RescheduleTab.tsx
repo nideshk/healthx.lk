@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Loader from "@/components/atom/Loader/Loader";
+import { authFetch } from "@/lib/authFetch";
 
 export default function RescheduleTab() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/booking/appointment")
+    authFetch("/api/booking/appointment")
       .then((r) => r.json())
       .then((j) => {
         setAppointments(j.upcoming || []);
@@ -17,11 +18,11 @@ export default function RescheduleTab() {
       .finally(() => setLoading(false));
   }, []);
 
- if (loading) { 
-     return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
-         <Loader size="lg"></Loader>;
-     </div>
-   }
+  if (loading) {
+    return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
+      <Loader size="lg"></Loader>;
+    </div>
+  }
 
   return (
     <div className="space-y-4">

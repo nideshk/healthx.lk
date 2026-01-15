@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import { authFetch } from '@/lib/authFetch';
 
 // --- ICON ---
 const StethoscopeIcon = () => (
@@ -90,20 +90,36 @@ export default function Consultation() {
 
   // 🔹 Fetch services from your API
   useEffect(() => {
-    const fetchServices = async () => {
+    let mounted = true;
+
+    async function fetchServices() {
       try {
-        const res = await axios.get('/api/services');
-        console.log('✅ API Response:', res.data);
-        setServices(res.data.services || []);
-        setFilteredServices(res.data.services || []);
+        const res = await authFetch("/api/services");
+
+        if (!res.ok) {
+          throw new Error(`Service fetch failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+
+        setServices(data.services || []);
+        setFilteredServices(data.services || []);
       } catch (err) {
-        console.error('❌ Failed to fetch services:', err);
+        console.error("❌ Failed to fetch services:", err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
-    };
+    }
+
     fetchServices();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
 
   // 🔹 Filter services
   useEffect(() => {
