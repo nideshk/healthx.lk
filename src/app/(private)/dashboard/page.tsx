@@ -9,6 +9,7 @@ import PatientDashboard from "@/components/dashboard/patient/PatientDashboard";
 import PractitionerDashboard from "@/components/dashboard/practitioner/PractitionerDashboard";
 import Loader from "@/components/atom/Loader/Loader";
 import { authFetch } from "@/lib/authFetch";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Role = "patient" | "practitioner" | "admin" | "superadmin";
 
@@ -16,7 +17,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const { user } = useAuth();
+  console.log(user)
   useEffect(() => {
     let mounted = true;
 
