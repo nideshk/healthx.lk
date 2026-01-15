@@ -1,58 +1,71 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 import AdminDashboard from "@/components/dashboard/admin/AdminDashboard";
 import PatientDashboard from "@/components/dashboard/patient/PatientDashboard";
 import PractitionerDashboard from "@/components/dashboard/practitioner/PractitionerDashboard";
 import Loader from "@/components/atom/Loader/Loader";
-import { redirect } from "next/navigation";
-import { toast } from "react-toastify";
+import { authFetch } from "@/lib/authFetch";
 
 type Role = "patient" | "practitioner" | "admin" | "superadmin";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     async function loadRole() {
       try {
-        const res = await axios.get("/api/auth/me");
-        const user = res.data?.user;
+        const res = await authFetch("/api/auth/me");
+
+        if (!res.ok) {
+          throw new Error("Unauthorized");
+        }
+
+        const j = await res.json();
+        const user = j.user;
 
         if (!user?.role) {
           throw new Error("No role");
         }
 
-        // ✅ SOURCE OF TRUTH = BACKEND
+        if (!mounted) return;
+
         setRole(user.role);
 
-        // Optional cache (safe now)
+        // Optional cache
         localStorage.setItem("user_role", user.role);
 
         if (user.role === "patient") {
           localStorage.setItem("user_id", user.patient_id);
         } else if (user.role === "practitioner") {
           localStorage.setItem("user_id", user.practitioner_id);
-        } else if (user.role === "admin") {
-          localStorage.setItem("user_id", user.admin_id);
+        } else {
+          localStorage.setItem("user_id", user.auth_user_id);
         }
       } catch (err) {
-        // ❌ Clear stale cache
         localStorage.removeItem("user_role");
         localStorage.removeItem("user_id");
 
         toast.error("Please login to access the dashboard.");
-        redirect("/");
+        router.push("/");
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
     loadRole();
-  }, []);
+
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
 
   /* ---------------- LOADING ---------------- */
   if (loading) {
@@ -66,7 +79,10 @@ export default function DashboardPage() {
   /* ---------------- ROLE BASED ---------------- */
   if (role === "patient") return <PatientDashboard />;
   if (role === "practitioner") return <PractitionerDashboard />;
-  if (role === "admin" || role === "superadmin") return <AdminDashboard />;
+  if (role === "admin" || role === "superadmin")
+    return <AdminDashboard />;
 
-  redirect("/");
+  // Fallback safety
+  router.push("/");
+  return null;
 }

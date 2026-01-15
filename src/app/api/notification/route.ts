@@ -3,19 +3,17 @@ import { requireUser } from "@/lib/authGuard";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export async function GET() {
-  const { authorized, user, response } = await requireUser();
+export async function GET(req: Request) {
+  const { authorized, user, response } = await requireUser(req);
   if (!authorized) return response;
 
   const { data, error } = await supabaseAdmin
     .from("notifications")
     .select("*")
-    .eq("user_id",  user?.auth_user_id)
+    .eq("user_id", user?.auth_user_id)
     .in("channel", ["in_app"])
     .neq("status", "read")
     .limit(20);
-
-
 
   if (error) {
     return NextResponse.json(

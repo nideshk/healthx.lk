@@ -26,7 +26,7 @@ function calculateAge(dob: string | Date | null | undefined): number | null {
 ------------------------------------- */
 export async function GET(req: NextRequest) {
   try {
-    const { authorized, user, role } = await requireUser();
+    const { authorized, user, role } = await requireUser(req);
     if (!authorized) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
@@ -144,7 +144,7 @@ export async function GET(req: NextRequest) {
         starts_at: appt.starts_at,
         ends_at: appt.ends_at,
         status: appt.status,
-        room_key : appt.room_key,
+        room_key: appt.room_key,
         payment_status: appt.payment_status,
         expires_at: appt.expires_at,
         notes: appt.notes,
@@ -210,9 +210,9 @@ export async function GET(req: NextRequest) {
       const end = a.ends_at
         ? new Date(a.ends_at)
         : new Date(
-            start.getTime() +
-              (a.appointment_type?.duration_mins ?? 15) * 60000
-          );
+          start.getTime() +
+          (a.appointment_type?.duration_mins ?? 15) * 60000
+        );
 
       // 1️⃣ Cancelled (highest priority)
       if (a.status === "cancelled" || a.cancellation_reason) {
@@ -220,12 +220,12 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-  // Cancelled
-  if (a.status === "cancelled" || a.cancellation_reason) {
-    console.log("⛔ → CANCELLED\n");
-    cancelled.push(a);
-    continue;
-  }
+      // Cancelled
+      if (a.status === "cancelled" || a.cancellation_reason) {
+        console.log("⛔ → CANCELLED\n");
+        cancelled.push(a);
+        continue;
+      }
       // 2️⃣ Pending payment (admin or user created)
       if (
         a.payment_status === "pending" &&
@@ -264,21 +264,21 @@ export async function GET(req: NextRequest) {
       purpose: "operations",
       source: "user_portal",
       metadata: {
-      success: true,
-      role,
-      count: {
-        pending_payment: pending_payment.length,
-        ongoing: ongoing.length,
-        upcoming: upcoming.length,
-        past: past.length,
-        cancelled: cancelled.length,
-      },
-      pending_payment,
-      ongoing,
-      upcoming,
-      past,
-      cancelled,
-    }
+        success: true,
+        role,
+        count: {
+          pending_payment: pending_payment.length,
+          ongoing: ongoing.length,
+          upcoming: upcoming.length,
+          past: past.length,
+          cancelled: cancelled.length,
+        },
+        pending_payment,
+        ongoing,
+        upcoming,
+        past,
+        cancelled,
+      }
     })
     return NextResponse.json({
       success: true,
