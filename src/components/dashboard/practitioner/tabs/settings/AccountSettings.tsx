@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
+import { authFetch } from "@/lib/authFetch";
 
 const AccountSettings: React.FC = () => {
   const [form, setForm] = useState({
@@ -21,9 +22,7 @@ const AccountSettings: React.FC = () => {
   useEffect(() => {
     const fetchMe = async () => {
       try {
-        const res = await fetch("/api/auth/me", {
-          credentials: "include",
-        });
+        const res = await authFetch("/api/auth/me");
 
         if (!res.ok) return;
 
@@ -66,12 +65,11 @@ const AccountSettings: React.FC = () => {
     try {
       setLoading(true);
 
-      const res = await fetch("/api/auth/change-password", {
+      const res = await authFetch("/api/auth/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
         body: JSON.stringify({
           new_password: form.newPassword,
         }),

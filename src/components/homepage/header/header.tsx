@@ -29,6 +29,7 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { useModalStore } from "@/store/useModalStore";
 import Modal from "@/components/atom/Modal/Modal";
 import { useAuth } from "@/contexts/AuthContext";
+import { authFetch } from "@/lib/authFetch";
 
 const LOCAL_DRAFT_KEY = "bookingDraft";
 
@@ -71,7 +72,7 @@ export default function Header() {
     if (!user) return;
     setLoadingNotifs(true);
     try {
-      const res = await fetch("/api/notification");
+      const res = await authFetch("/api/notification");
       const data = await res.json();
       if (data.notifications) {
         setNotifications(data.notifications);

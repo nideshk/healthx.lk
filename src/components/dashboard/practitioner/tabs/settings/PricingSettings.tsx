@@ -5,6 +5,7 @@ import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import Loader from "@/components/atom/Loader/Loader";
 import { toast } from "react-toastify";
+import { authFetch } from "@/lib/authFetch";
 
 // Interfaces updated to match your provided JSON response structure
 interface FeeDetails {
@@ -44,7 +45,7 @@ const PricingSettings: React.FC = () => {
 
   const getPractitionerId = async (): Promise<string> => {
     try {
-      const response = await fetch("/api/auth/me");
+      const response = await authFetch("/api/auth/me");
       if (!response.ok) throw new Error("Failed to fetch practitioner info");
       const data = await response.json();
       return data?.user?.practitioner_id || "";
@@ -58,7 +59,7 @@ const PricingSettings: React.FC = () => {
     try {
       setLoading(true);
       const practitionerId = await getPractitionerId();
-      const response = await fetch(
+      const response = await authFetch(
         `/api/practitioners/${practitionerId}/pricing`
       );
       if (!response.ok) throw new Error("Failed to fetch pricing data");
@@ -90,10 +91,10 @@ const PricingSettings: React.FC = () => {
 
   const addAvailableService = (service: AvailablePricingType) => {
     if (!pricingData) return;
-    
+
     setPricingData((prev) => {
       if (!prev) return prev;
-      
+
       // Add the selected service into the active fees object
       const updatedFees = {
         ...prev.fees,
@@ -125,7 +126,7 @@ const PricingSettings: React.FC = () => {
     try {
       setSaving(true);
       const practitionerId = pricingData.practitioner_id;
-      const response = await fetch(
+      const response = await authFetch(
         `/api/practitioners/${practitionerId}/pricing`,
         {
           method: "PATCH",
@@ -136,14 +137,14 @@ const PricingSettings: React.FC = () => {
           }),
         }
       );
-      
+
       if (!response.ok) throw new Error("Failed to save pricing data");
-      
+
       toast.success("Pricing updated successfully");
-      
+
       // Instead of window.location.reload(), we fetch data to refresh the tab state
       await fetchPricingData();
-      
+
     } catch (err) {
       const message = err instanceof Error ? err.message : "An error occurred";
       setError(message);
@@ -228,7 +229,7 @@ const PricingSettings: React.FC = () => {
             <Section title="Add Available Services">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {pricingData.available_pricing_types.map((service) => (
-                  <div 
+                  <div
                     key={service.appointment_type_id}
                     className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-slate-50 hover:bg-white transition-all cursor-default group"
                   >

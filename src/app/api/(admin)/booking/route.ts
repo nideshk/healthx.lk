@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
       ...cnx,
       action: "VIEWED",
       entityType: "APPOINTMENT",
-      purpose: "operations",
+      purpose: "analytics",
       source: "dashboard",
       metadata: { filters: { from: fromDate, to: toDate, type } }
     })
