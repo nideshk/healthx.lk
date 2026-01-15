@@ -627,7 +627,7 @@ const AppointmentRow: React.FC<{
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-5 py-4 border-b">
-              <div className="text-sm font-semibold text-slate-900">Email Template Preview</div>
+              <div className="text-sm font-semibold text-slate-900">Send Email </div>
               <button onClick={() => setShowEmailModal(false)} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
             </div>
 
