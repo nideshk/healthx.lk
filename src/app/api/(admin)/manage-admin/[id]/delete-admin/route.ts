@@ -160,7 +160,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Admin hehe successfully",
+      message: "Admin deleted successfully",
     });
   }
 
