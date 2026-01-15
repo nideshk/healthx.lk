@@ -1,3 +1,5 @@
+import { authFetch } from "./authFetch";
+
 type LogCallEventParams = {
   appointmentId: string;
   eventType: string;
@@ -12,7 +14,7 @@ export async function logCallEvent({
   metadata = {},
 }: LogCallEventParams) {
   try {
-    await fetch("/api/consultation/audit-log", {
+    await authFetch("/api/consultation/audit-log", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

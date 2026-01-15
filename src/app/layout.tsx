@@ -4,6 +4,7 @@ import "./globals.css";
 import Script from "next/script";
 import ToastProvider from "./toast-provider";
 import Header from "@/components/homepage/header/header";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,17 +31,20 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Adding this for blur effect while triggering payment */}
-        <div id="main-app-layout" className="transition-all duration-500">
-          <Header />
-          {children}
-        </div>
-        {/* render page.tsx here */}
-        <Script
-          src="https://www.payhere.lk/lib/payhere.js"
-          strategy="lazyOnload"
-        />
-         <ToastProvider />
+        <AuthProvider>
+
+          {/* Adding this for blur effect while triggering payment */}
+          <div id="main-app-layout" className="transition-all duration-500">
+            <Header />
+            {children}
+          </div>
+          {/* render page.tsx here */}
+          <Script
+            src="https://www.payhere.lk/lib/payhere.js"
+            strategy="lazyOnload"
+          />
+          <ToastProvider />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -9,6 +9,7 @@ import Button from "@/components/atom/Button/Button";
 import GenericTable, { Column } from "./GenericTable";
 import { Download } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                                                      */
@@ -334,9 +335,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 
   return (
     <span
-      className={`${
-        colorMap[status.toLowerCase()] || "bg-slate-100 text-slate-600"
-      } px-2 py-1 rounded-full text-[10px] font-bold uppercase border`}
+      className={`${colorMap[status.toLowerCase()] || "bg-slate-100 text-slate-600"
+        } px-2 py-1 rounded-full text-[10px] font-bold uppercase border`}
     >
       {status}
     </span>

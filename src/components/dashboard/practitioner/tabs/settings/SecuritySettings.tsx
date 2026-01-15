@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { supabaseClient } from "@/lib/supabaseClient";
-import { toast } from "react-toastify";
 import { useMfaEnrollment } from "@/hooks/useMfaEnrollment";
 
 const SecuritySettings: React.FC = () => {
@@ -54,7 +52,7 @@ const SecuritySettings: React.FC = () => {
   --------------------------------- */
   const handleToggle = async () => {
     if (loading || twoFactorEnabled === null) return;
-    
+
     if (!twoFactorEnabled) {
       startEnrollment();
     } else {

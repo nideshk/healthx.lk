@@ -6,6 +6,7 @@ import Input from "@/components/atom/Input/Input";
 import ClinicianCard from "./ClinicianCard";
 import ClinicianProfileModal from "./ClinicianProfileModal";
 import Loader from "@/components/atom/Loader/Loader";
+import { authFetch } from "@/lib/authFetch";
 
 const SearchClinicianTab: React.FC = () => {
   const [search, setSearch] = useState("");
@@ -31,7 +32,7 @@ const SearchClinicianTab: React.FC = () => {
         params.append("limit", limit.toString());
         params.append("offset", offset.toString());
 
-        const res = await fetch(`/api/practitioner?${params.toString()}`, {
+        const res = await authFetch(`/api/practitioner?${params.toString()}`, {
           credentials: "include",
         });
 
@@ -77,7 +78,7 @@ const SearchClinicianTab: React.FC = () => {
 
   const handleViewProfile = async (id: string) => {
     try {
-      const res = await fetch(`/api/practitioners/${id}`, {
+      const res = await authFetch(`/api/practitioners/${id}`, {
         credentials: "include",
       });
 

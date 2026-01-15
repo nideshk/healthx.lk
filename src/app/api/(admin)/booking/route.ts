@@ -97,11 +97,10 @@ export async function GET(req: NextRequest) {
       ...cnx,
       action: "VIEWED",
       entityType: "APPOINTMENT",
-      purpose: "operations",
+      purpose: "analytics",
       source: "dashboard",
       metadata: { filters: { from: fromDate, to: toDate, type } }
     })
-
 
     const { data, error, count } = await query;
     if (!count || from >= count) {

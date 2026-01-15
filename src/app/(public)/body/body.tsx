@@ -10,10 +10,12 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import ServiceDoctorFlow from "@/components/homepage/home/ServiceDoctorFlow";
+import { useAuth } from "@/contexts/AuthContext";
 
 /* ================= HERO ================= */
 
 const HeroSection = () => {
+  const { user } = useAuth();
   const router = useRouter();
   const { openLoginModal } = useModalStore();
 
@@ -47,13 +49,24 @@ const HeroSection = () => {
 
         {/* Secondary CTA */}
         <div className="mt-10 flex justify-center gap-4">
-          <Button onClick={() => router.push("#book")}>
-            Book now
-          </Button>
+          {!user ?
 
-          <Button variant="outline" onClick={openLoginModal}>
-            Log in
-          </Button>
+            <Button onClick={() => router.push("#booking")}>
+              Book now
+            </Button>
+            :
+            <Button onClick={() => router.push("/appointment")}>
+              Book now
+            </Button>
+          }
+
+          {user ?
+            <Button onClick={() => router.push("/dashboard")}>Dashboard</Button>
+            :
+            <Button variant="outline" onClick={openLoginModal}>
+              Log in
+            </Button>
+          }
         </div>
       </div>
     </section>

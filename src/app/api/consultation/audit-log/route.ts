@@ -83,17 +83,18 @@ export async function GET(req: NextRequest) {
   /* ----------------------------------------
      1️⃣ Authenticate
   ---------------------------------------- */
-  const { user } = await requireUser(req);
+  const { user, authorized } = await requireUser(req);
+  console.log("user", user)
 
-  if (!user) {
+  if (!authorized) {
     return NextResponse.json(
       { error: "Unauthorized" },
-      { status: 401 }
+      { status: 403 }
     );
   }
 
-  const isAdmin = user.role === "admin" || user.role === "superadmin";
-  const isPractitioner = user.role === "practitioner";
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isPractitioner = user?.role === "practitioner";
 
   if (!isAdmin && !isPractitioner) {
     return NextResponse.json(

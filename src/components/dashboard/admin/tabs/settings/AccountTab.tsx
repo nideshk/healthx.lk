@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import { toast } from "react-toastify";
+import { authFetch } from "@/lib/authFetch";
 
 interface AccountTabProps {
   email: string;
@@ -23,7 +24,7 @@ const AccountTab: React.FC<AccountTabProps> = ({ email }) => {
   const [accountError, setAccountError] = useState<string | null>(null);
 
   const changePassword = async (newPassword: string) => {
-    const res = await fetch("/api/auth/change-password", {
+    const res = await authFetch("/api/auth/change-password", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
