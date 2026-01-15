@@ -10,6 +10,7 @@ import GenericTable, { Column } from "./GenericTable";
 import {
   Download,
 } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                                                      */
@@ -67,7 +68,7 @@ const TimestampTab: React.FC = () => {
 
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
   // Pagination State
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -85,18 +86,18 @@ const TimestampTab: React.FC = () => {
         limit: limit.toString(),
       });
 
-      const response = await fetch(`/api/consultation/audit-log?${queryParams}`);
+      const response = await authFetch(`/api/consultation/audit-log?${queryParams}`);
       const result = await response.json();
 
       if (result?.data) {
         // Map the data to ensure every item has an 'id' for GenericTable's requirement
         const formattedData = result.data.map((item: AuditLogItem) => ({
           ...item,
-          id: item.appointment_id, 
+          id: item.appointment_id,
         }));
         setLogs(formattedData);
         setTotalPages(result.totalPages || 1);
-        setTotalResults(result.totalCount || result.data.length); 
+        setTotalResults(result.totalCount || result.data.length);
       }
     } catch (error) {
       console.error("Failed to fetch audit logs:", error);
@@ -305,9 +306,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 
   return (
     <span
-      className={`${
-        colorMap[status.toLowerCase()] || "bg-slate-100 text-slate-600"
-      } px-2 py-1 rounded-full text-[10px] font-bold uppercase border`}
+      className={`${colorMap[status.toLowerCase()] || "bg-slate-100 text-slate-600"
+        } px-2 py-1 rounded-full text-[10px] font-bold uppercase border`}
     >
       {status}
     </span>
