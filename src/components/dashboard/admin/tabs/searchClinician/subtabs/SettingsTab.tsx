@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
+import { toast } from "react-toastify";
 
 interface SettingsTabProps {
   clinician: {
@@ -32,11 +33,11 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ clinician }) => {
       }
 
       // Success feedback
-      alert(data.message || "Clinician deactivated successfully.");
+      toast.success(data.message || "Clinician deactivated successfully.");
       setShowConfirmModal(false);
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Something went wrong while deactivating clinician");
+      toast.error(err.message || "Something went wrong while deactivating clinician");
     } finally {
       setIsDeactivating(false);
     }
