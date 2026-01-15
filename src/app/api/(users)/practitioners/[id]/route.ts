@@ -93,39 +93,6 @@ export async function GET(
       );
     }
 
-    const cnx = getAuditContext(req, user);
-    await auditLog({
-      ...cnx,
-      action: "VIEWED",
-      entityType: "PRACTITIONER",
-      entityId: practitioner.id,
-      purpose: "operations",
-      source: "dashboard",
-      metadata: {
-        success: true,
-        practitioner: {
-          id: practitioner.id,
-          gender: practitioner.gender,
-          license_number: practitioner.license_number,
-          contact_number: practitioner.contact_number,
-          contact_email: practitioner.contact_email,
-          full_name: practitioner.full_name,
-          first_name: practitioner.first_name || null,
-          last_name: practitioner.last_name || null,
-          profile_bio: practitioner.profile_bio,
-          specialization: practitioner.specialization,
-          qualifications: practitioner.qualification,
-          experience_years: practitioner.experience_years,
-          price: practitioner.solo_consultation_fee,
-          family_price: practitioner.family_consultation_fee,
-          profile_image: practitioner.profile_picture_url,
-          available_services: practitioner.available_services,
-          appointment_types: appointmentTypes,
-        },
-        bank_details: bankDetails,
-        requested_by: user?.auth_user_id,
-      }
-    });
 
     return NextResponse.json({
       success: true,
