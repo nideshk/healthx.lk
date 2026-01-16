@@ -14,11 +14,14 @@ const SearchClinicianTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [limit] = useState(10);
-  const [offset] = useState(0);
+  // Dynamic Pagination States
+  const [limit, setLimit] = useState(10);
+  const [offset, setOffset] = useState(0);
 
   useEffect(() => {
     const fetchClinicians = async () => {
+      // Logic to prevent searching on very short strings,
+      // but allow fetching the default list if search is empty
       if (search.length > 0 && search.length < 3) return;
 
       setLoading(true);
@@ -50,6 +53,11 @@ const SearchClinicianTab: React.FC = () => {
     fetchClinicians();
   }, [search, limit, offset]);
 
+  // Reset offset when search or limit changes to avoid being stuck on an empty page
+  useEffect(() => {
+    setOffset(0);
+  }, [search, limit]);
+
   type Clinician = {
     id: string;
     name: string;
@@ -73,7 +81,9 @@ const SearchClinicianTab: React.FC = () => {
     tags: string[];
   };
 
-  const [selectedClinician, setSelectedClinician] = useState<Clinician | null>(null);
+  const [selectedClinician, setSelectedClinician] = useState<Clinician | null>(
+    null
+  );
   const [openProfile, setOpenProfile] = useState(false);
 
   const handleViewProfile = async (id: string) => {
@@ -117,12 +127,30 @@ const SearchClinicianTab: React.FC = () => {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <div>
-            <div className="text-sm font-semibold text-slate-900">
-              Search Clinicians
+          <div className="flex justify-between items-center w-full">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">
+                Search Clinicians
+              </div>
+              <div className="text-xs text-slate-500">
+                Find clinicians and view quick details. Click name to open
+                profile.
+              </div>
             </div>
-            <div className="text-xs text-slate-500">
-              Find clinicians and view quick details. Click name to open profile.
+
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-slate-500">Show:</span>
+              <select
+                value={limit}
+                onChange={(e) => setLimit(Number(e.target.value))}
+                className="text-xs border border-slate-200 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                {[10, 20, 50, 100].map((val) => (
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </CardHeader>
@@ -150,21 +178,44 @@ const SearchClinicianTab: React.FC = () => {
             ) : (
               <>
                 {clinicians.length > 0 ? (
-                  clinicians.map((c) => (
-                    <ClinicianCard
-                      key={c.id}
-                      clinician={{
-                        id: c.id,
-                        name: c.full_name,
-                        specialty: c.qualification,
-                        registration: c.license_number,
-                        tags: c.specialization,
-                        experience: c.experience_years,
-                        fees: c.fees ?? [],
-                      }}
-                      onViewProfile={handleViewProfile}
-                    />
-                  ))
+                  <>
+                    {clinicians.map((c) => (
+                      <ClinicianCard
+                        key={c.id}
+                        clinician={{
+                          id: c.id,
+                          name: c.full_name,
+                          specialty: c.qualification,
+                          registration: c.license_number,
+                          tags: c.specialization,
+                          experience: c.experience_years,
+                          fees: c.fees ?? [],
+                        }}
+                        onViewProfile={handleViewProfile}
+                      />
+                    ))}
+
+                    {/* Pagination Controls */}
+                    <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                      <button
+                        disabled={offset === 0 || loading}
+                        onClick={() => setOffset(Math.max(0, offset - limit))}
+                        className="px-3 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-xs text-slate-500">
+                        Page {offset / limit + 1}
+                      </span>
+                      <button
+                        disabled={clinicians.length < limit || loading}
+                        onClick={() => setOffset(offset + limit)}
+                        className="px-3 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </>
                 ) : (
                   <div className="text-xs text-slate-500 py-10 text-center">
                     No clinicians found.

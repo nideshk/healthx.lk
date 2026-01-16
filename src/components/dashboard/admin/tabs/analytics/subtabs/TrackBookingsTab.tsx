@@ -107,8 +107,8 @@ const TrackBookingsTab: React.FC = () => {
         `/api/booking?from=${fromDate}&to=${toDate}&type=${activeListView}&page=${currentPage}&per_page=${perPage}`
       );
       if (!response.ok) {
-          throw new Error(`Failed to fetch detailed list: ${response.status}`);
-        }
+        throw new Error(`Failed to fetch detailed list: ${response.status}`);
+      }
       const data = await response.json();
       if (data.success) {
         setListData(data.data);

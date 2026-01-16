@@ -22,7 +22,7 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
 }) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -45,11 +45,11 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
         `/api/booking?from=${fromDate}&to=${toDate}&type=${type}&page=${currentPage}&per_page=${perPage}`
       );
       if (!response.ok) {
-          throw new Error(`Failed to fetch booking details: ${response.status}`);
-        }
+        throw new Error(`Failed to fetch booking details: ${response.status}`);
+      }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setData(data.data);
         setTotalPages(data.meta.total_pages || 1);
@@ -67,7 +67,6 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        
         {/* HEADER */}
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
@@ -91,7 +90,9 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Loader2 className="animate-spin text-blue-600" size={32} />
-              <p className="text-slate-500 text-sm">Loading page {currentPage}...</p>
+              <p className="text-slate-500 text-sm">
+                Loading page {currentPage}...
+              </p>
             </div>
           ) : data.length === 0 ? (
             <div className="text-center py-20 text-slate-500">
@@ -111,14 +112,23 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
                 </thead>
                 <tbody className="divide-y">
                   {data.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
                       <td className="px-4 py-3">
-                        <div className="font-medium text-slate-700">{item.appointment_date}</div>
-                        <div className="text-xs text-slate-500">{item.start_time}</div>
+                        <div className="font-medium text-slate-700">
+                          {item.appointment_date}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {item.start_time}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium">{item.patient.name}</div>
-                        <div className="text-xs text-slate-400">{item.patient.email}</div>
+                        <div className="text-xs text-slate-400">
+                          {item.patient.email}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-slate-600">
                         {item.practitioner.name}
@@ -127,9 +137,30 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
                         {item.appointment_type}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase">
-                          {item.status}
-                        </span>
+                        {(() => {
+                          const statusStyles: Record<string, string> = {
+                            completed:
+                              "bg-emerald-50 text-emerald-700 border-emerald-100",
+                            cancelled: "bg-red-50 text-red-700 border-red-100",
+                            scheduled:
+                              "bg-blue-50 text-blue-700 border-blue-100",
+                            pending:
+                              "bg-amber-50 text-amber-700 border-amber-100",
+                          };
+
+                          // Fallback to blue if the status doesn't match our specific keys
+                          const currentStyle =
+                            statusStyles[item.status?.toUpperCase()] ||
+                            "bg-slate-50 text-slate-700 border-slate-100";
+
+                          return (
+                            <span
+                              className={`${currentStyle} px-2 py-1 rounded-md text-[10px] font-bold uppercase border`}
+                            >
+                              {item.status}
+                            </span>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))}
@@ -142,7 +173,8 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
         {/* FOOTER WITH PAGINATION */}
         <div className="px-6 py-4 border-t bg-slate-50 flex items-center justify-between">
           <div className="text-sm text-slate-500">
-            Page <span className="font-medium text-slate-700">{currentPage}</span> of{" "}
+            Page{" "}
+            <span className="font-medium text-slate-700">{currentPage}</span> of{" "}
             <span className="font-medium text-slate-700">{totalPages}</span>
           </div>
 
