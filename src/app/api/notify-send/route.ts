@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
        AUTH
     -------------------------- */
     const { authorized, response } = await requireUser(req);
-    if (!authorized) return response;
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     /* -------------------------
        BODY

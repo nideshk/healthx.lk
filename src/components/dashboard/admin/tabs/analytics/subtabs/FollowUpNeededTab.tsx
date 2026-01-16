@@ -149,7 +149,7 @@ const FollowUpNeededTab: React.FC = () => {
   /* ---------------- ACTION ---------------- */
   const handleNotify = async (item: FollowUpItem) => {
     try {
-      const res = await fetch("/api/encounter/follow-up", {
+      const res = await authFetch("/api/encounter/follow-up", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
