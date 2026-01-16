@@ -1,14 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/authGuard";
 
-export async function GET() {
-  const { authorized, user, response , role } = await requireUser();
+export async function GET(req: NextRequest) {
+  const { authorized, user } = await requireUser(req);
 
-  if (!authorized) return response;
+  if (!authorized) return NextResponse.json({
+    success: false,
+    message: "Unauthorized"
+  });
 
   return NextResponse.json({
     success: true,
-    user,
-    role
+    user
   });
 }

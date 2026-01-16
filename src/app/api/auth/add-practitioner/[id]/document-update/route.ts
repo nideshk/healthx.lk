@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
-import { logAuditEvent } from "@/lib/logAuditEvent";
 
 export async function PUT(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  try{
-  const { id: practitioner_id } = await context.params;  
+  try {
+    const { id: practitioner_id } = await context.params;
     if (!practitioner_id) {
       return NextResponse.json(
         { error: "Missing application id" },
@@ -16,7 +15,7 @@ export async function PUT(
       );
     }
 
-    const { user, role } = await requireUser();
+    const { user, role } = await requireUser(req);
     if (!user || !["admin", "superadmin"].includes(user?.admin?.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

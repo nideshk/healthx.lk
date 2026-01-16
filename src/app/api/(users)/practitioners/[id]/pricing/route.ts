@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     const { id: practitionerId } = await ctx.params;
     if (!practitionerId) return NextResponse.json({ error: "Practitioner identifier is required." }, { status: 400 });
 
-    const { authorized, user, role } = await requireUser();
+    const { authorized, user, role } = await requireUser(request);
     if (!authorized) return NextResponse.json({ error: "You are not authorized." }, { status: 401 });
 
     // permissions: practitioner self OR admin OR patient can view
@@ -92,7 +92,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     const { id: practitionerId } = await ctx.params;
     if (!practitionerId) return NextResponse.json({ error: "Practitioner identifier is required." }, { status: 400 });
 
-    const { authorized, user } = await requireUser();
+    const { authorized, user } = await requireUser(request);
     if (!authorized) return NextResponse.json({ error: "You are not authorized." }, { status: 401 });
 
     // Only the practitioner (own profile) may update pricing

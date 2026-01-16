@@ -6,6 +6,7 @@ import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import { CheckCircle, XCircle } from "lucide-react";
 import GenericTable, { Column } from "./GenericTable";
+import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                    */
@@ -107,17 +108,17 @@ const FollowUpNeededTab: React.FC = () => {
           limit: perPage.toString(),
         });
 
-        const res = await fetch(`/api/encounter/follow-up?${queryParams}`, {
+        const res = await authFetch(`/api/encounter/follow-up?${queryParams}`, {
           credentials: "include",
         });
 
-        if (!res.ok) {
-          throw new Error("Failed to fetch follow-up data");
+       if (!res.ok) {
+          throw new Error(`Failed to fetch follow-up data: ${res.status}`);
         }
 
-        const json = await res.json();
+        const data = await res.json();
 
-        const mapped: FollowUpItem[] = (json.items || []).map((item: any) => {
+        const mapped: FollowUpItem[] = (data.items || []).map((item: any) => {
           const dt = DateTime.fromISO(item.follow_up_date);
           
           return {
@@ -133,7 +134,7 @@ const FollowUpNeededTab: React.FC = () => {
         });
 
         setData(mapped);
-        setTotalResults(json.total || mapped.length);
+        setTotalResults(data.total || mapped.length);
       } catch (err) {
         console.error(err);
         setData([]);
@@ -148,7 +149,7 @@ const FollowUpNeededTab: React.FC = () => {
   /* ---------------- ACTION ---------------- */
   const handleNotify = async (item: FollowUpItem) => {
     try {
-      const res = await fetch("/api/encounter/follow-up", {
+      const res = await authFetch("/api/encounter/follow-up", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

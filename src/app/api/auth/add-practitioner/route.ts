@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     /* --------------------------------------------------
      * 1️⃣ Authentication & Authorization
      * -------------------------------------------------- */
-    const { authorized, role } = await requireUser();
+    const { authorized, role } = await requireUser(req);
 
     if (!authorized || !["admin", "superadmin"].includes(role)) {
       return NextResponse.json(

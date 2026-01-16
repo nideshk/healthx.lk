@@ -16,7 +16,7 @@ export async function POST(
     const { practitionerId } = await context.params;
 
     // 1️⃣ Auth
-    const { authorized, user } = await requireUser();
+    const { authorized, user }: any = await requireUser(req);
     if (!authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

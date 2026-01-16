@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Loader from "@/components/atom/Loader/Loader";
+import { authFetch } from "@/lib/authFetch";
 import { CalendarDays, Clock, ChevronRight, AlertCircle, User } from "lucide-react";
 
 export default function RescheduleTab() {
@@ -10,7 +11,7 @@ export default function RescheduleTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/booking/appointment")
+    authFetch("/api/booking/appointment")
       .then((r) => r.json())
       .then((j) => {
         setAppointments(j.upcoming || []);
@@ -19,11 +20,9 @@ export default function RescheduleTab() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="w-full h-[60vh] flex justify-center items-center">
-        <Loader size="lg" />
-      </div>
-    );
+    return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
+      <Loader size="lg"></Loader>;
+    </div>
   }
 
   return (

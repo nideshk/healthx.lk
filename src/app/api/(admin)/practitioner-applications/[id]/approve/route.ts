@@ -19,7 +19,7 @@ export async function POST(
   /* --------------------------------------------------
    * 1️⃣ Authentication & Authorization
    * -------------------------------------------------- */
-  const { authorized, role, user } = await requireUser();
+  const { authorized, role, user } = await requireUser(req);
 
   if (!authorized || !["admin", "superadmin"].includes(role)) {
     return NextResponse.json(
@@ -134,21 +134,21 @@ export async function POST(
 
   // Decrypt password from application
   const password = decrypt(app.encrypted_password);
-  
-if (!password) {
-  return NextResponse.json(
-    {
-      success: false,
-      message: "Invalid or corrupted application password",
-    },
-    { status: 500 }
-  );
-}
+
+  if (!password) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Invalid or corrupted application password",
+      },
+      { status: 500 }
+    );
+  }
 
   const applicationDocuments = Array.isArray(app.documents)
     ? app.documents
     : [];
-    
+
   /* --------------------------------------------------
    * 1️⃣ Create practitioner
    * -------------------------------------------------- */
@@ -179,7 +179,7 @@ if (!password) {
         message: result.message,
       },
       { status: 500 }
-    );              
+    );
   }
 
   createdUserId = result?.userId ?? null;
@@ -209,18 +209,18 @@ if (!password) {
       await supabaseAdmin.from("profiles").delete().eq("id", createdUserId);
     }
 
-     const cnx = getAuditContext(req, user);
-  await auditLog({
-    ...cnx,
-    action: "FAILED",
-    entityType: "ADMIN_USER",
-    purpose: "operations",
-    source: "dashboard",
-    entityId : createdPractitionerId || createdUserId || undefined,
-    metadata: {
-      success: true,
-    }
-  });
+    const cnx = getAuditContext(req, user);
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      entityId: createdPractitionerId || createdUserId || undefined,
+      metadata: {
+        success: true,
+      }
+    });
     return NextResponse.json(
       {
         success: false,
@@ -231,14 +231,14 @@ if (!password) {
     );
   }
 
-    const cnx = getAuditContext(req, user);
+  const cnx = getAuditContext(req, user);
   await auditLog({
     ...cnx,
     action: "APPROVED",
     entityType: "ADMIN_USER",
     purpose: "operations",
     source: "dashboard",
-    entityId : createdPractitionerId || undefined,
+    entityId: createdPractitionerId || undefined,
     metadata: {
       success: true,
     }

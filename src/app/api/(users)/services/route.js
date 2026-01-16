@@ -3,10 +3,11 @@
 import { requireUser } from "@/lib/authGuard";
 import { supabaseClient } from "@/lib/supabaseClient";
 
-export async function GET() {
+export async function GET(req) {
   try {
-    const { authorized, response, user } = await requireUser();
-    if (!authorized) return response;
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
 
     // Fetch all appointment types from your DB
     const { data: appointmentTypes, error } = await supabaseClient
@@ -41,7 +42,7 @@ export async function GET() {
         user: user.email
       }
     });
-    
+
     // Final response
     return Response.json(
       {

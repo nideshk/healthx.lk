@@ -1,0 +1,128 @@
+import { supabaseAdmin } from "./supabaseAdmin";
+
+export const dynamic = "force-dynamic";
+
+export async function requireUser(req: Request) {
+  if (!req) {
+    throw new Error(
+      "requireUser(req) was called without a Request object"
+    );
+  }
+
+  /* -------------------------------
+     1️⃣ Read Authorization header
+  ------------------------------- */
+  const authHeader = req.headers.get("authorization");
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return unauthorized();
+  }
+
+  const accessToken = authHeader.replace("Bearer ", "");
+
+  /* -------------------------------
+     2️⃣ Verify token
+  ------------------------------- */
+  const { data, error } =
+    await supabaseAdmin.auth.getUser(accessToken);
+
+  if (error || !data?.user) {
+    return unauthorized();
+  }
+
+  const user = data.user;
+  const auth_user_id = user.id;
+
+  /* -------------------------------
+     3️⃣ Fetch profile
+  ------------------------------- */
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("*")
+    .eq("id", auth_user_id)
+    .single();
+
+  if (!profile) {
+    return forbidden("Profile not found");
+  }
+
+  /* -------------------------------
+     4️⃣ Domain mapping
+  ------------------------------- */
+  const { data: patient } = await supabaseAdmin
+    .from("patients")
+    .select("id, contact_number")
+    .eq("supabase_user_id", auth_user_id)
+    .maybeSingle();
+
+  const { data: practitioner } = await supabaseAdmin
+    .from("practitioners")
+    .select("id")
+    .eq("supabase_user_id", auth_user_id)
+    .maybeSingle();
+
+  const { data: adminUser } = await supabaseAdmin
+    .from("admin_users")
+    .select("id, role")
+    .eq("supabase_user_id", auth_user_id)
+    .maybeSingle();
+
+  let admin = null;
+
+  if (adminUser) {
+    const { data: policyRows } = await supabaseAdmin
+      .from("admin_policy_map")
+      .select("policy_code")
+      .eq("admin_id", adminUser.id);
+
+    admin = {
+      id: adminUser.id,
+      role: adminUser.role,
+      policies: policyRows?.map((p) => p.policy_code) ?? [],
+    };
+  }
+
+  return {
+    authorized: true,
+    role: profile.role,
+    response: "",
+    user: {
+      auth_user_id,
+      role: profile.role,
+      profile,
+      user,
+      admin,
+      phone: patient?.contact_number ?? null,
+      patient_id: patient?.id ?? null,
+      practitioner_id: practitioner?.id ?? null,
+    },
+  };
+}
+
+/* -------------------------------
+   Helpers
+------------------------------- */
+
+function unauthorized() {
+  return {
+    authorized: false,
+    user: null,
+    role: null,
+    response: Response.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    ),
+  };
+}
+
+function forbidden(message: string) {
+  return {
+    authorized: false,
+    user: null,
+    role: null,
+    response: Response.json(
+      { error: message },
+      { status: 403 }
+    ),
+  };
+}

@@ -6,11 +6,11 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
 export async function POST(request: NextRequest) {
-    const { authorized, response, user } = await requireUser();
+    const { authorized, user } = await requireUser(request);
 
     if (!authorized) {
         console.log("Not authorized access to /api/payhere");
-        return response;
+        return NextResponse.json({ error: "User not authenticated." }, { status: 401 });
     }
 
     if (!user) {
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     let patient_id = null;
     console.log(user);
-    
+
 
     if (user) {
         patient_id = user.patient_id;
@@ -67,23 +67,21 @@ export async function POST(request: NextRequest) {
         if (!first_name || !last_name || !email || !phone || !address || !city || !country || !appointment_id || !practitioner_id) {
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
         }
-        
+
         const supabase = await supabaseServer();
 
         // Get the appointment based on appointment_id from frontend
-        const {data: appt, error: apptError} = await supabase
-        .from('appointments')
-        .select('patient_id, fee_charged')
-        .eq('id', appointment_id)
-        .single();
+        const { data: appt, error: apptError } = await supabase
+            .from('appointments')
+            .select('patient_id, fee_charged')
+            .eq('id', appointment_id)
+            .single();
 
-        if(!appt || apptError)
-        {
+        if (!appt || apptError) {
             return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
         }
 
-        if(appt.patient_id !== patient_id)
-        {
+        if (appt.patient_id !== patient_id) {
             return NextResponse.json({ error: "Unauthorized: This appointment does not belong to you." }, { status: 403 });
         }
 
@@ -91,7 +89,7 @@ export async function POST(request: NextRequest) {
 
         // Using total fee stored in DB instead of passing it from front-end directly
         const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
-        
+
         const { data: dbData, error: dbError } = await supabase.from('transactions').upsert({
             order_id: orderID,
             status: 'pending',
@@ -153,9 +151,9 @@ export async function POST(request: NextRequest) {
             address,
             city,
             country,
-            amount:formattedAmount,
+            amount: formattedAmount,
             currency,
-            order_id:orderID,
+            order_id: orderID,
             hash: hash,
             items: itemsDescription
         }

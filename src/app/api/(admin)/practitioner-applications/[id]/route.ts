@@ -31,8 +31,8 @@ export async function GET(
   context: { params: Promise<{ id: string }> }) {
   try {
     // 🔐 Authentication check
-    const { authorized, response, user } = await requireUser();
-    if (!authorized) return response;
+    const { authorized, user } = await requireUser(_req);
+    if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     const role = user?.profile?.role;
 
@@ -122,18 +122,18 @@ export async function GET(
       );
     }
 
-     const cnx = getAuditContext(_req, user);
-  await auditLog({
-    ...cnx,
-    action: "EXPORTED",
-    entityType: "ADMIN_USER",
-    purpose: "operations",
-    source: "dashboard",
-    entityId : data.id || undefined,
-    metadata: {
-      success: true,
-    }
-  });
+    const cnx = getAuditContext(_req, user);
+    await auditLog({
+      ...cnx,
+      action: "EXPORTED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      entityId: data.id || undefined,
+      metadata: {
+        success: true,
+      }
+    });
 
     return NextResponse.json({
       success: true,

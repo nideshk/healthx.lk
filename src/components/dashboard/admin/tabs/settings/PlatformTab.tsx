@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import { toast } from "react-toastify";
+import { authFetch } from "@/lib/authFetch";
 
 interface PlatformFee {
   id: string;
@@ -43,7 +44,10 @@ const PlatformTab: React.FC = () => {
 
   const fetchFees = async () => {
     try {
-      const res = await fetch("/api/platform_fee");
+      const res = await authFetch("/api/platform_fee");
+      if (!res.ok) {
+          throw new Error(`Failed to fetch platform fee: ${res.status}`);
+      }
       const json = await res.json();
       if (json.success) setFees(json.data);
     } catch (err) {
@@ -68,7 +72,7 @@ const PlatformTab: React.FC = () => {
         platform_fee: f.platform_fee,
         extra_fee_per_attendee: f.extra_fee_per_attendee
       }));
-      const res = await fetch("/api/platform_fee", {
+      const res = await authFetch("/api/platform_fee", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ updates }),
@@ -95,7 +99,7 @@ const PlatformTab: React.FC = () => {
       const payload = { ...newType };
       if (payload.extra_fee_per_attendee === 0) delete payload.extra_fee_per_attendee;
       
-      const res = await fetch("/api/platform_fee", {
+      const res = await authFetch("/api/platform_fee", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -116,7 +120,7 @@ const PlatformTab: React.FC = () => {
   const confirmDelete = async () => {
     const { typeId, typeName } = deleteModal;
     try {
-      const res = await fetch("/api/platform_fee", {
+      const res = await authFetch("/api/platform_fee", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: typeId }),

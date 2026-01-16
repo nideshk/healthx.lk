@@ -23,6 +23,23 @@ import {
 } from "lucide-react";
 import { toast } from "sonner"; // Switched to sonner for consistency with previous steps
 import Loader from "@/components/atom/Loader/Loader";
+import { authFetch } from "@/lib/authFetch";
+
+/* ---------------- UI HELPER ---------------- */
+function InfoRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-xs uppercase text-gray-500">{label}</p>
+      <p className="font-medium text-gray-900 mt-1">{value}</p>
+    </div>
+  );
+}
 
 export default function AppointmentDetailsPage() {
   const params = useParams();
@@ -31,18 +48,47 @@ export default function AppointmentDetailsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios
-      .get(`/api/booking/appointment/${params.id}`)
-      .then((res) => setAppointment(res.data))
-      .catch(() => toast.error("Failed to load appointment"))
-      .finally(() => setLoading(false));
+    let mounted = true;
+
+    async function fetchAppointment() {
+      try {
+        const res = await authFetch(
+          `/api/booking/appointment/${params.id}`
+        );
+
+        if (!res.ok) {
+          throw new Error(`Failed to load appointment: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+        setAppointment(data);
+      } catch (err) {
+        console.error("Failed to load appointment:", err);
+        if (mounted) {
+          toast.error("Failed to load appointment");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    if (params.id) {
+      fetchAppointment();
+    }
+
+    return () => {
+      mounted = false;
+    };
   }, [params.id]);
+
 
   // --- Safe Sharing Feature ---
   const handleShare = useCallback(async () => {
     const date = DateTime.fromISO(appointment.starts_at).toFormat("EEEE, dd MMMM yyyy");
     const time = DateTime.fromISO(appointment.starts_at).toFormat("hh:mm a");
-    
+
     // Abstracted data for sharing - NO links or IDs
     const shareText = `Appointment Summary:
 🩺 Professional: Dr. ${appointment.practitioner.full_name}
@@ -82,15 +128,15 @@ Status: Confirmed via Secure Portal`;
       {/* 1. TOP UTILITY BAR */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <button 
-            onClick={() => router.back()} 
+          <button
+            onClick={() => router.back()}
             className="flex items-center gap-2 text-slate-400 hover:text-teal-600 transition-all font-bold text-xs uppercase tracking-widest"
           >
             <ArrowLeft className="w-4 h-4" /> Dashboard
           </button>
-          
+
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={handleShare}
               className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-600 transition-all text-[10px] font-black uppercase tracking-widest border border-slate-100"
             >
@@ -106,10 +152,10 @@ Status: Confirmed via Secure Portal`;
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* LEFT: PRIMARY DATA RECORD */}
           <div className="lg:col-span-2 space-y-6">
-            
+
             {/* STATUS HEADER */}
             <div className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
               <div className="bg-teal-600 px-8 py-3 flex justify-between items-center">
@@ -118,7 +164,7 @@ Status: Confirmed via Secure Portal`;
                 </span>
                 <span className="text-teal-100 text-[10px] font-bold opacity-80">Ref: {appointment.id.split('-')[0]}</span>
               </div>
-              
+
               <div className="p-8 md:p-10">
                 <div className="flex flex-col md:flex-row gap-8 items-start">
                   <div className="relative">
@@ -157,7 +203,7 @@ Status: Confirmed via Secure Portal`;
             {/* MEDICAL NOTES & ATTACHMENTS */}
             <section className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                <FileText className="w-4 h-4 text-teal-500" /> 
+                <FileText className="w-4 h-4 text-teal-500" />
                 Intake Information
               </h3>
               <div className="space-y-8">
@@ -169,16 +215,16 @@ Status: Confirmed via Secure Portal`;
                     </p>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-3">Patient Attachments</label>
                   {appointment.attachments.length === 0 ? (
                     <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-bold uppercase tracking-widest">
-                       <ShieldCheck className="w-4 h-4 opacity-50" /> No files shared
+                      <ShieldCheck className="w-4 h-4 opacity-50" /> No files shared
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-3">
-                       {/* Map through attachments here */}
+                      {/* Map through attachments here */}
                     </div>
                   )}
                 </div>
@@ -192,11 +238,11 @@ Status: Confirmed via Secure Portal`;
               <div className="absolute top-0 right-0 rotate-12 translate-x-4 -translate-y-4 opacity-[0.03] text-teal-900 pointer-events-none">
                 <CreditCard size={120} />
               </div>
-              
+
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
                 <CreditCard className="w-4 h-4" /> Billing Summary
               </h3>
-              
+
               <div className="space-y-6">
                 <div className="flex justify-between items-end">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Paid</span>
@@ -204,7 +250,7 @@ Status: Confirmed via Secure Portal`;
                     {appointment.currency} {appointment.fee_charged.toLocaleString()}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-4 bg-teal-50 rounded-2xl border border-teal-100">
                   <span className="text-[10px] font-black text-teal-700 uppercase tracking-tighter">Status</span>
                   <span className="text-[10px] font-black text-teal-700 uppercase flex items-center gap-1 bg-white px-2 py-1 rounded-md shadow-sm">
@@ -225,7 +271,7 @@ Status: Confirmed via Secure Portal`;
               <p className="text-teal-100 text-[11px] font-medium leading-relaxed mb-6 relative z-10">
                 You can easily rebook a session with Dr. {appointment.practitioner.full_name.split(' ')[0]} to discuss your progress.
               </p>
-              <button 
+              <button
                 onClick={() => router.push(`/appointment`)}
                 className="w-full py-4 bg-white text-teal-600 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-teal-50 transition-all active:scale-95 relative z-10"
               >
@@ -237,7 +283,7 @@ Status: Confirmed via Secure Portal`;
             <div className="px-6 py-4 bg-slate-50/50 rounded-2xl border border-slate-100">
               <p className="text-[9px] text-slate-400 font-mono uppercase tracking-tighter leading-loose">
                 <span className="block border-b border-slate-100 pb-1 mb-1 font-bold">Audit Trail</span>
-                ID: {appointment.id}<br/>
+                ID: {appointment.id}<br />
                 PRV: {appointment.practitioner.id}
               </p>
             </div>

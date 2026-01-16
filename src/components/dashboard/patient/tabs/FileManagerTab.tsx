@@ -1,7 +1,8 @@
 "use client";
 
 import Loader from "@/components/atom/Loader/Loader";
-import { FileText, Trash2, ExternalLink, HardDrive, AlertCircle, FileIcon } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
+import { AlertCircle, ExternalLink, File, FileArchiveIcon, FileText, HardDrive, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
@@ -21,8 +22,12 @@ export default function FileManagerTab() {
     async function loadFiles() {
       try {
         setLoading(true);
-        const res = await fetch("/api/manage-attachment");
-        if (!res.ok) throw new Error("Failed to fetch files");
+        const res = await authFetch("/api/manage-attachment");
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch files");
+        }
+
         const data = await res.json();
         setFiles(data.files || []);
       } catch (err: any) {
@@ -38,7 +43,8 @@ export default function FileManagerTab() {
   const viewFile = async (id: string) => {
     try {
       setActionId(id);
-      const res = await fetch(`/api/manage-attachment/${id}`);
+
+      const res = await authFetch(`/api/manage-attachment/${id}`);
       const data = await res.json();
       if (!res.ok || !data?.url) throw new Error(data?.error || "Failed to open file");
       window.open(data.url, "_blank", "noopener,noreferrer");
@@ -56,7 +62,11 @@ export default function FileManagerTab() {
 
     try {
       setActionId(id);
-      const res = await fetch(`/api/manage-attachment/${id}`, { method: "DELETE" });
+
+      const res = await authFetch(`/api/manage-attachment/${id}`, {
+        method: "DELETE",
+      });
+
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data?.error || "Delete failed");
@@ -71,14 +81,14 @@ export default function FileManagerTab() {
     }
   };
 
+  /* ─────────────────────────────────────────────
+     UI STATES
+  ───────────────────────────────────────────── */
   if (loading) {
-    return (
-      <div className="w-full h-[60vh] flex justify-center items-center">
-        <Loader size="lg" />
-      </div>
-    );
+    return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
+      <Loader size="lg"></Loader>;
+    </div>
   }
-
   return (
     <div className="max-w-5xl space-y-6">
       {/* Header Section */}
@@ -108,8 +118,8 @@ export default function FileManagerTab() {
           {files.map((file) => {
             const busy = actionId === file.id;
             const sizeInMB = file.file_size / (1024 * 1024);
-            const displaySize = sizeInMB < 1 
-              ? `${(file.file_size / 1024).toFixed(1)} KB` 
+            const displaySize = sizeInMB < 1
+              ? `${(file.file_size / 1024).toFixed(1)} KB`
               : `${sizeInMB.toFixed(1)} MB`;
 
             return (
@@ -141,7 +151,7 @@ export default function FileManagerTab() {
                   >
                     {busy ? "..." : <><ExternalLink className="w-3.5 h-3.5" /> View</>}
                   </button>
-                  
+
                   <button
                     onClick={() => deleteFile(file.id)}
                     disabled={busy}
@@ -155,7 +165,8 @@ export default function FileManagerTab() {
             );
           })}
         </div>
-      )}
+      )
+      }
     </div>
   );
 }

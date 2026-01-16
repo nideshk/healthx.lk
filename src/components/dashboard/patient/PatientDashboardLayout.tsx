@@ -11,14 +11,14 @@ import {
   MessageCircleCodeIcon,
 } from "lucide-react";
 import Link from "next/link";
-import axios from "axios";
-
 import { PatientTab } from "./patientTabs";
 import AppointmentTab from "./tabs/AppointmentTab";
 import RescheduleTab from "./tabs/RescheduleTab";
 import FileManagerTab from "./tabs/FileManagerTab";
 import FollowUpRequest from "./FollowUpRequest";
 import { ReviewModal } from "@/components/atom/Modal/ReviewModal";
+import { authFetch } from "@/lib/authFetch";
+
 
 export default function PatientDashboardLayout({
   activeTab,
@@ -32,15 +32,38 @@ export default function PatientDashboardLayout({
     const lastPrompt = localStorage.getItem("lastReviewPrompt");
     if (lastPrompt && isSameDay(new Date(lastPrompt), new Date())) return;
 
-    axios.get("http://localhost:3000/api/reviews/pending")
-      .then(res => {
-        if (res.data.appointment) {
-          setPendingReview(res.data.appointment);
-          setShowReviewModal(true);
-          localStorage.setItem("lastReviewPrompt", new Date().toISOString());
+    let mounted = true;
+
+    async function fetchPendingReview() {
+      try {
+        const res = await authFetch("/api/reviews/pending");
+
+        if (!res.ok) {
+          // 401 / 404 / 204 are all acceptable "no prompt" cases
+          return;
         }
-      })
-      .catch(err => console.error("Review check failed", err));
+
+        const data = await res.json();
+
+        if (!mounted || !data?.appointment) return;
+
+        setPendingReview(data.appointment);
+        setShowReviewModal(true);
+
+        localStorage.setItem(
+          "lastReviewPrompt",
+          new Date().toISOString()
+        );
+      } catch (err) {
+        console.error("Failed to fetch pending review:", err);
+      }
+    }
+
+    fetchPendingReview();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return (
@@ -74,7 +97,7 @@ export default function PatientDashboardLayout({
                     icon={<Files />}
                     label="Medical Records"
                   />
-                   <SidebarLink
+                  <SidebarLink
                     href="/dashboard?tab=follow-up"
                     active={activeTab === "follow-up"}
                     icon={<MessageCircleCodeIcon />}
@@ -109,25 +132,25 @@ export default function PatientDashboardLayout({
           {/* ---------------- MAIN CONTENT (9 cols) ---------------- */}
           <main className="lg:col-span-9">
             <header className="mb-8 flex items-end justify-between">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 capitalize">
-                        {activeTab.replace("-", " ")}
-                    </h1>
-                    <p className="text-slate-500 text-sm mt-1">Manage your healthcare journey and records</p>
-                </div>
-                <div className="hidden md:block">
-                     {/* Dynamic breadcrumb or date can go here */}
-                     <span className="text-xs font-medium text-slate-400 bg-white border border-slate-200 px-3 py-1.5 rounded-full">
-                        Today: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                     </span>
-                </div>
+              <div>
+                <h1 className="text-3xl font-black text-slate-900 capitalize">
+                  {activeTab.replace("-", " ")}
+                </h1>
+                <p className="text-slate-500 text-sm mt-1">Manage your healthcare journey and records</p>
+              </div>
+              <div className="hidden md:block">
+                {/* Dynamic breadcrumb or date can go here */}
+                <span className="text-xs font-medium text-slate-400 bg-white border border-slate-200 px-3 py-1.5 rounded-full">
+                  Today: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
             </header>
 
             <div className="min-h-[60vh]">
-                {activeTab === "appointment" && <AppointmentTab />}
-                {activeTab === "reschedule" && <RescheduleTab />}
-                {activeTab === "file-manager" && <FileManagerTab />}
-                {activeTab === "follow-up" && <FollowUpRequest />}
+              {activeTab === "appointment" && <AppointmentTab />}
+              {activeTab === "reschedule" && <RescheduleTab />}
+              {activeTab === "file-manager" && <FileManagerTab />}
+              {activeTab === "follow-up" && <FollowUpRequest />}
             </div>
           </main>
         </div>
@@ -147,18 +170,17 @@ function SidebarLink({ href, active, icon, label }: any) {
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${
-        active
+      className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${active
           ? "bg-blue-50 text-blue-700 font-bold border border-blue-100"
           : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
-      }`}
+        }`}
     >
       <span className={`${active ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"} transition-colors`}>
-      {icon}
+        {icon}
       </span>
       <span className="text-sm">{label}</span>
       {active && (
-         <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.5)]" />
+        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.5)]" />
       )}
     </Link>
   );

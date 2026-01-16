@@ -21,6 +21,7 @@ import HomeTab from "../practitioner/tabs/HomeTab";
 import SearchPatientsTab from "./tabs/seachPatients/SearchPatientsTab";
 import AnalyticsTab from "./tabs/analyticsTab/AnalyticsTab";
 import SettingsTab from "../practitioner/tabs/settings/SettingsTab";
+import { authFetch } from "@/lib/authFetch";
 
 /* ------------ Mock data (patients + appointments) ------------ */
 
@@ -45,7 +46,7 @@ const PractitionerDashboard: React.FC = () => {
   useEffect(() => {
     const fetchMe = async () => {
       try {
-        const res = await fetch("/api/auth/me", { credentials: "include" });
+        const res = await authFetch("/api/auth/me");
         if (!res.ok) return;
 
         const json = await res.json();
@@ -94,7 +95,7 @@ const PractitionerDashboard: React.FC = () => {
     >
       {/* Changed from grid to flex for better responsiveness */}
       <div className="flex flex-col md:flex-row gap-6">
-        
+
         {/* LEFT MENU CARD - Hidden on mobile, width fixed on desktop */}
         <div className="hidden md:block w-full md:w-64 shrink-0">
           {menuContent}
@@ -116,7 +117,7 @@ const PractitionerDashboard: React.FC = () => {
             />
           )}
 
-          {activeMenu === "analytics" && <AnalyticsTab/>}
+          {activeMenu === "analytics" && <AnalyticsTab />}
 
           {activeMenu === "settings" && (
             <SettingsTab />

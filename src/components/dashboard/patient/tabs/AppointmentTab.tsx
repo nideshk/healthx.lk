@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react";
 import { AppointmentCard } from "../AppointmentCard";
 import Loader from "@/components/atom/Loader/Loader";
-import { 
-  Activity, 
-  CalendarClock, 
-  History, 
-  XCircle, 
+import {
+  Activity,
+  CalendarClock,
+  History,
+  XCircle,
   CreditCard,
   Inbox
 } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 export default function AppointmentTab() {
   const [data, setData] = useState({
@@ -23,7 +24,7 @@ export default function AppointmentTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/booking/appointment")
+    authFetch("/api/booking/appointment")
       .then((r) => r.json())
       .then((j) => {
         setData({
@@ -34,7 +35,7 @@ export default function AppointmentTab() {
           pending: j.pending_payment || [],
         });
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -58,18 +59,18 @@ export default function AppointmentTab() {
       {/* 1. CRITICAL ACTIONS (Ongoing & Pending) */}
       {(data.ongoing.length > 0 || data.pending.length > 0) && (
         <div className="grid grid-cols-1 gap-6">
-          <Section 
-            title="Active & Urgent" 
-            items={data.ongoing} 
+          <Section
+            title="Active & Urgent"
+            items={data.ongoing}
             icon={<Activity className="text-emerald-500" />}
             accent="emerald"
           >
             {(a: any) => <AppointmentCard appt={a} isOngoing />}
           </Section>
 
-          <Section 
-            title="Action Required: Payment" 
-            items={data.pending} 
+          <Section
+            title="Action Required: Payment"
+            items={data.pending}
             icon={<CreditCard className="text-amber-500" />}
             accent="amber"
           >
@@ -79,9 +80,9 @@ export default function AppointmentTab() {
       )}
 
       {/* 2. SCHEDULED */}
-      <Section 
-        title="Upcoming Consultations" 
-        items={data.upcoming} 
+      <Section
+        title="Upcoming Consultations"
+        items={data.upcoming}
         icon={<CalendarClock className="text-blue-500" />}
       >
         {(a: any) => <AppointmentCard appt={a} />}
@@ -89,9 +90,9 @@ export default function AppointmentTab() {
 
       {/* 3. RECORDS */}
       <div className="pt-8 border-t border-slate-200">
-        <Section 
-          title="Past Visits" 
-          items={data.past} 
+        <Section
+          title="Past Visits"
+          items={data.past}
           icon={<History className="text-slate-400" />}
           gridCols="lg:grid-cols-3"
         >
@@ -101,9 +102,9 @@ export default function AppointmentTab() {
 
       {/* 4. CANCELLED (Subtle) */}
       {data.cancelled.length > 0 && (
-        <Section 
-          title="Cancelled" 
-          items={data.cancelled} 
+        <Section
+          title="Cancelled"
+          items={data.cancelled}
           icon={<XCircle className="text-slate-300" />}
           isCollapsedInitial
         >

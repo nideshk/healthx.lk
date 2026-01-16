@@ -1,9 +1,10 @@
+
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextResponse } from "next/server";
 
 export async function PATCH(req: Request) {
-  const { user } = await requireUser();
+  const { user } = await requireUser(req);
   if (!user?.patient_id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

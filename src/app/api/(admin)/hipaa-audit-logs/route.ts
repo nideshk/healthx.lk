@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     /* -----------------------------------------------------
        1️⃣ Auth + role check
     ----------------------------------------------------- */
-    const { authorized, user, role } = await requireUser();
+    const { authorized, user, role } = await requireUser(req);
     console.log("User fetching HIPAA audit logs:", user?.auth_user_id);
     console.log("User role:", role);
     console.log("Authorized:", authorized);
@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
       purpose: "compliance",
       source: "admin_panel",
       metadata: {
-        filters: { actorRole, action, entityType, entityId, from, to}
+        filters: { actorRole, action, entityType, entityId, from, to }
       }
     })
 

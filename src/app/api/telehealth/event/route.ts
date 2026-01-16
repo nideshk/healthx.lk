@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     // ---------------------------------------------------------
     // 1️⃣ FIRST PRIORITY → LOGGED-IN USER SESSION
     // ---------------------------------------------------------
-    const { authorized, user } = await requireUser();
+    const { authorized, user } = await requireUser(req);
 
     if (authorized && user?.auth_user_id) {
       actorUserId = user.patient_id || user.practitioner_id || user.auth_user_id;
@@ -30,34 +30,34 @@ export async function POST(req: Request) {
     // ---------------------------------------------------------
     // 2️⃣ IF NOT LOGGED IN → USE GUEST TOKEN
     // ---------------------------------------------------------
-   if (!actorUserId) {
-  if (!token) {
-    return NextResponse.json(
-      { error: "User not authenticated and no guest token provided" },
-      { status: 401 }
-    );
-  }
+    if (!actorUserId) {
+      if (!token) {
+        return NextResponse.json(
+          { error: "User not authenticated and no guest token provided" },
+          { status: 401 }
+        );
+      }
 
-  const decoded: any = verifyTelehealthToken(token);
+      const decoded: any = verifyTelehealthToken(token);
 
-  if (!decoded) {
-    return NextResponse.json(
-      { error: "Invalid telehealth token" },
-      { status: 403 }
-    );
-  }
+      if (!decoded) {
+        return NextResponse.json(
+          { error: "Invalid telehealth token" },
+          { status: 403 }
+        );
+      }
 
-  // 🔐 HARD SAFETY CHECK
-  if (decoded.appointmentId !== appointmentId) {
-    return NextResponse.json(
-      { error: "Token does not match appointment" },
-      { status: 403 }
-    );
-  }
+      // 🔐 HARD SAFETY CHECK
+      if (decoded.appointmentId !== appointmentId) {
+        return NextResponse.json(
+          { error: "Token does not match appointment" },
+          { status: 403 }
+        );
+      }
 
-  actorUserId = `guest:${decoded.email}`;
-  actorRole = decoded.role ?? "guest";
-}
+      actorUserId = `guest:${decoded.email}`;
+      actorRole = decoded.role ?? "guest";
+    }
 
     // ---------------------------------------------------------
     // 3️⃣ FINAL SAFETY CHECK

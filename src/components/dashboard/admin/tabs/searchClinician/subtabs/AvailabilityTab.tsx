@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { DateTime } from "luxon";
 import { useEffect } from "react";
+import { authFetch } from "@/lib/authFetch";
 
 
 // interface LeaveEntry {
@@ -61,7 +62,7 @@ useEffect(() => {
       const startDate = currentMonth.startOf("month").toISODate();
       const endDate = currentMonth.endOf("month").toISODate();
 
-      const res = await fetch(
+      const res = await authFetch(
         `/api/practitioners/${clinicianId}/leaves?startDate=${startDate}&endDate=${endDate}`,
         { credentials: "include" }
       );

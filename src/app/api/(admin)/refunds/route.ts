@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export async function GET() {
-  const { authorized, user, role } = await requireUser();
+export async function GET(req: NextRequest) {
+  const { authorized, user, role } = await requireUser(req);
 
   if (!authorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -59,7 +59,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    status : "success",
+    status: "success",
     refunds: data || [],
   });
 }
@@ -71,7 +71,7 @@ export async function GET() {
    - mark refunded / reject
 ===================================================== */
 export async function PATCH(req: Request) {
-  const { authorized, user, role } = await requireUser();
+  const { authorized, user, role } = await requireUser(req);
 
   if (!authorized || !["admin", "superadmin"].includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

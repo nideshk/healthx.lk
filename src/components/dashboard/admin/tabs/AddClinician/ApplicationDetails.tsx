@@ -12,6 +12,7 @@ import {
   FileText,
   X,
 } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 const ApplicationDetails = ({
   applicationId,
@@ -34,9 +35,12 @@ const ApplicationDetails = ({
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const res = await fetch(
+        const res = await authFetch(
           `/api/practitioner-applications/${applicationId}`
         );
+        if (!res.ok) {
+          throw new Error(`Failed to fetch practitioner application: ${res.status}`);
+        }
         const json = await res.json();
         if (json.success) {
           setData(json.data);
@@ -59,7 +63,7 @@ const ApplicationDetails = ({
 
     setProcessing(true);
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `/api/practitioner-applications/${applicationId}/approve`,
         {
           method: "POST",
@@ -71,6 +75,10 @@ const ApplicationDetails = ({
           }),
         }
       );
+
+      if (!res.ok) {
+          throw new Error(`Failed to approve/reject the application: ${res.status}`);
+        }
 
       const result = await res.json();
 

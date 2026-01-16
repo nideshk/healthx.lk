@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { Calendar, Clock, Stethoscope, AlertCircle, ChevronRight, History, CalendarCheck, Ban } from "lucide-react";
 import Loader from "@/components/atom/Loader/Loader";
+import { authFetch } from "@/lib/authFetch";
 
 export default function AllAppointmentsPage() {
   const [loading, setLoading] = useState(true);
@@ -13,19 +13,39 @@ export default function AllAppointmentsPage() {
   const [cancelled, setCancelled] = useState([]);
 
   useEffect(() => {
+    let mounted = true;
+
     async function load() {
       try {
-        setLoading(true);
-        const res = await axios.get("/api/booking/appointment");
-        setUpcoming(res.data.upcoming || []);
-        setPast(res.data.past || []);
-        setCancelled(res.data.cancelled || []);
+        if (mounted) setLoading(true);
+
+        const res = await authFetch("/api/booking/appointment");
+
+        if (!res.ok) {
+          throw new Error(`Booking fetch failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+
+        setUpcoming(data.upcoming || []);
+        setPast(data.past || []);
+        setCancelled(data.cancelled || []);
+      } catch (err) {
+        console.error("Failed to load appointments:", err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
+
     load();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
 
   if (loading)
     return (
@@ -46,18 +66,18 @@ export default function AllAppointmentsPage() {
         </div>
 
         <div className="space-y-16">
-          <Section 
-            title="Upcoming Sessions" 
-            items={upcoming} 
+          <Section
+            title="Upcoming Sessions"
+            items={upcoming}
             icon={<CalendarCheck className="w-5 h-5 text-blue-600" />}
-            emptyText="No upcoming appointments scheduled." 
+            emptyText="No upcoming appointments scheduled."
           />
 
-          <Section 
-            title="Past Visits" 
-            items={past} 
+          <Section
+            title="Past Visits"
+            items={past}
             icon={<History className="w-5 h-5 text-slate-500" />}
-            emptyText="Your completed appointments will appear here." 
+            emptyText="Your completed appointments will appear here."
           />
 
           <Section
@@ -116,10 +136,9 @@ function AppointmentCard({ appt, cancelled }: any) {
       href={`/dashboard/appointment/${appt.id}`}
       className={`
         group relative block p-5 rounded-2xl border transition-all duration-300
-        ${
-          cancelled
-            ? "border-red-100 bg-red-50/30 hover:bg-red-50 hover:border-red-200"
-            : "border-slate-100 bg-white hover:shadow-xl hover:shadow-slate-200/50 hover:border-blue-200"
+        ${cancelled
+          ? "border-red-100 bg-red-50/30 hover:bg-red-50 hover:border-red-200"
+          : "border-slate-100 bg-white hover:shadow-xl hover:shadow-slate-200/50 hover:border-blue-200"
         }
       `}
     >
@@ -137,7 +156,7 @@ function AppointmentCard({ appt, cancelled }: any) {
             <h4 className="font-bold text-slate-900 text-lg group-hover:text-blue-600 transition-colors">
               Dr. {appt.practitioner?.full_name || "Medical Professional"}
             </h4>
-            
+
             <div className="flex flex-wrap items-center gap-y-1 gap-x-4 mt-1">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">
                 {appt.appointment_type?.name}

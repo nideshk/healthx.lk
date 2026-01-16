@@ -6,16 +6,16 @@ import VideoCallContainer from "@/components/atom/VideoCall/VideoCall";
 
 type AuthorizeResponse =
   | {
-      authorized: true;
-      token: string;
-      role: "patient" | "practitioner" | "attendee";
-      appointmentId: string;
-      roomKey: string;
-    }
+    authorized: true;
+    token: string;
+    role: "patient" | "practitioner" | "attendee";
+    appointmentId: string;
+    roomKey: string;
+  }
   | {
-      authorized: false;
-      error?: string;
-    };
+    authorized: false;
+    error?: string;
+  };
 
 export default function MeetingPage() {
   const params = useSearchParams();
@@ -33,8 +33,8 @@ export default function MeetingPage() {
         const body = inviteToken
           ? { token: inviteToken }
           : roomKey
-          ? { roomKey }
-          : null;
+            ? { roomKey }
+            : null;
 
         if (!body) {
           setError("Missing meeting information");

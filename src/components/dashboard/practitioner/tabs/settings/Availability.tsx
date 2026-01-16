@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Button from "@/components/atom/Button/Button";
 import Loader from "@/components/atom/Loader/Loader";
 import { toast } from "react-toastify";
+import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                    */
@@ -76,10 +77,10 @@ const LEAVE_TYPES: {
   color: string;
   bgColor: string;
 }[] = [
-  { label: "Full Day", value: "full_day", color: "bg-red-400", bgColor: "bg-red-50" },
-  { label: "First Half", value: "first_half", color: "bg-yellow-400", bgColor: "bg-yellow-50" },
-  { label: "Second Half", value: "second_half", color: "bg-blue-400", bgColor: "bg-blue-50" },
-];
+    { label: "Full Day", value: "full_day", color: "bg-red-400", bgColor: "bg-red-50" },
+    { label: "First Half", value: "first_half", color: "bg-yellow-400", bgColor: "bg-yellow-50" },
+    { label: "Second Half", value: "second_half", color: "bg-blue-400", bgColor: "bg-blue-50" },
+  ];
 
 const MAX_DAYS_AHEAD = 45;
 const UNDO_TIMEOUT = 30000;
@@ -164,7 +165,7 @@ const CancelLeaveModal: React.FC<CancelLeaveModalProps> = ({
       {/* Modal Container */}
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-sm mx-auto p-4 animate-in fade-in zoom-in-95 duration-200">
         <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
-          
+
           {/* Header - Soft and Clean */}
           <div className="px-6 pt-6 pb-2 text-center">
             <h2 className="text-lg font-semibold text-slate-900">
@@ -249,12 +250,12 @@ const Availability: React.FC = () => {
   useEffect(() => {
     const fetchPractitionerData = async () => {
       try {
-        const authRes = await fetch("/api/auth/me");
+        const authRes = await authFetch("/api/auth/me");
         const authData = await authRes.json();
         const id = authData?.user?.practitioner_id;
         if (!id) throw new Error("No practitioner ID found");
         setPractitionerId(id);
-        const res = await fetch(`/api/practitioners/${id}/leaves`);
+        const res = await authFetch(`/api/practitioners/${id}/leaves`);
         const data = await res.json();
         if (data.leaves) setLeaveRequests(data.leaves);
       } catch (err) {
@@ -311,7 +312,7 @@ const Availability: React.FC = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/practitioners/${practitionerId}/leaves`, {
+      const res = await authFetch(`/api/practitioners/${practitionerId}/leaves`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -322,9 +323,9 @@ const Availability: React.FC = () => {
           force: forceApply,
         }),
       });
-      
+
       const data: ApiResponse = await res.json();
-      
+
       if (res.status === 409) {
         setWarning(data.warning || "Conflicts detected.");
         setConflicts(data.conflicts || []);
@@ -333,15 +334,15 @@ const Availability: React.FC = () => {
         throw new Error(data.error || "Failed to apply leave");
       } else {
         setLeaveRequests(prev => [...prev, data.leave!]);
-        
+
         // Handle Undo State if appointments were cancelled
         if (data.cancelled_appointments && data.cancelled_appointments.length > 0) {
-            setUndoState({
-                leaveId: data.leave!.id,
-                appointmentIds: data.cancelled_appointments.map(a => a.id),
-                timestamp: Date.now()
-            });
-            setUndoTimeLeft(30);
+          setUndoState({
+            leaveId: data.leave!.id,
+            appointmentIds: data.cancelled_appointments.map(a => a.id),
+            timestamp: Date.now()
+          });
+          setUndoTimeLeft(30);
         }
 
         toast.success("Leave applied successfully!");
@@ -364,7 +365,7 @@ const Availability: React.FC = () => {
     if (!undoState) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/practitioners/${practitionerId}/leaves/${undoState.leaveId}/undo-force`, { method: "POST" });
+      const res = await authFetch(`/api/practitioners/${practitionerId}/leaves/${undoState.leaveId}/undo-force`, { method: "POST" });
       if (!res.ok) throw new Error("Undo failed");
       setLeaveRequests(prev => prev.filter(l => l.id !== undoState.leaveId));
       setUndoState(null);
@@ -380,7 +381,7 @@ const Availability: React.FC = () => {
     if (!cancelModal.leaveId) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/practitioners/${practitionerId}/leaves?leave_id=${cancelModal.leaveId}`, { method: "DELETE" });
+      const res = await authFetch(`/api/practitioners/${practitionerId}/leaves?leave_id=${cancelModal.leaveId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Deletion failed");
       setLeaveRequests(prev => prev.filter(l => l.id !== cancelModal.leaveId));
       toast.success("Leave cancelled successfully");
@@ -446,12 +447,12 @@ const Availability: React.FC = () => {
         <div className="space-y-4 border-t pt-6">
           <div className="grid grid-cols-2 gap-3">
             <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Start Date</label>
-                <input type="date" value={selectedStartDate} onChange={e => setSelectedStartDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Start Date</label>
+              <input type="date" value={selectedStartDate} onChange={e => setSelectedStartDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
             </div>
             <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">End Date</label>
-                <input type="date" value={selectedEndDate} onChange={e => setSelectedEndDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">End Date</label>
+              <input type="date" value={selectedEndDate} onChange={e => setSelectedEndDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
             </div>
           </div>
 
@@ -467,10 +468,10 @@ const Availability: React.FC = () => {
 
           {/* UNDO BANNER */}
           {undoState && undoTimeLeft > 0 && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex justify-between items-center animate-pulse">
-                  <span className="text-xs font-bold text-green-800">Leave Applied & Appointments Cancelled</span>
-                  <button onClick={undoForceApply} className="text-xs bg-green-600 text-white px-3 py-1 rounded font-bold">Undo ({undoTimeLeft}s)</button>
-              </div>
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex justify-between items-center animate-pulse">
+              <span className="text-xs font-bold text-green-800">Leave Applied & Appointments Cancelled</span>
+              <button onClick={undoForceApply} className="text-xs bg-green-600 text-white px-3 py-1 rounded font-bold">Undo ({undoTimeLeft}s)</button>
+            </div>
           )}
 
           {/* CONFLICT UI SECTION */}
@@ -481,7 +482,7 @@ const Availability: React.FC = () => {
                 {conflicts.map(c => (
                   <div key={c.id} className="text-[10px] flex justify-between p-1 border-b last:border-0">
                     <span className="font-semibold text-slate-700">{c.patient?.full_name || "Patient"}</span>
-                    <span className="text-slate-500">{new Date(c.starts_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <span className="text-slate-500">{new Date(c.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 ))}
               </div>
@@ -493,22 +494,22 @@ const Availability: React.FC = () => {
           )}
 
           {/* Apply Button - Normal State */}
-{!warning && (
-  <Button
-    disabled={loading || !!(!reason.trim()) || !selectedStartDate || !selectedEndDate}
-    onClick={applyLeave}
-    className="w-full"
-  >
-    {loading ? "Processing..." : "Apply Leave"}
-  </Button>
-)}
+          {!warning && (
+            <Button
+              disabled={loading || !!(!reason.trim()) || !selectedStartDate || !selectedEndDate}
+              onClick={applyLeave}
+              className="w-full"
+            >
+              {loading ? "Processing..." : "Apply Leave"}
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="border rounded-xl p-6 bg-white shadow-sm flex flex-col h-fit">
         <div className="text-lg font-bold text-gray-800 mb-4">Leave Details</div>
         <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-          {leaveRequests.length === 0 ? <div className="text-sm text-slate-500 text-center py-8">No leaves recorded</div> : 
+          {leaveRequests.length === 0 ? <div className="text-sm text-slate-500 text-center py-8">No leaves recorded</div> :
             leaveRequests.sort((a, b) => b.start_date.localeCompare(a.start_date)).map(l => {
               const { can, msg } = canCancelLeave(l);
               return (
