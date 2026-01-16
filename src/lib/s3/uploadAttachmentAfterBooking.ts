@@ -1,9 +1,11 @@
+import { authFetch } from "../authFetch";
+
 export async function uploadAttachmentAfterBooking(
   file: File,
   appointmentId: string
 ) {
   // 1️⃣ Get signed upload URL
-  const res = await fetch(
+  const res = await authFetch(
     `/api/appointments/${appointmentId}/attachments/upload-url`,
     {
       method: "POST",
@@ -11,7 +13,7 @@ export async function uploadAttachmentAfterBooking(
       body: JSON.stringify({
         fileName: file.name,
         fileType: file.type,
-              fileSize: file.size, // 🔑 THIS WAS MISSING
+        fileSize: file.size, // 🔑 THIS WAS MISSING
 
       }),
     }
@@ -33,7 +35,7 @@ export async function uploadAttachmentAfterBooking(
   });
 
   // 3️⃣ Save metadata in DB
-  await fetch(`/api/appointments/${appointmentId}/attachments`, {
+  await authFetch(`/api/appointments/${appointmentId}/attachments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

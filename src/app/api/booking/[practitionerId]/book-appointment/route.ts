@@ -152,6 +152,7 @@ export async function POST(
       );
     }
 
+    await supabaseAdmin.from("appointment_draft").delete().eq("patient_id", patient_id)
     // ---------------------------
     // 7️⃣ Return payment payload
     // ---------------------------

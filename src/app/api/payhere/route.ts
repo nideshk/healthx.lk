@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: NextRequest) {
     const { authorized, user } = await requireUser(request);

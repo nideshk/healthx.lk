@@ -12,11 +12,13 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
+import localforage from "localforage";
 
 import { uploadAttachmentAfterBooking } from '@/lib/s3/uploadAttachmentAfterBooking';
 import { authFetch } from '@/lib/authFetch';
 import { useAuth } from '@/contexts/AuthContext';
 import PaymentStepUI from '../PaymentPageUI';
+import { useBookingDraftStore } from '@/stores/useBookingDraftStore';
 
 interface StepRefHandle {
   validateStep?: () => boolean;
@@ -130,6 +132,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     // --- Post-Booking Actions ---
     const handlePostBookingActions = async (appointmentId: string) => {
       let file: File | null = null;
+
       if (bookingControllerRef?.current?.getAttachment) {
         file = bookingControllerRef.current.getAttachment();
       }
@@ -141,6 +144,12 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           toast.warn('Attachment upload failed. You can re-upload later.');
         }
       }
+
+      const { reset } = useBookingDraftStore.getState();
+
+      // 1️⃣ Clear draft properly (DB + memory)
+      await reset();
+
 
       updateData({ payment_status: 'completed', appointment_id: appointmentId });
       router.push('/dashboard/appointment');
