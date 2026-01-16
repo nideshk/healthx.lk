@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { toast } from "react-toastify";
 
@@ -17,6 +17,10 @@ export const useMfaEnrollment = () => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const latestFactorId = useRef<string | null>(null);
+  const latestQr = useRef<string | null>(null);
+  const latestTwoFactorEnabled = useRef<boolean | null>(null);
+
 
   console.log("🧩 [RENDER] useMfaEnrollment", {
     twoFactorEnabled,
@@ -44,16 +48,30 @@ export const useMfaEnrollment = () => {
     };
 
     loadStatus();
-  });
+  }, []);
 
   /* --------------------------------
-   CP-0: CLEANUP ON UNMOUNT
+    CP-REFS-SYNC: KEEP REFS UPDATED
+  --------------------------------- */
+  useEffect(() => {
+    latestFactorId.current = factorId;
+    latestQr.current = qr;
+    latestTwoFactorEnabled.current = twoFactorEnabled;
+  }, [factorId, qr, twoFactorEnabled]);
+
+
+  /* --------------------------------
+    CP-CLEANUP: UNMOUNT ONLY
     Cancel ONLY unfinished enrollment
   --------------------------------- */
   useEffect(() => {
     return () => {
-      // Only cancel if enrollment was started but NOT completed
-      if (qr && twoFactorEnabled === false && factorId) {
+      const factorId = latestFactorId.current;
+      const qr = latestQr.current;
+      const enabled = latestTwoFactorEnabled.current;
+
+      // ✅ Cancel ONLY if enrollment was started but NOT verified
+      if (qr && enabled !== true && factorId) {
         supabaseClient.auth.mfa
           .unenroll({ factorId })
           .catch(() => {
@@ -61,7 +79,7 @@ export const useMfaEnrollment = () => {
           });
       }
     };
-  }, [qr, twoFactorEnabled, factorId]);
+  }, []); // 👈 EMPTY deps = unmount only
 
 
   /* --------------------------------
@@ -99,7 +117,6 @@ export const useMfaEnrollment = () => {
 
     setLoading(true);
     setError(null);
-    debugger;
 
     const { data, error } =
       await supabaseClient.auth.mfa.challenge({
