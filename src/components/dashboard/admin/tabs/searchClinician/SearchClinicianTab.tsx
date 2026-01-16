@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Input from "@/components/atom/Input/Input";
 import ClinicianCard from "./ClinicianCard";
@@ -18,40 +18,43 @@ const SearchClinicianTab: React.FC = () => {
   const [limit, setLimit] = useState(10);
   const [offset, setOffset] = useState(0);
 
-  useEffect(() => {
-    const fetchClinicians = async () => {
-      // Logic to prevent searching on very short strings,
-      // but allow fetching the default list if search is empty
-      if (search.length > 0 && search.length < 3) return;
+  // Added a trigger state to force refresh the list manually
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-      setLoading(true);
-      setError(null);
+  const fetchClinicians = useCallback(async () => {
+    // Logic to prevent searching on very short strings,
+    // but allow fetching the default list if search is empty
+    if (search.length > 0 && search.length < 3) return;
 
-      try {
-        const params = new URLSearchParams();
-        if (search.length >= 3) {
-          params.append("q", search);
-        }
-        params.append("limit", limit.toString());
-        params.append("offset", offset.toString());
+    setLoading(true);
+    setError(null);
 
-        const res = await authFetch(`/api/practitioner?${params.toString()}`, {
-          credentials: "include",
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch clinicians");
-
-        const data = await res.json();
-        setClinicians(data.practitioners || []);
-      } catch (err: any) {
-        setError(err.message || "Something went wrong");
-      } finally {
-        setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (search.length >= 3) {
+        params.append("q", search);
       }
-    };
+      params.append("limit", limit.toString());
+      params.append("offset", offset.toString());
 
-    fetchClinicians();
+      const res = await authFetch(`/api/practitioner?${params.toString()}`, {
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch clinicians");
+
+      const data = await res.json();
+      setClinicians(data.practitioners || []);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   }, [search, limit, offset]);
+
+  useEffect(() => {
+    fetchClinicians();
+  }, [fetchClinicians, refreshTrigger]);
 
   // Reset offset when search or limit changes to avoid being stuck on an empty page
   useEffect(() => {
@@ -123,6 +126,15 @@ const SearchClinicianTab: React.FC = () => {
     }
   };
 
+  /**
+   * Called when a clinician is successfully deactivated/deleted.
+   * Closes the modal and increments refreshTrigger to re-run useEffect.
+   */
+  const handleRefreshList = () => {
+    setOpenProfile(false);
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -145,7 +157,7 @@ const SearchClinicianTab: React.FC = () => {
                 onChange={(e) => setLimit(Number(e.target.value))}
                 className="text-xs border border-slate-200 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                {[10, 20, 50, 100].map((val) => (
+                {[2, 10, 20, 50, 100].map((val) => (
                   <option key={val} value={val}>
                     {val}
                   </option>
@@ -165,7 +177,7 @@ const SearchClinicianTab: React.FC = () => {
           {openProfile && (
             <ClinicianProfileModal
               open={openProfile}
-              onClose={() => setOpenProfile(false)}
+              onClose={handleRefreshList} // Changed to handleRefreshList to trigger data update
               clinician={selectedClinician}
             />
           )}

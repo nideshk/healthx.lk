@@ -12,6 +12,7 @@ export interface AdminAppointment {
   id: string;
   date: string;
   time: string;
+  info: string;
   doctorName: string;
   category: "upcoming" | "previous";
 }
@@ -29,8 +30,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
   loadingAppointments = false,
   onBack,
 }) => {
-  const [activeTab, setActiveTab] =
-    useState<PatientDetailTab>("overview");
+  const [activeTab, setActiveTab] = useState<PatientDetailTab>("overview");
 
   return (
     <div className="space-y-4">
@@ -68,9 +68,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
       </div>
 
       {/* Tab Content */}
-      {activeTab === "overview" && (
-        <PatientOverviewTab patient={patient} />
-      )}
+      {activeTab === "overview" && <PatientOverviewTab patient={patient} />}
 
       {activeTab === "appointments" && (
         <AppointmentsTab
@@ -78,8 +76,6 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
           loading={loadingAppointments}
         />
       )}
-
-      
     </div>
   );
 
@@ -122,10 +118,7 @@ const DetailLine: React.FC<{ label: string; value: string }> = ({
    Overview Tab
 ----------------------------------- */
 
-const PatientOverviewTab: React.FC<{ patient: Patient }> = ({
-  patient,
-}) => (
-
+const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
     <Card>
       <CardHeader>
@@ -150,15 +143,9 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({
       <CardBody className="space-y-3 text-xs">
         <InfoRow label="Email" value={patient.email} />
         <InfoRow label="Phone" value={patient.phone} />
-        <InfoRow
-          label="Address"
-          value={patient.addressLine1 || "-"}
-        />
+        <InfoRow label="Address" value={patient.addressLine1 || "-"} />
         <InfoRow label="City" value={patient.city || "-"} />
-        <InfoRow
-          label="Country"
-          value={patient.country || "-"}
-        />
+        <InfoRow label="Country" value={patient.country || "-"} />
       </CardBody>
     </Card>
   </div>
@@ -184,12 +171,8 @@ const AppointmentsTab: React.FC<{
   appointments: AdminAppointment[];
   loading: boolean;
 }> = ({ appointments, loading }) => {
-  const upcoming = appointments.filter(
-    (a) => a.category === "upcoming"
-  );
-  const previous = appointments.filter(
-    (a) => a.category === "previous"
-  );
+  const upcoming = appointments.filter((a) => a.category === "upcoming");
+  const previous = appointments.filter((a) => a.category === "previous");
 
   return (
     <div className="space-y-6">
@@ -233,13 +216,8 @@ const AppointmentList: React.FC<{
     {appointments.map((a) => (
       <Card key={a.id}>
         <CardBody className="text-xs">
-          <div className="font-large text-slate-900">
-            Dr. {a.doctorName}
-           
-          </div>
-          <div className="text-slate-600">
-             {a.date} at {a.time}
-          </div>
+          <div className="font-large text-slate-900">Dr. {a.doctorName}</div>
+          <div className="text-slate-600">{a.info}</div>
         </CardBody>
       </Card>
     ))}
@@ -247,14 +225,9 @@ const AppointmentList: React.FC<{
 );
 
 const LoadingText = () => (
-  <p className="text-xs text-slate-500">
-    Loading appointments...
-  </p>
+  <p className="text-xs text-slate-500">Loading appointments...</p>
 );
 
 const EmptyText = () => (
-  <p className="text-xs text-slate-500">
-    No appointments in this section.
-  </p>
+  <p className="text-xs text-slate-500">No appointments in this section.</p>
 );
-
