@@ -188,15 +188,15 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                       updateData({ appointmentType: type });
                     }}
                     className={`group relative p-6 rounded-3xl border-2 text-left transition-all ${selectedType?.id === type.id
-                        ? "border-teal-500 bg-teal-50/30"
-                        : "border-slate-100 hover:border-teal-200 bg-white"
+                      ? "border-teal-500 bg-teal-50/30"
+                      : "border-slate-100 hover:border-teal-200 bg-white"
                       }`}
                   >
                     {selectedType?.id === type.id && (
                       <CheckCircle2 className="absolute top-6 right-6 w-6 h-6 text-teal-500 fill-teal-50" />
                     )}
                     <p className={`font-black text-lg ${selectedType?.id === type.id ? 'text-teal-900' : 'text-slate-800'}`}>
-                      {type.name}
+                      {type.name} <span className="text-xs font-bold uppercase tracking-tight">({type.fee + type.platform_fee} LKR)</span>
                     </p>
                     <div className="flex items-center gap-2 mt-2 text-slate-400 group-hover:text-teal-600 transition-colors">
                       <Clock className="w-3.5 h-3.5" />
@@ -274,8 +274,8 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                               });
                             }}
                             className={`py-4 rounded-2xl text-[13px] font-black transition-all ${selectedTime === time
-                                ? "bg-teal-500 text-white shadow-lg shadow-teal-100"
-                                : "bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-700"
+                              ? "bg-teal-500 text-white shadow-lg shadow-teal-100"
+                              : "bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-700"
                               }`}
                           >
                             {time}

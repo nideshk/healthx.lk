@@ -7,33 +7,18 @@ import { auditLog } from "@/lib/audit/auditLog";
 
 export async function POST(request: NextRequest) {
     const { authorized, user } = await requireUser(request);
-
-    if (!authorized) {
-        console.log("Not authorized access to /api/payhere");
+    console.log("user", user)
+    if (!authorized || !user) {
+        console.log("Unauthorized access attempt to /api/payhere");
         return NextResponse.json({ error: "User not authenticated." }, { status: 401 });
     }
 
-    if (!user) {
-        console.log("No user found in /api/payhere");
-        return NextResponse.json({ error: "User not authenticated." }, { status: 401 });
-    }
-
-    let patient_id = null;
-    console.log(user);
-
-
-    if (user) {
-        patient_id = user.patient_id;
-    }
-
-    console.log("*******User patient_id:", patient_id);
+    const patient_id = user.patient_id;
 
     if (!patient_id) {
-        console.log("User missing patient_id");
+        console.log("User missing patient_id:", user.auth_user_id);
         return NextResponse.json({ error: "User profile incomplete for payment processing." }, { status: 400 });
     }
-
-    console.log("API Route Reached: /api/payhere");
 
     try {
         const MERCHANT_ID = process.env.PAYHERE_MERCHANT_ID!;
@@ -45,32 +30,20 @@ export async function POST(request: NextRequest) {
         const PAYHERE_CANCEL_PATH = process.env.PAYHERE_CANCEL_PATH;
         const PAYHERE_NOTIFY_PATH = process.env.PAYHERE_NOTIFY_PATH;
 
-        console.log("BASE URL:", BASE_URL);
-        console.log("NGROK URL:", NGROK_URL);
-        console.log("PAYHERE RETURN PATH:", PAYHERE_RETURN_PATH);
-        console.log("PAYHERE CANCEL PATH:", PAYHERE_CANCEL_PATH);
-        console.log("PAYHERE NOTIFY PATH:", PAYHERE_NOTIFY_PATH);
-
-        if (!BASE_URL) {
-            throw new Error("BASE_URL is not defined in environment variables.");
-        }
-
         const body = await request.json();
-        console.log("Request Body received :", body);
-
-        // These are paramters that we expect from the booking form
         const {
-            first_name, last_name, email, phone, address, city, country, appointment_id, practitioner_id, consultation_fee, platform_fee
+            first_name, last_name, email, phone, address, city, country,
+            appointment_id, practitioner_id, consultation_fee, platform_fee
         } = body;
 
-        // if any required field is missing, return error 
-        if (!first_name || !last_name || !email || !phone || !address || !city || !country || !appointment_id || !practitioner_id) {
+        // Validation
+        if (!first_name || !last_name || !email || !appointment_id || !practitioner_id) {
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
         }
 
         const supabase = await supabaseServer();
 
-        // Get the appointment based on appointment_id from frontend
+        // 1. Fetch Appointment from DB (The Source of Truth)
         const { data: appt, error: apptError } = await supabase
             .from('appointments')
             .select('patient_id, fee_charged')
@@ -82,15 +55,16 @@ export async function POST(request: NextRequest) {
         }
 
         if (appt.patient_id !== patient_id) {
-            return NextResponse.json({ error: "Unauthorized: This appointment does not belong to you." }, { status: 403 });
+            return NextResponse.json({ error: "Unauthorized: Ownership mismatch." }, { status: 403 });
         }
 
+        // --- AMOUNT LOGGING SECTION ---
+        const rawDbAmount = appt.fee_charged;
+        const formattedAmount = parseFloat(rawDbAmount).toFixed(2);
         const orderID = appointment_id;
 
-        // Using total fee stored in DB instead of passing it from front-end directly
-        const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
-
-        const { data: dbData, error: dbError } = await supabase.from('transactions').upsert({
+        // 2. Upsert Transaction
+        const { error: dbError } = await supabase.from('transactions').upsert({
             order_id: orderID,
             status: 'pending',
             amount: formattedAmount,
@@ -107,17 +81,17 @@ export async function POST(request: NextRequest) {
             consultation_fee: parseFloat(consultation_fee).toFixed(2),
             platform_fee: parseFloat(platform_fee).toFixed(2),
             updated_at: new Date().toISOString()
-        }, {
-            onConflict: 'order_id'
-        });
+        }, { onConflict: 'order_id' });
 
         if (dbError) {
-            console.error("Error inserting transaction into DB:", dbError);
-            return NextResponse.json({ error: "Failed to initialize payment transaction in DB." }, { status: 500 });
+            console.error("DB Error:", dbError);
+            return NextResponse.json({ error: "Database transaction failed." }, { status: 500 });
         }
 
+        // 3. Generate PayHere MD5 Hash
+        // Important: PayHere expects Uppercase MD5 of Secret + rest of the string
+        const hashedSecret = crypto.createHash('md5').update(MERCHANT_SECRET).digest('hex').toUpperCase();
 
-        // Creating hash directly here instead of calculate-hash route 
         const hash = crypto
             .createHash('md5')
             .update(
@@ -125,19 +99,14 @@ export async function POST(request: NextRequest) {
                 orderID +
                 formattedAmount +
                 currency +
-                crypto.createHash('md5').update(MERCHANT_SECRET).digest('hex').toUpperCase()
+                hashedSecret
             )
             .digest('hex')
             .toUpperCase();
 
-        const itemsDescription = `Medical Consultation (Ref: ${orderID})`;
-
         const publicDomain = NGROK_URL || BASE_URL;
         const notifyUrl = `${publicDomain}${PAYHERE_NOTIFY_PATH}`;
 
-        console.log("Notify URL : ", notifyUrl);
-
-        // Final PayHere payment payload (With fields from form and other required fields)
         const payHerePayload = {
             sandbox: process.env.NODE_ENV !== 'production',
             merchant_id: MERCHANT_ID,
@@ -155,22 +124,25 @@ export async function POST(request: NextRequest) {
             currency,
             order_id: orderID,
             hash: hash,
-            items: itemsDescription
-        }
+            items: `Medical Consultation (Ref: ${orderID})`
+        };
 
+        // 4. Audit Log
         const cnx = getAuditContext(request, user);
         await auditLog({
             ...cnx,
             action: "CREATED",
             entityType: "TRANSACTION",
-            entityId: practitioner_id,
+            entityId: orderID,
             purpose: "operations",
             source: "user_portal",
-            metadata: { payment_initiated_for_appointment: appointment_id, order_id: orderID }
-        })
+            metadata: { amount: formattedAmount, appointment_id }
+        });
+
         return NextResponse.json({ payment: payHerePayload });
+
     } catch (err: any) {
-        console.log("Error in /api/payhere:", err);
+        console.error("Critical Error in /api/payhere:", err);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

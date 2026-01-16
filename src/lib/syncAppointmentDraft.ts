@@ -1,5 +1,6 @@
 import debounce from "lodash.debounce";
 import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
+import { authFetch } from "./authFetch";
 
 export const syncAppointmentDraft = debounce(async () => {
   const { data, dirty, markClean } =
@@ -8,7 +9,7 @@ export const syncAppointmentDraft = debounce(async () => {
   if (!dirty) return;
 
   try {
-    await fetch("/api/booking/appointment/draft", {
+    await authFetch("/api/booking/appointment/draft", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ data }),
