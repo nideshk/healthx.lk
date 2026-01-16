@@ -13,7 +13,7 @@ export async function GET(
   try {
     const { id } = await context.params;
 
-    const {user} = await requireUser();
+    const { user } = await requireUser(req);
 
     if (!id) {
       return NextResponse.json(
@@ -51,19 +51,19 @@ export async function GET(
         { status: 404 }
       );
     }
-    
-    const cnx = getAuditContext(req,user);
+
+    const cnx = getAuditContext(req, user);
 
     await auditLog(
       {
         ...cnx,
         action: "VIEWED",
-        entityType : "PRACTITIONER",
-        purpose : "operations",
-        entityId : data[0].id,
-        source : "dashboard",
-        metadata : {
-          practitioner_viewed : data[0]
+        entityType: "PRACTITIONER",
+        purpose: "operations",
+        entityId: data[0].id,
+        source: "dashboard",
+        metadata: {
+          practitioner_viewed: data[0]
         }
       }
     );

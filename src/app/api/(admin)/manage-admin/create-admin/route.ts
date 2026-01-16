@@ -6,8 +6,8 @@ import { auditLog } from "@/lib/audit/auditLog";
 
 export async function POST(req: NextRequest) {
   // 1️⃣ Auth
-  const { authorized, user, response } = await requireUser();
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   if (!user?.admin) {
     return NextResponse.json({ message: "Not an admin" }, { status: 403 });

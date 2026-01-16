@@ -6,8 +6,8 @@ import { auditLog } from "@/lib/audit/auditLog";
 
 export async function GET(req: NextRequest) {
   // 1️⃣ Auth
-  const { authorized, user, response } = await requireUser();
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   // 2️⃣ Must be admin
   if (!user?.admin) {

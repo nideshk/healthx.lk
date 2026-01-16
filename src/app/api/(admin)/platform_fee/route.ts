@@ -10,19 +10,19 @@ import { auditLog } from "@/lib/audit/auditLog";
 /* Fetch all appointment types */
 
 export async function GET(req: NextRequest) {
-  const { authorized, role, user } = await requireUser();
+  const { authorized, role, user } = await requireUser(req);
   if (!authorized) {
     return NextResponse.json(
-    { error: "You are not authorized." },
-    { status: 401 }
+      { error: "You are not authorized." },
+      { status: 401 }
     );
   }
 
   const allowedRoles = ["admin", "superadmin"];
-    if (!allowedRoles.includes(role)) {
+  if (!allowedRoles.includes(role)) {
     return NextResponse.json(
-        { error: "You do not have permission to view appointments." },
-        { status: 403 }
+      { error: "You do not have permission to view appointments." },
+      { status: 403 }
     );
   }
   const { data, error } = await supabaseAdmin
@@ -71,19 +71,19 @@ export async function GET(req: NextRequest) {
 /* Create new appointment type */
 
 export async function POST(req: NextRequest) {
-  const { authorized, role, user } = await requireUser();
+  const { authorized, role, user } = await requireUser(req);
   if (!authorized) {
     return NextResponse.json(
-    { error: "You are not authorized." },
-    { status: 401 }
+      { error: "You are not authorized." },
+      { status: 401 }
     );
   }
 
   const allowedRoles = ["admin", "superadmin"];
   if (!allowedRoles.includes(role)) {
     return NextResponse.json(
-        { error: "You do not have permission to view appointments." },
-        { status: 403 }
+      { error: "You do not have permission to view appointments." },
+      { status: 403 }
     );
   }
   const body = await req.json();
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-    const cnx = getAuditContext(req, user);
+  const cnx = getAuditContext(req, user);
   await auditLog({
     ...cnx,
     action: "CREATED",
@@ -148,22 +148,22 @@ export async function POST(req: NextRequest) {
 /* Update pricing fields ONLY */
 
 export async function PUT(req: NextRequest) {
-  const { authorized, role, user } = await requireUser();
+  const { authorized, role, user } = await requireUser(req);
   if (!authorized) {
     return NextResponse.json(
-    { error: "You are not authorized." },
-    { status: 401 }
+      { error: "You are not authorized." },
+      { status: 401 }
     );
   }
 
   const allowedRoles = ["admin", "superadmin"];
   if (!allowedRoles.includes(role)) {
     return NextResponse.json(
-        { error: "You do not have permission to view appointments." },
-        { status: 403 }
+      { error: "You do not have permission to view appointments." },
+      { status: 403 }
     );
   }
-    const body = await req.json();
+  const body = await req.json();
   const updatesArray = body?.updates;
 
   if (!Array.isArray(updatesArray) || updatesArray.length === 0) {
@@ -229,7 +229,7 @@ export async function PUT(req: NextRequest) {
     results.push(data);
   }
 
-    const cnx = getAuditContext(req, user);
+  const cnx = getAuditContext(req, user);
   await auditLog({
     ...cnx,
     action: "UPDATED",
@@ -251,7 +251,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: Request) {
   try {
-    const { authorized, role } = await requireUser();
+    const { authorized, role } = await requireUser(req);
     if (!authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

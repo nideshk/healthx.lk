@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import Button from "@/components/atom/Button/Button";
+import { authFetch } from "@/lib/authFetch";
 
 interface BookingDetailsModalProps {
   isOpen: boolean;
@@ -40,16 +41,19 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
   const fetchData = async () => {
     setLoading(true);
     try {
-      // API 34 call with dynamic page
-      const response = await fetch(
-        `http://localhost:3000/api/booking?from=${fromDate}&to=${toDate}&type=${type}&page=${currentPage}&per_page=${perPage}`
+      const response = await authFetch(
+        `/api/booking?from=${fromDate}&to=${toDate}&type=${type}&page=${currentPage}&per_page=${perPage}`
       );
-      const json = await response.json();
+      if (!response.ok) {
+          throw new Error(`Failed to fetch booking details: ${response.status}`);
+        }
+
+      const data = await response.json();
       
-      if (json.success) {
-        setData(json.data);
-        setTotalPages(json.meta.total_pages || 1);
-        setTotalItems(json.meta.total || 0);
+      if (data.success) {
+        setData(data.data);
+        setTotalPages(data.meta.total_pages || 1);
+        setTotalItems(data.meta.total || 0);
       }
     } catch (error) {
       console.error("Error fetching booking details:", error);

@@ -1,10 +1,11 @@
 import { requireUser } from "@/lib/authGuard";
 import { supabaseClient } from "@/lib/supabaseClient";
 
-export async function GET(_, { params }) {
+export async function GET(req, { params }) {
   try {
-    const { authorized, response, user } = await requireUser();
-    if (!authorized) return response;
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
 
     const { serviceId } = params;
 

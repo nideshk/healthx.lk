@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const { authorized, role, user } = await requireUser();
+    const { authorized, role, user } = await requireUser(request);
 
     const cnx = getAuditContext(request, user);
 

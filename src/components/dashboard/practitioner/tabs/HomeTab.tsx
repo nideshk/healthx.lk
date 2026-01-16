@@ -6,6 +6,7 @@ import { Appointment } from "@/types/Dashboard";
 import AppointmentCalendar from "@/components/dashboard/practitioner/tabs/shared/AppointmentCalendar";
 import { Calendar } from "lucide-react";
 import Loader from "@/components/atom/Loader/Loader";
+import { authFetch } from "@/lib/authFetch";
 
 interface DashboardStats {
   todaysAppointments: number;
@@ -64,9 +65,7 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
       setError(null);
 
       try {
-        const meRes = await fetch("/api/auth/me", {
-          credentials: "include",
-        });
+        const meRes = await authFetch("/api/auth/me");
 
         if (!meRes.ok) {
           throw new Error("Failed to load current user");
@@ -97,7 +96,7 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
             ? `/api/practitioner/${practitionerId}/appointments?view=weekly&week_start=${date}`
             : `/api/practitioner/${practitionerId}/appointments?view=daily&date=${date}`;
 
-        const res = await fetch(url, { credentials: "include" });
+        const res = await authFetch(url);
         const data = await res.json();
 
         if (!res.ok) {
@@ -113,15 +112,15 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
           completedAppointments: data.counts?.completed ?? 0,
         });
 
-        const mappedAppointments: Appointment[] = (data.data  || []).map(
+        const mappedAppointments: Appointment[] = (data.data || []).map(
           (item: any) => {
             const statusFromApi: string = item.status || "scheduled";
             const status =
               statusFromApi === "completed"
                 ? "completed"
                 : statusFromApi === "cancelled"
-                ? "cancelled"
-                : "confirmed";
+                  ? "cancelled"
+                  : "confirmed";
 
             return {
               id: item.id,
@@ -186,8 +185,8 @@ const HomeTab: React.FC<DashboardHomeProps> = ({ clinicianName }) => {
   const formattedRangeLabel = isSingleDay
     ? `Appointments on ${new Date(dateRange.from).toLocaleDateString("en-GB")}`
     : `Appointments (${new Date(dateRange.from).toLocaleDateString("en-GB")} – ${new Date(
-        dateRange.to
-      ).toLocaleDateString("en-GB")})`;
+      dateRange.to
+    ).toLocaleDateString("en-GB")})`;
 
   return (
     <div className="space-y-4">

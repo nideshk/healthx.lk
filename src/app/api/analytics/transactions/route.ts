@@ -9,10 +9,9 @@ export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching
 // Endpoint: /api/analytics/transactions
 export async function GET(req: NextRequest) {
 
-    const { authorized, response, user } = await requireUser();
-    if (!authorized) {
-        return response;
-    }
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
 
     const cnx = getAuditContext(req, user);
     // Check if the user has the 'admin' role or 'superadmin' role

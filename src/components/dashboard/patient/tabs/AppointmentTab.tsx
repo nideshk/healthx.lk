@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AppointmentCard } from "../AppointmentCard";
 import Loader from "@/components/atom/Loader/Loader";
 import { set } from "zod";
+import { authFetch } from "@/lib/authFetch";
 
 export default function AppointmentTab() {
   const [ongoing, setOngoing] = useState<any[]>([]);
@@ -14,7 +15,7 @@ export default function AppointmentTab() {
   const [pending, setPending] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/api/booking/appointment")
+    authFetch("/api/booking/appointment")
       .then((r) => r.json())
       .then((j) => {
         setOngoing(j.ongoing || []);
@@ -26,32 +27,32 @@ export default function AppointmentTab() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) { 
+  if (loading) {
     return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
-        <Loader size="lg"></Loader>;
+      <Loader size="lg"></Loader>;
     </div>
   }
 
   return (
     <div className="space-y-10">
       <Section title="Ongoing" items={ongoing}>
-        {(a:any) => <AppointmentCard appt={a} isOngoing />}
+        {(a: any) => <AppointmentCard appt={a} isOngoing />}
       </Section>
 
       <Section title="Upcoming" items={upcoming}>
-        {(a:any) => <AppointmentCard appt={a} />}
+        {(a: any) => <AppointmentCard appt={a} />}
       </Section>
 
       <Section title="Past" items={past}>
-        {(a:any) => <AppointmentCard appt={a} isPast />}
+        {(a: any) => <AppointmentCard appt={a} isPast />}
       </Section>
 
       <Section title="Cancelled" items={cancelled}>
-        {(a:any) => <AppointmentCard appt={a} isCancelled />}
+        {(a: any) => <AppointmentCard appt={a} isCancelled />}
       </Section>
 
       <Section title="Pending Payment" items={pending}>
-        {(a:any) => <AppointmentCard appt={a} isPending />}
+        {(a: any) => <AppointmentCard appt={a} isPending />}
       </Section>
     </div>
   );

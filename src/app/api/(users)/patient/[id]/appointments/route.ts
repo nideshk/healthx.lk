@@ -18,7 +18,7 @@ export async function GET(
       );
     }
 
-    const { authorized, role , user } = await requireUser();
+    const { authorized, role, user } = await requireUser(request);
 
     if (!authorized) {
       return NextResponse.json(
@@ -52,7 +52,7 @@ export async function GET(
         )
       `)
       .eq("patient_id", patientId)
-      .in("status", ["scheduled", "confirmed", "completed","pending"])
+      .in("status", ["scheduled", "confirmed", "completed", "pending"])
       .order("starts_at", { ascending: false });
 
     if (error) throw error;
@@ -86,11 +86,11 @@ export async function GET(
           name: appt.practitioner.full_name,
         },
         appointment_type: appt.appointment_type
-        ? {
+          ? {
             id: appt.appointment_type.id,
             name: appt.appointment_type.name,
           }
-        : null,
+          : null,
       };
 
       if (appt.status === "scheduled" || appt.status === "confirmed" || appt.status === "pending") {
@@ -111,7 +111,7 @@ export async function GET(
       entityId: patientId,
       purpose: "operations",
       source: "user_portal",
-      metadata: { patientId , total_appointments: data.length, scheduled: scheduled.length, completed: completed.length }
+      metadata: { patientId, total_appointments: data.length, scheduled: scheduled.length, completed: completed.length }
     });
 
     return NextResponse.json({

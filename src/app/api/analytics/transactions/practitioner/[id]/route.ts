@@ -4,19 +4,20 @@ import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
-export const dynamic = "force-dynamic"; 
+export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest
     , context: { params: Promise<{ id: string }> }) {
-    const { authorized, response, user } = await requireUser();
-    if (!authorized) return response;
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const cnx = getAuditContext(req, user);
+
+    const cnx = getAuditContext(req, user);
     if (user?.profile?.role !== 'practitioner') {
 
         await auditLog({
             ...cnx,
             action: "FORBIDDEN_ACCESS_ATTEMPT",
-            entityType : "TRANSACTION",
+            entityType: "TRANSACTION",
             entityId: (await context.params).id,
             purpose: "analytics",
             metadata: {
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest
             await auditLog({
                 ...cnx,
                 action: "FORBIDDEN_ACCESS_ATTEMPT",
-                entityType : "TRANSACTION",
+                entityType: "TRANSACTION",
                 entityId: transactionId,
                 purpose: "analytics",
                 metadata: {
@@ -86,9 +87,9 @@ export async function GET(req: NextRequest
             entityId: transactionId,
             purpose: "analytics",
             source: "dashboard",
-            metadata: { 
+            metadata: {
                 transactionId
-              }
+            }
         })
 
         return NextResponse.json({

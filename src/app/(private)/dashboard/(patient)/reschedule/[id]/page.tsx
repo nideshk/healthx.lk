@@ -1,6 +1,5 @@
 "use client";
 
-import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState, useRef } from "react";
 import { DateTime } from "luxon";
@@ -13,6 +12,7 @@ import {
   ShieldAlert,
   ChevronLeft,
 } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 function ReschedulePage() {
   const params = useParams();
@@ -28,10 +28,24 @@ function ReschedulePage() {
      LOAD ORIGINAL APPOINTMENT
   ---------------------------------------------- */
   useEffect(() => {
-    axios
-      .get(`/api/booking/appointment/${params.id}`)
-      .then((res) => {
-        const data = res.data;
+    let mounted = true;
+
+    async function fetchAppointment() {
+      try {
+        if (mounted) setLoading(true);
+
+        const res = await authFetch(
+          `/api/booking/appointment/${params.id}`
+        );
+
+        if (!res.ok) {
+          throw new Error(`Failed to load appointment: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+
         setAppointment(data);
 
         const bookingDataObj = {
@@ -54,9 +68,23 @@ function ReschedulePage() {
         };
 
         setBookingData(bookingDataObj);
-      })
-      .catch(() => toast.error("Failed to load appointment"))
-      .finally(() => setLoading(false));
+      } catch (err) {
+        console.error("Failed to load appointment:", err);
+        if (mounted) {
+          toast.error("Failed to load appointment");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    if (params.id) {
+      fetchAppointment();
+    }
+
+    return () => {
+      mounted = false;
+    };
   }, [params.id]);
 
   if (loading) {
@@ -93,13 +121,24 @@ function ReschedulePage() {
     if (!stepRef.current?.validateStep()) return;
 
     try {
-      await axios.patch(
+      const res = await authFetch(
         `/api/booking/appointment/${appointment.id}/reschedule`,
         {
-          starts_at: bookingData.starts_at,
-          ends_at: bookingData.ends_at,
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            starts_at: bookingData.starts_at,
+            ends_at: bookingData.ends_at,
+          }),
         }
       );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Failed to reschedule");
+      }
 
       toast.success("Appointment rescheduled successfully ✨");
 
@@ -107,9 +146,11 @@ function ReschedulePage() {
         router.push("/dashboard/appointment");
       }, 1000);
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Failed to reschedule");
+      console.error("Reschedule failed:", err);
+      toast.error(err.message || "Failed to reschedule");
     }
   }
+
 
   /* ----------------------------------------------
      UI
@@ -163,29 +204,28 @@ function ReschedulePage() {
               <p className="text-gray-600 flex items-center gap-1">
                 <Clock className="w-4 h-4" />
                 <span className="text-xs text-gray-500 mt-1">
-                Your time: {userLocal.toFormat("hh:mm a")} (
-                {userLocal.zoneName})
-              </span>
+                  Your time: {userLocal.toFormat("hh:mm a")} (
+                  {userLocal.zoneName})
+                </span>
               </p>
 
               {/* USER LOCAL TIME (SECONDARY) */}
-              
+
             </div>
 
             {/* COUNTDOWN */}
             <div className="ml-auto">
               <span
-                className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                  canReschedule
+                className={`px-3 py-1.5 rounded-full text-sm font-medium ${canReschedule
                     ? "bg-green-50 text-green-700 border border-green-200"
                     : "bg-red-50 text-red-700 border border-red-200"
-                }`}
+                  }`}
               >
                 {diffHours < 0
                   ? "Already started"
                   : `${Math.floor(diffHours)}h ${Math.round(
-                      (diffHours % 1) * 60
-                    )}m left`}
+                    (diffHours % 1) * 60
+                  )}m left`}
               </span>
             </div>
           </div>
@@ -198,7 +238,7 @@ function ReschedulePage() {
             bookingData={bookingData}
             draftData={appointment}
             prevStep={() => router.back()}
-            nextStep={() => {}}
+            nextStep={() => { }}
             updateData={(newData) =>
               setBookingData((prev: any) => ({ ...prev, ...newData }))
             }
@@ -218,11 +258,10 @@ function ReschedulePage() {
         <button
           disabled={!canReschedule}
           onClick={handleReschedule}
-          className={`px-6 py-2 rounded-lg text-white font-semibold flex items-center gap-2 ${
-            canReschedule
+          className={`px-6 py-2 rounded-lg text-white font-semibold flex items-center gap-2 ${canReschedule
               ? "bg-blue-600 hover:bg-blue-700"
               : "bg-gray-400 cursor-not-allowed"
-          }`}
+            }`}
         >
           Reschedule <ArrowRight size={18} />
         </button>

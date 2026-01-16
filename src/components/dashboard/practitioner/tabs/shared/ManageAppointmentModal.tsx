@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import { toast } from "react-toastify";
+import { authFetch } from "@/lib/authFetch";
 
 interface ManageAppointmentModalProps {
   open: boolean;
@@ -41,7 +42,7 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/booking/appointment/${appointment?.id}`, {
+      const response = await authFetch(`/api/booking/appointment/${appointment?.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

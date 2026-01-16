@@ -7,8 +7,8 @@ import { auditLog } from "@/lib/audit/auditLog";
 export async function GET(req: NextRequest) {
   try {
     // 🔐 Authentication check
-    const { authorized, response, user } = await requireUser();
-    if (!authorized) return response;
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     const role = user?.profile?.role;
 
@@ -49,18 +49,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
-     const cnx = getAuditContext(req, user);
-  await auditLog({
-    ...cnx,
-    action: "EXPORTED",
-    entityType: "ADMIN_USER",
-    purpose: "operations",
-    source: "dashboard",
-    metadata: {
-      success: true,
-      data,
-    }
-  });
+    const cnx = getAuditContext(req, user);
+    await auditLog({
+      ...cnx,
+      action: "EXPORTED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        success: true,
+        data,
+      }
+    });
 
     return NextResponse.json({
       success: true,

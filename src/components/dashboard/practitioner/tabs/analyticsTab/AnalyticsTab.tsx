@@ -8,6 +8,7 @@ import Loader from "@/components/atom/Loader/Loader";
 import GenericTable, { Column } from "./GenericTable";
 import { X, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { authFetch } from "@/lib/authFetch";
 
 /* ---------- constants ---------- */
 
@@ -117,20 +118,20 @@ const AnalyticsTab: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const authRes = await fetch("/api/auth/me", { credentials: "include" });
+      const authRes = await authFetch("/api/auth/me");
       if (!authRes.ok) throw new Error("Authentication failed");
       const me = await authRes.json();
       const pId = me?.user?.practitioner_id ?? me?.practitioner_id;
       if (!pId) throw new Error("Practitioner profile not found");
 
       const [analyticsRes, transactionRes] = await Promise.all([
-        fetch(`/api/practitioners/${pId}/analytics`, { credentials: "include" }),
-        fetch(`http://localhost:3000/api/analytics/transactions/practitioner`, { credentials: "include" })
+        authFetch(`/api/practitioners/${pId}/analytics`),
+        authFetch(`http://localhost:3000/api/analytics/transactions/practitioner`)
       ]);
 
       if (!analyticsRes.ok) throw new Error("Failed to fetch booking statistics");
       const data = await analyticsRes.json();
-      
+
       let tData = { analytics: { totalGrossAmount: 0, totalPlatformFees: 0, totalConsultationFees: 0, totalServiceFees: 0, totalTaxes: 0 } };
       if (transactionRes.ok) {
         tData = await transactionRes.json();
@@ -173,9 +174,9 @@ const AnalyticsTab: React.FC = () => {
       url.searchParams.append("page", pagination.currentPage.toString());
       url.searchParams.append("per_page", pagination.perPage.toString());
 
-      const response = await fetch(url.toString(), { credentials: "include" });
+      const response = await authFetch(url.toString());
       const result = await response.json();
-      
+
       if (result.success) {
         setDetailData(result.data);
         setPagination(prev => ({
@@ -202,7 +203,7 @@ const AnalyticsTab: React.FC = () => {
       url.searchParams.append("page", auditPagination.currentPage.toString());
       url.searchParams.append("per_page", auditPagination.perPage.toString());
 
-      const response = await fetch(url.toString(), { credentials: "include" });
+      const response = await authFetch(url.toString());
       const result = await response.json();
 
       if (result.data) {
@@ -316,7 +317,7 @@ const AnalyticsTab: React.FC = () => {
           default: "bg-blue-50 text-blue-700 border-blue-100"
         };
         const style = config[status as keyof typeof config] || config.default;
-        
+
         return (
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${style}`}>
             {item.status}
@@ -386,7 +387,7 @@ const AnalyticsTab: React.FC = () => {
               {error}
             </div>
           )}
-          
+
           <BookingsView
             stats={stats}
             fromDate={fromDate}
@@ -404,7 +405,7 @@ const AnalyticsTab: React.FC = () => {
                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">
                   {detailTitle}
                 </h3>
-                <button 
+                <button
                   onClick={() => setSelectedDetail(null)}
                   className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-600 transition-colors"
                 >
@@ -468,9 +469,8 @@ const AnalyticsTabButton = ({
 }) => (
   <button
     onClick={() => onClick(id)}
-    className={`flex-1 rounded-full px-3 py-2 font-medium transition-all ${
-      id === active ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
-    }`}
+    className={`flex-1 rounded-full px-3 py-2 font-medium transition-all ${id === active ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+      }`}
   >
     {label}
   </button>
@@ -567,9 +567,8 @@ const Stat = ({
 }) => (
   <div
     onClick={onClick}
-    className={`rounded-xl px-4 py-3 text-xs font-medium text-white transition-all transform ${bg} ${
-      onClick ? "cursor-pointer hover:scale-[1.02] active:scale-[0.98]" : ""
-    } ${active ? "ring-4 ring-offset-2 ring-slate-200 shadow-lg" : "opacity-100"}`}
+    className={`rounded-xl px-4 py-3 text-xs font-medium text-white transition-all transform ${bg} ${onClick ? "cursor-pointer hover:scale-[1.02] active:scale-[0.98]" : ""
+      } ${active ? "ring-4 ring-offset-2 ring-slate-200 shadow-lg" : "opacity-100"}`}
   >
     <div className="text-[11px] opacity-90">{label}</div>
     <div className="mt-1 text-sm font-bold">{value}</div>

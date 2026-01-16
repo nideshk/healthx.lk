@@ -8,7 +8,7 @@ export async function PATCH(
 ) {
   const { id } = await context.params;
 
-  const { authorized, user, role } = await requireUser();
+  const { authorized, user, role } = await requireUser(req);
   if (!authorized || !["admin", "superadmin"].includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

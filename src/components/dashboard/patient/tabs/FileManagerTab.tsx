@@ -1,6 +1,7 @@
 "use client";
 
 import Loader from "@/components/atom/Loader/Loader";
+import { authFetch } from "@/lib/authFetch";
 import { File, FileArchiveIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -24,7 +25,7 @@ export default function FileManagerTab() {
     async function loadFiles() {
       try {
         setLoading(true);
-        const res = await fetch("/api/manage-attachment");
+        const res = await authFetch("/api/manage-attachment");
 
         if (!res.ok) {
           throw new Error("Failed to fetch files");
@@ -50,7 +51,7 @@ export default function FileManagerTab() {
     try {
       setActionId(id);
 
-      const res = await fetch(`/api/manage-attachment/${id}`);
+      const res = await authFetch(`/api/manage-attachment/${id}`);
       const data = await res.json();
 
       if (!res.ok || !data?.url) {
@@ -78,7 +79,7 @@ export default function FileManagerTab() {
     try {
       setActionId(id);
 
-      const res = await fetch(`/api/manage-attachment/${id}`, {
+      const res = await authFetch(`/api/manage-attachment/${id}`, {
         method: "DELETE",
       });
 
@@ -100,11 +101,11 @@ export default function FileManagerTab() {
   /* ─────────────────────────────────────────────
      UI STATES
   ───────────────────────────────────────────── */
-  if (loading) { 
-      return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
-          <Loader size="lg"></Loader>;
-      </div>
-    }
+  if (loading) {
+    return <div className="w-[90vh] h-[90vh] flex justify-center items-center">
+      <Loader size="lg"></Loader>;
+    </div>
+  }
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">My Files & Reports</h2>
@@ -123,16 +124,16 @@ export default function FileManagerTab() {
               {/* File info */}
               <div className="flex gap-2">
 
-                <FileArchiveIcon/>
-              <div>
-                <p className="font-medium text-gray-900">
-                  {file.file_name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {(file.file_size / 1024).toFixed(1)} KB ·{" "}
-                  {new Date(file.uploaded_at).toLocaleDateString()}
-                </p>
-              </div>
+                <FileArchiveIcon />
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {file.file_name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {(file.file_size / 1024).toFixed(1)} KB ·{" "}
+                    {new Date(file.uploaded_at).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
 
               {/* Actions */}
@@ -140,11 +141,10 @@ export default function FileManagerTab() {
                 <button
                   onClick={() => viewFile(file.id)}
                   disabled={busy}
-                  className={`${
-                    busy
-                      ? "text-gray-400 cursor-not-allowed"
-                      : "text-blue-600 hover:underline"
-                  }`}
+                  className={`${busy
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-blue-600 hover:underline"
+                    }`}
                 >
                   {busy ? "Opening…" : "View"}
                 </button>
@@ -152,11 +152,10 @@ export default function FileManagerTab() {
                 <button
                   onClick={() => deleteFile(file.id)}
                   disabled={busy}
-                  className={`${
-                    busy
-                      ? "text-gray-400 cursor-not-allowed"
-                      : "text-red-600 hover:underline"
-                  }`}
+                  className={`${busy
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-red-600 hover:underline"
+                    }`}
                 >
                   {busy ? "Deleting…" : "Delete"}
                 </button>

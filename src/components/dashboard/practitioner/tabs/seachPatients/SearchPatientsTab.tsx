@@ -9,6 +9,7 @@ import { Patient, Appointment } from "@/types/Dashboard";
 import PatientDetails from "./PatientDetailView";
 import { toast } from "react-toastify";
 import { Trash2 } from "lucide-react"; // ⭐ Added icon
+import { authFetch } from "@/lib/authFetch";
 
 interface SearchPatientsTabProps {
   search: string;
@@ -29,7 +30,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // State for delete confirmation modal
   const [isDeleting, setIsDeleting] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
@@ -47,9 +48,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
     setError(null);
 
     try {
-      const res = await fetch("/api/booking/appointment", {
-        credentials: "include",
-      });
+      const res = await authFetch("/api/booking/appointment");
 
       if (!res.ok) {
         throw new Error("Failed to load appointments");
@@ -58,8 +57,8 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
       const json = await res.json();
 
       // Handle cases where response might be an array or object with buckets
-      const mergedAppointments = Array.isArray(json) 
-        ? json 
+      const mergedAppointments = Array.isArray(json)
+        ? json
         : [
           ...(json.ongoing || []),
           ...(json.upcoming || []),
@@ -128,14 +127,13 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
   ------------------------------------------------------------------ */
   const handlePermanentDelete = async () => {
     if (!patientToDelete) return;
-    
+
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/patient/${patientToDelete.id}/delete`, {
+      const res = await authFetch(`/api/patient/${patientToDelete.id}/delete`, {
         method: "DELETE",
-        credentials: "include",
       });
-      
+
       const data = await res.json();
 
       if (data.success) {
@@ -171,8 +169,8 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
           a.status === "cancelled"
             ? "previous"
             : start < new Date()
-            ? "previous"
-            : "upcoming";
+              ? "previous"
+              : "upcoming";
 
         return {
           id: a.id,
@@ -193,6 +191,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
           prescriptions: "",
           followUpNeeded: false,
           followUpDate: undefined,
+          room_key: a?.room_key,
         };
       });
 
@@ -255,9 +254,9 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
                 <span className="text-xs text-slate-500">{p.phone}</span>
               </div>
 
-              <Button 
-                variant="danger" 
-                size="sm" 
+              <Button
+                variant="danger"
+                size="sm"
                 className="text-xs px-4"
                 onClick={() => setPatientToDelete(p)}
               >
@@ -280,21 +279,21 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
           <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900">Confirm Deletion</h3>
             <p className="text-sm text-slate-500 mt-2">
-              Are you sure you want to delete <span className="font-bold">{patientToDelete.name}</span>? 
+              Are you sure you want to delete <span className="font-bold">{patientToDelete.name}</span>?
               This action will remove them from your appointments and cannot be undone.
             </p>
             <div className="flex gap-3 mt-6">
-              <Button 
-                variant="outline" 
-                className="flex-1" 
+              <Button
+                variant="outline"
+                className="flex-1"
                 onClick={() => setPatientToDelete(null)}
                 disabled={isDeleting}
               >
                 Cancel
               </Button>
-              <Button 
-                variant="danger" 
-                className="flex-1" 
+              <Button
+                variant="danger"
+                className="flex-1"
                 onClick={handlePermanentDelete}
                 loading={isDeleting}
               >

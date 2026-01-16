@@ -16,6 +16,8 @@
 //   }
 // }
 
+import { authFetch } from "./authFetch";
+
 export async function logAuditEvent({
   appointmentId,
   eventType,
@@ -23,7 +25,7 @@ export async function logAuditEvent({
   token
 }: any) {
 
-  await fetch("http://localhost:3000/api/consultation/audit-log", {
+  await authFetch("http://localhost:3000/api/consultation/audit-log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

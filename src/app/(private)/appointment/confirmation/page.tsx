@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle, Upload } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
 
 export default function AppointmentConfirmPage() {
   const router = useRouter();
@@ -31,18 +32,34 @@ export default function AppointmentConfirmPage() {
 
   // 🧭 Fetch Draft
   useEffect(() => {
+    let mounted = true;
+
     (async () => {
       try {
-        const resp = await axios.get(`/api/appointment/draft`);
-        setDraft(resp.data.drafts);
-        setDraftId(resp.data.drafts?.[0]?.id);
+        const res = await authFetch("/api/appointment/draft");
+
+        if (!res.ok) {
+          throw new Error(`Draft fetch failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+
+        setDraft(data.drafts);
+        setDraftId(data.drafts?.[0]?.id);
       } catch (err) {
-        console.error('❌ Failed to fetch draft:', err);
+        console.error("❌ Failed to fetch draft:", err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
 
   // ===== VALIDATION RULES =====
   const canGoForward = () => {
@@ -204,11 +221,10 @@ export default function AppointmentConfirmPage() {
             <button
               disabled={!canGoForward()}
               onClick={handleNext}
-              className={`px-5 py-2 rounded-md text-white ${
-                canGoForward()
+              className={`px-5 py-2 rounded-md text-white ${canGoForward()
                   ? 'bg-blue-600 hover:bg-blue-700'
                   : 'bg-gray-400 cursor-not-allowed'
-              }`}
+                }`}
             >
               Next
             </button>
@@ -318,11 +334,10 @@ export default function AppointmentConfirmPage() {
             <button
               disabled={!canGoForward()}
               onClick={handleNext}
-              className={`px-5 py-2 rounded-md text-white ${
-                canGoForward()
+              className={`px-5 py-2 rounded-md text-white ${canGoForward()
                   ? 'bg-blue-600 hover:bg-blue-700'
                   : 'bg-gray-400 cursor-not-allowed'
-              }`}
+                }`}
             >
               {uploading ? 'Uploading...' : 'Next'}
             </button>

@@ -81,7 +81,7 @@ export async function GET(
     /* ------------------------------------------------
      * AUTH
      * ------------------------------------------------ */
-    const { authorized, user, role } = await requireUser();
+    const { authorized, user, role } = await requireUser(req);
 
     const cnx = getAuditContext(req, user);
     if (!authorized || !user) {
@@ -169,7 +169,7 @@ export async function GET(
         entityId: appointmentId,
         purpose: "operations",
         source: "user_portal",
-        metadata:{ data :  `${patient?.id} : patient_id_mismatch`}
+        metadata: { data: `${patient?.id} : patient_id_mismatch` }
       })
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -185,7 +185,7 @@ export async function GET(
         entityId: appointmentId,
         purpose: "operations",
         source: "dashboard",
-        metadata:{ data :  `${practitioner?.id} : practitioner_id_mismatch`}
+        metadata: { data: `${practitioner?.id} : practitioner_id_mismatch` }
       })
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -251,15 +251,15 @@ export async function GET(
      * ------------------------------------------------ */
     if (role === "patient") {
       const signedAttachments = await Promise.all(
-    attachments.map(async (atc) => ({
-      id: atc.id,
-      file_name: atc.file_name,
-      file_type: atc.file_type,
-      file_size: atc.file_size,
-      created_at: atc.created_at,
-      view_url: await signViewUrl(atc.file_url),
-    }))
-  );
+        attachments.map(async (atc) => ({
+          id: atc.id,
+          file_name: atc.file_name,
+          file_type: atc.file_type,
+          file_size: atc.file_size,
+          created_at: atc.created_at,
+          view_url: await signViewUrl(atc.file_url),
+        }))
+      );
 
       await auditLog({
         ...cnx,
@@ -288,7 +288,7 @@ export async function GET(
             reason: appointment.cancellation_reason,
             cancelled_at: appointment.cancelled_at,
           },
-        attachments :signedAttachments
+        attachments: signedAttachments
       });
     }
 
@@ -300,7 +300,7 @@ export async function GET(
       entityType: "APPOINTMENT",
       entityId: appointmentId,
       purpose: "treatment",
-      source : "dashboard",
+      source: "dashboard",
       metadata: { appointment_id: appointmentId }
     })
 
@@ -325,13 +325,13 @@ export async function GET(
 }
 
 export async function PATCH(
-  req:  NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await context.params;
 
-    const { authorized , user} = await requireUser();
+    const { authorized, user } = await requireUser(req);
 
     const cnx = getAuditContext(req, user);
     if (!authorized) {
@@ -342,7 +342,7 @@ export async function PATCH(
         entityId: id,
         purpose: "operations",
         source: "user_portal",
-        metadata:{ data :  `unauthorized_access`}
+        metadata: { data: `unauthorized_access` }
       })
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -426,12 +426,12 @@ export async function PATCH(
       --------------------------------------------------------------*/
 
       const patient = Array.isArray(appt.patient)
-      ? appt.patient[0]
-      : appt.patient;
+        ? appt.patient[0]
+        : appt.patient;
 
-    const practitioner = Array.isArray(appt.practitioner)
-      ? appt.practitioner[0]
-      : appt.practitioner;
+      const practitioner = Array.isArray(appt.practitioner)
+        ? appt.practitioner[0]
+        : appt.practitioner;
 
       // Notify patient
       if (patient?.id) {
@@ -486,7 +486,7 @@ export async function PATCH(
       }
 
 
-      await auditLog({        
+      await auditLog({
         ...cnx,
         action: "UPDATED",
         entityType: "APPOINTMENT",

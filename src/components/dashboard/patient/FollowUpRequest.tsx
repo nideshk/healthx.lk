@@ -4,6 +4,7 @@ import axios from "axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarDays, Stethoscope, Pill } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 type FollowUpRequest = {
   id: string;
@@ -31,12 +32,38 @@ export default function FollowUpRequest() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    axios
-      .get("/api/follow-up")
-      .then((res) => setFollowUps(res.data?.data ?? []))
-      .catch(() => setError("Unable to load follow-up requests"))
-      .finally(() => setLoading(false));
+    let mounted = true;
+
+    async function fetchFollowUps() {
+      try {
+        const res = await authFetch("/api/follow-up");
+
+        if (!res.ok) {
+          throw new Error("Failed to load follow-ups");
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+
+        setFollowUps(data?.data ?? []);
+      } catch (err) {
+        console.error("Unable to load follow-up requests:", err);
+        if (mounted) {
+          setError("Unable to load follow-up requests");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    fetchFollowUps();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
 
   if (loading) {
     return <div className="py-10 text-center text-gray-500">Loading…</div>;
@@ -89,11 +116,10 @@ export default function FollowUpRequest() {
                   </div>
 
                   <span
-                    className={`rounded-full flex justify-center items-center px-3 py-1 text-xs font-medium ${
-                      isOverdue
+                    className={`rounded-full flex justify-center items-center px-3 py-1 text-xs font-medium ${isOverdue
                         ? "bg-red-100 text-red-700"
                         : "bg-yellow-100 text-yellow-700"
-                    }`}
+                      }`}
                   >
                     {isOverdue ? "Overdue" : "Follow-Up Required"}
                   </span>
@@ -113,9 +139,8 @@ export default function FollowUpRequest() {
                   <div>
                     <p className="text-gray-500">Follow-Up Date</p>
                     <p
-                      className={`font-medium ${
-                        isOverdue ? "text-red-600" : ""
-                      }`}
+                      className={`font-medium ${isOverdue ? "text-red-600" : ""
+                        }`}
                     >
                       {req.follow_up_date
                         ? new Date(req.follow_up_date).toLocaleDateString()

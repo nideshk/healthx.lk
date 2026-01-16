@@ -14,13 +14,13 @@ type PostBody = {
 };
 
 // GET: return preconsult + encounter for an appointment
-export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }){
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id: appointmentId } = await context.params;
 
-    if (!appointmentId) {
-      return NextResponse.json({ error: 'Missing appointment id' }, { status: 400 });
-    }
-  const { authorized, user, role } = await requireUser();
+  if (!appointmentId) {
+    return NextResponse.json({ error: 'Missing appointment id' }, { status: 400 });
+  }
+  const { authorized, user, role } = await requireUser(request);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     // Fetch appointment (minimal)
@@ -44,14 +44,14 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const { data: consent, error: conErr} = await supabaseClient
-        .from("consents")
-        .select("id, telehealth, terms, accepted_at")
-        .eq("appointment_id", appointmentId)
-        .limit(1)
-        .maybeSingle();
+    const { data: consent, error: conErr } = await supabaseClient
+      .from("consents")
+      .select("id, telehealth, terms, accepted_at")
+      .eq("appointment_id", appointmentId)
+      .limit(1)
+      .maybeSingle();
     if (conErr) throw conErr;
-     
+
     if (isAdmin) {
       return NextResponse.json({ consent: consent ?? null }, { status: 200 });
     }
@@ -64,33 +64,33 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       .maybeSingle();
     if (preErr) throw preErr;
 
-    
+
     let attachments: any[] = [];
-    
-      const { data } = await supabaseAdmin
-        .from("attachments")
-        .select(
-          `
+
+    const { data } = await supabaseAdmin
+      .from("attachments")
+      .select(
+        `
           *
         `
-        )
-        .eq("appointment_id", appointmentId)
-        .eq("practitioner_id", user?.practitioner_id);
-console.log("Fetched attachments (practitioner):", data);
-      attachments = data ?? [];
-    
+      )
+      .eq("appointment_id", appointmentId)
+      .eq("practitioner_id", user?.practitioner_id);
+    console.log("Fetched attachments (practitioner):", data);
+    attachments = data ?? [];
 
-      const signedAttachments = await Promise.all(
-        attachments.map(async (atc) => ({
-          id: atc.id,
-          file_name: atc.file_name,
-          file_type: atc.file_type,
-          file_size: atc.file_size,
-          created_at: atc.created_at,
-          view_url: await signViewUrl(atc.file_url),
-        }))
-      );
-    
+
+    const signedAttachments = await Promise.all(
+      attachments.map(async (atc) => ({
+        id: atc.id,
+        file_name: atc.file_name,
+        file_type: atc.file_type,
+        file_size: atc.file_size,
+        created_at: atc.created_at,
+        view_url: await signViewUrl(atc.file_url),
+      }))
+    );
+
     // Fetch encounter (assumes one encounter per appointment)
     const { data: encounter, error: encErr } = await supabaseClient
       .from("encounters")
@@ -113,7 +113,7 @@ console.log("Fetched attachments (practitioner):", data);
       metadata: { appointment_id: appointmentId }
     })
 
-    return NextResponse.json({ consent: consent ?? null ,preconsult: preconsult ?? null, encounter: encounter ?? null, attachments: signedAttachments ?? [] }, { status: 200 });
+    return NextResponse.json({ consent: consent ?? null, preconsult: preconsult ?? null, encounter: encounter ?? null, attachments: signedAttachments ?? [] }, { status: 200 });
   } catch (err: any) {
     console.error("GET /consultation error:", err);
     return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });
@@ -122,18 +122,18 @@ console.log("Fetched attachments (practitioner):", data);
 
 // POST: create or update encounter for the appointment
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-//   const appointmentId = params?.id;
-//   if (!appointmentId) return NextResponse.json({ error: "Missing appointment id" }, { status: 400 });
+  //   const appointmentId = params?.id;
+  //   if (!appointmentId) return NextResponse.json({ error: "Missing appointment id" }, { status: 400 });
 
-    const { id: appointmentId } = await context.params;
+  const { id: appointmentId } = await context.params;
 
-    if (!appointmentId) {
-      return NextResponse.json({ error: 'Missing appointment id' }, { status: 400 });
-    }
+  if (!appointmentId) {
+    return NextResponse.json({ error: 'Missing appointment id' }, { status: 400 });
+  }
 
 
-    
-  const { authorized, user, role } = await requireUser();
+
+  const { authorized, user, role } = await requireUser(request);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: PostBody;

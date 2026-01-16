@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
-    const { user } = await requireUser();
+    const { user } = await requireUser(req);
     console.log(user?.patient_id)
 
     /* user.patientId is trusted */
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       .from("attachments")
       .select(
         "*"
-    )
+      )
       .eq("patient_id", user?.patient_id)
       .order("uploaded_at", { ascending: false });
 
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       source: "user_portal",
       metadata: files.map(f => f.id)
     });
-    
+
 
     return NextResponse.json({ files });
   } catch (err: any) {

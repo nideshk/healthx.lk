@@ -20,7 +20,7 @@ export async function POST(
     /* ------------------------------------------------
      * AUTH
      * ------------------------------------------------ */
-    const auth = await requireUser();
+    const auth = await requireUser(req);
     console.log("🔹 [UPLOAD_URL] Auth result", {
       requestId,
       authorized: auth.authorized,

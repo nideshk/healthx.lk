@@ -9,8 +9,9 @@ export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching
 
 // Endpoint: /api/analytics/transactions/patient/[transaction_id]
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-    const { authorized, response, user } = await requireUser();
-    if (!authorized) return response;
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
 
     if (user?.profile?.role !== 'patient') {
         return NextResponse.json(
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     console.log(`🔍 Fetching transactions for patient ID: ${patientId} (User: ${user?.auth_user_id}, Role: ${user?.role})`);
 
     try {
-        
+
         const { data: transaction, error } = await supabaseClient
             .from("transactions")
             .select("*")
@@ -70,8 +71,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
             entityId: transactionId,
             purpose: "operations",
             source: "user_portal",
-            metadata: { transactionId  }
-            
+            metadata: { transactionId }
+
         })
 
         return NextResponse.json({

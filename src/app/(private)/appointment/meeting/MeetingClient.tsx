@@ -3,19 +3,20 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import VideoCallContainer from "@/components/atom/VideoCall/VideoCall";
+import { authFetch } from "@/lib/authFetch";
 
 type AuthorizeResponse =
   | {
-      authorized: true;
-      token: string;
-      role: "patient" | "practitioner" | "attendee";
-      appointmentId: string;
-      roomKey: string;
-    }
+    authorized: true;
+    token: string;
+    role: "patient" | "practitioner" | "attendee";
+    appointmentId: string;
+    roomKey: string;
+  }
   | {
-      authorized: false;
-      error?: string;
-    };
+    authorized: false;
+    error?: string;
+  };
 
 export default function MeetingPage() {
   const params = useSearchParams();
@@ -33,8 +34,8 @@ export default function MeetingPage() {
         const body = inviteToken
           ? { token: inviteToken }
           : roomKey
-          ? { roomKey }
-          : null;
+            ? { roomKey }
+            : null;
 
         if (!body) {
           setError("Missing meeting information");
@@ -42,9 +43,8 @@ export default function MeetingPage() {
           return;
         }
 
-        const res = await fetch("/api/telehealth/authorize", {
+        const res = await authFetch("/api/telehealth/authorize", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
 
@@ -55,7 +55,7 @@ export default function MeetingPage() {
           localStorage.setItem("telehealth_token", json.token);
           setAuthData(json);
         } else {
-          setError( "Access denied");
+          setError("Access denied");
         }
       } catch (e) {
         console.error(e);

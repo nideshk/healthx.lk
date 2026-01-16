@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import GenericTable, { Column } from "./GenericTable"; // Adjust path as needed
+import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                    */
@@ -55,15 +56,17 @@ const RefundsRequestedTab: React.FC = () => {
   /* API CALLS                                  */
   /* -------------------------------------------------------------------------- */
 
-  // API 37: Fetch Refunds
   const fetchRefunds = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/api/refunds");
+      const response = await authFetch("/api/refunds");
+
+      if (!response.ok) {
+          throw new Error(`Failed to fetch refunds: ${response.status}`);
+        }
       const data = await response.json();
 
       if (data.status === "success") {
-        // Mapping the exact structure provided in your requirements
         const mappedData: RefundItem[] = data.refunds.map((item: any) => ({
           id: item.id,
           transaction_id: item.transaction_id,
@@ -74,7 +77,7 @@ const RefundsRequestedTab: React.FC = () => {
           refund_amount: item.refund_amount || 0,
           currency: item.currency || "LKR",
           reason: item.reason || "N/A",
-          status: item.status, // e.g. "requested"
+          status: item.status, 
         }));
 
         setRefunds(mappedData);
@@ -93,12 +96,11 @@ const RefundsRequestedTab: React.FC = () => {
     fetchRefunds();
   }, [fetchRefunds]);
 
-  // API 38: PATCH Action
   const handleProcessAction = async () => {
     if (!selectedRefund || !actionType) return;
 
     try {
-      const response = await fetch("http://localhost:3000/api/refunds", {
+      const response = await authFetch("/api/refunds", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -107,6 +109,10 @@ const RefundsRequestedTab: React.FC = () => {
           admin_note: adminNote,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to process refund action: ${response.status}`);
+      }
 
       const result = await response.json();
 
@@ -181,24 +187,24 @@ const RefundsRequestedTab: React.FC = () => {
       header: "Status",
       render: (item) => <StatusBadge status={item.status} />,
     },
-    // {
-    //   header: "Actions",
-    //   className: "text-right",
-    //   render: (item) => (
-    //     item.status === "requested" ? (
-    //       <div className="flex justify-end gap-2">
-    //         <Button size="sm" onClick={() => openConfirmation(item, "mark_refunded")}>
-    //           Approve
-    //         </Button>
-    //         <Button size="sm" variant="danger" onClick={() => openConfirmation(item, "reject")}>
-    //           Reject
-    //         </Button>
-    //       </div>
-    //     ) : (
-    //       <span className="text-xs text-slate-400 italic capitalize">{item.status}</span>
-    //     )
-    //   ),
-    // },
+    {
+      header: "Actions",
+      className: "text-right",
+      render: (item) => (
+        item.status === "requested" ? (
+          <div className="flex justify-end gap-2">
+            <Button size="sm" onClick={() => openConfirmation(item, "mark_refunded")}>
+              Approve
+            </Button>
+            <Button size="sm" variant="danger" onClick={() => openConfirmation(item, "reject")}>
+              Reject
+            </Button>
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400 italic capitalize">{item.status}</span>
+        )
+      ),
+    },
   ];
 
   // Pagination Logic
@@ -252,7 +258,7 @@ const RefundsRequestedTab: React.FC = () => {
       />
 
       {/* ---------------- CONFIRMATION MODAL ---------------- */}
-      {/* {modalOpen && selectedRefund && (
+      {modalOpen && selectedRefund && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
             <h3 className="text-lg font-bold text-slate-800">
@@ -299,7 +305,7 @@ const RefundsRequestedTab: React.FC = () => {
             </div>
           </div>
         </div>
-      )} */}
+      )}
     </div>
   );
 };
