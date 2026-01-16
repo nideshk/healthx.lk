@@ -100,7 +100,7 @@ const RefundsRequestedTab: React.FC = () => {
     if (!selectedRefund || !actionType) return;
 
     try {
-      const response = await fetch("/api/refunds", {
+      const response = await authFetch("/api/refunds", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,6 +109,10 @@ const RefundsRequestedTab: React.FC = () => {
           admin_note: adminNote,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to process refund action: ${response.status}`);
+      }
 
       const result = await response.json();
 
@@ -183,24 +187,24 @@ const RefundsRequestedTab: React.FC = () => {
       header: "Status",
       render: (item) => <StatusBadge status={item.status} />,
     },
-    // {
-    //   header: "Actions",
-    //   className: "text-right",
-    //   render: (item) => (
-    //     item.status === "requested" ? (
-    //       <div className="flex justify-end gap-2">
-    //         <Button size="sm" onClick={() => openConfirmation(item, "mark_refunded")}>
-    //           Approve
-    //         </Button>
-    //         <Button size="sm" variant="danger" onClick={() => openConfirmation(item, "reject")}>
-    //           Reject
-    //         </Button>
-    //       </div>
-    //     ) : (
-    //       <span className="text-xs text-slate-400 italic capitalize">{item.status}</span>
-    //     )
-    //   ),
-    // },
+    {
+      header: "Actions",
+      className: "text-right",
+      render: (item) => (
+        item.status === "requested" ? (
+          <div className="flex justify-end gap-2">
+            <Button size="sm" onClick={() => openConfirmation(item, "mark_refunded")}>
+              Approve
+            </Button>
+            <Button size="sm" variant="danger" onClick={() => openConfirmation(item, "reject")}>
+              Reject
+            </Button>
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400 italic capitalize">{item.status}</span>
+        )
+      ),
+    },
   ];
 
   // Pagination Logic
@@ -254,7 +258,7 @@ const RefundsRequestedTab: React.FC = () => {
       />
 
       {/* ---------------- CONFIRMATION MODAL ---------------- */}
-      {/* {modalOpen && selectedRefund && (
+      {modalOpen && selectedRefund && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
             <h3 className="text-lg font-bold text-slate-800">
@@ -301,7 +305,7 @@ const RefundsRequestedTab: React.FC = () => {
             </div>
           </div>
         </div>
-      )} */}
+      )}
     </div>
   );
 };
