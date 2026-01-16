@@ -267,7 +267,10 @@ export default function Header() {
                           <User size={18} /> My Profile
                         </Link>
                         <button
-                          onClick={() => supabaseBrowser.auth.signOut()}
+                          onClick={() => {
+                            router.push("/")
+                            supabaseBrowser.auth.signOut()
+                          }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all mt-1"
                         >
                           <LogOut size={18} /> Sign Out
