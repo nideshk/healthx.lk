@@ -335,11 +335,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
         fees: selectedAppointments.reduce((acc: any, appt) => {
           acc[appt.id] = {
             type: appt.name,
-            duration_mins: appt.duration_mins,
-            max_attendees: appt.max_attendee,
             fee: Number(appt.base_fee || 0),
-            platform_fee: Number(appt.platform_fee || 0),
-            extra_fee_per_attendee: Number(appt.extra_fee_per_attendee || 0),
           };
           return acc;
         }, {}),

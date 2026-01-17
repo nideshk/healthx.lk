@@ -101,7 +101,7 @@ export async function GET(
         ? `${date}T23:59:59`
         : (() => {
           const end = new Date(weekStart!);
-          end.setDate(end.getDate() + 6);
+          end.setDate(end.getDate() + 7);
           return end.toISOString();
         })()
     )

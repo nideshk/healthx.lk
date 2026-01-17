@@ -217,8 +217,8 @@ function ReschedulePage() {
             <div className="ml-auto">
               <span
                 className={`px-3 py-1.5 rounded-full text-sm font-medium ${canReschedule
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-red-50 text-red-700 border border-red-200"
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : "bg-red-50 text-red-700 border border-red-200"
                   }`}
               >
                 {diffHours < 0
@@ -239,7 +239,7 @@ function ReschedulePage() {
             draftData={appointment}
             prevStep={() => router.back()}
             nextStep={() => { }}
-            updateData={(newData) =>
+            updateData={(newData: any) =>
               setBookingData((prev: any) => ({ ...prev, ...newData }))
             }
           />
@@ -259,8 +259,8 @@ function ReschedulePage() {
           disabled={!canReschedule}
           onClick={handleReschedule}
           className={`px-6 py-2 rounded-lg text-white font-semibold flex items-center gap-2 ${canReschedule
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-gray-400 cursor-not-allowed"
+            ? "bg-blue-600 hover:bg-blue-700"
+            : "bg-gray-400 cursor-not-allowed"
             }`}
         >
           Reschedule <ArrowRight size={18} />

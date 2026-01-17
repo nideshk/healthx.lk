@@ -17,6 +17,8 @@
     "clsx": "^2.1.1",
     "form-data": "^4.0.4",
     "jsonwebtoken": "^9.0.3",
+    "localforage": "^1.10.0",
+    "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.544.0",
     "luxon": "^3.7.2",
     "next": "15.5.9",
@@ -37,6 +39,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/lodash.debounce": "^4.0.9",
     "@types/luxon": "^3.7.1",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.4",

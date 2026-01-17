@@ -146,7 +146,11 @@ export default function Header() {
   const firstName = user?.profile?.first_name || "User";
   const userInitial = firstName[0]?.toUpperCase() || "U";
   const unreadCount = notifications.length;
+  const redirectToSignup = () => {
+    closeLoginModal()
+    router.push("/create-account");
 
+  }
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
@@ -267,7 +271,10 @@ export default function Header() {
                           <User size={18} /> My Profile
                         </Link>
                         <button
-                          onClick={() => supabaseBrowser.auth.signOut()}
+                          onClick={() => {
+                            router.push("/")
+                            supabaseBrowser.auth.signOut()
+                          }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all mt-1"
                         >
                           <LogOut size={18} /> Sign Out
@@ -298,7 +305,6 @@ export default function Header() {
         )}
       </header>
 
-      {/* LOGIN MODAL */}
       <Modal
         isOpen={isLoginModalOpen}
         onClose={() => { setShowForgot(false); setMfa(null); closeLoginModal(); }}
@@ -353,6 +359,9 @@ export default function Header() {
               </div>
               <button disabled={isSubmitting} className="w-full bg-slate-900 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-3 transition-all active:scale-[0.98] shadow-xl shadow-slate-200">
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
+              </button>
+              <button onClick={redirectToSignup} className="w-full bg-slate-900 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-3 transition-all active:scale-[0.98] shadow-xl shadow-slate-200">
+                Create Account
               </button>
             </form>
           ) : (

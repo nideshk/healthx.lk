@@ -7,6 +7,9 @@ import {
   Clock,
   Video,
   Lock,
+  ChevronRight,
+  User,
+  AlertCircle,
 } from "lucide-react";
 
 export function AppointmentCard({
@@ -21,178 +24,132 @@ export function AppointmentCard({
 
   const canNavigate = !isPending && !isCancelled;
 
-  const hasBadge = isPending || isOngoing || isCancelled || isPast;
+  // Status-based configuration
+  const config = {
+    cancelled: {
+      container: "bg-white border-red-100 opacity-70",
+      iconBg: "bg-red-50 text-red-500",
+      badge: { bg: "bg-red-50 text-red-600 border-red-100", label: "Cancelled" },
+    },
+    pending: {
+      container: "bg-amber-50/50 border-amber-200 shadow-sm",
+      iconBg: "bg-amber-100 text-amber-600",
+      badge: { bg: "bg-amber-600 text-white", label: "Action Required" },
+    },
+    ongoing: {
+      container: "bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500",
+      iconBg: "bg-emerald-100 text-emerald-600",
+      badge: { bg: "bg-emerald-600 text-white animate-pulse", label: "Live Now" },
+    },
+    past: {
+      container: "bg-slate-50 border-slate-200 grayscale-[0.5]",
+      iconBg: "bg-slate-200 text-slate-500",
+      badge: { bg: "bg-slate-100 text-slate-500 border-slate-200", label: "Completed" },
+    },
+    upcoming: {
+      container: "bg-white border-slate-200 hover:border-blue-300 hover:shadow-md",
+      iconBg: "bg-blue-50 text-blue-600",
+      badge: null,
+    },
+  };
 
-  const containerStyle = isCancelled
-    ? "bg-red-50 border-red-200 opacity-75"
-    : isPending
-    ? "bg-yellow-50 border-yellow-200"
-    : isOngoing
-    ? "bg-green-50 border-green-300 shadow-green-200/40"
-    : isPast
-    ? "bg-gray-50 border-gray-200 opacity-80"
-    : "bg-white/80 border-gray-200 hover:shadow-lg";
+  const current = isCancelled ? config.cancelled : 
+                  isPending ? config.pending : 
+                  isOngoing ? config.ongoing : 
+                  isPast ? config.past : config.upcoming;
 
   return (
     <article
-      role={canNavigate ? "button" : undefined}
-      aria-disabled={!canNavigate}
-      tabIndex={canNavigate ? 0 : -1}
-      onClick={() => {
-        if (!canNavigate) return;
-        router.push(`/dashboard/appointment/${appt.id}`);
-      }}
-      onKeyDown={(e) => {
-        if (!canNavigate) return;
-        if (e.key === "Enter") {
-          router.push(`/dashboard/appointment/${appt.id}`);
-        }
-      }}
+      onClick={() => canNavigate && router.push(`/dashboard/appointment/${appt.id}`)}
       className={`
-        group relative rounded-2xl border transition
-        focus:outline-none focus:ring-2 focus:ring-blue-500
-        ${canNavigate ? "cursor-pointer" : "cursor-default"}
-        ${hasBadge ? "pt-10" : "pt-5"}
-        px-5 pb-5
-        ${containerStyle}
+        group relative rounded-2xl border p-5 transition-all duration-200
+        ${canNavigate ? "cursor-pointer active:scale-[0.99]" : "cursor-default"}
+        ${current.container}
       `}
     >
-      {/* STATUS BADGE */}
-      <div className="absolute top-3 right-3">
+      {/* 1. TOP SECTION: Status & Type */}
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-2.5 rounded-xl ${current.iconBg}`}>
+          <Video className="w-5 h-5" />
+        </div>
+        {current.badge && (
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${current.badge.bg}`}>
+            {current.badge.label}
+          </span>
+        )}
+      </div>
+
+      {/* 2. DOCTOR INFO */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
+          {appt.practitioner?.profile_picture_url ? (
+            <img src={appt.practitioner.profile_picture_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <User className="w-5 h-5 text-slate-400" />
+          )}
+        </div>
+        <div className="min-w-0">
+          <h4 className="text-sm font-bold text-slate-900 truncate">
+            Dr. {appt.practitioner?.full_name || "Specialist"}
+          </h4>
+          <p className="text-xs text-slate-500 truncate font-medium">
+            {appt.appointment_type?.name}
+          </p>
+        </div>
+      </div>
+
+      {/* 3. LOGISTICS */}
+      <div className="grid grid-cols-2 gap-2 py-3 border-y border-slate-100">
+        <div className="flex items-center gap-2 text-slate-600">
+          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] font-semibold">
+            {start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-slate-600">
+          <Clock className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] font-semibold">
+            {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
+      </div>
+
+      {/* 4. ACTIONS */}
+      <div className="mt-4">
         {isPending && (
-          <Badge color="yellow" icon={<Lock className="w-3 h-3" />}>
-            Payment Pending
-          </Badge>
+          <button
+            onClick={(e) => { e.stopPropagation(); router.push(`/payments/checkout?appointment_id=${appt.id}`); }}
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+          >
+            <Lock className="w-3 h-3" /> Complete Payment
+          </button>
         )}
+
         {isOngoing && (
-          <Badge color="green" pulse>
-            Live
-          </Badge>
+          <Link
+            href={`/appointment/meeting?room=${appt.room_key}`}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+            Join Consultation
+          </Link>
         )}
+
+        {canNavigate && !isOngoing && !isPending && (
+          <div className="flex items-center justify-between text-blue-600 group-hover:translate-x-1 transition-transform">
+             <span className="text-[11px] font-bold uppercase tracking-tight">View Details</span>
+             <ChevronRight className="w-4 h-4" />
+          </div>
+        )}
+        
         {isCancelled && (
-          <Badge color="red">Cancelled</Badge>
+           <div className="flex items-center gap-2 text-red-500">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span className="text-[11px] font-medium">Session was cancelled</span>
+           </div>
         )}
-        {isPast && !isCancelled && (
-          <Badge color="gray">Completed</Badge>
-        )}
       </div>
-
-      {/* HEADER */}
-      <div className="flex items-start gap-4">
-        <div
-          className={`
-            w-12 h-12 rounded-xl flex items-center justify-center shrink-0
-            ${isOngoing ? "bg-green-100" : "bg-blue-50"}
-          `}
-        >
-          <Video
-            className={`w-5 h-5 ${
-              isOngoing ? "text-green-700" : "text-blue-700"
-            }`}
-          />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <p className="text-base font-semibold text-gray-900 truncate">
-            {appt.practitioner?.full_name || "Practitioner"}
-          </p>
-
-          <p className="text-sm text-gray-600 mt-0.5">
-            {appt.appointment_type?.name} ·{" "}
-            {appt.appointment_type?.duration_mins} mins
-          </p>
-        </div>
-      </div>
-
-      {/* DATE & TIME */}
-      <div className="mt-4 flex items-center gap-5 text-xs text-gray-600">
-        <div className="flex items-center gap-1">
-          <Calendar className="w-3.5 h-3.5" />
-          {start.toLocaleDateString()}
-        </div>
-        <div className="flex items-center gap-1">
-          <Clock className="w-3.5 h-3.5" />
-          {start.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </div>
-      </div>
-
-      {/* 🔒 PENDING PAYMENT CTA */}
-      {isPending && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            router.push(
-              `/payments/checkout?appointment_id=${appt.id}`
-            );
-          }}
-          className="
-            mt-5 w-full px-4 py-2 rounded-xl
-            bg-yellow-600 text-white font-semibold
-            hover:bg-yellow-700 active:scale-[0.98]
-            transition
-          "
-        >
-          Complete Payment
-        </button>
-      )}
-
-      {/* ▶️ JOIN APPOINTMENT */}
-      {isOngoing && (
-        <Link
-          href={`/appointment/meeting?room=${appt.room_key}`}
-          onClick={(e) => e.stopPropagation()}
-          className="
-            mt-5 inline-flex items-center justify-center gap-2
-            w-full px-4 py-2 rounded-xl
-            bg-green-600 text-white font-semibold
-            hover:bg-green-700 active:scale-[0.98]
-            shadow-md shadow-green-600/30
-            transition
-          "
-        >
-          Join Appointment
-        </Link>
-      )}
     </article>
-  );
-}
-
-/* ---------------------------------------
-   Badge Component
---------------------------------------- */
-function Badge({
-  children,
-  color,
-  icon,
-  pulse,
-}: {
-  children: React.ReactNode;
-  color: "green" | "yellow" | "red" | "gray";
-  icon?: React.ReactNode;
-  pulse?: boolean;
-}) {
-  const colors = {
-    green: "bg-green-600",
-    yellow: "bg-yellow-600",
-    red: "bg-red-600",
-    gray: "bg-gray-500",
-  };
-
-  return (
-    <span
-      className={`
-        inline-flex items-center gap-1
-        text-xs font-semibold px-2 py-0.5
-        rounded-full text-white
-        ${colors[color]}
-        ${pulse ? "animate-pulse" : ""}
-      `}
-    >
-      {icon}
-      {children}
-    </span>
   );
 }

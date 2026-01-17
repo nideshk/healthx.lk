@@ -17,6 +17,7 @@ const SecurityTab: React.FC = () => {
     createChallenge,
     verifyEnrollment,
     disableMfa,
+    cancelEnrollment,
   } = useMfaEnrollment();
 
   const handleToggle2FA = () => {
@@ -63,19 +64,50 @@ const SecurityTab: React.FC = () => {
           </div>
 
           {!challengeId ? (
-            <Button onClick={createChallenge} disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded mb-2">
-              Enable 2FA
-            </Button>
+            <div className="flex gap-2">
+              <button
+                onClick={createChallenge}
+                disabled={loading}
+                className="flex-1 bg-blue-600 text-white py-2 rounded"
+              >
+                Enable 2FA
+              </button>
+
+              <button
+                onClick={cancelEnrollment}
+                disabled={loading}
+                className="flex-1 border border-slate-300 text-slate-700 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <>
               <input
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.trim())}
                 placeholder="Enter 6-digit code"
-                className="border border-slate-300 rounded-lg px-3 py-2 w-full text-center tracking-widest font-mono text-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="border rounded px-3 py-2 w-full mb-2"
               />
-              <Button onClick={verifyEnrollment} disabled={loading} className="w-full">Verify & Enable</Button>
-            </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={verifyEnrollment}
+                  disabled={loading}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded"
+                >
+                  Verify & Enable
+                </button>
+
+                <button
+                  onClick={cancelEnrollment}
+                  disabled={loading}
+                  className="flex-1 border border-slate-300 text-slate-700 py-2 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
           )}
           {error && <div className="text-xs text-red-600 mt-2 text-center font-medium">{error}</div>}
         </div>
