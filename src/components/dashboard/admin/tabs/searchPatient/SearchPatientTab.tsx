@@ -66,7 +66,7 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit, setLimit] = useState(3); // Set default to 3 to match your screenshot
+  const [limit, setLimit] = useState(10); 
 
   // Deletion States
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
@@ -246,7 +246,7 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
                   onChange={(e) => setLimit(Number(e.target.value))}
                   className="text-xs border border-slate-200 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  {[3, 10, 20, 50, 100].map((val) => (
+                  {[10, 20, 50, 100].map((val) => (
                     <option key={val} value={val}>
                       {val}
                     </option>
