@@ -20,7 +20,7 @@ function parseDateInput(val: string | null) {
   return d;
 }
 
-export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }){
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id: practitionerId } = await context.params;
   if (!practitionerId) return NextResponse.json({ error: "Missing practitioner id" }, { status: 400 });
 
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   }
 
   // Auth: only practitioner (self) or admin/support can get analytics
-  const { authorized, user, role } = await requireUser();
+  const { authorized, user, role } = await requireUser(req);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const isPractitionerSelf = user?.practitioner_id === practitionerId;

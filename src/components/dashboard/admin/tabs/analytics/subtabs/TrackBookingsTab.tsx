@@ -7,6 +7,7 @@ import RevenueBreakdownModal from "../subtabs/RevenueBreakdownModal";
 import GenericTable, { Column } from "../subtabs/GenericTable";
 import Input from "@/components/atom/Input/Input";
 import { XCircle } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 const TrackBookingsTab: React.FC = () => {
   const [fromDate, setFromDate] = useState(
@@ -33,7 +34,9 @@ const TrackBookingsTab: React.FC = () => {
   const [showRevenueModal, setShowRevenueModal] = useState(false);
 
   // --- NEW LIST VIEW STATES ---
-  const [activeListView, setActiveListView] = useState<"total" | "upcoming" | "completed" | "cancelled" | null>(null);
+  const [activeListView, setActiveListView] = useState<
+    "total" | "upcoming" | "completed" | "cancelled" | null
+  >(null);
   const [listData, setListData] = useState<any[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -44,14 +47,27 @@ const TrackBookingsTab: React.FC = () => {
   // Original Fetch Logic for Cards
   const fetchData = async () => {
     try {
-      const summaryRes = await fetch(
-        `http://localhost:3000/api/booking/summary?from=${fromDate}&to=${toDate}`
+      const summaryRes = await authFetch(
+        `/api/booking/summary?from=${fromDate}&to=${toDate}`
       );
+
+      if (!summaryRes.ok) {
+        throw new Error(
+          `Failed to fetch booking summary: ${summaryRes.status}`
+        );
+      }
+
       const summaryJson = await summaryRes.json();
 
-      const analyticsRes = await fetch(
-        `http://localhost:3000/api/analytics/transactions?from=${fromDate}&to=${toDate}`
+      const analyticsRes = await authFetch(
+        `/api/analytics/transactions?from=${fromDate}&to=${toDate}`
       );
+
+      if (!analyticsRes.ok) {
+        throw new Error(
+          `Failed to fetch booking analytics: ${analyticsRes.status}`
+        );
+      }
       const analyticsJson = await analyticsRes.json();
 
       if (summaryJson.success) {
@@ -87,14 +103,17 @@ const TrackBookingsTab: React.FC = () => {
     if (!activeListView) return;
     setListLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/booking?from=${fromDate}&to=${toDate}&type=${activeListView}&page=${currentPage}&per_page=${perPage}`
+      const response = await authFetch(
+        `/api/booking?from=${fromDate}&to=${toDate}&type=${activeListView}&page=${currentPage}&per_page=${perPage}`
       );
-      const json = await response.json();
-      if (json.success) {
-        setListData(json.data);
-        setTotalPages(json.meta.total_pages || 1);
-        setTotalResults(json.meta.total || 0);
+      if (!response.ok) {
+          throw new Error(`Failed to fetch detailed list: ${response.status}`);
+        }
+      const data = await response.json();
+      if (data.success) {
+        setListData(data.data);
+        setTotalPages(data.meta.total_pages || 1);
+        setTotalResults(data.meta.total || 0);
       }
     } catch (error) {
       console.error("Error fetching detailed list:", error);
@@ -117,27 +136,37 @@ const TrackBookingsTab: React.FC = () => {
       header: "Patient Details",
       render: (item) => (
         <div>
-          <div className="font-medium text-slate-700">{item.patient?.name || "N/A"}</div>
-          <div className="text-xs text-slate-500">{item.patient?.email || "N/A"}</div>
+          <div className="font-medium text-slate-700">
+            {item.patient?.name || "N/A"}
+          </div>
+          <div className="text-xs text-slate-500">
+            {item.patient?.email || "N/A"}
+          </div>
         </div>
       ),
     },
     {
       header: "Practitioner",
-      render: (item) => <div className="text-slate-700">{item.practitioner.name}</div>,
+      render: (item) => (
+        <div className="text-slate-700">{item.practitioner.name}</div>
+      ),
     },
     {
       header: "Appointment Date",
       render: (item) => (
         <div>
           <div className="font-medium">{item.appointment_date}</div>
-          <div className="text-xs text-slate-500">{item.start_time} - {item.end_time}</div>
+          <div className="text-xs text-slate-500">
+            {item.start_time} - {item.end_time}
+          </div>
         </div>
       ),
     },
     {
       header: "Type",
-      render: (item) => <span className="text-slate-600">{item.appointment_type}</span>,
+      render: (item) => (
+        <span className="text-slate-600">{item.appointment_type}</span>
+      ),
     },
     {
       header: "Status",
@@ -149,7 +178,9 @@ const TrackBookingsTab: React.FC = () => {
     },
   ];
 
-  const openDetails = (type: "total" | "upcoming" | "completed" | "cancelled") => {
+  const openDetails = (
+    type: "total" | "upcoming" | "completed" | "cancelled"
+  ) => {
     setActiveListView(type);
     setCurrentPage(1);
   };

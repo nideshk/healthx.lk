@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { Calendar, Clock, Stethoscope, AlertCircle } from "lucide-react";
 import Loader from "@/components/atom/Loader/Loader";
+import { authFetch } from "@/lib/authFetch";
 
 /* ------------------------------------------------------ */
 /* MAIN PAGE */
@@ -16,19 +16,39 @@ export default function AllAppointmentsPage() {
   const [cancelled, setCancelled] = useState([]);
 
   useEffect(() => {
+    let mounted = true;
+
     async function load() {
       try {
-        setLoading(true);
-        const res = await axios.get("/api/booking/appointment");
-        setUpcoming(res.data.upcoming || []);
-        setPast(res.data.past || []);
-        setCancelled(res.data.cancelled || []);
+        if (mounted) setLoading(true);
+
+        const res = await authFetch("/api/booking/appointment");
+
+        if (!res.ok) {
+          throw new Error(`Booking fetch failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+
+        setUpcoming(data.upcoming || []);
+        setPast(data.past || []);
+        setCancelled(data.cancelled || []);
+      } catch (err) {
+        console.error("Failed to load appointments:", err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
+
     load();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
 
   if (loading)
     return (
@@ -102,10 +122,9 @@ function AppointmentCard({ appt, cancelled }: any) {
       className={`
         block p-5 rounded-2xl border backdrop-blur
         transition-all duration-200 hover:shadow-lg
-        ${
-          cancelled
-            ? "border-red-200 bg-red-50 hover:bg-red-100/70"
-            : "border-gray-200 bg-white hover:bg-gray-50"
+        ${cancelled
+          ? "border-red-200 bg-red-50 hover:bg-red-100/70"
+          : "border-gray-200 bg-white hover:bg-gray-50"
         }
       `}
     >

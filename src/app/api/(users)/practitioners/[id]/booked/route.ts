@@ -25,7 +25,7 @@ export async function GET(
       );
     }
 
-    const {user} = await requireUser();
+    const { user } = await requireUser(req);
 
     if (user?.role === "patient") {
       return NextResponse.json(
@@ -78,7 +78,7 @@ export async function GET(
         date: startLocal.toFormat("yyyy-MM-dd"),
         appointment_type: a.appointment_type_id,
         telehealth_url: a.telehealth_url,
-        status : a.status
+        status: a.status
       };
     });
 
@@ -92,9 +92,9 @@ export async function GET(
       purpose: "operations",
       source: "dashboard",
       metadata: {
-        practitioner_id : practitionerId,
-        range : { from, to },
-        total : booked.length
+        practitioner_id: practitionerId,
+        range: { from, to },
+        total: booked.length
       }
     })
 

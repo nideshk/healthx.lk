@@ -7,6 +7,7 @@ import Button from "@/components/atom/Button/Button";
 import { X } from "lucide-react";
 import GenericTable, { Column } from "./GenericTable";
 import { start } from "repl";
+import { authFetch } from "@/lib/authFetch";
 
 type CancellationItem = {
   id: string;
@@ -49,13 +50,18 @@ const CancellationsTab: React.FC = () => {
   const fetchCancellations = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/booking?from=${fromDate}&to=${toDate}&type=cancelled&page=${currentPage}&per_page=${perPage}`
+      const response = await authFetch(
+        `/api/booking?from=${fromDate}&to=${toDate}&type=cancelled&page=${currentPage}&per_page=${perPage}`
       );
-      const json = await response.json();
 
-      if (json.success) {
-        const mappedData = json.data.map((item: any) => ({
+      if (!response.ok) {
+          throw new Error(`Failed to fetch cancellations: ${response.status}`);
+        }
+
+      const data = await response.json();
+
+      if (data.success) {
+        const mappedData = data.data.map((item: any) => ({
           id: item.id,
           cancellationDate: item.appointment_date,
           appointmentDate: item.appointment_date,
@@ -74,8 +80,8 @@ const CancellationsTab: React.FC = () => {
           notes :item.notes || "No notes provided",
         }));
         setData(mappedData);
-        setTotalPages(json.meta.total_pages || 1);
-        setTotalResults(json.meta.total || 0);
+        setTotalPages(data.meta.total_pages || 1);
+        setTotalResults(data.meta.total || 0);
       }
     } catch (error) {
       console.error("Error fetching cancellations:", error);

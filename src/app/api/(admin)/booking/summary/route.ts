@@ -6,8 +6,8 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 
 export async function GET(request: NextRequest) {
   try {
-    const { authorized, user, response } = await requireUser();
-    if (!authorized) return response;
+    const { authorized, user, } = await requireUser(request);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     /** RBAC: admin + superadmin */
     if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     let cancelled = 0;
 
     (data ?? []).forEach((appt) => {
-      if (["scheduled", "confirmed","pending"].includes(appt.status)) {
+      if (["scheduled", "confirmed", "pending"].includes(appt.status)) {
         upcoming++;
       }
 
@@ -56,20 +56,22 @@ export async function GET(request: NextRequest) {
         cancelled++;
       }
     });
-    
+
     const cnx = getAuditContext(request, user);
     await auditLog({
       ...cnx,
-      action      : "VIEWED",
-      entityType  : "APPOINTMENT",
-      purpose     : "operations",
-      source      : "dashboard",
-      metadata    : { stats: {
-        total_bookings: upcoming + completed + cancelled,
-        upcoming,
-        completed,
-        cancelled,
-      } },
+      action: "VIEWED",
+      entityType: "APPOINTMENT",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        stats: {
+          total_bookings: upcoming + completed + cancelled,
+          upcoming,
+          completed,
+          cancelled,
+        }
+      },
     })
 
     return NextResponse.json({

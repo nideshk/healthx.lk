@@ -6,16 +6,16 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 
 export async function POST(
   req: NextRequest,
-  context: { params: Promise<{ id: string }>  }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     /* ---------------- AUTH ---------------- */
-    const { authorized, user } = await requireUser();
+    const { authorized, user } = await requireUser(req);
     if (!authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const {id} = await context.params;
+    const { id } = await context.params;
     const patientId = user?.patient_id;
     if (!patientId) {
       return NextResponse.json(

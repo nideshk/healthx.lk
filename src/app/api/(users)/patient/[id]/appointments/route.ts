@@ -18,7 +18,7 @@ export async function GET(
       );
     }
 
-    const { authorized, role , user } = await requireUser();
+    const { authorized, role, user } = await requireUser(request);
 
     if (!authorized) {
       return NextResponse.json(
@@ -52,16 +52,23 @@ export async function GET(
         )
       `)
       .eq("patient_id", patientId)
-      .in("status", ["scheduled", "confirmed", "completed","pending"])
+      .in("status", ["scheduled", "confirmed", "completed", "pending"])
       .order("starts_at", { ascending: false });
 
     if (error) throw error;
 
     const scheduled: any[] = [];
     const completed: any[] = [];
+    const ongoing: any[] = [];
 
+    const now = new Date();
     (data ?? []).forEach((appt: any) => {
       const startsAt = new Date(appt.starts_at);
+
+      const endsAt = appt.ends_at
+        ? new Date(appt.ends_at)
+        : new Date(startsAt.getTime() + 15 * 60000); // fallback 15 mins
+
       // Local date (YYYY-MM-DD)
       const appointment_date = new Date(
         startsAt.getTime() - startsAt.getTimezoneOffset() * 60000
@@ -86,18 +93,20 @@ export async function GET(
           name: appt.practitioner.full_name,
         },
         appointment_type: appt.appointment_type
-        ? {
+          ? {
             id: appt.appointment_type.id,
             name: appt.appointment_type.name,
           }
-        : null,
+          : null,
       };
 
-      if (appt.status === "scheduled" || appt.status === "confirmed" || appt.status === "pending") {
+      if (now < startsAt) {
         scheduled.push(item);
-      }
-
-      if (appt.status === "completed") {
+      } 
+      else if (now >= startsAt && now <= endsAt) {
+        ongoing.push(item);
+      } 
+      else if (now > endsAt) {
         completed.push(item);
       }
     });
@@ -111,11 +120,12 @@ export async function GET(
       entityId: patientId,
       purpose: "operations",
       source: "user_portal",
-      metadata: { patientId , total_appointments: data.length, scheduled: scheduled.length, completed: completed.length }
+      metadata: { patientId, total_appointments: data.length, scheduled: scheduled.length, ongoing: ongoing.length, completed: completed.length }
     });
 
     return NextResponse.json({
       scheduled,
+      ongoing,
       completed,
     });
   } catch (err: any) {

@@ -12,8 +12,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   // 🔐 Auth check (admin / staff recommended)
-  const { authorized, response, user } = await requireUser();
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
 
   const role = user?.profile?.role;
 
@@ -55,6 +56,7 @@ export async function GET(req: NextRequest) {
     .eq("follow_up_needed", true)
     .eq("follow_up_notified", false)
     .eq("appointments.status", "completed")
+    .not("appointments.patient_id", "is", null)
     .order("follow_up_date", { ascending: true });
 
   if (error) {
@@ -106,8 +108,8 @@ export async function GET(req: NextRequest) {
 ------------------------------------------ */
 export async function PATCH(req: NextRequest) {
   // 1️⃣ Auth
-  const { authorized, response, user } = await requireUser();
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // 2️⃣ Role check
   if (!["admin", "superadmin"].includes(user?.role)) {

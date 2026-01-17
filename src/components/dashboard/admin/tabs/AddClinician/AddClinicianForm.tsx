@@ -6,6 +6,7 @@ import { Trash2, ChevronDown, X, ArrowLeft } from "lucide-react"; // Added Arrow
 import { useRouter } from "next/navigation"; // Added for list refresh
 import Input from "@/components/atom/Input/Input";
 import Textarea from "@/components/atom/Textarea/Textarea";
+import { authFetch } from "@/lib/authFetch";
 
 type AppointmentType = {
   id: string;
@@ -147,7 +148,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
   useEffect(() => {
     const fetchFormConfig = async () => {
       try {
-        const res = await fetch("/api/form-data/appointment-config");
+        const res = await authFetch("/api/form-data/appointment-config");
 
         if (!res.ok) {
           throw new Error("Failed to fetch appointment config");
@@ -264,7 +265,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
     try {
       for (const item of pendingFiles) {
         // 1. Get pre-signed URL & document record
-        const res = await fetch("/api/practitioner-document/upload-url", {
+        const res = await authFetch("/api/practitioner-document/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -282,7 +283,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
         }
 
         // 2. Put file to S3
-        const uploadRes = await fetch(data.uploadUrl, {
+        const uploadRes = await authFetch(data.uploadUrl, {
           method: "PUT",
           headers: { "Content-Type": item.file.type },
           body: item.file,
@@ -296,7 +297,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
       }
 
       // 3. Notify backend that documents were added
-      const attachRes = await fetch(
+      const attachRes = await authFetch(
         `/api/auth/add-practitioner/${applicationId}/document-update`,
         {
           method: "PUT",
@@ -334,17 +335,13 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
         fees: selectedAppointments.reduce((acc: any, appt) => {
           acc[appt.id] = {
             type: appt.name,
-            duration_mins: appt.duration_mins,
-            max_attendees: appt.max_attendee,
             fee: Number(appt.base_fee || 0),
-            platform_fee: Number(appt.platform_fee || 0),
-            extra_fee_per_attendee: Number(appt.extra_fee_per_attendee || 0),
           };
           return acc;
         }, {}),
       };
 
-      const res = await fetch("/api/auth/add-practitioner", {
+      const res = await authFetch("/api/auth/add-practitioner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

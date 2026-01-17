@@ -21,6 +21,7 @@ import {
 import Modal from "@/components/atom/Modal/Modal";
 import { toast } from "react-toastify";
 import Loader from "@/components/atom/Loader/Loader";
+import { authFetch } from "@/lib/authFetch";
 
 /* ---------------- UI HELPER ---------------- */
 function InfoRow({
@@ -58,19 +59,46 @@ export default function AppointmentDetailsPage() {
   ];
 
   useEffect(() => {
-    axios
-      .get(`/api/booking/appointment/${params.id}`)
-      .then((res) => {
-       setAppointment(res.data)
-      })
-      .catch(() => toast.error("Failed to load appointment"))
-      .finally(() => setLoading(false));
+    let mounted = true;
+
+    async function fetchAppointment() {
+      try {
+        const res = await authFetch(
+          `/api/booking/appointment/${params.id}`
+        );
+
+        if (!res.ok) {
+          throw new Error(`Failed to load appointment: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+        setAppointment(data);
+      } catch (err) {
+        console.error("Failed to load appointment:", err);
+        if (mounted) {
+          toast.error("Failed to load appointment");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    if (params.id) {
+      fetchAppointment();
+    }
+
+    return () => {
+      mounted = false;
+    };
   }, [params.id]);
+
 
   if (loading)
     return (
       <div className="h-screen flex justify-center items-center">
-        <Loader size="lg"/>
+        <Loader size="lg" />
       </div>
     );
 

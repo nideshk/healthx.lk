@@ -18,8 +18,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   // 🔐 AUTH
-  const { authorized, response, user } = await requireUser();
-  if (!authorized) return response;
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const cnx = getAuditContext(req, user);
   const { id: practitionerId } = await context.params;
 
@@ -100,7 +101,7 @@ export async function GET(
         ? `${date}T23:59:59`
         : (() => {
           const end = new Date(weekStart!);
-          end.setDate(end.getDate() + 6);
+          end.setDate(end.getDate() + 7);
           return end.toISOString();
         })()
     )

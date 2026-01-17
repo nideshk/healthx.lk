@@ -6,7 +6,7 @@ import { auditLog } from "@/lib/audit/auditLog";
 
 export async function GET(request: NextRequest) {
   try {
-    const { authorized, user } = await requireUser();
+    const { authorized, user } = await requireUser(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const cnx = getAuditContext(request, user);
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     if (apptError) throw new Error(apptError.message);
     if (!appt) {
-       return NextResponse.json({ error: `Appointment ${id} not found in DB.` }, { status: 404 });
+      return NextResponse.json({ error: `Appointment ${id} not found in DB.` }, { status: 404 });
     }
 
     // Fetch the related data separately
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin.from("practitioners").select("id, full_name, profile_bio").eq("id", appt.practitioner_id).maybeSingle(),
       supabaseAdmin.from("appointment_type").select("id, name, base_fee, duration_mins").eq("id", appt.appointment_type_id).maybeSingle(),
       supabaseAdmin.from("consents").select('telehealth, terms').eq('appointment_id', appt.id)
-    ]);        
+    ]);
 
     const formattedData = {
       selectedDoctor: practitionerRes.data,
@@ -48,9 +48,9 @@ export async function GET(request: NextRequest) {
       fullName: patientRes.data?.full_name,
       email: patientRes.data?.email,
       phone: patientRes.data?.contact_number,
-      fee_charged:appt?.fee_charged,
+      fee_charged: appt?.fee_charged,
       address: patientRes.data?.address,
-      selectedService: { name: "Medical Consultation" }, 
+      selectedService: { name: "Medical Consultation" },
       consents: consentsRes.data,
       selectedAttendees: []
     };

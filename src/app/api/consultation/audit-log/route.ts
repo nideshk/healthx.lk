@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     // ---------------------------------------------------------
     // 1️⃣ FIRST PRIORITY → LOGGED-IN USER SESSION
     // ---------------------------------------------------------
-    const { authorized, user } = await requireUser();
+    const { authorized, user } = await requireUser(req);
 
     if (authorized && user?.auth_user_id) {
       actorUserId = user.auth_user_id;
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Validate token
-      const decoded:any = verifyTelehealthToken(token);
+      const decoded: any = verifyTelehealthToken(token);
       if (!decoded) {
         return NextResponse.json(
           { error: "Invalid telehealth token" },
@@ -79,21 +79,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-export async function GET() {
+export async function GET(req: NextRequest) {
   /* ----------------------------------------
      1️⃣ Authenticate
   ---------------------------------------- */
-  const { user } = await requireUser();
+  const { user, authorized } = await requireUser(req);
+  console.log("user", user)
 
-  if (!user) {
+  if (!authorized) {
     return NextResponse.json(
       { error: "Unauthorized" },
-      { status: 401 }
+      { status: 403 }
     );
   }
 
-  const isAdmin = user.role === "admin" || user.role === "superadmin";
-  const isPractitioner = user.role === "practitioner";
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isPractitioner = user?.role === "practitioner";
 
   if (!isAdmin && !isPractitioner) {
     return NextResponse.json(

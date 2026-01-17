@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { authorized, role, user } = await requireUser();
+    const { authorized, role, user } = await requireUser(req);
 
     if (!authorized || role !== "superadmin") {
       return NextResponse.json(
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
 
-      await auditLog({
+    await auditLog({
       ...cnx,
       action: "CREATED",
       entityType: "APPOINTMENT_TYPE",
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
  * ------------------------------------------------ */
 export async function PUT(req: Request) {
   try {
-    const { authorized, role } = await requireUser();
+    const { authorized, role } = await requireUser(req);
 
     if (!authorized || role !== "superadmin") {
       return NextResponse.json(

@@ -3,6 +3,7 @@ import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 interface ApplicationListProps {
   onViewDetails: (id: string) => void;
@@ -17,7 +18,10 @@ const ApplicationList: React.FC<ApplicationListProps> = ({ onViewDetails, onAddN
   const fetchApplications = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/practitioner-applications");
+      const res = await authFetch("/api/practitioner-applications");
+      if (!res.ok) {
+          throw new Error(`Failed to fetch practitioner application list: ${res.status}`);
+      }
       const json = await res.json();
       if (json.success) setApps(json.data);
     } catch (err) {

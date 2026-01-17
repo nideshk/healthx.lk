@@ -190,7 +190,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                               className={`w-full h-[22px] rounded-md text-[11px] px-2 truncate ${colorClasses}`}
                               onClick={() => setSelectedAppt(appt)}
                             >
-                              {appt.reason || "Appointment"}
+                              {appt.patient || "Appointment"}
                             </button>
                           );
                         })}

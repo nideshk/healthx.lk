@@ -8,12 +8,9 @@ export const dynamic = "force-dynamic"; // Ensures dynamic execution (no caching
 
 // Endpoint: /api/analytics/transactions/practitioner
 export async function GET(req: NextRequest) {
-    const { authorized, response, user } = await requireUser();
+    const { authorized, user } = await requireUser(req);
+    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    console.log("User: ", user);
-    console.log("Authorized: ", authorized);
-
-    if (!authorized) return response;
 
     const cnx = getAuditContext(req, user);
 
@@ -23,7 +20,7 @@ export async function GET(req: NextRequest) {
         await auditLog({
             ...cnx,
             action: "FORBIDDEN_ACCESS_ATTEMPT",
-            entityType : "TRANSACTION",
+            entityType: "TRANSACTION",
             purpose: "analytics",
             metadata: {
                 description: `Non-practitioner ${user?.auth_user_id} attempted to access practitioner transactions.`,
@@ -46,7 +43,7 @@ export async function GET(req: NextRequest) {
 
     const start = (page - 1) * pageSize;
     const end = start + pageSize - 1;
-    
+
     // Validate status
     const allowedStatuses = ['refund', 'paid', 'failed'];
     if (status && !allowedStatuses.includes(status)) {
@@ -152,7 +149,7 @@ export async function GET(req: NextRequest) {
         await auditLog({
             ...cnx,
             action: "VIEWED",
-            entityType : "TRANSACTION",
+            entityType: "TRANSACTION",
             purpose: "analytics",
             source: "dashboard",
             metadata: {

@@ -16,6 +16,7 @@ import FileManagerTab from "./tabs/FileManagerTab";
 import FollowUpRequest from "./FollowUpRequest";
 import { ReviewModal } from "@/components/atom/Modal/ReviewModal";
 import axios from "axios";
+import { authFetch } from "@/lib/authFetch";
 
 
 export default function PatientDashboardLayout({
@@ -35,17 +36,38 @@ export default function PatientDashboardLayout({
       return;
     }
 
-    const res = axios.get("http://localhost:3000/api/reviews/pending").then(res=>{
-       setPendingReview(res.data.appointment);
-          setShowReviewModal(true);
-          console.log(res.data)
-          localStorage.setItem(
-            "lastReviewPrompt",
-            new Date().toISOString()
-          );
-    }).catch(err=>{
-      console.log(err)
-    })
+    let mounted = true;
+
+    async function fetchPendingReview() {
+      try {
+        const res = await authFetch("/api/reviews/pending");
+
+        if (!res.ok) {
+          // 401 / 404 / 204 are all acceptable "no prompt" cases
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!mounted || !data?.appointment) return;
+
+        setPendingReview(data.appointment);
+        setShowReviewModal(true);
+
+        localStorage.setItem(
+          "lastReviewPrompt",
+          new Date().toISOString()
+        );
+      } catch (err) {
+        console.error("Failed to fetch pending review:", err);
+      }
+    }
+
+    fetchPendingReview();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   /* ---------------- UI ---------------- */
@@ -122,11 +144,10 @@ function SidebarLink({ href, active, icon, label }: any) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-4 py-2 rounded-xl mb-2 transition ${
-        active
-          ? "bg-blue-100 text-blue-700 font-semibold"
-          : "hover:bg-gray-50"
-      }`}
+      className={`flex items-center gap-3 px-4 py-2 rounded-xl mb-2 transition ${active
+        ? "bg-blue-100 text-blue-700 font-semibold"
+        : "hover:bg-gray-50"
+        }`}
     >
       {icon}
       {label}

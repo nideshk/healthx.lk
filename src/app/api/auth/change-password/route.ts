@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/authGuard";    
-import { cookies } from 'next/headers'
+import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type Body = {
@@ -24,15 +23,12 @@ function validatePassword(pw: string) {
 }
 
 export async function POST(request: Request) {
-  // debugger;
-  console.log(request)
   let body: Body;
   try {
     body = (await request.json()) as Body;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const cookieStore = cookies()
   const supabase = supabaseAdmin
 
 
@@ -48,17 +44,17 @@ export async function POST(request: Request) {
   }
 
   // Get authenticated user
-  const { authorized, user } = await requireUser();
+  const { authorized, user } = await requireUser(request);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!user?.auth_user_id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const targetUserId = user.auth_user_id; // ALWAYS the logged-in user
-  console.log(user)
   try {
     // Update user's password using admin API (server-side)
-    const { data, error } = await supabase.auth.updateUser({
-    password: new_password,
-  });
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      targetUserId,
+      { password: new_password }
+    );
 
     if (error) {
       console.error("Password update failed:", error);

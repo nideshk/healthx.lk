@@ -15,7 +15,7 @@ export async function PATCH(
     const { id: appointmentId } = await context.params;
 
     // Auth
-    const { authorized, user } = await requireUser();
+    const { authorized, user } = await requireUser(req);
 
     const cnx = getAuditContext(req, user);
     if (!authorized) {
@@ -51,11 +51,11 @@ export async function PATCH(
       await auditLog({
         ...cnx,
         action: "UNAUTHORIZED_ATTEMPT",
-        entityType: "APPOINTMENT",  
+        entityType: "APPOINTMENT",
         entityId: appointmentId,
         purpose: "operations",
         source: "user_portal",
-        metadata:{ data :  `${appointment.patient_id} : patient_id_mismatch`}
+        metadata: { data: `${appointment.patient_id} : patient_id_mismatch` }
       })
       return NextResponse.json(
         { error: "You cannot modify this appointment" },

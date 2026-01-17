@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { authFetch } from "@/lib/authFetch";
 
 export default function FileUpload() {
   const [file, setFile] = useState<File | null>(null);
@@ -8,28 +9,39 @@ export default function FileUpload() {
   const [message, setMessage] = useState("");
 
   const handleUpload = async () => {
-    if (!file) return alert("Select a file first!");
+    if (!file) {
+      alert("Select a file first!");
+      return;
+    }
 
     setUploading(true);
     setMessage("");
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("patient_id", "1798559871122023774"); // Cliniko patient ID
-    formData.append("description", "Uploaded via Medx");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("patient_id", "1798559871122023774"); // Cliniko patient ID
+      formData.append("description", "Uploaded via Medx");
 
-    const res = await fetch("/api/patient/attachment", {
-      method: "POST",
-      body: formData,
-    });
+      const res = await authFetch("/api/patient/attachment", {
+        method: "POST",
+        body: formData, // ✅ do NOT set headers
+      });
 
-    const data = await res.json();
-    setUploading(false);
+      const data = await res.json();
 
-    if (!res.ok) return setMessage("❌ Error: " + data.error);
+      if (!res.ok) {
+        throw new Error(data?.error || "Upload failed");
+      }
 
-    setMessage("✅ File uploaded successfully!");
-    console.log("Attachment Created:", data);
+      setMessage("✅ File uploaded successfully!");
+      console.log("Attachment Created:", data);
+    } catch (err: any) {
+      console.error("File upload failed:", err);
+      setMessage("❌ Error: " + err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
