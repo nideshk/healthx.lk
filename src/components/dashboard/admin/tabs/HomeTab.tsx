@@ -6,11 +6,11 @@ import Input from "@/components/atom/Input/Input";
 import AppointmentCalendar from "@/components/dashboard/admin/tabs/shared/AppointmentCalendar";
 import { Appointment } from "@/types/Dashboard";
 import Loader from "@/components/atom/Loader/Loader";
-import { ChevronLeft, ChevronRight, User, Stethoscope } from "lucide-react";
+import { ChevronLeft, ChevronRight, User, Stethoscope, Search, SearchCode } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
-/* TYPES                                    */
+/* TYPES                                     */
 /* -------------------------------------------------------------------------- */
 
 interface Clinician {
@@ -110,15 +110,19 @@ const HomeTab: React.FC = () => {
   }, []);
 
   /* -------------------------------------------------------------------------- */
-  /* PRACTITIONER SEARCH (API 24)                      */
+  /* PRACTITIONER SEARCH (Only fires when search is not empty)                  */
   /* -------------------------------------------------------------------------- */
 
   useEffect(() => {
+    // Check if search is empty or just whitespace
+    if (!search.trim()) {
+      setClinicians([]);
+      return;
+    }
+
     const fetchPractitioners = async () => {
       try {
-        const url = search
-          ? `/api/practitioner-list?q=${encodeURIComponent(search)}`
-          : `/api/practitioner-list`;
+        const url = `/api/practitioner-list?q=${encodeURIComponent(search)}`;
 
         const res = await authFetch(url, { credentials: "include" });
         if (!res.ok) {
@@ -135,17 +139,22 @@ const HomeTab: React.FC = () => {
             specialty: d.specialization?.join(", ") || "-",
           }))
         );
-        setCurrentPage(1); // Reset to first page on new search
+        setCurrentPage(1); 
       } catch (err) {
         console.error(err);
       }
     };
 
-    fetchPractitioners();
+    // Optional: add a small debounce here if you want to prevent rapid API calls
+    const delayDebounceFn = setTimeout(() => {
+      fetchPractitioners();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
   }, [search]);
 
   /* -------------------------------------------------------------------------- */
-  /* FETCH APPOINTMENTS (API 25)                              */
+  /* FETCH APPOINTMENTS                                                        */
   /* -------------------------------------------------------------------------- */
 
   const fetchAppointments = async (
@@ -163,8 +172,8 @@ const HomeTab: React.FC = () => {
 
       const res = await authFetch(url, { credentials: "include" });
       if (!res.ok) {
-          throw new Error(`Appointments view fetch failed: ${res.status}`);
-        }
+        throw new Error(`Appointments view fetch failed: ${res.status}`);
+      }
       const data = await res.json();
       if (!data.success) return;
 
@@ -177,7 +186,7 @@ const HomeTab: React.FC = () => {
           status: a.status,
           category: "upcoming",
           doctorName: selectedClinician?.name || "",
-          appointmentType: "",
+          appointmentType: a.appointment_type || "Not specified",
           telehealthConsent: false,
           termsAccepted: false,
           mainConcern: "",
@@ -206,7 +215,6 @@ const HomeTab: React.FC = () => {
   const handleSelectClinician = (c: Clinician) => {
     setSelectedClinician(c);
 
-    // default weekly view, current week
     const today = new Date();
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
@@ -228,7 +236,7 @@ const HomeTab: React.FC = () => {
   }, [selectedClinician, calendarLoading]);
 
   /* -------------------------------------------------------------------------- */
-  /* PAGINATION LOGIC                             */
+  /* PAGINATION LOGIC                              */
   /* -------------------------------------------------------------------------- */
 
   const totalPages = Math.ceil(clinicians.length / itemsPerPage);
@@ -296,22 +304,36 @@ const HomeTab: React.FC = () => {
                 Appointment Calendar
               </div>
               <div className="text-xs text-slate-500">
-                Select a clinician below to view their schedule
+                Search a clinician to view their appointment schedule.
               </div>
-            </div>
-            <div className="w-full md:w-80">
-              <Input
-                placeholder="Search doctor by name or specialty..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
             </div>
           </div>
         </CardHeader>
 
         <CardBody className="space-y-4">
+          {/* Green Search Bar in the Red Box Area */}
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <Search size={16} className="text-emerald-500" />
+            </div>
+            <Input
+              className="pl-10 border-emerald-100 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all duration-200 bg-emerald-50/30"
+              placeholder="Find a specialist by name or expertise..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
           <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
-            {currentData.length > 0 ? (
+            {search.trim() === "" ? (
+              /* State 1: Initial load / No search query */
+              <div className="p-12 text-center flex flex-col items-center justify-center bg-slate-50/50">
+                <SearchCode size={32} className="text-slate-300 mb-2" />
+                <div className="text-slate-500 text-sm font-medium">Ready to search</div>
+                <div className="text-slate-400 text-xs mt-1">Start typing above to find a clinician</div>
+              </div>
+            ) : currentData.length > 0 ? (
+              /* State 2: Results found */
               currentData.map((c) => (
                 <button
                   key={c.id}
@@ -350,8 +372,9 @@ const HomeTab: React.FC = () => {
                 </button>
               ))
             ) : (
+              /* State 3: Search active but no results */
               <div className="p-10 text-center text-slate-500 text-sm">
-                No clinicians found.
+                No clinicians found for "{search}". Try a different term.
               </div>
             )}
           </div>

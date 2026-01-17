@@ -19,7 +19,12 @@ interface DeleteRequest {
   };
 }
 
-const DeleteRequestsModal = ({ onClose }: { onClose: () => void }) => {
+interface DeleteRequestsModalProps {
+  onClose: () => void;
+  onSuccess: () => void; // New prop to handle refresh and closure
+}
+
+const DeleteRequestsModal = ({ onClose, onSuccess }: DeleteRequestsModalProps) => {
   const [requests, setRequests] = useState<DeleteRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,7 +66,9 @@ const DeleteRequestsModal = ({ onClose }: { onClose: () => void }) => {
       const data = await res.json();
       if (res.ok) {
         toast.success(data.message || "Admin deleted successfully");
-        fetchRequests(); // Refresh the list
+        // Trigger the parent refresh and close the modal
+        onSuccess();
+        onClose();
       }
     } catch (err) {
       console.error(err);

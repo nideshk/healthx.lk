@@ -107,8 +107,8 @@ const TrackBookingsTab: React.FC = () => {
         `/api/booking?from=${fromDate}&to=${toDate}&type=${activeListView}&page=${currentPage}&per_page=${perPage}`
       );
       if (!response.ok) {
-          throw new Error(`Failed to fetch detailed list: ${response.status}`);
-        }
+        throw new Error(`Failed to fetch detailed list: ${response.status}`);
+      }
       const data = await response.json();
       if (data.success) {
         setListData(data.data);
@@ -170,11 +170,26 @@ const TrackBookingsTab: React.FC = () => {
     },
     {
       header: "Status",
-      render: (item) => (
-        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase">
-          {item.status}
-        </span>
-      ),
+      render: (item) => {
+        // Define a robust mapping for status styles
+        const statusMap: Record<string, string> = {
+          COMPLETED: "bg-emerald-100 text-emerald-700",
+          CANCELLED: "bg-red-100 text-red-700",
+          SCHEDULED: "bg-blue-100 text-blue-700",
+          PENDING: "bg-amber-100 text-amber-700",
+        };
+        const currentStatus = item.status?.toUpperCase() || "";
+        const colorClass =
+          statusMap[currentStatus] || "bg-blue-100 text-blue-700";
+
+        return (
+          <span
+            className={`${colorClass} px-2 py-1 rounded-full text-[10px] font-bold uppercase whitespace-nowrap`}
+          >
+            {item.status}
+          </span>
+        );
+      },
     },
   ];
 

@@ -193,7 +193,7 @@ const ManageAdminsTab: React.FC = () => {
       )}
 
       {showDeleteReqsModal && (
-        <DeleteRequestsModal onClose={() => setShowDeleteReqsModal(false)} />
+        <DeleteRequestsModal onClose={() => setShowDeleteReqsModal(false)} onSuccess={fetchAdmins} />
       )}
       {console.log(currentUser)}
       {/* Delete Confirmation Modal */}
