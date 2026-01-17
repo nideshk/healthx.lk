@@ -157,7 +157,7 @@ const SearchClinicianTab: React.FC = () => {
                 onChange={(e) => setLimit(Number(e.target.value))}
                 className="text-xs border border-slate-200 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                {[2, 10, 20, 50, 100].map((val) => (
+                {[10, 20, 50, 100].map((val) => (
                   <option key={val} value={val}>
                     {val}
                   </option>

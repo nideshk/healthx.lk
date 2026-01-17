@@ -14,7 +14,7 @@ export interface AdminAppointment {
   time: string;
   info: string;
   doctorName: string;
-  category: "upcoming" | "previous";
+  category: "upcoming" | "ongoing" | "previous";
 }
 
 interface PatientDetailViewProps {
@@ -172,6 +172,7 @@ const AppointmentsTab: React.FC<{
   loading: boolean;
 }> = ({ appointments, loading }) => {
   const upcoming = appointments.filter((a) => a.category === "upcoming");
+  const ongoing = appointments.filter((a) => a.category === "ongoing");
   const previous = appointments.filter((a) => a.category === "previous");
 
   return (
@@ -186,6 +187,21 @@ const AppointmentsTab: React.FC<{
           <LoadingText />
         ) : upcoming.length ? (
           <AppointmentList appointments={upcoming} />
+        ) : (
+          <EmptyText />
+        )}
+      </div>
+
+      {/* Ongoing */}
+      <div className="pt-4 border-t border-slate-200">
+        <h3 className="text-sm font-semibold text-slate-900 mb-2">
+          Ongoing Appointments
+        </h3>
+
+        {loading ? (
+          <LoadingText />
+        ) : ongoing.length ? (
+          <AppointmentList appointments={ongoing} />
         ) : (
           <EmptyText />
         )}
