@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
-import { getAuditContext } from "@/lib/audit/getAuditContext";
-import { auditLog } from "@/lib/audit/auditLog";
+import { calculateAppointmentAmount } from "@/lib/pricing/calculateAppointmentAmount";
+import crypto from "crypto";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -11,11 +12,13 @@ export async function POST(
   context: { params: Promise<{ practitionerId: string }> }
 ) {
   try {
-
-    const { attendeeList } = await req.json();
     const { practitionerId } = await context.params;
+    const { date, time, appointment_type_id, attendeeList = [] } =
+      await req.json();
 
+    // ---------------------------
     // 1️⃣ Auth
+    // ---------------------------
     const { authorized, user }: any = await requireUser(req);
     if (!authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,56 +27,60 @@ export async function POST(
     const patient_id = user?.patient_id;
     if (!patient_id) {
       return NextResponse.json(
-        { error: "No patient record linked to this account" },
+        { error: "Patient profile missing" },
         { status: 400 }
       );
     }
 
-    // 2️⃣ Load Draft
-    const { data: draft, error: draftError } = await supabaseClient
-      .from("appointment_draft")
-      .select("data")
-      .eq("patient_id", patient_id)
-      .single();
-
-    if (draftError || !draft?.data) {
+    if (!date || !time || !appointment_type_id || !practitionerId) {
       return NextResponse.json(
-        { error: "No appointment draft found" },
-        { status: 404 }
-      );
-    }
-
-    const draftData = draft.data;
-
-    const {
-      starts_at,
-      ends_at,
-      appointmentType,
-      pre_consultation,
-      selectedDoctor,
-      consent
-    } = draftData;
-
-
-    // 3️⃣ Validate
-    if (!starts_at || !ends_at || !appointmentType?.id || !selectedDoctor?.id) {
-      return NextResponse.json(
-        {
-          error: "Draft is incomplete",
-          missing: {
-            starts_at,
-            ends_at,
-            appointmentType,
-            selectedDoctor,
-          },
-        },
+        { error: "Missing booking parameters" },
         { status: 400 }
       );
     }
 
+    // ---------------------------
+    // 2️⃣ Time normalization
+    // ---------------------------
+    const starts_at = new Date(`${date}T${time}:00.000Z`).toISOString();
 
+    // ---------------------------
+    // 3️⃣ Fetch Appointment Type (SOURCE OF TRUTH)
+    // ---------------------------
+    const { data: appointmentType, error: typeErr } =
+      await supabaseClient
+        .from("appointment_type")
+        .select(
+          `
+          id,
+          name,
+          base_fee,
+          platform_fee,
+          duration_mins,
+          max_attendee,
+          extra_fee_per_attendee
+        `
+        )
+        .eq("id", appointment_type_id)
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .single();
 
-    // 4️⃣ Check Conflicts
+    if (typeErr || !appointmentType) {
+      return NextResponse.json(
+        { error: "Invalid appointment type" },
+        { status: 400 }
+      );
+    }
+
+    const ends_at = new Date(
+      new Date(starts_at).getTime() +
+      appointmentType.duration_mins * 60 * 1000
+    ).toISOString();
+
+    // ---------------------------
+    // 4️⃣ Slot conflict check
+    // ---------------------------
     const { data: existing } = await supabaseClient
       .from("appointments")
       .select("id")
@@ -84,204 +91,84 @@ export async function POST(
 
     if (existing) {
       return NextResponse.json(
-        { error: "This time slot is already booked" },
+        { error: "Time slot already booked" },
         { status: 409 }
       );
     }
 
-    let resolvedFee: number | null = null;
-    let consultationFee!: number;
-    let platformFee!: number;
-    let serviceFee: number;
-    let tax: number;
+    const { data: practitioner } = await supabaseAdmin.from("practitioners").select("*").eq("id", practitionerId).single();
 
-    // 1️⃣ Fetch practitioner fees JSON
-    const { data: practitionerRow, error: feeErr } = await supabaseClient
-      .from("practitioners")
-      .select("fees")
-      .eq("id", practitionerId)
-      .single();
-
-    if (feeErr || !practitionerRow) {
+    if (!practitioner) {
       return NextResponse.json(
-        { error: "Unable to fetch practitioner's pricing details." },
-        { status: 500 }
-      );
-    }
-
-    const practitionerFeeEntry =
-      practitionerRow.fees?.[appointmentType.id];
-
-    // 2️⃣ If practitioner fee exists → use it
-    if (practitionerFeeEntry) {
-      consultationFee = Number(practitionerFeeEntry.fee);
-      platformFee = Number(practitionerFeeEntry.platform_fee);
-    }
-
-    // 3️⃣ Fallback: fetch from appointment_type
-    if (
-      !Number.isFinite(consultationFee) ||
-      !Number.isFinite(platformFee)
-    ) {
-      const { data: typeRow, error: typeErr } = await supabaseClient
-        .from("appointment_type")
-        .select("base_fee, platform_fee")
-        .eq("id", appointmentType.id)
-        .eq("is_active", true)
-        .single();
-
-      if (typeErr || !typeRow) {
-        return NextResponse.json(
-          {
-            error: "Fee configuration missing",
-            message:
-              "Neither practitioner nor appointment type has valid pricing configured.",
-          },
-          { status: 400 }
-        );
-      }
-
-      consultationFee = Number(typeRow.base_fee);
-      platformFee = Number(typeRow.platform_fee);
-    }
-
-    serviceFee = Math.round(consultationFee * 0.05);
-    tax = Math.round((consultationFee + serviceFee) * 0.08);
-
-    // 4️⃣ Final validation
-    if (
-      !Number.isFinite(consultationFee) ||
-      consultationFee < 0 ||
-      !Number.isFinite(platformFee) ||
-      platformFee < 0 ||
-      !Number.isFinite(serviceFee) ||
-      serviceFee < 0 ||
-      !Number.isFinite(tax) ||
-      tax < 0
-    ) {
-      return NextResponse.json(
-        {
-          error: "Invalid fee configuration",
-          message:
-            "Resolved fee values are invalid. Please contact support.",
-        },
+        { error: "Invalid practitioner" },
         { status: 400 }
       );
     }
 
-    // 5️⃣ Final resolved fee
-    resolvedFee = consultationFee + platformFee + serviceFee + tax;
+    const consultation_fee_by_practitioner = practitioner.fees[appointmentType.id];
+    console.log("consultation_fee_by_practitioner", consultation_fee_by_practitioner)
 
-    // 6 Insert Appointment
-    const { data: appointment, error: insertError } = await supabaseClient
-      .from("appointments")
-      .insert({
-        practitioner_id: practitionerId,
-        patient_id,
-        appointment_type_id: appointmentType.id,
-        starts_at,
-        ends_at,
-        status: "pending", // Changing this from confirmed to pending payment, will update this to confirm once the payment is received
-        notes: pre_consultation?.note?.concern || null,
-        source: "web",
-        room_key: crypto.randomUUID,
-        additional_attendees: attendeeList,
-        // 🟦 NEW — STORE HISTORICAL PRICING
-        fee_charged: resolvedFee,
-        currency: selectedDoctor.currency ?? "LKR",
-      })
-      .select()
-      .single();
+    const fees_charged = (consultation_fee_by_practitioner.fee || appointmentType.base_fee) + (appointmentType.platform_fee) + (100 * attendeeList.length);
+    const consultation_fee = consultation_fee_by_practitioner.fee || appointmentType.base_fee + appointmentType.platform_fee;
+    const platform_fee = appointmentType.platform_fee;
+    const tax_amount = fees_charged * 0.08;
+    console.log("appointmentType", appointmentType)
+    console.log(fees_charged)
+    // ---------------------------
+    // 6️⃣ Create Appointment
+    // ---------------------------
+    const { data: appointment, error: insertError } =
+      await supabaseClient
+        .from("appointments")
+        .insert({
+          practitioner_id: practitionerId,
+          patient_id,
+          appointment_type_id,
+          starts_at,
+          ends_at,
+          status: "pending",
+          source: "web",
+          room_key: crypto.randomUUID(),
 
-    if (insertError) {
+          additional_attendees: attendeeList,
+
+          // 💰 PRICING SNAPSHOT
+          fee_charged: fees_charged,
+          consultation_fee: consultation_fee,
+          service_fee: 100 * attendeeList.length,
+          tax_amount: tax_amount,
+          platform_fee: platform_fee,
+
+          currency: "LKR",
+        })
+        .select()
+        .single();
+
+    console.log("fees chargedd", appointment)
+    if (insertError || !appointment) {
       return NextResponse.json(
-        { error: "Database insert failed", details: insertError.message },
+        { error: "Failed to create appointment" },
         { status: 500 }
       );
     }
 
-    // 7 Save Pre-Consultation Responses
-    if (pre_consultation) {
-      await supabaseClient.from("preconsult_responses").insert({
+    await supabaseAdmin.from("appointment_draft").delete().eq("patient_id", patient_id)
+    // ---------------------------
+    // 7️⃣ Return payment payload
+    // ---------------------------
+    return NextResponse.json({
+      success: true,
+      appointment,
+      paymentPayload: {
         appointment_id: appointment.id,
-        patient_id,
-        raw_payload: pre_consultation,
-      });
-    }
-
-    if (consent) {
-      if (consent) {
-        await supabaseClient.from("consents").insert({
-          appointment_id: appointment.id,
-          terms: consent?.terms,
-          telehealth: consent?.telehealth,
-          accepted_at: new Date().toISOString()
-        })
-      }
-
-      // ---------------------------
-      // 8 Prepare payment payload (backend derived)
-      // ---------------------------
-      const paymentPayload = {
-        appointment_id: appointment.id,
-        patient_id,
-        practitioner_id: practitionerId,
-        city: user.patient_data.city,
-        country: user.patient_data.country,
-        address: user.patient_data.address,
-        appointment_type_id: appointmentType.id,
-        amount: resolvedFee,
-        first_name: user.profile.first_name,
-        last_name: user.profile.last_name,
-        consultation_fee: consultationFee, // Added this column to transactions table
-        platform_fee: platformFee, // Added this column to transactions table
-        currency: appointment.currency ?? "LKR",
-        source: "appointment_booking",
-        status: "INITIATED",
-        email: user?.user?.email,
-        phone: user?.phone,
-        metadata: {
-          starts_at,
-          ends_at,
-        },
-      };
-
-      // Removed notify part from here as we'll send notifications from the payhere webhook once the payment is confirmed and verified.
-
-      // 9 Mark Draft as Used (best-effort, non-critical)
-      try {
-        await supabaseClient
-          .from("appointment_draft")
-          .delete()
-          .eq("patient_id", patient_id);
-      } catch (draftErr) {
-        console.error("⚠️ Failed to delete appointment draft:", draftErr);
-        // Do not rethrow: draft cleanup failure should not break a successful booking
-      }
-
-      const cnx = getAuditContext(req, user);
-
-      await auditLog({
-        ...cnx,
-        action: "CREATED",
-        entityType: "APPOINTMENT",
-        entityId: appointment.id,
-        purpose: "treatment",
-        source: "user_portal",
-        metadata: { patient_id, practitionerId, appointment_id: appointment.id }
-      })
-
-
-      return NextResponse.json({
-        success: true,
-        message: "Appointment initiated, payment pending.",
-        appointment,
-        paymentPayload
-      });
-    }
-  }
-  catch (err: any) {
-    console.error("❌ Booking Error:", err);
+        amount: fees_charged,
+        consultation_fee: consultation_fee,
+        platform_fee: platform_fee, // informational
+        currency: "LKR",
+      },
+    });
+  } catch (err: any) {
+    console.error("❌ book-appointment error:", err);
     return NextResponse.json(
       { error: err.message || "Internal server error" },
       { status: 500 }

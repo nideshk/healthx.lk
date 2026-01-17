@@ -5,11 +5,12 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useRef,
+  useEffect,
 } from "react";
 import { toast } from "sonner";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, ChevronDown } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface Props {
   nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
@@ -20,6 +21,7 @@ interface Props {
 
 const ConsentFormStep = forwardRef(
   ({ nextStep, prevStep, updateData, bookingData }: Props, ref) => {
+    const router = useRouter();
     const [consent, setConsent] = useState({
       telehealth: bookingData?.consent?.telehealth || false,
       terms: bookingData?.consent?.terms || false,
@@ -32,35 +34,39 @@ const ConsentFormStep = forwardRef(
     const telehealthRef = useRef<HTMLDivElement>(null);
     const termsRef = useRef<HTMLDivElement>(null);
 
+    // 1. Logic: Auto-enable if content is too short to scroll
+    useEffect(() => {
+      const checkScrollable = (ref: React.RefObject<HTMLDivElement | null>, setter: (v: boolean) => void) => {
+        if (ref.current && ref.current.scrollHeight <= ref.current.clientHeight) {
+          setter(true);
+        }
+      };
+      checkScrollable(telehealthRef, setTelehealthRead);
+      checkScrollable(termsRef, setTermsRead);
+    }, []);
+
     useImperativeHandle(ref, () => ({
       validateStep: () => {
         if (!consent.telehealth || !consent.terms) {
-          toast.error("You must agree to all consent terms before continuing.");
+          toast.error("Please accept both agreements to continue.");
           return false;
         }
         return true;
       },
     }));
 
-    const allChecked = consent.telehealth && consent.terms;
-
-    const handleContinue = () => {
-      if (!allChecked) {
-        toast.error("Please agree to both consents before proceeding.");
-        return;
-      }
-      updateData({ consent });
-      nextStep({ override: { consent } });
-    };
-
-    const handleScrollCheck = (
-      ref: React.RefObject<HTMLDivElement | null>,
-      setter: (v: boolean) => void
-    ) => {
+    const handleScroll = (ref: React.RefObject<HTMLDivElement | null>, setter: (v: boolean) => void) => {
       if (!ref.current) return;
       const { scrollTop, scrollHeight, clientHeight } = ref.current;
-      if (scrollTop + clientHeight >= scrollHeight - 10) {
+      if (scrollTop + clientHeight >= scrollHeight - 20) {
         setter(true);
+      }
+    };
+
+    const handleContinue = () => {
+      if (consent.telehealth && consent.terms) {
+        updateData({ consent });
+        nextStep({ override: { consent } });
       }
     };
 
@@ -68,220 +74,146 @@ const ConsentFormStep = forwardRef(
       <>
         {/* ================= DECLINE MODAL ================= */}
         {showDeclineModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-              <div className="flex gap-3">
-                <XCircle className="w-6 h-6 text-red-500 mt-1" />
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Why is consent required?
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Telehealth consent is legally required to:
-                  </p>
-                  <ul className="list-disc ml-5 mt-2 text-sm text-gray-600 space-y-1">
-                    <li>Enable secure virtual medical consultations</li>
-                    <li>Protect your privacy and medical rights</li>
-                    <li>Ensure compliance with healthcare regulations</li>
-                  </ul>
-                  <p className="text-sm text-gray-600 mt-3">
-                    Without consent, we cannot proceed with this appointment.
-                  </p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-in fade-in zoom-in duration-200">
+              <div className="text-center">
+                <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-10 h-10 text-red-500" />
                 </div>
+                <h3 className="text-xl font-bold text-gray-900">Wait, Consent is Required</h3>
+                <p className="text-sm text-gray-600 mt-3 leading-relaxed">
+                  To provide legal telehealth care and protect your privacy, we must have your signed agreement. Exiting now will cancel your booking progress.
+                </p>
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="mt-8 flex flex-col gap-3">
                 <button
-                  onClick={() => setShowDeclineModal(false)}
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  onClick={() => router.push("/dashboard")}
+                  className="w-full py-3 rounded-xl bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition-colors"
                 >
-                  Go Back
+                  Yes, Exit Booking
                 </button>
                 <button
-                  onClick={() => {
-                    setShowDeclineModal(false);
-                    redirect("/dashboard")
-                  }}
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                  onClick={() => setShowDeclineModal(false)}
+                  className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-transform active:scale-95"
                 >
-                  Exit Booking
+                  Go Back & Review
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* ================= MAIN PAGE ================= */}
-        <div className="min-h-screen bg-blue-50 py-12 px-4 sm:px-8 flex justify-center">
-          <div className="max-w-4xl w-full bg-white shadow-lg rounded-2xl p-8 border">
-            <h2 className="text-3xl font-bold text-gray-800 text-center">
-              Consent & Terms
-            </h2>
-            <p className="text-gray-600 text-center mt-2 mb-8">
-              Please read and accept the following documents to proceed.
-            </p>
-
-            {/* TELEHEALTH CONSENT */}
-            <div className="mb-8 border rounded-xl p-6 shadow-sm">
-              <h3 className="text-xl font-semibold text-blue-700 flex items-center gap-2 mb-3">
-                <CheckCircle className="w-5 h-5" />
-                Telehealth Consent
-              </h3>
-
-              <div
-                ref={telehealthRef}
-                onScroll={() =>
-                  handleScrollCheck(telehealthRef, setTelehealthRead)
-                }
-                className="h-56 overflow-y-auto bg-blue-50 rounded-md p-4 text-sm text-gray-700 space-y-4"
-              >
-                <p className="font-semibold">Telehealth Informed Consent</p>
-
-                <p>
-                  Telehealth involves the delivery of healthcare services using
-                  electronic communication technologies such as video calls,
-                  audio calls, messaging platforms, and secure portals.
-                </p>
-
-                <p>
-                  Participation is voluntary. You may discontinue telehealth
-                  services at any time and request an in-person consultation
-                  where available.
-                </p>
-
-                <p>
-                  Telehealth benefits include improved access to care, reduced
-                  travel time, and faster follow-ups. However, it may not be
-                  suitable for all medical conditions.
-                </p>
-
-                <p>
-                  Risks include technical failures, limited physical
-                  examination, and possible miscommunication.
-                </p>
-
-                <p>
-                  Reasonable security measures are used to protect your medical
-                  data, but no system is completely secure. You are responsible
-                  for maintaining privacy on your device.
-                </p>
-
-                <p>
-                  Telehealth is not for emergencies. In case of an emergency,
-                  contact local emergency services immediately.
-                </p>
-
-                <p>
-                  By agreeing, you confirm you understand and consent to receive
-                  healthcare services via telehealth.
-                </p>
-              </div>
-
-              <label className="flex items-center gap-3 mt-4">
-                <input
-                  type="checkbox"
-                  disabled={!telehealthRead}
-                  checked={consent.telehealth}
-                  onChange={(e) =>
-                    setConsent((p) => ({
-                      ...p,
-                      telehealth: e.target.checked,
-                    }))
-                  }
-                  className="w-5 h-5 text-blue-600"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  I Accept the Telehealth Consent
-                </span>
-              </label>
+        {/* ================= MAIN INTERFACE ================= */}
+        <div className="min-h-screen bg-[#F8FAFC] py-12 px-4 sm:px-6">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Review & Sign</h2>
+              <p className="text-slate-500 mt-2">Almost done! We just need your legal consent.</p>
             </div>
 
-            {/* TERMS */}
-            <div className="mb-10 border rounded-xl p-6 shadow-sm">
-              <h3 className="text-xl font-semibold text-blue-700 flex items-center gap-2 mb-3">
-                <CheckCircle className="w-5 h-5" />
-                Terms & Conditions
-              </h3>
+            <div className="space-y-6">
+              {[
+                {
+                  id: "telehealth",
+                  title: "Telehealth Consent",
+                  ref: telehealthRef,
+                  read: telehealthRead,
+                  setter: setTelehealthRead,
+                  checked: consent.telehealth,
+                  content: (
+                    <>
+                      <p className="font-bold text-slate-900 underline underline-offset-4">Digital Healthcare Agreement</p>
+                      <p>Telehealth involves electronic communication technologies to provide care when the provider and patient are not in the same location.</p>
+                      <p>By checking the box, you acknowledge that you understand the limitations of virtual care, including technical risks and the lack of physical examination.</p>
+                      <p>I understand I can withdraw consent at any time without affecting my right to future care or treatment.</p>
+                    </>
+                  ),
+                },
+                {
+                  id: "terms",
+                  title: "Terms & Conditions",
+                  ref: termsRef,
+                  read: termsRead,
+                  setter: setTermsRead,
+                  checked: consent.terms,
+                  content: (
+                    <>
+                      <p className="font-bold text-slate-900 underline underline-offset-4">Service Agreement</p>
+                      <p>Appointments must be cancelled 24 hours in advance to avoid a no-show fee. Payment is processed securely via our encrypted partner.</p>
+                      <p>The platform acts as a facilitator and does not directly provide medical advice. All medical outcomes are the responsibility of the licensed practitioner.</p>
+                    </>
+                  ),
+                },
+              ].map((section) => (
+                <div key={section.id} className={`group bg-white border-2 rounded-2xl transition-all duration-300 ${section.checked ? 'border-blue-500 shadow-md' : 'border-slate-200'}`}>
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        {section.read ? <CheckCircle className="w-5 h-5 text-green-500" /> : <div className="w-5 h-5 rounded-full border-2 border-slate-300" />}
+                        {section.title}
+                      </h3>
+                      {!section.read && (
+                        <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-1 bg-amber-100 text-amber-700 rounded-md animate-pulse">
+                          Scroll to read
+                        </span>
+                      )}
+                    </div>
 
-              <div
-                ref={termsRef}
-                onScroll={() => handleScrollCheck(termsRef, setTermsRead)}
-                className="h-56 overflow-y-auto bg-blue-50 rounded-md p-4 text-sm text-gray-700 space-y-4"
-              >
-                <p>
-                  Appointments are subject to provider availability and must be
-                  cancelled at least 24 hours in advance.
-                </p>
+                    <div className="relative">
+                      <div
+                        ref={section.ref}
+                        onScroll={() => handleScroll(section.ref, section.setter)}
+                        className="h-48 overflow-y-auto bg-slate-50 rounded-xl p-5 text-sm leading-relaxed text-slate-600 border border-slate-100 scroll-smooth"
+                      >
+                        <div className="space-y-4">{section.content}</div>
+                      </div>
+                      
+                      {!section.read && (
+                        <div className="absolute bottom-2 right-4 animate-bounce pointer-events-none">
+                          <ChevronDown className="w-5 h-5 text-slate-400" />
+                        </div>
+                      )}
+                    </div>
 
-                <p>
-                  No-shows or late cancellations may result in forfeiture of
-                  fees.
-                </p>
-
-                <p>
-                  Payment is due before consultation. Refunds are subject to
-                  platform policies.
-                </p>
-
-                <p>
-                  Practitioners provide care based on information shared during
-                  consultations.
-                </p>
-
-                <p>
-                  The platform facilitates scheduling and communication but does
-                  not guarantee outcomes.
-                </p>
-
-                <p>
-                  Liability is limited to the amount paid for the consultation,
-                  to the maximum extent permitted by law.
-                </p>
-
-                <p>
-                  By agreeing, you confirm that you understand and accept all
-                  stated terms.
-                </p>
-              </div>
-
-              <label className="flex items-center gap-3 mt-4">
-                <input
-                  type="checkbox"
-                  disabled={!termsRead}
-                  checked={consent.terms}
-                  onChange={(e) =>
-                    setConsent((p) => ({
-                      ...p,
-                      terms: e.target.checked,
-                    }))
-                  }
-                  className="w-5 h-5 text-blue-600"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  I Agree to the Terms and Conditions
-                </span>
-              </label>
+                    <label className={`flex items-center gap-3 mt-5 p-3 rounded-lg cursor-pointer transition-colors ${!section.read ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50'}`}>
+                      <div className="relative flex items-center">
+                        <input
+                          type="checkbox"
+                          disabled={!section.read}
+                          checked={section.checked}
+                          onChange={(e) => setConsent(p => ({ ...p, [section.id]: e.target.checked }))}
+                          className="w-6 h-6 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer disabled:cursor-not-allowed"
+                        />
+                      </div>
+                      <span className={`text-sm font-semibold ${section.checked ? 'text-blue-700' : 'text-slate-600'}`}>
+                        I have read and agree to the {section.title}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* ACTIONS */}
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
+            {/* ACTION FOOTER */}
+            <div className="mt-10 flex flex-col sm:flex-row-reverse items-center justify-between gap-4 border-t pt-8">
               <button
                 onClick={handleContinue}
-                disabled={!allChecked}
-                className={`px-8 py-3 rounded-lg font-semibold ${
-                  allChecked
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-blue-200 text-gray-400 cursor-not-allowed"
+                disabled={!consent.telehealth || !consent.terms}
+                className={`w-full sm:w-auto px-10 py-4 rounded-xl font-bold text-lg transition-all transform active:scale-95 ${
+                  consent.telehealth && consent.terms
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
                 }`}
               >
-                Let’s Finalise the Appointment
+                Finalize Appointment
               </button>
 
               <button
                 onClick={() => setShowDeclineModal(true)}
-                className="px-8 py-3 rounded-lg font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50"
+                className="text-slate-500 hover:text-red-600 font-medium transition-colors text-sm"
               >
-                I Do Not Agree
+                I do not agree to these terms
               </button>
             </div>
           </div>

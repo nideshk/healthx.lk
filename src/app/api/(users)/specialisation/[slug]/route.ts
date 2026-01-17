@@ -32,6 +32,29 @@ export async function GET(
       );
     }
 
+    console.log(data)
+    function calculateAverageFee(
+      fees?: Record<
+        string,
+        {
+          fee?: number;
+        }
+      >
+    ): number | null {
+      if (!fees) return null;
+
+      const validFees = Object.values(fees)
+        .map(f => Number(f.fee))
+        .filter(f => Number.isFinite(f) && f > 0);
+
+      if (validFees.length === 0) return null;
+
+      const avg =
+        validFees.reduce((sum, f) => sum + f, 0) / validFees.length;
+
+      return Math.round(avg);
+    }
+
     return NextResponse.json({
       success: true,
       count: data?.length || 0,
@@ -45,7 +68,7 @@ export async function GET(
         license_number: p.license_number,
         contact_email: p.contact_email,
         profile_picture_url: p.profile_picture_url,
-        price: p.solo_consultation_fee,
+        fees: calculateAverageFee(p.fees),
       })),
     });
   } catch (err: any) {
