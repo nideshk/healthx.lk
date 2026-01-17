@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
     .eq("follow_up_needed", true)
     .eq("follow_up_notified", false)
     .eq("appointments.status", "completed")
+    .not("appointments.patient_id", "is", null)
     .order("follow_up_date", { ascending: true });
 
   if (error) {

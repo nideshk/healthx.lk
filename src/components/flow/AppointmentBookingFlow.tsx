@@ -67,7 +67,8 @@ export default function AppointmentBookingFlow() {
         const d = wrapper.data || {};
         setBookingData((prev) => ({ ...prev, ...d }));
         setCurrentStep(d?.last_visited_step ?? 0);
-      } catch (err) {
+      } catch (err: any) {
+        toast.error(err);
         console.error("Failed to fetch draft:", err);
       }
     }
@@ -130,7 +131,6 @@ export default function AppointmentBookingFlow() {
       toast.success("Progress saved");
       setTimeout(() => setCurrentStep((s) => (s + 1) as Step), 150);
     } catch (err) {
-      console.error(err);
       toast.error("Failed to save progress");
     } finally {
       setIsSaving(false);
