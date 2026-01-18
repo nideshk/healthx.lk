@@ -94,6 +94,7 @@ const ClinicianProfileModal: React.FC<ClinicianProfileModalProps> = ({
         email: clinician.email ?? clinician.contact_email ?? "",
         isActive: true, // until backend sends is_active
       }}
+      onSuccess={onClose} // This ensures the modal closes on success
     />
   </div>
 )}

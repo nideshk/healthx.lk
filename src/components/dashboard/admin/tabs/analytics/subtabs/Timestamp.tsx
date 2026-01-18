@@ -140,7 +140,7 @@ const TimestampTab: React.FC = () => {
     () => [
       {
         header: "Appointment ID",
-        className: "font-mono text-[10px] text-slate-500",
+        className: "font-semibold",
         render: (item) => item.appointment_id,
       },
       {

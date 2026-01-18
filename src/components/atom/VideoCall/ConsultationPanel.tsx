@@ -1,5 +1,6 @@
 "use client";
 
+import { authFetch } from "@/lib/authFetch";
 import { useState } from "react";
 
 type Props = {
@@ -31,7 +32,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
     setSaving(true);
 
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `/api/booking/appointment/${appointmentId}/consultation`,
         {
           method: "POST",

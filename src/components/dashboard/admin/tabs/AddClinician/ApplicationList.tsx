@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, SearchX } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
 interface ApplicationListProps {
@@ -20,7 +20,7 @@ const ApplicationList: React.FC<ApplicationListProps> = ({ onViewDetails, onAddN
     try {
       const res = await authFetch("/api/practitioner-applications");
       if (!res.ok) {
-          throw new Error(`Failed to fetch practitioner application list: ${res.status}`);
+        throw new Error(`Failed to fetch practitioner application list: ${res.status}`);
       }
       const json = await res.json();
       if (json.success) setApps(json.data);
@@ -31,9 +31,11 @@ const ApplicationList: React.FC<ApplicationListProps> = ({ onViewDetails, onAddN
     }
   };
 
-  useEffect(() => { fetchApplications(); }, []);
+  useEffect(() => {
+    fetchApplications();
+  }, []);
 
-  const filteredApps = apps.filter(app => 
+  const filteredApps = apps.filter((app) =>
     `${app.first_name} ${app.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
     app.email.toLowerCase().includes(search.toLowerCase())
   );
@@ -45,28 +47,49 @@ const ApplicationList: React.FC<ApplicationListProps> = ({ onViewDetails, onAddN
           <div className="text-sm font-semibold text-slate-900">Practitioner Applications</div>
           <div className="text-xs text-slate-500">Find records and manage incoming applications</div>
         </div>
-        <Button size="sm" onClick={onAddNew}>+ Add New Clinician</Button>
+        <Button size="sm" onClick={onAddNew}>
+          + Add New Clinician
+        </Button>
       </CardHeader>
       <CardBody className="space-y-4">
-        <Input 
-          placeholder="Search by name or email..." 
-          value={search} 
-          onChange={(e) => setSearch(e.target.value)} 
+        <Input
+          placeholder="Search by name or email..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
         />
 
         {loading ? (
-          <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
+          <div className="flex justify-center py-10">
+            <Loader2 className="animate-spin text-slate-400" />
+          </div>
+        ) : filteredApps.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 rounded-lg bg-slate-50/50">
+            <SearchX className="h-10 w-10 text-slate-300 mb-3" />
+            <div className="text-sm font-medium text-slate-900">No records found</div>
+            <p className="text-xs text-slate-500 mt-1">
+              {search ? "Try adjusting your search filters" : "There are currently no practitioner applications"}
+            </p>
+          </div>
         ) : (
           <div className="space-y-3">
             {filteredApps.map((app) => (
-              <div key={app.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors">
+              <div
+                key={app.id}
+                className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors"
+              >
                 <div className="cursor-pointer" onClick={() => onViewDetails(app.id)}>
-                  <div className="text-sm font-bold text-blue-600 capitalize">{app.first_name} {app.last_name}</div>
+                  <div className="text-sm font-bold text-blue-600 capitalize">
+                    {app.first_name} {app.last_name}
+                  </div>
                   <div className="text-xs text-slate-500">{app.email}</div>
-                  <div className="text-xs text-slate-400 mt-1">{app.qualification} • {app.experience_years} Years Exp</div>
+                  <div className="text-xs text-slate-400 mt-1">
+                    {app.qualification} • {app.experience_years} Years Exp
+                  </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => onViewDetails(app.id)}>View & Process</Button>
+                  <Button variant="outline" size="sm" onClick={() => onViewDetails(app.id)}>
+                    View & Process
+                  </Button>
                 </div>
               </div>
             ))}

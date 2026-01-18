@@ -5,6 +5,7 @@ import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import { authFetch } from "@/lib/authFetch";
 import { toast } from "react-toastify";
+import { Eye, EyeOff } from "lucide-react";
 
 interface AddAdminModalProps {
   onClose: () => void;
@@ -18,10 +19,11 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState({
     full_name: "",
-    gender: "", // Changed from "female" to empty string for initial selection
+    gender: "",
     email: "",
     password: "",
     confirm_password: "",
@@ -154,23 +156,41 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({
             />
           </div>
 
-          <Input
-            label="Password"
-            type="password"
-            placeholder="Enter password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
+          <div className="relative">
+            <Input
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-[32px] text-slate-400 hover:text-slate-600"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
 
-          <Input
-            label="Confirm Password"
-            type="password"
-            placeholder="Re-enter password"
-            value={form.confirm_password}
-            onChange={(e) =>
-              setForm({ ...form, confirm_password: e.target.value })
-            }
-          />
+          <div className="relative">
+            <Input
+              label="Confirm Password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Re-enter password"
+              value={form.confirm_password}
+              onChange={(e) =>
+                setForm({ ...form, confirm_password: e.target.value })
+              }
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-[32px] text-slate-400 hover:text-slate-600"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
 
           <div>
             <label className="text-xs font-medium text-slate-700 mb-2 block">

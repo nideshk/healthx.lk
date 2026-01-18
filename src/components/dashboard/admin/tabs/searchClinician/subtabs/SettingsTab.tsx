@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
-import { authFetch } from "@/lib/authFetch";import { toast } from "react-toastify";
+import { authFetch } from "@/lib/authFetch";
+import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 
 interface SettingsTabProps {
   clinician: {
@@ -11,11 +13,13 @@ interface SettingsTabProps {
     email: string;
     isActive: boolean;
   };
+  onSuccess?: () => void; // Added to trigger UI updates in parent
 }
 
-const SettingsTab: React.FC<SettingsTabProps> = ({ clinician }) => {
+const SettingsTab: React.FC<SettingsTabProps> = ({ clinician, onSuccess }) => {
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const router = useRouter();
 
   const handleDeactivate = async () => {
     try {
@@ -35,6 +39,15 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ clinician }) => {
       // Success feedback
       toast.success(data.message || "Clinician deactivated successfully.");
       setShowConfirmModal(false);
+      
+      // Execute callback to close modal and refresh list
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      // Refresh the server-side data
+      router.refresh();
+      
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Something went wrong while deactivating clinician");

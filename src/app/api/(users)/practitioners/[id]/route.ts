@@ -2,16 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
-import { getAuditContext } from "@/lib/audit/getAuditContext";
-import { auditLog } from "@/lib/audit/auditLog";
 
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-
   try {
-    const id = (await context.params).id;
+    const { id } = await context.params;
 
     if (!id) {
       return NextResponse.json(
@@ -19,8 +16,12 @@ export async function GET(
         { status: 400 }
       );
     }
+
     const { user } = await requireUser(req);
 
+    // ---------------------------
+    // 1️⃣ Fetch Practitioner
+    // ---------------------------
     const { data: practitioner, error: dbError } = await supabaseClient
       .from("practitioners")
       .select("*")
@@ -34,43 +35,91 @@ export async function GET(
       );
     }
 
-    console.log(practitioner)
-    const appointmentTypes =
+    // ---------------------------
+    // 2️⃣ Resolve Appointment Types + Platform Fees
+    // ---------------------------
+    const feeConfig =
       practitioner.fees && typeof practitioner.fees === "object"
-        ? Object.entries<any>(practitioner.fees).map(
-          ([appointment_type_id, f]) => ({
-            id: appointment_type_id,          // ✅ appointment_type_id
-            name: f.type,
-            fee: f.fee,
-            duration_mins: f.duration_mins,
-            max_attendees: f.max_attendees,
-            extra_fee_per_attendee: f.extra_fee_per_attendee ?? 0,
-          })
-        )
-        : [];
+        ? practitioner.fees
+        : {};
 
+    const appointmentTypeIds = Object.keys(feeConfig);
+
+    let appointmentTypeMap: Record<string, any> = {};
+
+    if (appointmentTypeIds.length > 0) {
+      const { data: appointmentTypes, error } = await supabaseClient
+        .from("appointment_type")
+        .select(`
+          id,
+          name,
+          duration_mins,
+          max_attendee,
+          platform_fee,
+          extra_fee_per_attendee
+        `)
+        .in("id", appointmentTypeIds)
+        .eq("is_active", true)
+        .is("deleted_at", null);
+
+      if (error) {
+        console.error("Failed to load appointment types:", error);
+      }
+
+      appointmentTypeMap = (appointmentTypes || []).reduce(
+        (acc, at) => {
+          acc[at.id] = at;
+          return acc;
+        },
+        {} as Record<string, any>
+      );
+    }
+
+    const appointmentTypes = Object.entries<any>(feeConfig).map(
+      ([appointment_type_id, f]) => {
+        const typeMeta = appointmentTypeMap[appointment_type_id];
+
+        return {
+          id: appointment_type_id,
+          name: typeMeta?.name ?? f.type,
+          fee: f.fee, // ✅ includes platform fee
+          platform_fee: typeMeta?.platform_fee ?? null,
+          duration_mins: typeMeta?.duration_mins ?? f.duration_mins,
+          max_attendees: typeMeta?.max_attendee ?? f.max_attendees,
+          extra_fee_per_attendee:
+            typeMeta?.extra_fee_per_attendee ??
+            f.extra_fee_per_attendee ??
+            0,
+        };
+      }
+    );
+
+    // ---------------------------
+    // 3️⃣ Admin-only Bank Details
+    // ---------------------------
     let bankDetails: any[] | null = null;
-    console.log(user?.role)
-    if (["admin", "superadmin"].includes(user?.role)) {
-      console.log("enterd here")
-      console.log(id)
-      const { data: bank, error: bank_error } = await supabaseAdmin
+
+    if (["admin", "superadmin"].includes(user?.role as any)) {
+      const { data: bank, error: bankError } = await supabaseAdmin
         .from("practitioner_bank_details")
-        .select(
-          `account_holder_name,
+        .select(`
+          account_holder_name,
           bank_name,
           account_number,
           branch_name
-        `
-        )
+        `)
         .eq("practitioner_id", id);
 
-      bankDetails = bank ?? [];
-      if (bank_error) {
-        console.log(bank_error)
+      if (bankError) {
+        console.error("Bank fetch error:", bankError);
       }
+
+      bankDetails = bank ?? [];
     }
 
+    // ---------------------------
+    // 4️⃣ Patient View
+    // ---------------------------
     if (user?.role === "patient") {
       return NextResponse.json({
         success: true,
@@ -86,6 +135,9 @@ export async function GET(
       });
     }
 
+    // ---------------------------
+    // 5️⃣ Practitioner Authorization
+    // ---------------------------
     if (user?.role === "practitioner" && user?.practitioner_id !== id) {
       return NextResponse.json(
         { error: "You cannot view another practitioner's profile" },
@@ -93,7 +145,9 @@ export async function GET(
       );
     }
 
-
+    // ---------------------------
+    // 6️⃣ Admin / Self View
+    // ---------------------------
     return NextResponse.json({
       success: true,
       practitioner: {
@@ -109,8 +163,6 @@ export async function GET(
         specialization: practitioner.specialization,
         qualifications: practitioner.qualification,
         experience_years: practitioner.experience_years,
-        price: practitioner.solo_consultation_fee,
-        family_price: practitioner.family_consultation_fee,
         profile_image: practitioner.profile_picture_url,
         available_services: practitioner.available_services,
         appointment_types: appointmentTypes,
@@ -130,106 +182,3 @@ export async function GET(
     );
   }
 }
-
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id: practitionerId } = await context.params;
-
-    if (!practitionerId) {
-      return NextResponse.json(
-        { error: "Practitioner identifier is required." },
-        { status: 400 }
-      );
-    }
-
-    const { authorized, role, user } = await requireUser(request);
-
-    if (!authorized) {
-      return NextResponse.json(
-        { error: "You are not authorized to perform this action." },
-        { status: 401 }
-      );
-    }
-
-    const isAdmin = ["admin", "superadmin"].includes(role);
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: "Only administrators can delete practitioners." },
-        { status: 403 }
-      );
-    }
-
-    /** Fetch practitioner (includes supabase_id) */
-    const { data: practitioner, error: fetchError } = await supabaseAdmin
-      .from("practitioners")
-      .select("id, supabase_user_id, is_active, deleted_at")
-      .eq("id", practitionerId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    if (!practitioner || practitioner.deleted_at) {
-      return NextResponse.json(
-        { error: "Practitioner already deleted or does not exist." },
-        { status: 404 }
-      );
-    }
-
-    const deletedAt = new Date().toISOString();
-
-    /** 1️⃣ Soft delete practitioner */
-    const { error: practitionerError } = await supabaseAdmin
-      .from("practitioners")
-      .update({
-        is_active: false,
-        deleted_at: deletedAt,
-      })
-      .eq("id", practitionerId);
-
-    if (practitionerError) throw practitionerError;
-
-    /** 2️⃣ Soft delete linked profile (by supabase_id) */
-    if (practitioner.supabase_user_id) {
-      const { error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .update({
-          is_active: false,
-          deleted_at: deletedAt,
-        })
-        .eq("id", practitioner.supabase_user_id);
-
-      if (profileError) throw profileError;
-    }
-
-    const cnx = getAuditContext(request, user);
-
-    await auditLog({
-      ...cnx,
-      action: "DELETED",
-      entityType: "PRACTITIONER",
-      entityId: practitionerId,
-      purpose: "operations",
-      source: "dashboard",
-      metadata: {
-        success: true,
-        message: "Practitioner and profile soft-deleted successfully.",
-      }
-    })
-
-
-    return NextResponse.json({
-      success: true,
-      message: "Practitioner and profile soft-deleted successfully.",
-    });
-  } catch (err: any) {
-    console.error("DELETE /practitioner error:", err);
-    return NextResponse.json(
-      { error: err?.message ?? "Unable to delete practitioner." },
-      { status: 500 }
-    );
-  }
-}
-

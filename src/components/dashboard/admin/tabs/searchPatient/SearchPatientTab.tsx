@@ -8,13 +8,14 @@ import Loader from "@/components/atom/Loader/Loader";
 import PatientDetails from "./PatientDetails";
 import { Patient } from "@/types/Dashboard";
 import { toast } from "react-toastify";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
 export interface AdminAppointment {
   id: string;
   date: string;
   time: string;
+  info: string;
   doctorName: string;
   category: "upcoming" | "previous";
 }
@@ -59,38 +60,71 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
   const [loadingAppointments, setLoadingAppointments] = useState(false);
 
   // Local state management
-  const [localPatients, setLocalPatients] =
-    useState<Patient[]>(initialPatients);
+  const [localPatients, setLocalPatients] = useState<any[]>([]);
   const [localLoading, setLocalLoading] = useState(initialLoading);
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit, setLimit] = useState(10); 
 
   // Deletion States
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Sync local state with props when search/initial patients change
+  // Sync local state ONLY when initialPatients changes from parent and we are on page 1
   useEffect(() => {
-    setLocalPatients(initialPatients);
+    if (initialPatients.length > 0 && currentPage === 1 && !search) {
+        setLocalPatients(initialPatients);
+    }
     setLocalLoading(initialLoading);
   }, [initialPatients, initialLoading]);
 
+  // Reset page when search term or limit changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, limit]);
+
   /* -------------------------------------------------------------------------- */
-  /* REFRESH LIST LOGIC                               */
+  /* DYNAMIC FETCH LOGIC                                                        */
   /* -------------------------------------------------------------------------- */
-  const fetchPatientList = async () => {
+  const fetchPatientList = async (page: number) => {
     try {
       setLocalLoading(true);
-      const url = search
-        ? `/api/patient?page=1&limit=20&q=${encodeURIComponent(search)}`
-        : `/api/patient?page=1&limit=20`;
-
-      const res = await authFetch(url, { credentials: "include" });
-      if (!res.ok) {
-          throw new Error(`Failed to fetch Patients: ${res.status}`);
+      const params = new URLSearchParams();
+      if (search.length >= 3) {
+        params.append("q", search);
       }
-      const data = await res.json();
+      params.append("limit", limit.toString());
+      params.append("page", page.toString());
 
-      if (data.success) {
-        setLocalPatients(data.data || []);
+      const res = await authFetch(`/api/patient?${params.toString()}`, {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch Patients: ${res.status}`);
+      }
+      const result = await res.json();
+
+      // Based on your provided JSON structure (result.data and result.meta)
+      if (result.data) {
+        setLocalPatients(result.data);
+
+        // Robust total pages calculation based on your "meta" object
+        const meta = result.meta || {};
+        const totalCount = meta.total || 0;
+        const apiTotalPages = meta.totalPages;
+
+        if (apiTotalPages) {
+          setTotalPages(apiTotalPages);
+        } else if (totalCount > 0) {
+          setTotalPages(Math.ceil(totalCount / limit));
+        } else {
+          setTotalPages(
+            result.data.length === limit ? currentPage + 1 : currentPage
+          );
+        }
       }
     } catch (err) {
       console.error("Failed to refresh patient list", err);
@@ -98,6 +132,10 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
       setLocalLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPatientList(currentPage);
+  }, [currentPage, search, limit]);
 
   useEffect(() => {
     if (!selectedPatient) return;
@@ -110,20 +148,20 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
           { credentials: "include" }
         );
         if (!res.ok) throw new Error("Failed to fetch appointments");
-        const json = await res.json();
-
+        const data = await res.json();
         const mapped: AdminAppointment[] = [
-          ...(json.scheduled ?? []).map((a: any) => ({
+          ...(data.scheduled ?? []).map((a: any) => ({
             id: a.id,
             date: a.appointment_date,
-            time: formatGlobalTime(a.start_time),
+            time: a.start_time,
+            info: a.appointment_date + " at " + a.start_time,
             doctorName: a.doctor?.name || "Unknown",
             category: "upcoming",
           })),
-          ...(json.completed ?? []).map((a: any) => ({
+          ...(data.completed ?? []).map((a: any) => ({
             id: a.id,
             date: a.appointment_date,
-            time: formatGlobalTime(a.start_time),
+            time: a.start_time,
             doctorName: a.doctor?.name || "Unknown",
             category: "previous",
           })),
@@ -138,10 +176,6 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
     };
     fetchAppointments();
   }, [selectedPatient]);
-
-  /* -------------------------------------------------------------------------- */
-  /* DELETION HANDLER                                */
-  /* -------------------------------------------------------------------------- */
 
   const confirmDelete = (patient: Patient) => {
     setPatientToDelete(patient);
@@ -158,25 +192,15 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
       });
 
       if (!res.ok) {
-          throw new Error(`Failed to delete patient: ${res.status}`);
+        throw new Error(`Failed to delete patient: ${res.status}`);
       }
 
       const data = await res.json();
 
       if (data.success) {
-        // 1. Instant UI update: Filter out the deleted patient from local state
-        setLocalPatients((prev) =>
-          prev.filter((p) => p.id !== patientToDelete.id)
-        );
-
-        // 2. Success feedback
         toast.success(data.message || "Patient removed successfully ✨");
-
-        // 3. Close modal
         setPatientToDelete(null);
-
-        // 4. Robust sync: Fetch the latest list from server
-        await fetchPatientList();
+        await fetchPatientList(currentPage);
       } else {
         throw new Error(data.message || "Failed to delete patient");
       }
@@ -203,14 +227,35 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-1 w-full">
-            <div className="text-sm font-semibold text-slate-900">
-              Search Patients
+          <div className="w-full space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col gap-1">
+                <div className="text-sm font-semibold text-slate-900">
+                  Search Patients
+                </div>
+                <div className="text-xs text-slate-500">
+                  Find records and manage data.
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-slate-500 font-medium">
+                  Show:
+                </span>
+                <select
+                  value={limit}
+                  onChange={(e) => setLimit(Number(e.target.value))}
+                  className="text-xs border border-slate-200 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  {[10, 20, 50, 100].map((val) => (
+                    <option key={val} value={val}>
+                      {val}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="text-xs text-slate-500">
-              Find records and manage data.
-            </div>
-            <div className="mt-2">
+
+            <div className="w-full">
               <Input
                 placeholder="Search by name, email, or phone"
                 value={search}
@@ -220,18 +265,18 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
           </div>
         </CardHeader>
 
-        <CardBody className="space-y-2 relative min-h-[200px]">
+        <CardBody className="space-y-2 relative min-h-[350px] flex flex-col">
           {localLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+            <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10">
               <Loader />
             </div>
           ) : (
-            <>
+            <div className="flex-1 space-y-2">
               {localPatients.length > 0 ? (
                 localPatients.map((p) => (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50"
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50 transition-colors"
                   >
                     <div className="flex flex-col text-sm">
                       <button
@@ -239,10 +284,11 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
                         className="text-blue-600 font-semibold text-left hover:underline"
                         onClick={() => onSelectPatient(p)}
                       >
-                        {p.name}
+                        {/* Mapping full_name from API response */}
+                        {p.full_name || p.name}
                       </button>
                       <span className="text-xs text-slate-500">{p.email}</span>
-                      <span className="text-xs text-slate-500">{p.phone}</span>
+                      <span className="text-xs text-slate-500">{p.contact_number || p.phone}</span>
                     </div>
                     <Button
                       variant="danger"
@@ -256,13 +302,60 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-slate-500 text-center py-10">
-                  {search.length > 0
-                    ? "No patients found for this search."
-                    : "No patients available."}
-                </p>
+                <div className="flex flex-col items-center justify-center py-10 space-y-2">
+                  <p className="text-xs text-slate-500 text-center">
+                    {search.length > 0
+                      ? "No patients found for this search."
+                      : "No patients available."}
+                  </p>
+                </div>
               )}
-            </>
+            </div>
+          )}
+
+          {/* ---------------- PAGINATION CONTROLS ---------------- */}
+          {(localPatients.length > 0 || currentPage > 1) && (
+            <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-auto">
+              <div className="text-xs text-slate-500 font-medium">
+                Page{" "}
+                <span className="font-bold text-slate-900">{currentPage}</span>
+                {totalPages > 1 && (
+                  <>
+                    {" "}
+                    of{" "}
+                    <span className="font-bold text-slate-900">
+                      {totalPages}
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1 h-8"
+                  disabled={currentPage === 1 || localLoading}
+                  onClick={() => setCurrentPage((prev) => prev - 1)}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Prev
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1 h-8"
+                  disabled={
+                    (totalPages > 1 && currentPage === totalPages) ||
+                    (totalPages === 1 && localPatients.length < limit) ||
+                    localLoading
+                  }
+                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardBody>
       </Card>
@@ -299,7 +392,7 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
             <p className="text-sm text-slate-600 leading-relaxed mb-6">
               Are you sure you want to permanently delete the record for{" "}
               <span className="font-bold text-slate-900">
-                {patientToDelete.name}
+                {patientToDelete.name || patientToDelete.name}
               </span>
               ? This will remove all associated appointment history and cannot
               be undone.

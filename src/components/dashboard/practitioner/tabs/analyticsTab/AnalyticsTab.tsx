@@ -146,6 +146,7 @@ const AnalyticsTab: React.FC = () => {
       const pId = me?.user?.practitioner_id ?? me?.practitioner_id;
       if (!pId) throw new Error("Practitioner profile not found");
 
+      const query = `?from=${fromDate}&to=${toDate}`;
       const [analyticsRes, transactionRes] = await Promise.all([
         authFetch(`/api/practitioners/${pId}/analytics`),
         authFetch(`/api/analytics/transactions/practitioner`)
@@ -182,7 +183,7 @@ const AnalyticsTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fromDate, toDate]);
 
   /* --- Logic: Fetch Detail Table --- */
   const fetchDetailData = useCallback(async () => {

@@ -1,9 +1,22 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Paperclip, X } from "lucide-react";
+import { toast } from "react-toastify";
+import {
+  Paperclip,
+  X,
+  UserPlus,
+  CheckCircle2,
+  ChevronDown,
+  Users,
+  MessageSquare,
+  Target,
+  ChevronRight,
+  ShieldCheck,
+  AlertCircle
+} from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   bookingControllerRef: React.MutableRefObject<{
@@ -15,6 +28,16 @@ interface Props {
   nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
   prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
 }
+
+const REFERRAL_SOURCES = [
+  "Search Engine (Google/Bing)",
+  "Social Media (Instagram/Facebook)",
+  "Word of Mouth / Referral",
+  "Professional Recommendation",
+  "Previous Patient",
+  "Advertisement",
+  "Other"
+];
 
 export default function PreConsultationStep({
   nextStep,
@@ -31,237 +54,223 @@ export default function PreConsultationStep({
   const [emailInput, setEmailInput] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
 
-  /* ------------------------------------------------
-   * REGISTER CONTROLLER METHODS (KEY PART)
-   * ------------------------------------------------ */
+  const isCustomReferral = pre.referral && !REFERRAL_SOURCES.includes(pre.referral);
+
+  const { user } = useAuth();
+  console.log(user)
+  // Validation Logic
+  const validateFields = () => {
+    if (!note.concern?.trim()) {
+      toast.error("Main concern is required", { icon: <AlertCircle className="text-red-500" /> });
+      return false;
+    }
+    if (!note.outcome?.trim()) {
+      toast.error("Desired outcome is required", { icon: <AlertCircle className="text-red-500" /> });
+      return false;
+    }
+    if (!pre.referral?.trim()) {
+      toast.error("Please let us know how you heard about us", { icon: <AlertCircle className="text-red-500" /> });
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
-    bookingControllerRef.current.validateStep = () => {
-      if (!note.concern?.trim()) {
-        toast.error("Please enter your main concern.");
-        return false;
-      }
-      if (!note.outcome?.trim()) {
-        toast.error("Please enter your desired outcome.");
-        return false;
-      }
-      if (!pre.referral?.trim()) {
-        toast.error("Please provide referral source.");
-        return false;
-      }
-      if (maxAttendees > 1 && selectedAttendees.length === 0) {
-        toast.error("Please add at least one attendee email.");
-        return false;
-      }
-      return true;
-    };
-
+    bookingControllerRef.current.validateStep = validateFields;
     bookingControllerRef.current.getAttachment = () => attachment;
-
-    // 🔍 Debug (remove later)
-    console.log("✅ PreConsult controller registered:", bookingControllerRef.current);
   }, [attachment, note, pre.referral, selectedAttendees, maxAttendees]);
 
-  /* ------------------------------------------------
-   * FORM HANDLERS
-   * ------------------------------------------------ */
-  const handleChange = (field: "concern" | "outcome", value: string) => {
-    updateData({
-      pre_consultation: {
-        ...pre,
-        note: { ...note, [field]: value },
-      },
-    });
-  };
-
-  const handleReferralChange = (value: string) => {
-    updateData({
-      pre_consultation: {
-        ...pre,
-        referral: value,
-      },
-    });
-  };
-
   const addAttendee = () => {
-    if (!emailInput.trim() || !emailInput.includes("@")) {
-      toast.error("Enter a valid email.");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailInput.trim() || !emailRegex.test(emailInput)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (selectedAttendees.length >= maxAttendees) {
+      toast.error(`Maximum ${maxAttendees} attendees allowed.`);
       return;
     }
     if (selectedAttendees.includes(emailInput)) {
       toast.error("Email already added.");
       return;
     }
-    updateData({
-      selectedAttendees: [...selectedAttendees, emailInput],
-    });
+    if (user?.user?.email === emailInput) {
+      toast.error("You cannot add yourself as an attendee.");
+      return;
+    }
+    updateData({ selectedAttendees: [...selectedAttendees, emailInput] });
     setEmailInput("");
   };
 
   const removeAttendee = (email: string) => {
-    updateData({
-      selectedAttendees: selectedAttendees.filter((e) => e !== email),
-    });
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAttachment(file);
-
-      // Optional: store file name ONLY (safe)
-      updateData({
-        pre_consultation: {
-          ...pre,
-          attachment: file.name,
-        },
-      });
-
-      console.log("📤 Attachment selected:", file);
-    }
-  };
-
-  const removeAttachment = () => {
-    setAttachment(null);
-    updateData({
-      pre_consultation: {
-        ...pre,
-        attachment: null,
-      },
-    });
+    updateData({ selectedAttendees: selectedAttendees.filter((e) => e !== email) });
   };
 
   const handleNext = () => {
-    if (!bookingControllerRef.current.validateStep?.()) return;
-    nextStep();
+    if (validateFields()) {
+      nextStep();
+    }
   };
 
-  /* ------------------------------------------------
-   * RENDER
-   * ------------------------------------------------ */
   return (
-    <div className="py-12 px-6">
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">
-          Pre-Consultation Details
-        </h2>
-        <p className="text-gray-600 text-center mb-10">
-          Provide key details, optional attachments, and attendee email(s).
-        </p>
+    <div className="min-h-screen bg-[#FBFDFF] py-12 px-4 md:px-8 pb-32">
+      <div className="max-w-4xl mx-auto">
 
-        <div className="grid md:grid-cols-2 gap-6 mb-10">
+        {/* Step Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Main Concern
-            </label>
-            <textarea
-              value={note.concern || ""}
-              onChange={(e) => handleChange("concern", e.target.value)}
-              className="w-full border rounded-lg p-3 text-sm"
-              rows={3}
-            />
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Pre-Consultation</h2>
+            <p className="text-slate-500 font-medium mt-1">Help us prepare for your session with Dr. {bookingData.selectedDoctor?.name}</p>
           </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Desired Outcome
-            </label>
-            <textarea
-              value={note.outcome || ""}
-              onChange={(e) => handleChange("outcome", e.target.value)}
-              className="w-full border rounded-lg p-3 text-sm"
-              rows={3}
-            />
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-100 shadow-sm self-start">
+            <ShieldCheck className="w-4 h-4 text-teal-500" />
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Clinical Privacy</span>
           </div>
+        </div>
 
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              How did you hear about us?
-            </label>
-            <input
-              value={pre.referral || ""}
-              onChange={(e) => handleReferralChange(e.target.value)}
-              className="w-full border rounded-lg p-2 text-sm"
-            />
-          </div>
+        <div className="space-y-6">
+          {/* Main Info Card */}
+          <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                  <MessageSquare className="w-4 h-4 text-teal-500" />
+                  Main Concern <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  placeholder="Describe your primary symptoms or concerns..."
+                  value={note.concern || ""}
+                  onChange={(e) => updateData({ pre_consultation: { ...pre, note: { ...note, concern: e.target.value } } })}
+                  className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-teal-500 focus:ring-4 focus:ring-teal-50/50 min-h-[140px] bg-slate-50/50 transition-all outline-none resize-none"
+                />
+              </div>
 
-          {/* ATTACHMENT */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Attachment (optional)
-            </label>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                  <Target className="w-4 h-4 text-teal-500" />
+                  Desired Outcome <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  placeholder="What do you hope to achieve today?"
+                  value={note.outcome || ""}
+                  onChange={(e) => updateData({ pre_consultation: { ...pre, note: { ...note, outcome: e.target.value } } })}
+                  className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-teal-500 focus:ring-4 focus:ring-teal-50/50 min-h-[140px] bg-slate-50/50 transition-all outline-none resize-none"
+                />
+              </div>
+            </div>
 
-            <div className="flex items-center gap-3">
-              <label
-                htmlFor="attachment-upload"
-                className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 border border-blue-300 text-blue-700 text-sm font-medium"
-              >
-                <Paperclip className="w-4 h-4" />
-                {attachment ? "Replace File" : "Upload File"}
-              </label>
+            <div className="mt-8 pt-8 border-t border-dashed border-slate-100">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-4">How did you hear about us? <span className="text-red-400">*</span></label>
+              <div className="relative group">
+                <select
+                  value={isCustomReferral ? "Other" : (pre.referral || "")}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateData({
+                      pre_consultation: { ...pre, referral: val === "Other" ? "" : val }
+                    });
+                  }}
+                  className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-teal-500 bg-slate-50/50 appearance-none cursor-pointer outline-none transition-all font-bold text-slate-700"
+                >
+                  <option value="" disabled>Select an option...</option>
+                  {REFERRAL_SOURCES.map((source) => (
+                    <option key={source} value={source}>{source}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-hover:text-teal-500 pointer-events-none transition-colors" />
+              </div>
 
-              <input
-                id="attachment-upload"
-                type="file"
-                accept=".pdf,.jpg,.png,.jpeg"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-
-              {attachment && (
-                <div className="flex items-center gap-2 text-sm text-gray-700">
-                  <span>{attachment.name}</span>
-                  <button onClick={removeAttachment} className="text-red-500">
-                    <X className="w-4 h-4" />
-                  </button>
+              {(isCustomReferral || (pre.referral === "" && pre.referral !== undefined)) && (
+                <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                  <input
+                    placeholder="Please specify source..."
+                    value={pre.referral || ""}
+                    onChange={(e) => updateData({ pre_consultation: { ...pre, referral: e.target.value } })}
+                    className="w-full border-2 border-teal-100 rounded-2xl p-4 text-sm focus:border-teal-500 bg-white shadow-inner outline-none font-medium"
+                  />
                 </div>
               )}
             </div>
           </div>
-        </div>
 
-        {maxAttendees > 1 && (
-          <div className="mb-10">
-            <h3 className="text-lg font-semibold mb-3">Attendees</h3>
-
-            <div className="flex gap-3">
-              <input
-                type="email"
-                placeholder="Enter attendee email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm"
-              />
-              <button
-                onClick={addAttendee}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm"
-              >
-                Add
-              </button>
+          {/* Files & Attendees Card */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-4">Attachments (Optional)</label>
+              {!attachment ? (
+                <label className="group flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-200 rounded-3xl cursor-pointer hover:bg-teal-50/50 hover:border-teal-300 transition-all">
+                  <Paperclip className="w-8 h-8 text-slate-300 group-hover:text-teal-500 mb-2 transition-colors" />
+                  <p className="text-xs font-bold text-slate-400 group-hover:text-teal-700">Medical Records / Photos</p>
+                  <input type="file" className="hidden" accept=".pdf,.jpg,.png,.jpeg" onChange={(e) => setAttachment(e.target.files?.[0] || null)} />
+                </label>
+              ) : (
+                <div className="flex items-center justify-between p-4 bg-teal-50 border border-teal-100 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-teal-500 p-2 rounded-xl text-white shadow-sm">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-bold text-teal-900 truncate max-w-[150px]">{attachment.name}</span>
+                  </div>
+                  <button onClick={() => setAttachment(null)} className="p-1 hover:bg-white rounded-full text-teal-600 shadow-sm transition-all">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
 
-            {selectedAttendees.map((email) => (
-              <div
-                key={email}
-                className="flex justify-between mt-2 bg-blue-50 px-4 py-2 rounded"
-              >
-                <span>{email}</span>
-                <button onClick={() => removeAttendee(email)}>
-                  <X className="w-4 h-4 text-red-500" />
-                </button>
+            {maxAttendees > 1 && (
+              <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400">Attendees</label>
+                  <span className="px-2 py-0.5 bg-teal-50 text-teal-600 text-[10px] font-black rounded-lg border border-teal-100">MAX {maxAttendees}</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="Invite via email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addAttendee())}
+                    className="flex-1 border-2 border-slate-50 rounded-2xl p-3 text-sm focus:border-teal-500 bg-slate-50/50 outline-none font-medium"
+                  />
+                  <button onClick={addAttendee} className="p-3 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-all shadow-lg shadow-slate-200">
+                    <UserPlus className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {selectedAttendees.map((email) => (
+                    <div key={email} className="flex items-center gap-2 bg-slate-50 border border-slate-100 pl-3 pr-1 py-1 rounded-xl text-[11px] font-bold text-slate-600">
+                      {email}
+                      <button onClick={() => removeAttendee(email)} className="p-1 hover:bg-white rounded-full text-red-400 transition-colors">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
           </div>
-        )}
+        </div>
+      </div>
 
-        <div className="flex gap-4">
-          <button onClick={() => prevStep()} className="px-4 py-2 border rounded">
+      {/* --- FIXED NAVIGATION FOOTER --- */}
+      <div className="fixed bottom-0 inset-x-0 bg-white/80 backdrop-blur-lg border-t border-slate-100 p-4 md:p-6 z-50">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+          <button
+            type="button"
+            onClick={() => prevStep()}
+            className="px-8 py-3 rounded-2xl text-sm font-bold text-slate-400 hover:bg-slate-50 transition-all"
+          >
             Back
           </button>
+
           <button
+            type="button"
             onClick={handleNext}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            className="flex-1 md:flex-none px-12 py-3 bg-slate-900 hover:bg-teal-600 text-white rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-200"
           >
-            Next
+            Continue to Payment
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>

@@ -16,7 +16,7 @@ export async function PUT(
     }
 
     const { user, role } = await requireUser(req);
-    if (!user || !["admin", "superadmin"].includes(user?.admin?.role)) {
+    if (!user || !["admin", "superadmin"].includes(user?.admin?.role as any)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

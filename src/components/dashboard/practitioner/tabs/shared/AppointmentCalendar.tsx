@@ -65,7 +65,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     }
   }, [anchorDate, viewMode]);
 
-  const timeSlots = generateHourSlots(0, 24); // 07:00 – 19:00
+  const timeSlots = generateHourSlots(0, 24); // 00:00 – 24:00
 
   const headerLabel =
     viewMode === "weekly"
@@ -486,4 +486,3 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
 };
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
