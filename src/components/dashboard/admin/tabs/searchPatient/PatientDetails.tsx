@@ -152,7 +152,7 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({
         <InfoRow label="Phone" value={patient.phone} />
         <InfoRow
           label="Address"
-          value={patient.addressLine1 || "-"}
+          value={patient.address || "-"}
         />
         <InfoRow label="City" value={patient.city || "-"} />
         <InfoRow

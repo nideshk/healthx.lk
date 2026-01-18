@@ -7,10 +7,9 @@ import Button from "@/components/atom/Button/Button";
 import Input from "@/components/atom/Input/Input";
 import Loader from "@/components/atom/Loader/Loader";
 import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
-// Import the email template generator
-import { generateAppointmentConfirmationEmail } from "@/lib/emailTemplates";
 import { authFetch } from "@/lib/authFetch";
 import Link from "next/link";
+import { toast } from "react-toastify";
 
 interface PatientDetailViewProps {
   patient: Patient;
@@ -88,10 +87,11 @@ const renderTab = (
       key={id}
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${active
-        ? "bg-white text-slate-900 shadow-sm"
-        : "text-slate-500 hover:text-slate-900"
-        }`}
+      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${
+        active
+          ? "bg-white text-slate-900 shadow-sm"
+          : "text-slate-500 hover:text-slate-900"
+      }`}
     >
       {label}
     </button>
@@ -120,7 +120,7 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
     allergies: patient.allergies || "",
     email: patient.email,
     phone: patient.phone,
-    addressLine1: patient.addressLine1 || "",
+    address: patient.address || "",
     city: patient.city || "",
     country: patient.country || "",
   });
@@ -192,9 +192,9 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           />
           <EditableField
             label="Address"
-            value={formData.addressLine1}
+            value={formData.address}
             isEditing={isEditing}
-            onChange={(v) => handleChange("addressLine1", v)}
+            onChange={(v) => handleChange("address", v)}
           />
           <EditableField
             label="City"
@@ -251,9 +251,10 @@ const AppointmentsTab: React.FC<{
   patient: Patient;
 }> = ({ appointments, patient }) => {
   const upcoming = appointments.filter((a) => a.category === "upcoming");
+  const ongoing = appointments.filter((a) => a.category === "ongoing");
   const previous = appointments.filter((a) => a.category === "previous");
   const [showCreateModal, setShowCreateModal] = React.useState(false);
-  console.log("upcoming", upcoming)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -263,6 +264,14 @@ const AppointmentsTab: React.FC<{
       </div>
 
       <AppointmentSection appointments={upcoming} patient={patient} />
+
+      <div className="pt-4 border-t border-slate-200">
+        <h3 className="text-sm font-semibold text-slate-900">
+          Ongoing Appointments
+        </h3>
+      </div>
+
+      <AppointmentSection appointments={ongoing} patient={patient} />
 
       <div className="pt-4 border-t border-slate-200">
         <h3 className="text-sm font-semibold text-slate-900">
@@ -301,29 +310,27 @@ const AppointmentSection: React.FC<{
 };
 
 const AppointmentRow: React.FC<{
-
   appointment: Appointment;
   patient: Patient;
 }> = ({ appointment, patient }) => {
   const [open, setOpen] = React.useState(false);
-  const [showEmailModal, setShowEmailModal] = React.useState(false);
-  const [showToast, setShowToast] = React.useState(false);
   const [isEditingAppointment, setIsEditingAppointment] = React.useState(false);
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
+  const [isNotifying, setIsNotifying] = useState(false);
   const [, forceUpdate] = useState(0);
 
   const [appointmentForm, setAppointmentForm] = React.useState({
     clinicianNotes: appointment.clinicianNotes || "",
     followUpDate: appointment.followUpDate || "",
-    followUpTime: "", // Added for time selection
+    followUpTime: "",
     prescriptions: appointment.prescriptions || "",
     followUpNeeded: appointment.followUpNeeded || false,
   });
+
   const baseUrl = (
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
   ).replace(/\/$/, "");
-
 
   const updateAppointmentField = (
     key: keyof typeof appointmentForm,
@@ -332,17 +339,88 @@ const AppointmentRow: React.FC<{
     setAppointmentForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const [showSmsModal, setShowSmsModal] = React.useState(false);
-  const [smsNumber, setSmsNumber] = React.useState(patient.phone);
-  const [smsMessage, setSmsMessage] = React.useState(
-    `Hi ${patient.name}, this is a reminder about your appointment on ${appointment.date} at ${appointment.time} . Thank you!`
-  );
+  /**
+   * DRY Notification logic using the /api/notify-send endpoint
+   * Includes formatting for line separation and a clickable link for email
+   */
+  /**
+   * Refactored handleNotify logic with enhanced HTML email template
+   * featuring line separation and a styled action button.
+   */
+  const handleNotify = async (channels: Array<"email" | "sms" | "in_app">) => {
+    setIsNotifying(true);
+    try {
+      const meetingUrl = `${baseUrl}/appointment/meeting?room=${appointment.room_key}`;
+
+      // Constructing the styled HTML template
+      const htmlMessage = `
+        <div style="font-family: Arial, sans-serif; color: #334155; line-height: 1.6; max-width: 600px;">
+          <p ${patient.name},</p>
+          
+          <p>Here are your appointment details:</p>
+          
+          <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #2563eb; background-color: #f8fafc;">
+            <strong>Appointment Type:</strong> ${appointment.appointmentType || appointment.reason || "Standard Consultation"}<br />
+            <strong>Date:</strong> ${appointment.date}<br />
+            <strong>Time:</strong> ${appointment.time}
+          </div>
+
+          <p>Click the button below to join the meeting:</p>
+          
+          <div style="margin: 25px 0;">
+            <a href="${meetingUrl}" 
+               style="background-color: #2563eb; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+               Join Meeting
+            </a>
+          </div>
+
+          <p style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+            Regards,<br />
+            <strong>Clinico Team</strong>
+          </p>
+        </div>
+      `.trim();
+
+      // Plain text fallback for SMS/In-app
+      const textMessage = `Hello ${patient.name},\n\nAppointment: ${appointment.date} at ${appointment.time}\nJoin here: ${meetingUrl}\n\nRegards, Clinico Team`;
+
+      const res = await authFetch("/api/notify-send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: patient.id,
+          role: "patient",
+          eventType: "appointment_resend",
+          title: "Your Appointment Details",
+          message: channels.includes("email") ? htmlMessage : textMessage,
+          channels: channels,
+          payload: {
+            email: patient.email,
+            phone: patient.phone,
+            appointment_id: appointment.id,
+            meeting_url: meetingUrl,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        toast.success(
+          `${channels.join(" & ").toUpperCase()} sent successfully!`
+        );
+      } else {
+        throw new Error("Failed to send");
+      }
+    } catch (err) {
+      console.error("Notification error:", err);
+      toast.error("Failed to send notification.");
+    } finally {
+      setIsNotifying(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
       let formattedFollowUp = null;
-
-      // REQUIREMENT: Format as 2026-01-13T04:30:00+00:00
       if (appointmentForm.followUpNeeded && appointmentForm.followUpDate) {
         const time = appointmentForm.followUpTime || "00:00";
         formattedFollowUp = `${appointmentForm.followUpDate}T${time}:00+00:00`;
@@ -355,12 +433,15 @@ const AppointmentRow: React.FC<{
         follow_up_date: formattedFollowUp,
       };
 
-      await authFetch(`/api/booking/appointment/${appointment.id}/consultation`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
+      await authFetch(
+        `/api/booking/appointment/${appointment.id}/consultation`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        }
+      );
 
       appointment.clinicianNotes = payload.clinician_notes;
       appointment.prescriptions = payload.prescriptions;
@@ -368,41 +449,11 @@ const AppointmentRow: React.FC<{
       appointment.followUpDate = payload.follow_up_date || "";
 
       setIsEditingAppointment(false);
+      toast.success("Consultation notes saved.");
     } catch (err) {
       console.error("Failed to save consultation", err);
+      toast.error("Error saving consultation.");
     }
-  };
-
-  const [showSmsToast, setShowSmsToast] = React.useState(false);
-
-  // Email State
-  const [emailTo, setEmailTo] = React.useState(patient.email);
-  const [emailSubject, setEmailSubject] = React.useState(
-    `Appointment Confirmation at ${appointment.time} on ${appointment.date}`
-  );
-  const [emailBody, setEmailBody] = React.useState("");
-
-  // Use Memo to generate the HTML template
-  const htmlTemplate = useMemo(() => {
-    const startsAt = appointment.date.split("/").reverse().join("-") + "T" + appointment.time;
-    return generateAppointmentConfirmationEmail({
-      recipientName: patient.name,
-      appointment: {
-        id: appointment.id,
-        startsAt: startsAt,
-        endsAt: startsAt,
-        practitionerName: appointment.doctorName || "Your Practitioner",
-        appointmentType: appointment.appointmentType || appointment.reason || "Consultation",
-        meetingUrl: `${baseUrl}/appointment/meeting?room=${appointment?.room_key}`,
-      },
-    });
-  }, [appointment, patient.name]);
-
-  const handleSendEmail = () => {
-    console.log("Send appointment email", { to: emailTo, subject: emailSubject, body: emailBody });
-    setShowEmailModal(false);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
   };
 
   const statusClasses =
@@ -423,13 +474,16 @@ const AppointmentRow: React.FC<{
     if (consultationFetched) return;
     setConsultationLoading(true);
     try {
-      const res = await authFetch(`/api/booking/appointment/${appointment.id}/consultation`);
+      const res = await authFetch(
+        `/api/booking/appointment/${appointment.id}/consultation`
+      );
       if (!res.ok) return;
       const data = await res.json();
 
       appointment.telehealthConsent = !!data.consent?.telehealth;
       appointment.termsAccepted = !!data.consent?.terms;
-      appointment.mainConcern = data.preconsult?.raw_payload?.note?.concern || "";
+      appointment.mainConcern =
+        data.preconsult?.raw_payload?.note?.concern || "";
       appointment.goal = data.preconsult?.raw_payload?.note?.outcome || "";
       appointment.clinicianNotes = data.encounter?.clinician_notes || "";
       appointment.prescriptions = data.encounter?.prescriptions || "";
@@ -438,21 +492,21 @@ const AppointmentRow: React.FC<{
       const rawDate = data.encounter?.follow_up_date;
       if (rawDate) {
         appointment.followUpDate = rawDate.slice(0, 10);
-        // Extract time if it exists in the string
         if (rawDate.includes("T")) {
-          setAppointmentForm(prev => ({ ...prev, followUpTime: rawDate.split("T")[1].slice(0, 5) }));
+          setAppointmentForm((prev) => ({
+            ...prev,
+            followUpTime: rawDate.split("T")[1].slice(0, 5),
+          }));
         }
       }
 
       setConsultationFetched(true);
-
-      // Update local form state with fetched data
-      setAppointmentForm(prev => ({
+      setAppointmentForm((prev) => ({
         ...prev,
         clinicianNotes: data.encounter?.clinician_notes || "",
         prescriptions: data.encounter?.prescriptions || "",
         followUpNeeded: !!data.encounter?.follow_up_needed,
-        followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || ""
+        followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || "",
       }));
 
       forceUpdate((v) => v + 1);
@@ -464,238 +518,214 @@ const AppointmentRow: React.FC<{
   };
 
   return (
-    <>
-      <Card>
-        <CardBody className="space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-xs">
-              <div className="font-medium text-slate-900">
-                {appointment.date} at {appointment.time}
-              </div>
-
-              <div className="text-slate-400">{appointment.reason}</div>
+    <Card>
+      <CardBody className="space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="text-xs">
+            <div className="font-medium text-slate-900">
+              {appointment.date} at {appointment.time}
             </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={() => {
-                  setEmailBody(htmlTemplate);
-                  setShowEmailModal(true);
-                }}
-              >
-                Re-send appointment details
-              </Button>
-
-              <Button variant="secondary" size="sm" onClick={() => setShowSmsModal(true)}>
-                SMS patient
-              </Button>
-              <Link
-                href={`/appointment/meeting?room=${appointment.room_key}`}
-              >
-                <Button variant="primary" size="sm" className="text-xs">
-                  Join meeting
-                </Button>
-              </Link>
-              {/* <Button variant="primary" size="sm" className="text-xs">
-                Join meeting
-              </Button> */}
-              <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${statusClasses}`}>
-                {statusLabel}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!open) fetchConsultationDetails();
-                  setOpen((o) => !o);
-                }}
-                className="text-xs border rounded-full px-2 py-1"
-              >
-                {open ? "▴" : "▾"}
-              </button>
-            </div>
+            <div className="text-slate-400">{appointment.reason}</div>
           </div>
 
-          {open && (
-            <div className="pt-3 border-t border-slate-200 space-y-4 text-xs">
-              <div className="flex items-center justify-between">
-                {consultationLoading && <Loader size="sm" />}
-                <div className="font-semibold text-slate-900">Appointment Details</div>
-                {!isEditingAppointment ? (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => handleNotify(["email"])}
+              disabled={isNotifying}
+            >
+              Re-send appointment details
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleNotify(["sms"])}
+              disabled={isNotifying}
+            >
+              SMS patient
+            </Button>
+
+            <Link href={`/appointment/meeting?room=${appointment.room_key}`}>
+              <Button variant="primary" size="sm" className="text-xs">
+                Join meeting
+              </Button>
+            </Link>
+
+            <span
+              className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${statusClasses}`}
+            >
+              {statusLabel}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (!open) fetchConsultationDetails();
+                setOpen((o) => !o);
+              }}
+              className="text-xs border rounded-full px-2 py-1"
+            >
+              {open ? "▴" : "▾"}
+            </button>
+          </div>
+        </div>
+
+        {open && (
+          <div className="pt-3 border-t border-slate-200 space-y-4 text-xs">
+            <div className="flex items-center justify-between">
+              {consultationLoading && <Loader size="sm" />}
+              <div className="font-semibold text-slate-900">
+                Appointment Details
+              </div>
+              {!isEditingAppointment ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3"
+                  onClick={() => setIsEditingAppointment(true)}
+                >
+                  Edit
+                </Button>
+              ) : (
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs px-3"
-                    onClick={() => setIsEditingAppointment(true)}
+                    onClick={() => setIsEditingAppointment(false)}
                   >
-                    Edit
+                    Cancel
                   </Button>
-                ) : (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditingAppointment(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button variant="primary" size="sm" onClick={handleSave}>
-                      Save
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <div className="text-[11px] text-slate-500">Appointment Type</div>
-                  <div className="text-slate-700">{appointment.appointmentType || "-"}</div>
-                  <div className="text-[11px] text-slate-500 pt-3">Telehealth Consent</div>
-                  <div className="text-slate-700">
-                    {appointment.telehealthConsent ? "✓ Accepted" : "Not accepted"}
-                  </div>
+                  <Button variant="primary" size="sm" onClick={handleSave}>
+                    Save
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <div className="text-[11px] text-slate-500">Terms &amp; Conditions</div>
-                  <div className="text-slate-700">
-                    {appointment.termsAccepted ? "✓ Accepted" : "Not accepted"}
-                  </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <div className="text-[11px] text-slate-500">
+                  Appointment Type
+                </div>
+                <div className="text-slate-700">
+                  {appointment.appointmentType || "-"}
+                </div>
+                <div className="text-[11px] text-slate-500 pt-3">
+                  Telehealth Consent
+                </div>
+                <div className="text-slate-700">
+                  {appointment.telehealthConsent
+                    ? "✓ Accepted"
+                    : "Not accepted"}
                 </div>
               </div>
+              <div className="space-y-2">
+                <div className="text-[11px] text-slate-500">
+                  Terms &amp; Conditions
+                </div>
+                <div className="text-slate-700">
+                  {appointment.termsAccepted ? "✓ Accepted" : "Not accepted"}
+                </div>
+              </div>
+            </div>
 
-              <InfoRow label="What is your main concern today?" value={appointment.mainConcern || "-"} />
-              <InfoRow label="What are you hoping to achieve from this consultation?" value={appointment.goal || "-"} />
+            <InfoRow
+              label="What is your main concern today?"
+              value={appointment.mainConcern || "-"}
+            />
+            <InfoRow
+              label="What are you hoping to achieve from this consultation?"
+              value={appointment.goal || "-"}
+            />
 
-              {isEditingAppointment ? (
-                <div className="space-y-1">
-                  <div className="text-[11px] text-slate-500">Clinician Notes</div>
-                  <textarea
-                    value={appointmentForm.clinicianNotes}
-                    onChange={(e) => updateAppointmentField("clinicianNotes", e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+            {isEditingAppointment ? (
+              <div className="space-y-1">
+                <div className="text-[11px] text-slate-500">
+                  Clinician Notes
+                </div>
+                <textarea
+                  value={appointmentForm.clinicianNotes}
+                  onChange={(e) =>
+                    updateAppointmentField("clinicianNotes", e.target.value)
+                  }
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                />
+              </div>
+            ) : (
+              <InfoRow
+                label="Clinician Notes"
+                value={appointment.clinicianNotes || "-"}
+              />
+            )}
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                {isEditingAppointment ? (
+                  <input
+                    type="checkbox"
+                    checked={appointmentForm.followUpNeeded}
+                    onChange={(e) =>
+                      updateAppointmentField("followUpNeeded", e.target.checked)
+                    }
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
+                ) : (
+                  <span
+                    className={`inline-flex h-3 w-3 rounded-full border-4 ${
+                      appointment.followUpNeeded
+                        ? "border-blue-500"
+                        : "border-slate-300"
+                    } bg-white`}
+                  />
+                )}
+                <span>Follow-up appointment needed</span>
+              </div>
+
+              {appointmentForm.followUpNeeded && isEditingAppointment && (
+                <div className="flex flex-wrap gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-top-1">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">
+                      Follow-up Date
+                    </span>
+                    <input
+                      type="date"
+                      className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                      value={appointmentForm.followUpDate}
+                      onChange={(e) =>
+                        updateAppointmentField("followUpDate", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">
+                      Follow-up Time
+                    </span>
+                    <input
+                      type="time"
+                      className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                      value={appointmentForm.followUpTime}
+                      onChange={(e) =>
+                        updateAppointmentField("followUpTime", e.target.value)
+                      }
+                    />
+                  </div>
                 </div>
-              ) : (
-                <InfoRow label="Clinician Notes" value={appointment.clinicianNotes || "-"} />
               )}
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-[11px] text-slate-600">
-                  {isEditingAppointment ? (
-                    <input
-                      type="checkbox"
-                      checked={appointmentForm.followUpNeeded}
-                      onChange={(e) => updateAppointmentField("followUpNeeded", e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <span className={`inline-flex h-3 w-3 rounded-full border-4 ${appointment.followUpNeeded ? 'border-blue-500' : 'border-slate-300'} bg-white`} />
-                  )}
-                  <span>Follow-up appointment needed</span>
-                </div>
-
-                {/* REQUIREMENT: Show date and time field when checked */}
-                {appointmentForm.followUpNeeded && isEditingAppointment && (
-                  <div className="flex flex-wrap gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-top-1">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Follow-up Date</span>
-                      <input
-                        type="date"
-                        className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                        value={appointmentForm.followUpDate}
-                        onChange={(e) => updateAppointmentField("followUpDate", e.target.value)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Follow-up Time</span>
-                      <input
-                        type="time"
-                        className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                        value={appointmentForm.followUpTime}
-                        onChange={(e) => updateAppointmentField("followUpTime", e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {!isEditingAppointment && appointment.followUpNeeded && appointment.followUpDate && (
+              {!isEditingAppointment &&
+                appointment.followUpNeeded &&
+                appointment.followUpDate && (
                   <div className="text-[11px] text-blue-600 font-medium">
                     Scheduled for: {appointment.followUpDate}
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-        </CardBody>
-      </Card>
-
-      {/* Email Modal with HTML Visual Preview */}
-      {showEmailModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <div className="text-sm font-semibold text-slate-900">Send Email </div>
-              <button onClick={() => setShowEmailModal(false)} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
-            </div>
-
-            <div className="p-5 overflow-y-auto space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-slate-400 w-12 uppercase">To:</span>
-                <span className="text-xs border border-slate-200 px-3 py-2 text-slate-700">{emailTo}</span>
-              </div>
-              <div className="space-y-1">
-
-                <div className="text-[11px] font-bold text-slate-400 uppercase">Subject:</div>
-                {/* 1. REQUIREMENT: Subject fully visible */}
-                <textarea
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none resize-none"
-                  rows={2}
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                />
-              </div>
-
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <iframe title="Preview" srcDoc={emailBody} className="w-full min-h-[350px]" />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 px-5 py-4 border-t">
-              <Button variant="outline" size="sm" onClick={() => setShowEmailModal(false)}>Cancel</Button>
-              <Button variant="primary" size="sm" onClick={handleSendEmail}>Send Email</Button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Toast and SMS Modals (remaining same for DRY/Robustness) */}
-      {showToast && (
-        <div className="fixed bottom-4 right-4 z-[60] rounded-lg bg-slate-900 px-4 py-2 text-xs text-white shadow-lg">
-          Email sent to {emailTo}
-        </div>
-      )}
-
-      {showSmsModal && (
-        <div className="fixed inset-0 z-50 bg-black/20 flex items-center justify-center">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 space-y-4">
-            <div className="text-lg font-semibold text-slate-900">Send SMS</div>
-            <Input value={smsNumber} onChange={(e) => setSmsNumber(e.target.value)} />
-            <textarea
-              value={smsMessage}
-              onChange={(e) => setSmsMessage(e.target.value)}
-              className="w-full h-28 border border-slate-300 rounded-lg p-3 text-sm"
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowSmsModal(false)}>Cancel</Button>
-              <Button variant="primary" onClick={() => { setShowSmsModal(false); setShowSmsToast(true); }}>Send SMS</Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showSmsToast && <div className="fixed bottom-4 right-4 z-[60] bg-slate-900 text-white px-4 py-2 rounded-lg text-xs">SMS sent!</div>}
-    </>
+        )}
+      </CardBody>
+    </Card>
   );
 };
 
@@ -717,11 +747,19 @@ const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-2xl rounded-2xl bg-white shadow-lg p-6">
-        <div className="text-sm font-semibold mb-4 text-slate-900">Create Appointment for {patient.name}</div>
-        <p className="text-xs text-slate-500 mb-6">Appointment creation logic goes here.</p>
+        <div className="text-sm font-semibold mb-4 text-slate-900">
+          Create Appointment for {patient.name}
+        </div>
+        <p className="text-xs text-slate-500 mb-6">
+          Appointment creation logic goes here.
+        </p>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" size="sm" onClick={onClose}>Save</Button>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" size="sm" onClick={onClose}>
+            Save
+          </Button>
         </div>
       </div>
     </div>

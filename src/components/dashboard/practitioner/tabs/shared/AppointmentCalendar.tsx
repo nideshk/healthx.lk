@@ -65,7 +65,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     }
   }, [anchorDate, viewMode]);
 
-  const timeSlots = generateHourSlots(7, 20); // 07:00 – 19:00
+  const timeSlots = generateHourSlots(0, 24); // 07:00 – 19:00
 
   const headerLabel =
     viewMode === "weekly"

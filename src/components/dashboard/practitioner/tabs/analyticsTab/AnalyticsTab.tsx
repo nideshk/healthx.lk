@@ -9,6 +9,7 @@ import GenericTable, { Column } from "./GenericTable";
 import { X, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { authFetch } from "@/lib/authFetch";
+import { DateTime } from "luxon";
 
 /* ---------- constants ---------- */
 
@@ -38,6 +39,19 @@ interface BookingRecord {
   cancellation_reason?: string | null;
   payment_status?: string | null;
 }
+
+type RefundItem = {
+  id: string;
+  transaction_id: string | number;
+  created_at: string;
+  patient_name: string;
+  email: string;
+  appointment_start: string;
+  refund_amount: number;
+  currency: string;
+  reason: string;
+  status: string;
+};
 
 export interface AuditLogRow {
   id: string;
@@ -75,6 +89,7 @@ const AnalyticsTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRevenueModal, setShowRevenueModal] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   /* --- Filter State --- */
   const [fromDate, setFromDate] = useState(() => {
@@ -94,7 +109,7 @@ const AnalyticsTab: React.FC = () => {
 
   /* --- Detail Table State --- */
   const [selectedDetail, setSelectedDetail] = useState<DetailType>(null);
-  const [detailData, setDetailData] = useState<BookingRecord[]>([]);
+  const [detailData, setDetailData] = useState<any[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -113,6 +128,9 @@ const AnalyticsTab: React.FC = () => {
     perPage: 10,
   });
 
+  // Flag to hide refunds for clinicians
+  const showRefunds = useMemo(() => userRole !== "practitioner", [userRole]);
+
   /* --- Logic: Fetch Summary Stats --- */
   const fetchAnalyticsSummary = useCallback(async () => {
     setLoading(true);
@@ -121,12 +139,16 @@ const AnalyticsTab: React.FC = () => {
       const authRes = await authFetch("/api/auth/me");
       if (!authRes.ok) throw new Error("Authentication failed");
       const me = await authRes.json();
+      
+      const role = me?.user?.role || me?.role;
+      setUserRole(role);
+
       const pId = me?.user?.practitioner_id ?? me?.practitioner_id;
       if (!pId) throw new Error("Practitioner profile not found");
 
       const [analyticsRes, transactionRes] = await Promise.all([
         authFetch(`/api/practitioners/${pId}/analytics`),
-        authFetch(`http://localhost:3000/api/analytics/transactions/practitioner`)
+        authFetch(`/api/analytics/transactions/practitioner`)
       ]);
 
       if (!analyticsRes.ok) throw new Error("Failed to fetch booking statistics");
@@ -165,39 +187,76 @@ const AnalyticsTab: React.FC = () => {
   /* --- Logic: Fetch Detail Table --- */
   const fetchDetailData = useCallback(async () => {
     if (!selectedDetail) return;
+    
+    // Safety check: if user is clinician and somehow selected refunds, abort
+    if (selectedDetail === "refunds" && !showRefunds) {
+        setSelectedDetail(null);
+        return;
+    }
+
     setDetailLoading(true);
+
     try {
-      const url = new URL(`http://localhost:3000/api/booking`);
-      url.searchParams.append("from", fromDate);
-      url.searchParams.append("to", toDate);
-      url.searchParams.append("type", selectedDetail);
-      url.searchParams.append("page", pagination.currentPage.toString());
-      url.searchParams.append("per_page", pagination.perPage.toString());
+      if (selectedDetail === "refunds") {
+        const response = await authFetch("/api/refunds");
+        if (!response.ok) throw new Error(`Failed to fetch refunds: ${response.status}`);
+        const data = await response.json();
 
-      const response = await authFetch(url.toString());
-      const result = await response.json();
+        if (data.status === "success") {
+          const mappedData: RefundItem[] = data.refunds.map((item: any) => ({
+            id: item.id,
+            transaction_id: item.transaction_id,
+            created_at: item.created_at,
+            patient_name: item.patient?.full_name || "N/A",
+            email: item.patient?.email || "N/A",
+            appointment_start: item.appointment?.starts_at || "",
+            refund_amount: item.refund_amount || 0,
+            currency: item.currency || "LKR",
+            reason: item.reason || "N/A",
+            status: item.status,
+          }));
 
-      if (result.success) {
-        setDetailData(result.data);
-        setPagination(prev => ({
-          ...prev,
-          totalPages: result.meta.total_pages,
-          totalResults: result.meta.total,
-        }));
+          setDetailData(mappedData);
+          setPagination(prev => ({
+            ...prev,
+            totalPages: Math.ceil(mappedData.length / prev.perPage) || 1,
+            totalResults: mappedData.length,
+          }));
+        }
+      } 
+      else {
+        const url = new URL(`/api/booking`);
+        url.searchParams.append("from", fromDate);
+        url.searchParams.append("to", toDate);
+        url.searchParams.append("type", selectedDetail);
+        url.searchParams.append("page", pagination.currentPage.toString());
+        url.searchParams.append("per_page", pagination.perPage.toString());
+
+        const response = await authFetch(url.toString());
+        const result = await response.json();
+
+        if (result.success) {
+          setDetailData(result.data);
+          setPagination(prev => ({
+            ...prev,
+            totalPages: result.meta.total_pages,
+            totalResults: result.meta.total,
+          }));
+        }
       }
     } catch (err) {
-      console.error("Failed to fetch booking details", err);
+      console.error("Failed to fetch data", err);
     } finally {
       setDetailLoading(false);
     }
-  }, [selectedDetail, fromDate, toDate, pagination.currentPage, pagination.perPage]);
+  }, [selectedDetail, fromDate, toDate, pagination.currentPage, pagination.perPage, showRefunds]);
 
   /* --- Logic: Fetch Timestamp Audits --- */
   const fetchTimestampAudits = useCallback(async () => {
     if (activeTab !== "timestamps") return;
     setAuditLoading(true);
     try {
-      const url = new URL(`http://localhost:3000/api/consultation/audit-log`);
+      const url = new URL(`/api/consultation/audit-log`);
       url.searchParams.append("from", fromDate);
       url.searchParams.append("to", toDate);
       url.searchParams.append("page", auditPagination.currentPage.toString());
@@ -271,78 +330,153 @@ const AnalyticsTab: React.FC = () => {
   };
 
   /* --- Table Config --- */
-  const bookingColumns = useMemo<Column<BookingRecord>[]>(() => [
-    {
-      header: "Patient Details",
-      render: (item) => (
-        <div>
-          <div className="font-medium text-slate-900">{item.patient?.name ?? "Unknown Patient"}</div>
-          <div className="text-xs text-slate-500">{item.patient?.email ?? "No Email"}</div>
-        </div>
-      ),
-    },
-    {
-      header: "Practitioner",
-      render: (item) => (
-        <div>
-          <div className="font-medium text-slate-900">{item.practitioner?.name ?? "Unknown Practitioner"}</div>
-          <div className="text-xs text-slate-500">{item.practitioner?.email ?? "No Email"}</div>
-        </div>
-      ),
-    },
-    {
-      header: "Appointment Date",
-      render: (item) => (
-        <div>
-          <div className="text-slate-900">{item.appointment_date}</div>
-          <div className="text-xs text-slate-500">{`${item.start_time} - ${item.end_time}`}</div>
-        </div>
-      ),
-    },
-    {
-      header: "Type",
-      render: (item) => (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-          {item.appointment_type}
-        </span>
-      ),
-    },
-    {
-      header: "Status",
-      render: (item) => {
-        const status = item.status?.toLowerCase();
-        const config = {
-          completed: "bg-green-50 text-green-700 border-green-100",
-          cancelled: "bg-red-50 text-red-700 border-red-100",
-          default: "bg-blue-50 text-blue-700 border-blue-100"
-        };
-        const style = config[status as keyof typeof config] || config.default;
+  const bookingColumns = useMemo<Column<any>[]>(() => {
+    if (selectedDetail === "refunds") {
+      return [
+        {
+          header: "Requested On",
+          render: (item: RefundItem) => DateTime.fromISO(item.created_at).toFormat("yyyy-MM-dd HH:mm"),
+          className: "whitespace-nowrap",
+        },
+        {
+          header: "Patient Details",
+          render: (item: RefundItem) => (
+            <div className="flex flex-col">
+              <span className="font-bold text-slate-800">{item.patient_name}</span>
+              <span className="text-xs text-slate-500">{item.email}</span>
+            </div>
+          ),
+        },
+        {
+          header: "Appt. Date",
+          render: (item: RefundItem) =>
+            item.appointment_start
+              ? DateTime.fromISO(item.appointment_start).toFormat("yyyy-MM-dd")
+              : "N/A",
+        },
+        {
+          header: "TXN ID",
+          render: (item: RefundItem) => (
+            <span className="font-mono text-blue-600 font-bold">{item.transaction_id}</span>
+          ),
+        },
+        {
+          header: "Amount",
+          render: (item: RefundItem) => (
+            <span className="font-bold text-slate-900">
+              {item.currency} {item.refund_amount.toLocaleString()}
+            </span>
+          ),
+        },
+        {
+          header: "Reason",
+          render: (item: RefundItem) => (
+            <span className="text-[10px] uppercase font-semibold bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+              {item.reason.replace(/_/g, " ")}
+            </span>
+          ),
+        },
+        {
+          header: "Status",
+          render: (item: RefundItem) => {
+            const s = item.status.toLowerCase();
+            const styles: Record<string, string> = {
+              requested: "bg-amber-100 text-amber-700 border-amber-200",
+              refunded: "bg-green-100 text-green-700 border-green-200",
+              rejected: "bg-red-100 text-red-700 border-red-200",
+            };
+            const currentStyle = styles[s] || "bg-slate-100 text-slate-600 border-slate-200";
+            return (
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${currentStyle}`}>
+                {item.status}
+              </span>
+            );
+          },
+        },
+      ];
+    }
 
-        return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${style}`}>
-            {item.status}
-          </span>
-        );
+    return [
+      {
+        header: "Patient Details",
+        render: (item) => (
+          <div>
+            <div className="font-medium text-slate-900">{item.patient?.name ?? "Unknown Patient"}</div>
+            <div className="text-xs text-slate-500">{item.patient?.email ?? "No Email"}</div>
+          </div>
+        ),
       },
-    },
-    {
-      header: "Payment",
-      render: (item) => (
-        <span className={`text-xs font-bold ${item.payment_status === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
-          {item.payment_status?.toUpperCase() ?? "N/A"}
-        </span>
-      ),
-    },
-    {
-      header: "Cancellation reason",
-      render: (item) => <div className="text-slate-700 text-xs italic">{item.cancellation_reason ?? "N/A"}</div>,
-    },
-  ], []);
+      {
+        header: "Practitioner",
+        render: (item) => (
+          <div>
+            <div className="font-medium text-slate-900">{item.practitioner?.name ?? "Unknown Practitioner"}</div>
+            <div className="text-xs text-slate-500">{item.practitioner?.email ?? "No Email"}</div>
+          </div>
+        ),
+      },
+      {
+        header: "Appointment Date",
+        render: (item) => (
+          <div>
+            <div className="text-slate-900">{item.appointment_date}</div>
+            <div className="text-xs text-slate-500">{`${item.start_time} - ${item.end_time}`}</div>
+          </div>
+        ),
+      },
+      {
+        header: "Type",
+        render: (item) => (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+            {item.appointment_type}
+          </span>
+        ),
+      },
+      {
+        header: "Status",
+        render: (item) => {
+          const status = item.status?.toLowerCase();
+          const config = {
+            completed: "bg-green-50 text-green-700 border-green-100",
+            cancelled: "bg-red-50 text-red-700 border-red-100",
+            default: "bg-blue-50 text-blue-700 border-blue-100"
+          };
+          const style = config[status as keyof typeof config] || config.default;
+
+          return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${style}`}>
+              {item.status}
+            </span>
+          );
+        },
+      },
+      {
+        header: "Payment",
+        render: (item) => (
+          <span className={`text-xs font-bold ${item.payment_status === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
+            {item.payment_status?.toUpperCase() ?? "N/A"}
+          </span>
+        ),
+      },
+      {
+        header: "Cancellation reason",
+        render: (item) => <div className="text-slate-700 text-xs italic">{item.cancellation_reason ?? "N/A"}</div>,
+      },
+    ];
+  }, [selectedDetail]);
 
   const detailTitle = useMemo(() => {
     if (!selectedDetail) return "";
-    return `${selectedDetail.charAt(0).toUpperCase() + selectedDetail.slice(1)} Bookings List`.replace("Total", "All");
+    return `${selectedDetail.charAt(0).toUpperCase() + selectedDetail.slice(1)} List`.replace("Total", "All");
   }, [selectedDetail]);
+
+  const paginatedData = useMemo(() => {
+    if (selectedDetail === "refunds") {
+      const start = (pagination.currentPage - 1) * pagination.perPage;
+      return detailData.slice(start, start + pagination.perPage);
+    }
+    return detailData;
+  }, [detailData, selectedDetail, pagination.currentPage, pagination.perPage]);
 
   return (
     <div className="space-y-4">
@@ -397,6 +531,7 @@ const AnalyticsTab: React.FC = () => {
             onRevenueClick={() => setShowRevenueModal(true)}
             onStatClick={handleStatClick}
             activeDetail={selectedDetail}
+            showRefunds={showRefunds} // Pass role flag down
           />
 
           {selectedDetail && (
@@ -414,9 +549,9 @@ const AnalyticsTab: React.FC = () => {
               </div>
               <GenericTable
                 columns={bookingColumns}
-                data={detailData}
+                data={paginatedData}
                 loading={detailLoading}
-                minWidth="1000px"
+                minWidth="1200px"
                 pagination={{
                   ...pagination,
                   onPageChange: (page: number) => setPagination(prev => ({ ...prev, currentPage: page })),
@@ -485,6 +620,7 @@ const BookingsView = ({
   onRevenueClick,
   onStatClick,
   activeDetail,
+  showRefunds, // Receive role flag
 }: {
   stats: BookingStats;
   fromDate: string;
@@ -494,12 +630,14 @@ const BookingsView = ({
   onRevenueClick: () => void;
   onStatClick: (type: DetailType) => void;
   activeDetail: DetailType;
+  showRefunds: boolean;
 }) => {
+  // Filter out refunds card if user is clinician
   const statCards = [
     { id: "total", label: "Total Bookings", value: stats.totalBookings, bg: "bg-blue-500" },
     { id: "completed", label: "Appts. Completed", value: stats.completed, bg: "bg-green-500" },
     { id: "cancelled", label: "Cancelled Bookings", value: stats.cancelled, bg: "bg-red-500" },
-    { id: "refunds", label: "Refunds Requested", value: stats.refunds, bg: "bg-amber-400" },
+    ...(showRefunds ? [{ id: "refunds", label: "Refunds Requested", value: stats.refunds, bg: "bg-amber-400" }] : []),
     { id: "upcoming", label: "Upcoming Appointments", value: stats.upcoming, bg: "bg-orange-500" },
   ];
 
