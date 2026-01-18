@@ -16,6 +16,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   bookingControllerRef: React.MutableRefObject<{
@@ -55,6 +56,8 @@ export default function PreConsultationStep({
 
   const isCustomReferral = pre.referral && !REFERRAL_SOURCES.includes(pre.referral);
 
+  const { user } = useAuth();
+  console.log(user)
   // Validation Logic
   const validateFields = () => {
     if (!note.concern?.trim()) {
@@ -89,6 +92,10 @@ export default function PreConsultationStep({
     }
     if (selectedAttendees.includes(emailInput)) {
       toast.error("Email already added.");
+      return;
+    }
+    if (user?.user?.email === emailInput) {
+      toast.error("You cannot add yourself as an attendee.");
       return;
     }
     updateData({ selectedAttendees: [...selectedAttendees, emailInput] });

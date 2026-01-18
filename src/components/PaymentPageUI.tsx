@@ -52,7 +52,11 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                                 Doctor Details
                             </h3>
                             <div className='flex justify-between'>
-                                <p className="text-lg font-semibold">{doctor?.name}, <span className='text-sm'>{doctor?.qualification}</span></p>
+                                <div className='flex gap-2'>
+                                    <img src={bookingData.selectedDoctor?.profileImage || "/doctor.png"} className='w-22 h-22 rounded-full object-cover' alt="" />
+                                    <p className="text-lg font-semibold">{doctor?.name}, <span className='text-sm'>{doctor?.qualification}</span></p>
+                                    <p>{bookingData.selectedDoctor?.specialization}</p>
+                                </div>
                                 <p className='text-sm text-gray-600'>{doctor?.license_number}</p>
                             </div>
                             <p className="text-sm text-gray-600 mt-2">{doctor?.profile_bio}</p>

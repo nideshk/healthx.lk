@@ -1,6 +1,18 @@
 import { supabaseClient } from "@/lib/supabaseClient";
 import { NextResponse } from "next/server";
 
+
+function getAvatarUrl(
+  profiles: { avatar_url?: string } | { avatar_url?: string }[] | null
+): string | null {
+  if (!profiles) return null;
+  if (Array.isArray(profiles)) {
+    return profiles[0]?.avatar_url ?? null;
+  }
+  return profiles.avatar_url ?? null;
+}
+
+
 export async function GET(
   req: Request,
   context: { params: Promise<{ slug: string }> }
@@ -14,11 +26,24 @@ export async function GET(
         { status: 400 }
       );
     }
+
     const { data, error } = await supabaseClient
       .from("practitioners")
-      .select("*")
+      .select(`
+    id,
+    full_name,
+    profile_bio,
+    qualification,
+    license_number,
+    contact_email,
+    fees,
+    profiles!practitioners_profiles_fkey (
+      avatar_url
+    )
+  `)
       .contains("specialization", [slug])
       .order("created_at", { ascending: false });
+
 
     if (error) {
       console.error("❌ Supabase query error:", error.message);
@@ -64,10 +89,9 @@ export async function GET(
         full_name: p.full_name,
         profile_bio: p.profile_bio,
         qualification: p.qualification,
-        cliniko_practitioner_id: p.cliniko_practitioner_id,
         license_number: p.license_number,
         contact_email: p.contact_email,
-        profile_picture_url: p.profile_picture_url,
+        profile_picture_url: getAvatarUrl(p.profiles),
         fees: calculateAverageFee(p.fees),
       })),
     });

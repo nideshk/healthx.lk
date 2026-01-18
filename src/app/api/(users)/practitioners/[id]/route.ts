@@ -99,7 +99,7 @@ export async function GET(
     // ---------------------------
     let bankDetails: any[] | null = null;
 
-    if (["admin", "superadmin"].includes(user?.role)) {
+    if (["admin", "superadmin"].includes(user?.role as any)) {
       const { data: bank, error: bankError } = await supabaseAdmin
         .from("practitioner_bank_details")
         .select(`
