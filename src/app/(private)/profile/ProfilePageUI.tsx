@@ -7,72 +7,208 @@ import {
     ShieldCheck, Edit3, CheckCircle, Stethoscope,
     Fingerprint, Activity
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+
+/* -----------------------------
+   S3 Upload Helper
+----------------------------- */
+async function uploadAvatarToS3(file: File) {
+    const presignRes = await authFetch("/api/uploads/avatar-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType: file.type }),
+    });
+
+    if (!presignRes.ok) {
+        throw new Error("Failed to get upload URL");
+    }
+
+    const { uploadUrl, publicUrl } = await presignRes.json();
+
+    const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+    });
+
+    if (!uploadRes.ok) {
+        throw new Error("Image upload failed");
+    }
+
+    return publicUrl;
+}
 
 export default function AdaptiveProfileUI() {
+    const router = useRouter();
+    const { user } = useAuth();
+
     const [userData, setUserData] = useState<any>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState<any>({});
     const [loading, setLoading] = useState(true);
 
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+    /* -----------------------------
+       Load Profile
+    ----------------------------- */
     useEffect(() => {
         const load = async () => {
             try {
                 const res = await authFetch("/api/auth/me");
                 const json = await res.json();
                 const userInfo = json.user;
+
                 setUserData(userInfo);
                 setEditForm({
                     first_name: userInfo.profile.first_name,
                     last_name: userInfo.profile.last_name,
                     city: userInfo.profile.city,
-                    state: userInfo.profile.state.trim(),
+                    state: userInfo.profile.state?.trim() ?? "",
                     country: userInfo.profile.country,
                 });
-            } catch (e) {
-                console.error("Failed to fetch", e);
+            } catch {
+                toast.error("User not authenticated");
+                router.replace("/");
             } finally {
                 setLoading(false);
             }
         };
         load();
-    }, []);
+    }, [router]);
 
-    const handleSave = async () => {
-        setUserData({
-            ...userData,
-            profile: { ...userData.profile, ...editForm }
-        });
-        setIsEditing(false);
+    /* -----------------------------
+       Avatar Select
+    ----------------------------- */
+    const handleAvatarSelect = (file: File) => {
+        if (!file.type.startsWith("image/")) {
+            toast.error("Only image files allowed");
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error("Image must be under 2MB");
+            return;
+        }
+
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
     };
 
-    if (loading) return <div className="flex justify-center items-center h-screen text-slate-500 animate-pulse">Initializing Secure Session...</div>;
-    if (!userData) return <div className="text-center p-10">Profile not found.</div>;
+    /* -----------------------------
+       Save Profile
+    ----------------------------- */
+    const handleSave = async () => {
+        try {
+            let avatarUrl = userData.profile.avatar_url;
+
+            if (avatarFile) {
+                setUploadingAvatar(true);
+                avatarUrl = await uploadAvatarToS3(avatarFile);
+            }
+
+            const res = await authFetch("/api/auth/me", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    profile: {
+                        first_name: editForm.first_name,
+                        last_name: editForm.last_name,
+                        city: editForm.city,
+                        state: editForm.state,
+                        country: editForm.country,
+                        avatar_url: avatarUrl,
+                    },
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || "Update failed");
+            }
+
+            setUserData((prev: any) => ({
+                ...prev,
+                profile: {
+                    ...prev.profile,
+                    ...editForm,
+                    avatar_url: avatarUrl,
+                },
+            }));
+
+            toast.success("Profile updated");
+            setIsEditing(false);
+            setAvatarFile(null);
+            setAvatarPreview(null);
+        } catch (err: any) {
+            toast.error(err.message || "Failed to update profile");
+        } finally {
+            setUploadingAvatar(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-screen text-slate-500 animate-pulse">
+                Initializing Secure Session...
+            </div>
+        );
+    }
+
+    if (!userData) {
+        return <div className="text-center p-10">Profile not found.</div>;
+    }
 
     const { profile, user: auth, phone, patient_id, practitioner_id } = userData;
     const isPractitioner = profile.role === "practitioner";
-
-    // Theme logic based on role
     const themeColor = isPractitioner ? "indigo" : "blue";
     const roleIcon = isPractitioner ? <Stethoscope size={48} /> : <User size={48} />;
 
     return (
         <div className="min-h-screen bg-[#FBFBFE] pb-12 font-sans">
             {/* Top Branding Strip */}
-            <div className={`h-1.5 w-full bg-${themeColor}-600`}></div>
+            <div className={`h-1.5 w-full bg-${themeColor}-600`} />
 
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+            <div className="max-w-5xl mx-auto px-4 mt-8">
                 {/* Header Profile Card */}
                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="p-6 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
                         <div className="flex flex-col sm:flex-row items-center gap-8">
+                            {/* Avatar */}
                             <div className="relative">
-                                {profile.avatar_url ? (
-                                    <img src={profile.avatar_url} alt="Avatar" className={`w-28 h-28 rounded-3xl object-cover ring-4 ring-${themeColor}-50`} />
-                                ) : (
-                                    <div className={`w-28 h-28 bg-${themeColor}-50 rounded-3xl flex items-center justify-center text-${themeColor}-600`}>
-                                        {roleIcon}
-                                    </div>
-                                )}
+                                <label className="cursor-pointer group">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        disabled={!isEditing}
+                                        onChange={(e) => {
+                                            if (!isEditing) return;
+                                            if (e.target.files?.[0]) {
+                                                handleAvatarSelect(e.target.files[0]);
+                                            }
+                                        }}
+                                    />
+
+
+                                    {(avatarPreview || profile.avatar_url) ? (
+                                        <img
+                                            src={avatarPreview || profile.avatar_url}
+                                            className={`w-28 h-28 rounded-3xl object-cover ring-4 ring-${themeColor}-50 group-hover:opacity-80 transition`}
+                                        />
+                                    ) : (
+                                        <div className={`w-28 h-28 bg-${themeColor}-50 rounded-3xl flex items-center justify-center text-${themeColor}-600`}>
+                                            {roleIcon}
+                                        </div>
+                                    )}
+
+                                    {isEditing && <div className="absolute inset-0 rounded-3xl bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-bold text-white transition">
+                                        Change
+                                    </div>}
+                                </label>
+
                                 {profile.is_active && (
                                     <div className="absolute -bottom-2 -right-2 bg-emerald-500 border-4 border-white w-7 h-7 rounded-full flex items-center justify-center">
                                         <CheckCircle size={14} className="text-black" />
@@ -80,34 +216,37 @@ export default function AdaptiveProfileUI() {
                                 )}
                             </div>
 
+                            {/* Name */}
                             <div className="text-center sm:text-left">
-                                <div className="flex flex-wrap items-center gap-3 justify-center sm:justify-start">
-                                    <h1 className="text-3xl font-extrabold text-slate-900 leading-tight">
-                                        {profile.first_name} {profile.last_name}
-                                    </h1>
-                                    <span className={`px-4 py-1.5 bg-${themeColor}-100 text-${themeColor}-700 text-[11px] font-black rounded-full uppercase tracking-tighter`}>
-                                        {profile.role}
-                                    </span>
-                                </div>
-                                <p className="text-slate-400 flex items-center gap-1 justify-center sm:justify-start mt-2 font-medium">
+                                <h1 className="text-3xl font-extrabold">
+                                    {profile.first_name} {profile.last_name}
+                                </h1>
+                                <p className="text-slate-400 flex items-center gap-1 mt-2">
                                     <MapPin size={16} /> {profile.city}, {profile.country}
                                 </p>
                             </div>
                         </div>
 
                         <button
+                            disabled={uploadingAvatar}
                             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-                            className={`flex items-center gap-2 px-8 py-3 rounded-2xl font-bold transition-all duration-300 transform active:scale-95 ${isEditing
-                                ? "bg-emerald-600 text-black hover:bg-emerald-700 shadow-xl shadow-emerald-100"
-                                : `bg-white border-2 border-slate-100 text-slate-700 hover:border-${themeColor}-200 hover:bg-slate-50`
+                            className={`flex items-center gap-2 px-8 py-3 rounded-2xl font-bold ${isEditing
+                                ? "bg-emerald-600 text-white"
+                                : "bg-white border"
                                 }`}
                         >
-                            {isEditing ? <CheckCircle size={20} /> : <Edit3 size={20} />}
-                            {isEditing ? "Save Changes" : "Edit Profile"}
+                            {uploadingAvatar
+                                ? "Uploading..."
+                                : isEditing
+                                    ? "Save Changes"
+                                    : "Edit Profile"}
                         </button>
                     </div>
                 </div>
 
+                {/* ===== REST OF YOUR UI (UNCHANGED) ===== */}
+                {/* ID Card, Security Section, Personal Records, Role Insight */}
+                {/* This part stays exactly as you already had it */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
                     {/* Left Column: Role-Specific ID and MFA */}
                     <div className="lg:col-span-4 space-y-6">
