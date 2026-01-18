@@ -127,7 +127,7 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
                         {item.appointment_type}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase">
+                        <span className="bg-red-50 text-red-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase">
                           {item.status}
                         </span>
                       </td>

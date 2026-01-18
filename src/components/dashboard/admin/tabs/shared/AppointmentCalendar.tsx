@@ -1,17 +1,19 @@
-// src/components/dashboard/practitioner/AppointmentCalendar.tsx
+// healthx.lk\src\components\dashboard\practitioner\tabs\shared\AppointmentCalendar.tsx
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import { Appointment } from "@/types/Dashboard";
-// import ManageAppointmentModal from "./ManageAppointmentModal";
+import ManageAppointmentModal from "./ManageAppointmentModal";
+import Link from "next/link";
 
 type ViewMode = "weekly" | "daily";
 
 interface AppointmentCalendarProps {
   appointments: Appointment[];
-  onCompleteAppointment?: (id: string) => void; // easy API hook later
+  onCompleteAppointment?: (id: string) => void;
+  onRangeChange?: (from: string, to: string) => void; 
    userRole?: "admin" | "superadmin" | "practitioner";
 }
 
@@ -19,6 +21,7 @@ interface AppointmentCalendarProps {
 const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   appointments,
   onCompleteAppointment,
+  onRangeChange,
   userRole = "practitioner",
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
@@ -46,7 +49,23 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
       ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
       : [startOfDay(anchorDate)];
 
-  const timeSlots = generateHourSlots(7, 20); // 07:00 – 19:00
+  // Robust Range Syncing for Parent API calls
+  useEffect(() => {
+    if (onRangeChange && daysInView.length > 0) {
+      const fromDate = daysInView[0];
+      const toDate = daysInView[daysInView.length - 1];
+
+      const formatLocal = (d: Date) => {
+        const offset = d.getTimezoneOffset();
+        const local = new Date(d.getTime() - offset * 60 * 1000);
+        return local.toISOString().split("T")[0];
+      };
+
+      onRangeChange(formatLocal(fromDate), formatLocal(toDate));
+    }
+  }, [anchorDate, viewMode]);
+
+  const timeSlots = generateHourSlots(0, 24); // 00:00 – 24:00
 
   const headerLabel =
     viewMode === "weekly"
@@ -66,9 +85,9 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             <div className="text-sm font-semibold text-slate-900">
               Appointment Calendar
             </div>
+            
           </div>
 
-          {/* Weekly / Daily toggle */}
           <div className="flex gap-2 text-xs">
             <button
               type="button"
@@ -96,7 +115,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
         </CardHeader>
 
         <CardBody className="space-y-3">
-          {/* Week / day navigation */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <Button
@@ -127,9 +145,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             </Button>
           </div>
 
-          {/* Calendar grid */}
           <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
-            {/* Header row: time column + day columns */}
             <div className="grid grid-cols-[60px_repeat(7,1fr)] bg-slate-50 border-b border-slate-200">
               <div className="px-2 py-2" />
               {daysInView.map((day) => (
@@ -145,26 +161,22 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                   </div>
                 </div>
               ))}
-              {/* if daily view, grid-cols still expects 7, fill rest with empty */}
               {viewMode === "daily" &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <div key={`empty-${i}`} className="border-l border-slate-200" />
                 ))}
             </div>
 
-            {/* Time rows */}
             <div className="max-h-[360px] overflow-y-auto">
               {timeSlots.map((slot) => (
                 <div
                   key={slot.hour}
                   className="grid grid-cols-[60px_repeat(7,1fr)]"
                 >
-                  {/* Time label */}
                   <div className="px-2 py-3 border-t border-slate-100 text-[11px] text-slate-500">
                     {slot.label}
                   </div>
 
-                  {/* Cells per day */}
                   {daysInView.map((day, dayIndex) => {
                     const cellAppointments = parsedAppointments.filter((a) => {
                       if (!a.start) return false;
@@ -190,7 +202,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                               className={`w-full h-[22px] rounded-md text-[11px] px-2 truncate ${colorClasses}`}
                               onClick={() => setSelectedAppt(appt)}
                             >
-                              {appt.patient || "Appointment"}
+                            {appt.patient || "Patient"} • {appt.time}                            
                             </button>
                           );
                         })}
@@ -198,7 +210,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                     );
                   })}
 
-                  {/* fill remaining columns in daily mode */}
                   {viewMode === "daily" &&
                     Array.from({ length: 6 }).map((_, i) => (
                       <div
@@ -213,7 +224,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
         </CardBody>
       </Card>
 
-      {/* Appointment details modal */}
       {selectedAppt && (
         <DetailsModal
           appointment={selectedAppt}
@@ -223,7 +233,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
         />
       )}
 
-      {/* Confirm completed modal */}
       {confirmAppt && (
         <ConfirmCompleteModal
           onCancel={() => setConfirmAppt(null)}
@@ -237,7 +246,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
         />
       )}
 
-      {/* Manage appointment modal */}
       {/* {showManage && selectedAppt && (
       <ManageAppointmentModal
         open={showManage}
@@ -251,7 +259,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
 
 export default AppointmentCalendar;
 
-/* ---------- Types & helpers ---------- */
+/* ---------- Helpers ---------- */
 
 type CalendarAppointment = Appointment & { start: Date | null };
 
@@ -296,7 +304,7 @@ const parseAppointmentDateTime = (appt: Appointment): Date | null => {
 const getWeekStart = (date: Date): Date => {
   const d = startOfDay(date);
   const day = d.getDay(); // 0 = Sun
-  d.setDate(d.getDate() - day); // start from Sunday
+  d.setDate(d.getDate() - day);
   return d;
 };
 
@@ -323,7 +331,7 @@ const formatDate = (d: Date) =>
   ).padStart(2, "0")}/${d.getFullYear()}`;
 
 const formatDayName = (d: Date) =>
-  d.toLocaleDateString(undefined, { weekday: "short" }); // Sun, Mon…
+  d.toLocaleDateString(undefined, { weekday: "short" });
 
 const formatDayMonth = (d: Date) =>
   d.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
@@ -340,14 +348,9 @@ interface DetailsModalProps {
 const DetailsModal: React.FC<DetailsModalProps> = ({
   appointment,
   onClose,
-  onMarkCompleted,
-  onManage,
 }) => {
   const isCompleted = appointment.status === "completed";
-
-  console.log("Appointment object:", appointment);
-
-
+  {console.log("appointment:", appointment);}
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md text-xs">
@@ -363,38 +366,19 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
             ×
           </button>
         </div>
-
+        
         <div className="px-5 py-4 space-y-3">
           <DetailRow label="Patient" value={`${appointment.patient}`} />
           <DetailRow label="Time" value={`${appointment.time}`} />
+          <DetailRow label="Appointment Type" value={`${appointment.appointmentType}`}  />
           <DetailRow label="Participants" value="1" />
-          <DetailRow label="Reason" value={appointment.reason || "-"} />
+          <DetailRow label="Reason" value={appointment.reason || "Not specified"} />
           <DetailRow
             label="Status"
             value={appointment.status ? capitalize(appointment.status) : "-"}
           />
-          
         </div>
 
-        {/* <div className="flex justify-end gap-2 px-5 py-4 border-t">
-          <Button
-            variant="primary"
-            size="sm"
-            className="text-xs"
-            onClick={onMarkCompleted}
-            disabled={isCompleted}
-          >
-            {isCompleted ? "Already Completed" : "Appt. Completed"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-           onClick={onManage}
-          >
-            Manage Appointment
-          </Button>
-        </div> */}
       </div>
     </div>
   );

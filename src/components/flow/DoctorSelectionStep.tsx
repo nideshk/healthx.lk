@@ -1,4 +1,5 @@
 'use client';
+
 import React, {
   useState,
   useEffect,
@@ -7,200 +8,207 @@ import React, {
 } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Star, Stethoscope, ArrowLeft, Mail } from 'lucide-react';
+import { Star, ArrowLeft, Mail, BadgeCheck, GraduationCap, ChevronRight, Loader2 } from 'lucide-react';
 import { AppointmentFormInputs, Doctor } from '@/types/FormType';
+import Loader from '@/components/atom/Loader/Loader';
 
 const DoctorSelectionStep = forwardRef(
-  (
-    {
-      nextStep,
-      prevStep,
-      updateData,
-      bookingData,
-    }: {
-      nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
-      prevStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
-      updateData: (data: Partial<AppointmentFormInputs>) => void;
-      bookingData: AppointmentFormInputs;
-    },
-    ref
-  ) => {
+  ({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
     const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [doctors, setDoctors] = useState<Doctor[]>([]);
-    const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(
-      bookingData.selectedDoctor || null
+    const [selectedDoctorId, setSelectedDoctorId] = useState<string | number | null>(
+      bookingData.selectedDoctor?.id || null
     );
 
-    // ✅ Expose validateStep() to parent flow
+    // Expose validation to the parent multi-step component
     useImperativeHandle(ref, () => ({
       validateStep: () => {
-        if (!selectedDoctor) {
-          toast.error('Please select a doctor before continuing.');
+        if (!selectedDoctorId) {
+          toast.error('Please select a healthcare professional.');
           return false;
         }
         return true;
       },
     }));
 
-    // ✅ Fetch doctors based on selected service
     useEffect(() => {
-  if (!bookingData?.selectedService?.slug) return;
-  const fetchDoctors = async () => {
-    setLoading(true);
-    try {
-      
-      const res = await axios.get(`/api/specialisation/${bookingData.selectedService.slug}`);
-      console.log("fetching doctors for", bookingData);
-      console.log("data from api", res.data);
-      console.log("practitioners:", res.data.practitioners);
-      const mapped = res.data.practitioners.map((p: any) => ({
-        id: p.id,
-        name: p.full_name,
-        license_number: p.license_number,
-        email: p.contact_email,
-        qualification: p.qualification,
-        profileImage: p.profile_picture_url || '/images/default-doctor.png',
-        fee: 950 + p.price,
-        currency: 'LKR',
-        rating: {
-          advice: 4.6,
-          punctuality: 4.7,
-          overall: 4.8,
-        },
-      }));
-      setDoctors(mapped);
-    } catch (err) {
-      console.error('❌ Error fetching doctors:', err);
-      toast.error('Failed to fetch doctors');
-    } finally {
-      setLoading(false);
-    }
-  };
+      // Safety check: if no service is selected, we can't fetch doctors
+      if (!bookingData?.selectedService?.slug) return;
 
-  fetchDoctors();
-}, [bookingData.selectedService?.slug]);
+      const fetchDoctors = async () => {
+        setLoading(true);
+        try {
+          const res = await axios.get(`/api/specialisation/${bookingData.selectedService.slug}`);
+          const mapped = res.data.practitioners.map((p: any) => ({
+            id: p.id,
+            name: p.full_name,
+            license_number: p.license_number,
+            email: p.contact_email,
+            qualification: p.qualification,
+            profileImage: p.profile_picture_url || '/images/default-doctor.png',
+            fee: 950 + (p.fees || 0), // Fallback for price
+            currency: 'LKR',
+            rating: { overall: 4.8 },
+          }));
+          setDoctors(mapped);
+        } catch (err) {
+          toast.error('Unable to retrieve practitioner list.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchDoctors();
+    }, [bookingData.selectedService?.slug]);
 
+    // FIX: Optimized Selection Logic
+    const handleSelectDoctor = async (doctor: Doctor) => {
+      if (isSaving) return;
 
-    const handleSelectDoctor = (doctor: Doctor) => {
-      setSelectedDoctor(doctor);
+      setIsSaving(true);
+      setSelectedDoctorId(doctor.id);
+
+      // 1. Update the central store
       updateData({ selectedDoctor: doctor });
+
+      // 2. Short delay for visual feedback of the selection
+      setTimeout(async () => {
+        try {
+          // 3. Pass the data explicitly to override any stale state in the parent
+          await nextStep({
+            override: { selectedDoctor: doctor }
+          });
+        } catch (err) {
+          console.error("Navigation error:", err);
+          setIsSaving(false);
+        }
+      }, 300);
     };
 
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 font-sans">
-        <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="py-6 min-h-[60vh]">
+        <div className="max-w-5xl mx-auto px-4">
+
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <button
-              onClick={() => prevStep()}
-              className="flex items-center text-gray-600 hover:text-gray-900 transition"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back
-            </button>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">
-              Choose Your Practitioner
-            </h1>
-            <div />
+          <div className="mb-8 border-b border-slate-100 pb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <button
+                type="button"
+                onClick={() => prevStep()}
+                className="flex items-center gap-1.5 text-slate-400 hover:text-teal-600 font-bold text-xs mb-3 transition-colors uppercase tracking-wider group"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
+                Back to specialisation
+              </button>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+                Choose your Doctor
+              </h2>
+              <p className="text-sm text-slate-500 font-medium mt-1">
+                Available specialists for <span className="text-teal-600 font-bold">{bookingData.selectedService?.name}</span>
+              </p>
+            </div>
+
+            <div className="hidden md:block">
+              <div className="flex -space-x-2">
+                {doctors.slice(0, 3).map((d, i) => (
+                  <img key={i} src={d.profileImage} className="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" alt="" />
+                ))}
+                {doctors.length > 3 && (
+                  <div className="w-8 h-8 rounded-full bg-teal-50 border-2 border-white flex items-center justify-center text-[10px] font-bold text-teal-600 shadow-sm">
+                    {doctors.length}+
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Description */}
-          <p className="text-gray-600 mb-8 text-center max-w-2xl mx-auto">
-            Select a healthcare professional for{' '}
-            <span className="font-semibold text-blue-600">
-              {bookingData.selectedService.slug || 'this consultation'}
-            </span>
-            . Review their experience, qualifications, and fees before booking.
-          </p>
-
-          {/* Loading State */}
           {loading ? (
-            <div className="flex justify-center py-20">
-              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600"></div>
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Loader size="md" />
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Finding best specialists...</p>
             </div>
           ) : doctors.length === 0 ? (
-            <div className="text-center text-gray-500 py-10">
-              No practitioners available for this specialization.
+            <div className="text-center py-20">
+              <p className="text-slate-500 font-bold">No doctors available for this service yet.</p>
+              <button onClick={() => prevStep()} className="mt-4 text-teal-600 underline font-bold">Try another service</button>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {doctors.map((doctor: any) => {
-                const isSelected = selectedDoctor?.id === doctor.id;
+                const isSelected = selectedDoctorId === doctor.id;
 
                 return (
                   <div
-                    key={doctor.id+""+doctor.email}
-                    className={`rounded-2xl shadow-sm border transition-transform duration-200 cursor-pointer ${
-                      isSelected
-                        ? 'border-blue-600 ring-2 ring-blue-300 scale-[1.02]'
-                        : 'border-gray-100 hover:shadow-xl hover:scale-[1.02]'
-                    }`}
+                    key={doctor.id}
                     onClick={() => handleSelectDoctor(doctor)}
+                    className={`relative flex flex-col rounded-[2rem] border-2 transition-all duration-500 cursor-pointer overflow-hidden group ${isSelected
+                      ? 'bg-teal-50 border-teal-500 shadow-xl shadow-teal-200/50 scale-[1.02]'
+                      : 'bg-white border-slate-100 hover:border-teal-200 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1'
+                      }`}
                   >
-                    {/* Header */}
-                    <div className="p-4 flex items-center gap-3 border-b border-gray-100">
-                      <img
-                        src={doctor.profileImage}
-                        alt={doctor.name}
-                        className="w-12 h-12 rounded-full object-cover border border-gray-200"
-                      />
-                      <div>
-                        <h2 className="font-semibold text-gray-800">
-                          {doctor.name}
-                        </h2>
-                        <p className="text-xs text-gray-500">
-                          {doctor.qualification || 'General Practitioner'}
-                        </p>
-                        <p className="text-xs text-green-600 font-medium mt-0.5">
-                          Verified Practitioner
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Body */}
-                    <div className="p-4 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Consultation Fee</span>
-                        <span className="font-semibold text-gray-800">
-                          {doctor.currency} {doctor.fee}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Email</span>
-                        <span className="text-blue-600 flex items-center gap-1">
-                          <Mail className="w-3 h-3" /> {doctor.email || '—'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center border-t pt-2 mt-2">
-                        <span className="text-gray-500">Overall Rating</span>
-                        <div className="flex items-center space-x-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-3 h-3 ${
-                                i < Math.round(doctor.rating.overall)
-                                  ? 'text-yellow-400 fill-yellow-400'
-                                  : 'text-gray-300'
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="relative">
+                          <img
+                            src={doctor.profileImage}
+                            alt={doctor.name}
+                            className={`w-20 h-20 rounded-2xl object-cover border-2 transition-all ${isSelected ? 'border-teal-300 shadow-md' : 'border-slate-50'
                               }`}
-                            />
-                          ))}
-                          <span className="ml-1 text-xs font-semibold text-gray-700">
-                            {doctor.rating.overall.toFixed(1)}
-                          </span>
+                          />
+                          <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-md">
+                            <div className="bg-teal-500 rounded-full p-1">
+                              <BadgeCheck className="w-4 h-4 text-white" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1.5 rounded-xl border border-amber-100 shadow-sm">
+                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                          <span className="text-xs font-black text-amber-700">{doctor.rating.overall}</span>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Footer */}
-                    <div className="p-4 border-t border-gray-100">
-                      <button
-                        className={`w-full py-2 rounded-lg font-semibold text-sm transition ${
-                          isSelected
-                            ? 'bg-white text-blue-700 border border-blue-600 hover:bg-blue-50'
-                            : 'bg-blue-600 hover:bg-blue-700 text-white'
-                        }`}
-                      >
-                        {isSelected ? 'Selected ✓' : 'Select Doctor'}
-                      </button>
+                      <div className="mb-5">
+                        <h3 className={`text-xl font-black transition-colors ${isSelected ? 'text-teal-900' : 'text-slate-900'}`}>
+                          Dr. {doctor.name}
+                        </h3>
+                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mt-1.5">Verified Specialist</p>
+                      </div>
+
+                      <div className="space-y-3 mb-8">
+                        <div className="flex items-center gap-3 text-slate-500">
+                          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-white transition-colors">
+                            <GraduationCap className="w-4 h-4 text-slate-400" />
+                          </div>
+                          <span className="text-xs font-bold truncate">{doctor.qualification}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-slate-500">
+                          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-white transition-colors">
+                            <Mail className="w-4 h-4 text-slate-400" />
+                          </div>
+                          <span className="text-xs font-bold truncate">{doctor?.email}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-5 border-t border-dashed border-slate-200 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Consultation Fee</p>
+                          <p className={`text-xl font-black ${isSelected ? 'text-teal-700' : 'text-slate-900'}`}>
+                            {doctor.currency} {doctor.fee.toLocaleString()}
+                          </p>
+                        </div>
+
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg ${isSelected
+                          ? 'bg-teal-500 text-white shadow-teal-200'
+                          : 'bg-slate-900 text-white group-hover:bg-teal-600 shadow-slate-200'
+                          }`}>
+                          {isSaving && isSelected ? (
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                          ) : (
+                            <ChevronRight className={`w-6 h-6 transition-transform ${isSelected ? 'translate-x-1' : ''}`} />
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
