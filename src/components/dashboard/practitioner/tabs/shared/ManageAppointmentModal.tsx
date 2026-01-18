@@ -31,7 +31,7 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
   if (!open) return null;
 
   /* -------------------------------------------------------------------------- */
-  /* API Handlers                                */
+  /* API Handlers                                                               */
   /* -------------------------------------------------------------------------- */
 
   const handleCancelAppointment = async () => {
@@ -64,6 +64,72 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
       }
     } catch (error: any) {
       toast.error(error.message || "Unable to cancel appointment");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendDetails = async () => {
+    setIsSubmitting(true);
+    try {
+      // Dynamic content construction based on your requirements
+      const patientName = appointment.patient || "Patient";
+      const apptType = appointment.appointmentType || "Standard Consultation";
+      const apptDate = appointment.date || "N/A";
+      const apptTime = appointment.time || "N/A";
+      const roomKey = appointment.room_key || "";
+      const meetingUrl = `${window.location.origin}/appointment/meeting?room=${roomKey}`;
+
+      const messageContent = `
+Hello ${patientName},
+
+Here are your appointment details:
+
+Appointment Type: ${apptType}
+Date: ${apptDate}
+Time: ${apptTime}
+
+Join your appointment using the link below:
+${meetingUrl}
+
+Regards,
+Clinico Team
+      `.trim();
+
+      const response = await authFetch("/api/notify-send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: appointment.patient_id || appointment.userId,
+          role: "patient",
+          eventType: "appointment_resend",
+          title: "Your Appointment Details",
+          message: messageContent,
+          channels: ["email", "sms"],
+          payload: {
+            email: appointment.patient_email || "",
+            phone: appointment.patient_phone || "",
+            appointment_id: appointment.id,
+            room_key: roomKey,
+            meeting_url: meetingUrl,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Details resent successfully");
+        // Reset to first page and close modal
+        setScreen("menu");
+        onClose();
+      } else {
+        throw new Error(data.message || "Failed to resend details");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Unable to resend appointment details");
     } finally {
       setIsSubmitting(false);
     }
@@ -184,10 +250,19 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
         </p>
 
         <div className="flex justify-between mt-4">
-          <Button variant="outline" onClick={() => setScreen("menu")}>
+          <Button 
+            variant="outline" 
+            onClick={() => setScreen("menu")}
+            disabled={isSubmitting}
+          >
             Back
           </Button>
-          <Button>Resend Details</Button>
+          <Button 
+            onClick={handleResendDetails}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Resending..." : "Resend Details"}
+          </Button>
         </div>
       </ModalWrapper>
     );

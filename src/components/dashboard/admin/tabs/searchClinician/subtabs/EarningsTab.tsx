@@ -38,7 +38,7 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
     try {
       // API 2: Analytics Transactions endpoint with practitioner filter
       // Note: Assuming the backend filters by practitioner_id when passed as a query param
-      const url = `http://localhost:3000/api/analytics/transactions?from=${startDate}&to=${endDate}&practitionerId=${clinicianId}`;
+      const url = `/api/analytics/transactions?from=${startDate}&to=${endDate}&practitionerId=${clinicianId}`;
       
       const res = await authFetch(url, {
         credentials: "include",

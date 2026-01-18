@@ -31,7 +31,7 @@ export type PatientDetailTab =
   | "settings"
   | "audit";
 
-  export type AppointmentCategory = "upcoming" | "previous";
+export type AppointmentCategory = "upcoming" | "ongoing" | "previous";
 export type AppointmentStatus = "confirmed" | "completed" | "cancelled";
 
 export type AppointmentDocument = {
@@ -43,10 +43,10 @@ export type AppointmentDocument = {
 export type Appointment = {
   id: string;
   category: AppointmentCategory; // "upcoming" or "previous"
-  date: string;                  // "15/09/2025"
-  time: string;                  // "10:00 AM"
+  date: string; // "15/09/2025"
+  time: string; // "10:00 AM"
   doctorName: string;
-  reason: string;                // "Annual Checkup", etc.
+  reason: string; // "Annual Checkup", etc.
   status: AppointmentStatus;
   appointmentType?: string;
   telehealthConsent?: boolean;
@@ -92,8 +92,8 @@ export type SettingsTabId = "security" | "account" | "availability" | "pricing";
 
 export interface AdminAppointment {
   id: string;
-  date: string;       // YYYY-MM-DD
-  time: string;       // HH:mm
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
   doctorName: string;
   category: "upcoming" | "previous";
 }
