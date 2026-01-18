@@ -94,5 +94,18 @@
     "live": "Happening now",
     "startsIn": "Starts in {time}",
     "join": "Join Appointment"
+  },
+  "allAppointments": {
+    "title": "Your Appointments",
+    "subtitle": "View and manage your entire care history with MedX.",
+    "upcoming": "Upcoming Sessions",
+    "past": "Past Visits",
+    "cancelled": "Cancelled",
+    "emptyUpcoming": "No upcoming appointments scheduled.",
+    "emptyPast": "Your completed appointments will appear here.",
+    "emptyCancelled": "No cancelled appointments.",
+    "defaultDoctor": "Medical Professional",
+    "reason": "Reason",
+    "cancelledByUser": "Cancelled by user"
   }
 }

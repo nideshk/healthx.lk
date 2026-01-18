@@ -2,11 +2,29 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Calendar, Clock, Stethoscope, AlertCircle, ChevronRight, History, CalendarCheck, Ban } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Stethoscope,
+  AlertCircle,
+  ChevronRight,
+  History,
+  CalendarCheck,
+  Ban
+} from "lucide-react";
 import Loader from "@/components/atom/Loader/Loader";
 import { authFetch } from "@/lib/authFetch";
+import { useTranslations, useLocale } from "next-intl";
+import {
+  formatDate,
+  formatTime,
+  formatNumber
+} from "@/utils/formatters";
 
 export default function AllAppointmentsPage() {
+  const t = useTranslations("allAppointments");
+  const locale = useLocale() as "en" | "si";
+
   const [loading, setLoading] = useState(true);
   const [upcoming, setUpcoming] = useState([]);
   const [past, setPast] = useState([]);
@@ -40,12 +58,10 @@ export default function AllAppointmentsPage() {
     }
 
     load();
-
     return () => {
       mounted = false;
     };
   }, []);
-
 
   if (loading)
     return (
@@ -60,32 +76,37 @@ export default function AllAppointmentsPage() {
         {/* Header */}
         <div className="mb-12">
           <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">
-            Your Appointments
+            {t("title")}
           </h1>
-          <p className="text-slate-500 font-medium">View and manage your entire care history with MedX.</p>
+          <p className="text-slate-500 font-medium">
+            {t("subtitle")}
+          </p>
         </div>
 
         <div className="space-y-16">
           <Section
-            title="Upcoming Sessions"
+            title={t("upcoming")}
             items={upcoming}
             icon={<CalendarCheck className="w-5 h-5 text-blue-600" />}
-            emptyText="No upcoming appointments scheduled."
+            emptyText={t("emptyUpcoming")}
+            locale={locale}
           />
 
           <Section
-            title="Past Visits"
+            title={t("past")}
             items={past}
             icon={<History className="w-5 h-5 text-slate-500" />}
-            emptyText="Your completed appointments will appear here."
+            emptyText={t("emptyPast")}
+            locale={locale}
           />
 
           <Section
-            title="Cancelled"
+            title={t("cancelled")}
             items={cancelled}
             icon={<Ban className="w-5 h-5 text-red-500" />}
             cancelled
-            emptyText="No cancelled appointments."
+            emptyText={t("emptyCancelled")}
+            locale={locale}
           />
         </div>
       </div>
@@ -96,7 +117,14 @@ export default function AllAppointmentsPage() {
 /* ------------------------------------------------------ */
 /* SECTION */
 /* ------------------------------------------------------ */
-function Section({ title, items, emptyText, icon, cancelled = false }: any) {
+function Section({
+  title,
+  items,
+  emptyText,
+  icon,
+  cancelled = false,
+  locale
+}: any) {
   return (
     <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center gap-3 mb-6">
@@ -105,7 +133,7 @@ function Section({ title, items, emptyText, icon, cancelled = false }: any) {
         </div>
         <h2 className="text-xl font-bold text-slate-800">{title}</h2>
         <span className="ml-auto px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs font-black">
-          {items.length}
+          {formatNumber(items.length, locale)}
         </span>
       </div>
 
@@ -116,7 +144,12 @@ function Section({ title, items, emptyText, icon, cancelled = false }: any) {
       ) : (
         <div className="grid gap-4">
           {items.map((appt: any) => (
-            <AppointmentCard key={appt.id} appt={appt} cancelled={cancelled} />
+            <AppointmentCard
+              key={appt.id}
+              appt={appt}
+              cancelled={cancelled}
+              locale={locale}
+            />
           ))}
         </div>
       )}
@@ -127,54 +160,66 @@ function Section({ title, items, emptyText, icon, cancelled = false }: any) {
 /* ------------------------------------------------------ */
 /* APPOINTMENT CARD */
 /* ------------------------------------------------------ */
-function AppointmentCard({ appt, cancelled }: any) {
+function AppointmentCard({ appt, cancelled, locale }: any) {
+  const t = useTranslations("allAppointments");
   const start = new Date(appt.starts_at);
-  const time = start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   return (
     <Link
       href={`/dashboard/appointment/${appt.id}`}
       className={`
         group relative block p-5 rounded-2xl border transition-all duration-300
-        ${cancelled
-          ? "border-red-100 bg-red-50/30 hover:bg-red-50 hover:border-red-200"
-          : "border-slate-100 bg-white hover:shadow-xl hover:shadow-slate-200/50 hover:border-blue-200"
+        ${
+          cancelled
+            ? "border-red-100 bg-red-50/30 hover:bg-red-50 hover:border-red-200"
+            : "border-slate-100 bg-white hover:shadow-xl hover:shadow-slate-200/50 hover:border-blue-200"
         }
       `}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-5">
-          {/* Practitioner Avatar Logic */}
-          <div className={`
-            w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105
-            ${cancelled ? "bg-red-100 border-red-200 text-red-600" : "bg-blue-50 border-blue-100 text-blue-600"}
-          `}>
+          <div
+            className={`
+              w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105
+              ${
+                cancelled
+                  ? "bg-red-100 border-red-200 text-red-600"
+                  : "bg-blue-50 border-blue-100 text-blue-600"
+              }
+            `}
+          >
             <Stethoscope className="w-7 h-7" />
           </div>
 
           <div>
             <h4 className="font-bold text-slate-900 text-lg group-hover:text-blue-600 transition-colors">
-              Dr. {appt.practitioner?.full_name || "Medical Professional"}
+              Dr. {appt.practitioner?.full_name || t("defaultDoctor")}
             </h4>
 
             <div className="flex flex-wrap items-center gap-y-1 gap-x-4 mt-1">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">
                 {appt.appointment_type?.name}
               </span>
+
               <div className="flex items-center gap-1.5 text-slate-400">
                 <Calendar className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium">{start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                <span className="text-xs font-medium">
+                  {formatDate(start, locale)}
+                </span>
               </div>
+
               <div className="flex items-center gap-1.5 text-slate-400">
                 <Clock className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium">{time}</span>
+                <span className="text-xs font-medium">
+                  {formatTime(start, locale)}
+                </span>
               </div>
             </div>
 
             {cancelled && (
               <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 bg-red-100/50 rounded-lg text-[10px] font-black uppercase tracking-wider text-red-600">
                 <AlertCircle className="w-3 h-3" />
-                Reason: {appt.cancellation_reason || "Cancelled by user"}
+                {t("reason")}: {appt.cancellation_reason || t("cancelledByUser")}
               </div>
             )}
           </div>

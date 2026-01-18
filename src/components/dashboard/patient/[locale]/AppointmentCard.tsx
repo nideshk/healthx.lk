@@ -11,7 +11,11 @@ import {
   User,
   AlertCircle,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import {
+  formatDate,
+  formatTime
+} from "@/utils/formatters";
 
 export function AppointmentCard({
   appt,
@@ -21,6 +25,7 @@ export function AppointmentCard({
   isPending,
 }: any) {
   const t = useTranslations("appointmentCard");
+  const locale = useLocale() as "en" | "si";
   const router = useRouter();
   const start = new Date(appt.starts_at);
 
@@ -127,19 +132,14 @@ export function AppointmentCard({
         <div className="flex items-center gap-2 text-slate-600">
           <Calendar className="w-3.5 h-3.5 text-slate-400" />
           <span className="text-[11px] font-semibold">
-            {start.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
+            {formatDate(start, locale)}
           </span>
         </div>
+
         <div className="flex items-center gap-2 text-slate-600">
           <Clock className="w-3.5 h-3.5 text-slate-400" />
           <span className="text-[11px] font-semibold">
-            {start.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {formatTime(start, locale)}
           </span>
         </div>
       </div>
