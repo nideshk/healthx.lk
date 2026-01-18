@@ -83,7 +83,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
   >([]);
 
   const [uploadingDocs, setUploadingDocs] = useState(false);
-
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState("");
   /* ---------------- RHF ---------------- */
 
   const {
@@ -283,7 +283,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
         }
 
         // 2. Put file to S3
-        const uploadRes = await authFetch(data.uploadUrl, {
+        const uploadRes = await fetch(data.uploadUrl, {
           method: "PUT",
           headers: { "Content-Type": item.file.type },
           body: item.file,
@@ -533,7 +533,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                   Specializations
                 </label>
                 <div
-                  className="w-full px-3 py-2 border rounded-lg bg-white flex items-center justify-between cursor-pointer"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white flex items-center justify-between cursor-pointer"
                   onClick={() => setIsSpecOpen(!isSpecOpen)}
                 >
                   <div className="flex flex-wrap gap-1">
@@ -635,16 +635,27 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
             <div className="space-y-4 pt-4 border-t">
               <h3 className="font-semibold text-gray-700">Consultation Fees</h3>
               <select
-                className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
-                onChange={handleAppointmentSelect}
-              >
-                <option value="">Add appointment type...</option>
-                {appointmentTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
+                  value={selectedAppointmentId}
+                  onChange={(e) => {
+                    handleAppointmentSelect(e);
+                    setSelectedAppointmentId("");
+                  }}
+                  className={`w-full px-3 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-teal-500
+                    ${selectedAppointmentId === ""
+                      ? "text-[rgb(138,138,138)]"
+                      : "text-gray-900"
+                    }
+                  `}
+                >
+                  <option value="" disabled>
+                    Choose appointment type
                   </option>
-                ))}
-              </select>
+                  {appointmentTypes.map((type) => (
+                    <option key={type.id} value={type.id} className="text-gray-900">
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
 
               {selectedAppointments.length > 0 && (
                 <div className="border rounded-lg overflow-hidden">

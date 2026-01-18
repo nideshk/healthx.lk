@@ -6,7 +6,6 @@ import { Trash2, ChevronDown, X } from "lucide-react";
 import Input from "@/components/atom/Input/Input";
 import Textarea from "@/components/atom/Textarea/Textarea";
 
-
 type AppointmentType = {
   id: string;
   name: string;
@@ -72,6 +71,7 @@ export default function PractitionerRegisterPage() {
   >([]);
 
   const [uploadingDocs, setUploadingDocs] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState("");
 
   /* ---------------- RHF ---------------- */
 
@@ -634,14 +634,23 @@ export default function PractitionerRegisterPage() {
               {/* Dropdown to select appointment type */}
               <div className="mt-4">
                 <select
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none"
-                  onChange={handleAppointmentSelect}
+                  value={selectedAppointmentId}
+                  onChange={(e) => {
+                    handleAppointmentSelect(e);
+                    setSelectedAppointmentId("");
+                  }}
+                  className={`w-full px-3 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-teal-500
+                    ${selectedAppointmentId === ""
+                      ? "text-[rgb(138,138,138)]"
+                      : "text-gray-900"
+                    }
+                  `}
                 >
                   <option value="" disabled>
                     Choose appointment type
                   </option>
                   {appointmentTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
+                    <option key={type.id} value={type.id} className="text-gray-900">
                       {type.name}
                     </option>
                   ))}
