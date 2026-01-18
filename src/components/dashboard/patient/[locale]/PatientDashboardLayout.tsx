@@ -6,7 +6,6 @@ import {
   RotateCcw,
   Files,
   Plus,
-  LayoutDashboard,
   ShieldCheck,
   MessageCircleCodeIcon,
 } from "lucide-react";
@@ -18,13 +17,16 @@ import FileManagerTab from "./tabs/FileManagerTab";
 import FollowUpRequest from "./FollowUpRequest";
 import { ReviewModal } from "@/components/atom/Modal/ReviewModal";
 import { authFetch } from "@/lib/authFetch";
-
+import { useTranslations } from "next-intl";
+import LanguageToggle from "@/components/common/LanguageToggle";
 
 export default function PatientDashboardLayout({
   activeTab,
 }: {
   activeTab: PatientTab;
 }) {
+  const t = useTranslations("patientDashboard");
+
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [pendingReview, setPendingReview] = useState<any>(null);
 
@@ -38,10 +40,7 @@ export default function PatientDashboardLayout({
       try {
         const res = await authFetch("/api/reviews/pending");
 
-        if (!res.ok) {
-          // 401 / 404 / 204 are all acceptable "no prompt" cases
-          return;
-        }
+        if (!res.ok) return;
 
         const data = await res.json();
 
@@ -50,10 +49,7 @@ export default function PatientDashboardLayout({
         setPendingReview(data.appointment);
         setShowReviewModal(true);
 
-        localStorage.setItem(
-          "lastReviewPrompt",
-          new Date().toISOString()
-        );
+        localStorage.setItem("lastReviewPrompt", new Date().toISOString());
       } catch (err) {
         console.error("Failed to fetch pending review:", err);
       }
@@ -70,38 +66,38 @@ export default function PatientDashboardLayout({
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-12 gap-8">
-
-          {/* ---------------- SIDEBAR (4 cols) ---------------- */}
+          {/* ---------------- SIDEBAR ---------------- */}
           <aside className="lg:col-span-3 space-y-6">
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm sticky top-8">
               <div className="mb-8">
                 <h2 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 px-4">
-                  Menu
+                  {t("menu")}
                 </h2>
+
                 <nav className="space-y-1">
                   <SidebarLink
                     href="/dashboard?tab=appointment"
                     active={activeTab === "appointment"}
                     icon={<Calendar />}
-                    label="Appointments"
+                    label={t("appointments")}
                   />
                   <SidebarLink
                     href="/dashboard?tab=reschedule"
                     active={activeTab === "reschedule"}
                     icon={<RotateCcw />}
-                    label="Reschedule"
+                    label={t("reschedule")}
                   />
                   <SidebarLink
                     href="/dashboard?tab=file-manager"
                     active={activeTab === "file-manager"}
                     icon={<Files />}
-                    label="Medical Records"
+                    label={t("medicalRecords")}
                   />
                   <SidebarLink
                     href="/dashboard?tab=follow-up"
                     active={activeTab === "follow-up"}
                     icon={<MessageCircleCodeIcon />}
-                    label="Follow-Ups"
+                    label={t("followUps")}
                   />
                 </nav>
               </div>
@@ -112,7 +108,7 @@ export default function PatientDashboardLayout({
                   className="group flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-lg shadow-blue-100 transition-all active:scale-[0.98]"
                 >
                   <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
-                  New Booking
+                  {t("newBooking")}
                 </Link>
               </div>
 
@@ -120,30 +116,28 @@ export default function PatientDashboardLayout({
               <div className="mt-8 px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100">
                 <div className="flex items-center gap-2 text-slate-500 mb-1">
                   <ShieldCheck className="w-3 h-3 text-emerald-500" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Patient Privacy</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
+                    {t("privacyTitle")}
+                  </span>
                 </div>
                 <p className="text-[10px] text-slate-400 leading-tight">
-                  Your medical data is encrypted and HIPAA compliant.
+                  {t("privacyDescription")}
                 </p>
               </div>
             </div>
           </aside>
 
-          {/* ---------------- MAIN CONTENT (9 cols) ---------------- */}
+          {/* ---------------- MAIN CONTENT ---------------- */}
           <main className="lg:col-span-9">
             <header className="mb-8 flex items-end justify-between">
               <div>
                 <h1 className="text-3xl font-black text-slate-900 capitalize">
-                  {activeTab.replace("-", " ")}
+                  {t(`tabs.${activeTab}`)}
                 </h1>
-                <p className="text-slate-500 text-sm mt-1">Manage your healthcare journey and records</p>
+                <p className="text-slate-500 text-sm mt-1">{t("subtitle")}</p>
               </div>
-              <div className="hidden md:block">
-                {/* Dynamic breadcrumb or date can go here */}
-                <span className="text-xs font-medium text-slate-400 bg-white border border-slate-200 px-3 py-1.5 rounded-full">
-                  Today: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-              </div>
+
+              <LanguageToggle />
             </header>
 
             <div className="min-h-[60vh]">
@@ -170,12 +164,15 @@ function SidebarLink({ href, active, icon, label }: any) {
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${active
+      className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${
+        active
           ? "bg-blue-50 text-blue-700 font-bold border border-blue-100"
           : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
-        }`}
+      }`}
     >
-      <span className={`${active ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"} transition-colors`}>
+      <span
+        className={`${active ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"} transition-colors`}
+      >
         {icon}
       </span>
       <span className="text-sm">{label}</span>

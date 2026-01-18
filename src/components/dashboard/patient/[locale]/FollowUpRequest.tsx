@@ -1,12 +1,12 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarDays, Stethoscope, Pill } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import { useTranslations } from "next-intl";
 
-type FollowUpRequest = {
+type FollowUpRequestType = {
   id: string;
   follow_up_needed: boolean;
   follow_up_date: string | null;
@@ -27,7 +27,9 @@ type FollowUpRequest = {
 };
 
 export default function FollowUpRequest() {
-  const [followUps, setFollowUps] = useState<FollowUpRequest[]>([]);
+  const t = useTranslations("followUpRequest");
+
+  const [followUps, setFollowUps] = useState<FollowUpRequestType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,14 +45,13 @@ export default function FollowUpRequest() {
         }
 
         const data = await res.json();
-
         if (!mounted) return;
 
         setFollowUps(data?.data ?? []);
       } catch (err) {
-        console.error("Unable to load follow-up requests:", err);
+        console.error(err);
         if (mounted) {
-          setError("Unable to load follow-up requests");
+          setError(t("loadError"));
         }
       } finally {
         if (mounted) setLoading(false);
@@ -58,15 +59,17 @@ export default function FollowUpRequest() {
     }
 
     fetchFollowUps();
-
     return () => {
       mounted = false;
     };
-  }, []);
-
+  }, [t]);
 
   if (loading) {
-    return <div className="py-10 text-center text-gray-500">Loading…</div>;
+    return (
+      <div className="py-10 text-center text-gray-500">
+        {t("loading")}
+      </div>
+    );
   }
 
   if (error) {
@@ -81,16 +84,16 @@ export default function FollowUpRequest() {
     <div className="max-w-5xl mx-auto px-4 py-6">
       <div className="mb-6">
         <h2 className="text-2xl font-semibold text-gray-900">
-          Follow-Up Requests
+          {t("title")}
         </h2>
         <p className="text-sm text-gray-500">
-          Consultations that require a follow-up
+          {t("subtitle")}
         </p>
       </div>
 
       {followUps.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-gray-500">
-          No follow-ups pending 🎉
+          {t("empty")}
         </div>
       ) : (
         <ul className="space-y-5">
@@ -116,32 +119,28 @@ export default function FollowUpRequest() {
                   </div>
 
                   <span
-                    className={`rounded-full flex justify-center items-center px-3 py-1 text-xs font-medium ${isOverdue
+                    className={`rounded-full flex items-center px-3 py-1 text-xs font-medium ${
+                      isOverdue
                         ? "bg-red-100 text-red-700"
                         : "bg-yellow-100 text-yellow-700"
-                      }`}
+                    }`}
                   >
-                    {isOverdue ? "Overdue" : "Follow-Up Required"}
+                    {isOverdue ? t("overdue") : t("required")}
                   </span>
                 </div>
 
                 {/* Dates */}
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-500">Original Appointment</p>
+                    <p className="text-gray-500">{t("originalAppointment")}</p>
                     <p className="font-medium">
-                      {new Date(
-                        req.appointment.starts_at
-                      ).toLocaleString()}
+                      {new Date(req.appointment.starts_at).toLocaleString()}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-gray-500">Follow-Up Date</p>
-                    <p
-                      className={`font-medium ${isOverdue ? "text-red-600" : ""
-                        }`}
-                    >
+                    <p className="text-gray-500">{t("followUpDate")}</p>
+                    <p className={`font-medium ${isOverdue ? "text-red-600" : ""}`}>
                       {req.follow_up_date
                         ? new Date(req.follow_up_date).toLocaleDateString()
                         : "—"}
@@ -149,7 +148,7 @@ export default function FollowUpRequest() {
                   </div>
 
                   <div>
-                    <p className="text-gray-500">Last Updated</p>
+                    <p className="text-gray-500">{t("lastUpdated")}</p>
                     <p className="font-medium">
                       {new Date(req.updated_at).toLocaleDateString()}
                     </p>
@@ -183,7 +182,7 @@ export default function FollowUpRequest() {
                     className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
                   >
                     <CalendarDays className="w-4 h-4" />
-                    Book Follow-Up
+                    {t("book")}
                   </Link>
                 </div>
               </li>

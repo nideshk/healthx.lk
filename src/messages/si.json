@@ -1,0 +1,98 @@
+{
+  "patientDashboard": {
+    "menu": "මෙනුව",
+    "appointments": "නියමිත හමුවීම්",
+    "reschedule": "නැවත සැලසුම් කරන්න",
+    "medicalRecords": "වෛද්‍ය වාර්තා",
+    "followUps": "පසු විමසුම්",
+    "newBooking": "නව වෙන්කිරීම",
+    "privacyTitle": "රෝගියාගේ රහස්‍යතාවය",
+    "privacyDescription": "ඔබගේ වෛද්‍ය දත්ත සංකේතාත්මකව ආරක්ෂා කර ඇති අතර HIPAA නීතිවලට අනුකූල වේ.",
+    "subtitle": "ඔබගේ සෞඛ්‍ය ගමන සහ වාර්තා කළමනාකරණය කරන්න",
+    "tabs": {
+      "appointment": "නියමිත හමුවීම්",
+      "reschedule": "නැවත සැලසුම් කිරීම",
+      "file-manager": "වෛද්‍ය වාර්තා",
+      "follow-up": "පසු විමසුම්"
+    }
+  },
+
+  "patientCard": {
+    "deletePermanent": "ස්ථිරව මකන්න"
+  },
+
+  "appointmentTab": {
+    "syncing": "හමුවීම් සමකාලීන කරමින්…",
+    "activeUrgent": "ක්‍රියාත්මක හා හදිසි",
+    "paymentRequired": "ගෙවීම අවශ්‍යයි",
+    "upcoming": "ඉදිරි හමුවීම්",
+    "past": "පසුගිය හමුවීම්",
+    "cancelled": "අවලංගු කළ හමුවීම්",
+    "emptyTitle": "තවම හමුවීම් නැත",
+    "emptyDescription": "දැනට ඔබට කිසිදු හමුවීමක් නොමැත."
+  },
+
+  "appointmentCard": {
+    "cancelled": "අවලංගු කර ඇත",
+    "actionRequired": "ක්‍රියාමාර්ග අවශ්‍යයි",
+    "liveNow": "දැන් සිදුවෙමින්",
+    "completed": "සම්පූර්ණයි",
+    "specialist": "විශේෂඥයා",
+    "completePayment": "ගෙවීම සම්පූර්ණ කරන්න",
+    "joinConsultation": "හමුවට එක්වන්න",
+    "viewDetails": "විස්තර බලන්න",
+    "cancelledMessage": "මෙම හමුව අවලංගු කර ඇත"
+  },
+
+  "fileManagerTab": {
+    "title": "වෛද්‍ය වාර්තා",
+    "subtitle": "ඔබ උඩුගත කළ වෛද්‍ය ලේඛන කළමනාකරණය කරන්න",
+    "file": "ගොනුව",
+    "files": "ගොනු",
+    "saved": "සුරකින ලදී",
+    "uploaded": "උඩුගත කළේ",
+    "view": "බලන්න",
+    "delete": "මකන්න",
+    "deleteConfirm": "මෙම ගොනුව මකා දැමීමට ඔබට විශ්වාසද?",
+    "deleteSuccess": "ගොනුව සාර්ථකව මකා ඇත",
+    "deleteError": "ගොනුව මකා දැමීමට නොහැකි විය",
+    "loadError": "ගොනු ලබා ගැනීමට නොහැකි විය",
+    "openError": "ගොනුව විවෘත කළ නොහැකි විය",
+    "emptyTitle": "ගොනු උඩුගත කර නැත",
+    "emptyDescription": "ඔබ උඩුගත කරන වෛද්‍ය ලේඛන මෙහි දිස් වේ."
+  },
+
+  "rescheduleTab": {
+    "title": "හමුව නැවත සැලසුම් කරන්න",
+    "subtitle": "නැවත සැලසුම් කිරීමට හමුවක් තෝරන්න",
+    "emptyTitle": "ඉදිරි හමුවීම් නොමැත",
+    "emptyDescription": "නැවත සැලසුම් කිරීමට හමුවීම් නොමැත.",
+    "reschedule": "නැවත සැලසුම් කරන්න"
+  },
+
+  "followUpRequest": {
+    "title": "පසු විමසුම් ඉල්ලීම්",
+    "subtitle": "පසු විමසුමක් අවශ්‍ය වන හමුවීම්",
+    "loading": "පූරණය වෙමින්…",
+    "loadError": "පසු විමසුම් ලබා ගැනීමට නොහැකි විය",
+    "empty": "පසු විමසුම් කිසිවක් නැත 🎉",
+    "overdue": "කාලය ඉක්මවා ඇත",
+    "required": "පසු විමසුම අවශ්‍යයි",
+    "originalAppointment": "මුල් හමුව",
+    "followUpDate": "පසු විමසුම් දිනය",
+    "lastUpdated": "අවසන් යාවත්කාලීන කිරීම",
+    "book": "පසු විමසුම වෙන් කරන්න"
+  },
+
+  "followUpSummary": {
+    "title": "පසු විමසුම්",
+    "overdue": "කාලය ඉක්මවා ඇත {count}"
+  },
+
+  "nextAppointment": {
+    "defaultPractitioner": "ඔබගේ වෛද්‍යවරයා",
+    "live": "දැන් සිදුවෙමින්",
+    "startsIn": "{time} තුළ ආරම්භ වේ",
+    "join": "හමුවට එක්වන්න"
+  }
+}

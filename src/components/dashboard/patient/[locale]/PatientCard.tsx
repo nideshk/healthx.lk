@@ -1,8 +1,8 @@
-// src/components/dashboard/patient/PatientCard.tsx
 "use client";
 
 import React from "react";
 import Button from "@/components/atom/Button/Button";
+import { useTranslations } from "next-intl";
 
 export interface PatientCardProps {
   name: string;
@@ -17,6 +17,8 @@ const PatientCard: React.FC<PatientCardProps> = ({
   phone,
   onDelete,
 }) => {
+  const t = useTranslations("patientCard");
+
   return (
     <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50">
       {/* Left: patient info */}
@@ -38,7 +40,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
         className="text-xs px-4"
         onClick={onDelete}
       >
-        🗑 Delete Permanent
+        🗑 {t("deletePermanent")}
       </Button>
     </div>
   );

@@ -1,12 +1,13 @@
-// components/FollowUpSummary.tsx
 "use client";
 
 import { authFetch } from "@/lib/authFetch";
-import axios from "axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export default function FollowUpSummary() {
+  const t = useTranslations("followUpSummary");
+
   const [count, setCount] = useState<number | null>(null);
   const [overdue, setOverdue] = useState(0);
 
@@ -16,10 +17,7 @@ export default function FollowUpSummary() {
     async function fetchFollowUpStats() {
       try {
         const res = await authFetch("/api/follow-up");
-
-        if (!res.ok) {
-          throw new Error(`Follow-up fetch failed: ${res.status}`);
-        }
+        if (!res.ok) throw new Error();
 
         const data = await res.json();
         const items = data?.data ?? [];
@@ -30,12 +28,10 @@ export default function FollowUpSummary() {
         setOverdue(
           items.filter(
             (i: any) =>
-              i.follow_up_date &&
-              new Date(i.follow_up_date) < new Date()
+              i.follow_up_date && new Date(i.follow_up_date) < new Date()
           ).length
         );
-      } catch (err) {
-        console.error("Failed to load follow-up stats:", err);
+      } catch {
         if (mounted) {
           setCount(0);
           setOverdue(0);
@@ -44,14 +40,12 @@ export default function FollowUpSummary() {
     }
 
     fetchFollowUpStats();
-
     return () => {
       mounted = false;
     };
   }, []);
 
-
-  if (count === null || count === 0) return null;
+  if (!count) return null;
 
   return (
     <Link
@@ -60,7 +54,7 @@ export default function FollowUpSummary() {
     >
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-yellow-900">
-          Follow-Ups
+          {t("title")}
         </span>
         <span className="rounded-full bg-yellow-600 px-2 py-0.5 text-xs text-white">
           {count}
@@ -69,7 +63,7 @@ export default function FollowUpSummary() {
 
       {overdue > 0 && (
         <p className="mt-1 text-xs text-red-600">
-          {overdue} overdue
+          {t("overdue", { count: overdue })}
         </p>
       )}
     </Link>

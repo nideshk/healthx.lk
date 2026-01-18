@@ -1,0 +1,98 @@
+{
+  "patientDashboard": {
+    "menu": "Menu",
+    "appointments": "Appointments",
+    "reschedule": "Reschedule",
+    "medicalRecords": "Medical Records",
+    "followUps": "Follow-Ups",
+    "newBooking": "New Booking",
+    "privacyTitle": "Patient Privacy",
+    "privacyDescription": "Your medical data is encrypted and HIPAA compliant.",
+    "subtitle": "Manage your healthcare journey and records",
+    "tabs": {
+      "appointment": "Appointments",
+      "reschedule": "Reschedule",
+      "file-manager": "Medical Records",
+      "follow-up": "Follow-Ups"
+    }
+  },
+
+  "patientCard": {
+    "deletePermanent": "Delete Permanent"
+  },
+
+  "appointmentTab": {
+    "syncing": "Syncing your appointments…",
+    "activeUrgent": "Active & Urgent",
+    "paymentRequired": "Payment Required",
+    "upcoming": "Upcoming Appointments",
+    "past": "Past Appointments",
+    "cancelled": "Cancelled Appointments",
+    "emptyTitle": "No appointments yet",
+    "emptyDescription": "You don’t have any appointments at the moment."
+  },
+
+  "appointmentCard": {
+    "cancelled": "Cancelled",
+    "actionRequired": "Action Required",
+    "liveNow": "Live Now",
+    "completed": "Completed",
+    "specialist": "Specialist",
+    "completePayment": "Complete Payment",
+    "joinConsultation": "Join Consultation",
+    "viewDetails": "View Details",
+    "cancelledMessage": "Session was cancelled"
+  },
+
+  "fileManagerTab": {
+    "title": "Medical Records",
+    "subtitle": "Access and manage your uploaded medical files",
+    "file": "file",
+    "files": "files",
+    "saved": "saved",
+    "uploaded": "Uploaded",
+    "view": "View",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this file?",
+    "deleteSuccess": "File deleted successfully",
+    "deleteError": "Failed to delete file",
+    "loadError": "Unable to load files",
+    "openError": "Unable to open file",
+    "emptyTitle": "No files uploaded",
+    "emptyDescription": "Your uploaded medical documents will appear here."
+  },
+
+  "rescheduleTab": {
+    "title": "Reschedule Appointment",
+    "subtitle": "Select an appointment to reschedule",
+    "emptyTitle": "No upcoming appointments",
+    "emptyDescription": "You don’t have any appointments available for rescheduling.",
+    "reschedule": "Reschedule"
+  },
+
+  "followUpRequest": {
+    "title": "Follow-Up Requests",
+    "subtitle": "Consultations that require a follow-up",
+    "loading": "Loading…",
+    "loadError": "Unable to load follow-up requests",
+    "empty": "No follow-ups pending 🎉",
+    "overdue": "Overdue",
+    "required": "Follow-Up Required",
+    "originalAppointment": "Original Appointment",
+    "followUpDate": "Follow-Up Date",
+    "lastUpdated": "Last Updated",
+    "book": "Book Follow-Up"
+  },
+
+  "followUpSummary": {
+    "title": "Follow-Ups",
+    "overdue": "{count} overdue"
+  },
+
+  "nextAppointment": {
+    "defaultPractitioner": "Your Practitioner",
+    "live": "Happening now",
+    "startsIn": "Starts in {time}",
+    "join": "Join Appointment"
+  }
+}
