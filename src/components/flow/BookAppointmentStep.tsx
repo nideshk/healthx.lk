@@ -95,7 +95,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   }, [availability, selectedType]);
 
   if (loadingInfo) return <div className="flex justify-center py-20"><Loader size="lg" /></div>;
-
+  console.log(bookingData)
   return (
     <div className="pb-32 pt-6 md:pt-12 bg-[#FBFDFF] min-h-screen relative">
       <div className="max-w-6xl mx-auto px-4">
@@ -130,7 +130,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
               <div className="flex flex-col items-center text-center">
                 <div className="relative mb-5">
                   <img
-                    src={practitioner?.profile_image || "/images/default-doctor.png"}
+                    src={bookingData.selectedDoctor.profileImage || "/images/default-doctor.png"}
                     className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-slate-50 shadow-md"
                     alt={practitioner.full_name}
                   />

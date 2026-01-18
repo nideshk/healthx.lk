@@ -1,8 +1,36 @@
 import { supabaseAdmin } from "./supabaseAdmin";
 
 export const dynamic = "force-dynamic";
+type AuthorizedUser = {
+  auth_user_id: string;
+  role: string;
+  profile: any;
+  user: any;
+  admin: {
+    id: string;
+    role: string;
+    policies: string[];
+  } | null;
+  phone: string | null;
+  patient_id: string | null;
+  practitioner_id: string | null;
+};
 
-export async function requireUser(req: Request) {
+type RequireUserResult =
+  | {
+    authorized: true;
+    role: string;
+    user: AuthorizedUser;
+    response: "";
+  }
+  | {
+    authorized: false;
+    role: null;
+    user: null;
+    response: Response;
+  };
+
+export async function requireUser(req: Request): Promise<RequireUserResult> {
   if (!req) {
     throw new Error(
       "requireUser(req) was called without a Request object"
@@ -103,7 +131,7 @@ export async function requireUser(req: Request) {
    Helpers
 ------------------------------- */
 
-function unauthorized() {
+function unauthorized(): RequireUserResult {
   return {
     authorized: false,
     user: null,
@@ -115,7 +143,7 @@ function unauthorized() {
   };
 }
 
-function forbidden(message: string) {
+function forbidden(message: string): RequireUserResult {
   return {
     authorized: false,
     user: null,
