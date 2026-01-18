@@ -120,7 +120,7 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
     allergies: patient.allergies || "",
     email: patient.email,
     phone: patient.phone,
-    address: patient.address || "",
+    address: patient.addressLine1 || "",
     city: patient.city || "",
     country: patient.country || "",
   });
