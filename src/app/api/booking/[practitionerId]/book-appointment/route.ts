@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
-import { calculateAppointmentAmount } from "@/lib/pricing/calculateAppointmentAmount";
 import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { computeDiscount } from "@/lib/coupons/computeDiscount";
 
 export const runtime = "nodejs";
 
@@ -13,9 +13,9 @@ export async function POST(
 ) {
   try {
     const { practitionerId } = await context.params;
-    const { date, time, appointment_type_id, attendeeList = [] } =
+    const { date, time, appointment_type_id, attendeeList = [], coupon_code } =
       await req.json();
-
+    console.log("coupon_code", coupon_code)
     // ---------------------------
     // 1️⃣ Auth
     // ---------------------------
@@ -108,15 +108,49 @@ export async function POST(
     const consultation_fee_by_practitioner = practitioner.fees[appointmentType.id];
     console.log("consultation_fee_by_practitioner", consultation_fee_by_practitioner)
 
-    const fees_charged = (consultation_fee_by_practitioner.fee || appointmentType.base_fee) + (appointmentType.platform_fee) + (100 * attendeeList.length);
+
     const consultation_fee = consultation_fee_by_practitioner.fee || appointmentType.base_fee + appointmentType.platform_fee;
     const platform_fee = appointmentType.platform_fee;
-    const tax_amount = fees_charged * 0.08;
-    console.log("appointmentType", appointmentType)
-    console.log(fees_charged)
+
     // ---------------------------
     // 6️⃣ Create Appointment
     // ---------------------------
+    let discount_total = 0;
+    let platform_discount = 0;
+    let practitioner_discount = 0;
+    if (coupon_code) {
+      const { data: coupon } = await supabaseAdmin
+        .from("discount_coupons")
+        .select("*")
+        .eq("code", coupon_code)
+        .eq("is_active", true)
+        .single();
+
+      if (!coupon) {
+        return NextResponse.json(
+          { error: "Invalid coupon" },
+          { status: 400 }
+        );
+      }
+
+      const discount = computeDiscount({
+        coupon,
+        pricing: {
+          consultation_fee,
+          platform_fee
+        }
+      });
+
+      discount_total = discount.discount_total;
+      platform_discount = discount.platform_discount;
+      practitioner_discount = discount.practitioner_discount;
+    }
+
+    const fees_charged = (consultation_fee_by_practitioner.fee || appointmentType.base_fee) + (appointmentType.platform_fee) + (100 * attendeeList.length) - (discount_total || 0);
+    const tax_amount = fees_charged * 0.08;
+    console.log("appointmentType", appointmentType)
+    console.log(fees_charged)
+
     const { data: appointment, error: insertError } =
       await supabaseClient
         .from("appointments")

@@ -23,6 +23,7 @@ interface PaymentStepUIProps {
     paymentDone: boolean;
     handlePayment: (payload?: any) => void;
     prevStep: () => void;
+    setCoupon: (coupon: any) => void;
 }
 
 const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
@@ -33,6 +34,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
     isVerifying,
     handlePayment,
     prevStep,
+    setCoupon
 }) => {
     const doctor = bookingData.selectedDoctor;
     const type = bookingData.appointmentType;
@@ -85,6 +87,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
             }
 
             setAppliedCoupon(data);
+            setCoupon(couponCode);
         } catch (err) {
             setCouponError('Failed to validate coupon');
         } finally {
@@ -200,12 +203,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                                             {couponLoading ? 'Applying…' : 'Apply'}
                                         </button>
                                     ) : (
-                                        <button
-                                            onClick={removeCoupon}
-                                            className="text-sm text-red-600 underline"
-                                        >
-                                            Remove
-                                        </button>
+                                        <></>
                                     )}
                                 </div>
 
