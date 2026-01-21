@@ -155,8 +155,11 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
       router.push('/dashboard/appointment');
     };
 
+    const [coupon, setCoupon] = useState();
+
     // --- Payment Execution ---
-    const handlePayment = async () => {
+    const handlePayment = async (payload: any) => {
+      console.log(coupon)
       if (isPaymentProcessing || isVerifying) return;
 
       if (typeof window === "undefined" || !window.payhere) {
@@ -180,7 +183,13 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           const res = await authFetch(`/api/booking/${practitionerId}/book-appointment`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date, time, appointment_type_id, attendeeList: bookingData.selectedAttendees }),
+            body: JSON.stringify({
+              date,
+              time,
+              appointment_type_id,
+              attendeeList: bookingData.selectedAttendees,
+              coupon_code: coupon
+            }),
           });
 
           const data = await res.json();
@@ -269,6 +278,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     return (
       <>
         <PaymentStepUI
+          setCoupon={setCoupon}
           bookingData={bookingData}
           consultationFee={consultationFee}
           attendeeCount={attendeeCount}

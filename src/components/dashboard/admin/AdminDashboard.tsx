@@ -12,8 +12,9 @@ import AnalyticsTab from "./tabs/analytics/AnalyticsTab";
 import SettingsTab from "./tabs/settings/SettingsTab";
 import { Patient } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
+import CouponsTab from "./tabs/coupons/CouponsTab";
 
-type AdminMenuId = "home" | "searchClinician" | "searchPatient" | "addClinician" | "manageAdmins" | "analytics" | "settings";
+type AdminMenuId = "home" | "searchClinician" | "searchPatient" | "addClinician" | "manageAdmins" | "analytics" | "settings" | "coupons";
 
 const menuItems: DashboardMenuItem[] = [
   { id: "home", label: "Home" },
@@ -23,6 +24,7 @@ const menuItems: DashboardMenuItem[] = [
   { id: "manageAdmins", label: "Manage Administrators" },
   { id: "analytics", label: "Analytics" },
   { id: "settings", label: "Settings" },
+  { id: "coupons", label: "Coupons" }
 ];
 
 const calculateAgeFromDob = (dob?: string | null): number => {
@@ -39,7 +41,7 @@ const AdminDashboard: React.FC = () => {
   const [profileName, setProfileName] = useState("Admin");
   const [profileRole, setProfileRole] = useState("Administrator");
   const [profileEmail, setProfileEmail] = useState("");
-  
+
   const [patients, setPatients] = useState<Patient[]>([]);
   const [search, setSearch] = useState("");
   const [loadingPatients, setLoadingPatients] = useState(false); // ✅ Added loading state
@@ -123,14 +125,14 @@ const AdminDashboard: React.FC = () => {
   }, [activeMenu]);
 
   const menuComponent = (
-  <DashboardMenuCard
-    title="Admin Menu"
-    subtitle="Quick access"
-    items={menuItems as any}
-    activeId={activeMenu as any}
-    onChange={(id) => setActiveMenu(id as AdminMenuId)}
-  />
-);
+    <DashboardMenuCard
+      title="Admin Menu"
+      subtitle="Quick access"
+      items={menuItems as any}
+      activeId={activeMenu as any}
+      onChange={(id) => setActiveMenu(id as AdminMenuId)}
+    />
+  );
 
   return (
     <DashboardShell
@@ -143,8 +145,8 @@ const AdminDashboard: React.FC = () => {
     >
       <div className="flex flex-col md:flex-row gap-6">
         <div className="hidden md:block w-full md:w-64 shrink-0">
-        {menuComponent}
-      </div>
+          {menuComponent}
+        </div>
 
         <div className="flex-1 min-w-0">
           {activeMenu === "home" && <HomeTab />}
@@ -154,7 +156,7 @@ const AdminDashboard: React.FC = () => {
               search={search}
               onSearchChange={setSearch}
               patients={patients}
-              loading={loadingPatients} 
+              loading={loadingPatients}
               selectedPatient={selectedPatient}
               onSelectPatient={setSelectedPatient}
               onBackToDashboard={() => setSelectedPatient(null)}
@@ -164,6 +166,7 @@ const AdminDashboard: React.FC = () => {
           {activeMenu === "manageAdmins" && <ManageAdminsTab />}
           {activeMenu === "analytics" && <AnalyticsTab />}
           {activeMenu === "settings" && <SettingsTab email={profileEmail} />}
+          {activeMenu === "coupons" && <CouponsTab />}
         </div>
       </div>
     </DashboardShell>

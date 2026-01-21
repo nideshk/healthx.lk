@@ -5,6 +5,14 @@ import { DateTime } from "luxon";
 // ------------------------
 // TIME HELPERS
 // ------------------------
+const BLOCKING_STATUSES = [
+  "pending",
+  "scheduled",
+  "confirmed",
+  "payment_initiated",
+  "awaiting_payment",
+];
+
 function toMinutes(t: string) {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -172,11 +180,12 @@ export async function GET(
     // ---------------------------
     const { data: booked } = await supabaseClient
       .from("appointments")
-      .select("starts_at, ends_at")
+      .select("starts_at, ends_at, status")
       .eq("practitioner_id", practitionerId)
       .gte("starts_at", `${date}T00:00:00`)
       .lte("starts_at", `${date}T23:59:59`)
-      .neq("status", "cancelled");
+      .in("status", BLOCKING_STATUSES);
+
 
     const bookedIntervals =
       booked?.map((appt) => {
