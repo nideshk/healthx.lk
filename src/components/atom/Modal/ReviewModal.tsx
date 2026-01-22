@@ -1,3 +1,4 @@
+import { authFetch } from "@/lib/authFetch";
 import { Star, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -21,7 +22,7 @@ export function ReviewModal({ appointment, onClose }: any) {
         setLoading(true);
         console.log(appointment)
 
-        const res = await fetch(
+        const res = await authFetch(
             `http://localhost:3000/api/appointments/${appointment.appointment_id}/review`,
             {
                 method: "POST",

@@ -13,7 +13,7 @@ export async function POST(
 ) {
   try {
     const { practitionerId } = await context.params;
-    const { date, time, appointment_type_id, attendeeList = [], coupon_code } =
+    const { date, time, appointment_type_id, attendeeList = [], coupon_code, starts_at, ends_at } =
       await req.json();
     console.log("coupon_code", coupon_code)
     // ---------------------------
@@ -32,17 +32,12 @@ export async function POST(
       );
     }
 
-    if (!date || !time || !appointment_type_id || !practitionerId) {
+    if (!starts_at || !ends_at || !appointment_type_id || !practitionerId) {
       return NextResponse.json(
         { error: "Missing booking parameters" },
         { status: 400 }
       );
     }
-
-    // ---------------------------
-    // 2️⃣ Time normalization
-    // ---------------------------
-    const starts_at = new Date(`${date}T${time}:00.000Z`).toISOString();
 
     // ---------------------------
     // 3️⃣ Fetch Appointment Type (SOURCE OF TRUTH)
@@ -72,12 +67,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    const ends_at = new Date(
-      new Date(starts_at).getTime() +
-      appointmentType.duration_mins * 60 * 1000
-    ).toISOString();
-
     // ---------------------------
     // 4️⃣ Slot conflict check
     // ---------------------------
