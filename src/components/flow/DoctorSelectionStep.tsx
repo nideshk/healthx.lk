@@ -11,9 +11,12 @@ import { toast } from 'sonner';
 import { Star, ArrowLeft, Mail, BadgeCheck, GraduationCap, ChevronRight, Loader2 } from 'lucide-react';
 import { AppointmentFormInputs, Doctor } from '@/types/FormType';
 import Loader from '@/components/atom/Loader/Loader';
+import { useTranslations } from 'next-intl';
 
 const DoctorSelectionStep = forwardRef(
   ({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
+    const t = useTranslations("doctorSelection");
+
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -25,7 +28,7 @@ const DoctorSelectionStep = forwardRef(
     useImperativeHandle(ref, () => ({
       validateStep: () => {
         if (!selectedDoctorId) {
-          toast.error('Please select a healthcare professional.');
+          toast.error(t("selectDoctorError"));
           return false;
         }
         return true;
@@ -33,7 +36,6 @@ const DoctorSelectionStep = forwardRef(
     }));
 
     useEffect(() => {
-      // Safety check: if no service is selected, we can't fetch doctors
       if (!bookingData?.selectedService?.slug) return;
 
       const fetchDoctors = async () => {
@@ -47,13 +49,13 @@ const DoctorSelectionStep = forwardRef(
             email: p.contact_email,
             qualification: p.qualification,
             profileImage: p.profile_picture_url || '/images/default-doctor.png',
-            fee: 950 + (p.fees || 0), // Fallback for price
+            fee: 950 + (p.fees || 0),
             currency: 'LKR',
             rating: { overall: 4.8 },
           }));
           setDoctors(mapped);
         } catch (err) {
-          toast.error('Unable to retrieve practitioner list.');
+          toast.error(t("fetchDoctorError"));
         } finally {
           setLoading(false);
         }
@@ -61,20 +63,16 @@ const DoctorSelectionStep = forwardRef(
       fetchDoctors();
     }, [bookingData.selectedService?.slug]);
 
-    // FIX: Optimized Selection Logic
     const handleSelectDoctor = async (doctor: Doctor) => {
       if (isSaving) return;
 
       setIsSaving(true);
       setSelectedDoctorId(doctor.id);
 
-      // 1. Update the central store
       updateData({ selectedDoctor: doctor });
 
-      // 2. Short delay for visual feedback of the selection
       setTimeout(async () => {
         try {
-          // 3. Pass the data explicitly to override any stale state in the parent
           await nextStep({
             override: { selectedDoctor: doctor }
           });
@@ -84,7 +82,6 @@ const DoctorSelectionStep = forwardRef(
         }
       }, 300);
     };
-
 
     return (
       <div className="py-6 min-h-[60vh]">
@@ -99,13 +96,13 @@ const DoctorSelectionStep = forwardRef(
                 className="flex items-center gap-1.5 text-slate-400 hover:text-teal-600 font-bold text-xs mb-3 transition-colors uppercase tracking-wider group"
               >
                 <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
-                Back to specialisation
+                {t("backToSpecialization")}
               </button>
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                Choose your Doctor
+                {t("title")}
               </h2>
               <p className="text-sm text-slate-500 font-medium mt-1">
-                Available specialists for <span className="text-teal-600 font-bold">{bookingData.selectedService?.name}</span>
+                {t("subtitle")} <span className="text-teal-600 font-bold">{bookingData.selectedService?.name}</span>
               </p>
             </div>
 
@@ -126,12 +123,16 @@ const DoctorSelectionStep = forwardRef(
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader size="md" />
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Finding best specialists...</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">
+                {t("loadingDoctors")}
+              </p>
             </div>
           ) : doctors.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-slate-500 font-bold">No doctors available for this service yet.</p>
-              <button onClick={() => prevStep()} className="mt-4 text-teal-600 underline font-bold">Try another service</button>
+              <p className="text-slate-500 font-bold">{t("noDoctors")}</p>
+              <button onClick={() => prevStep()} className="mt-4 text-teal-600 underline font-bold">
+                {t("tryAnotherService")}
+              </button>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -172,7 +173,9 @@ const DoctorSelectionStep = forwardRef(
                         <h3 className={`text-xl font-black transition-colors ${isSelected ? 'text-teal-900' : 'text-slate-900'}`}>
                           Dr. {doctor.name}
                         </h3>
-                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mt-1.5">Verified Specialist</p>
+                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mt-1.5">
+                          {t("verifiedSpecialist")}
+                        </p>
                       </div>
 
                       <div className="space-y-3 mb-8">
@@ -192,7 +195,9 @@ const DoctorSelectionStep = forwardRef(
 
                       <div className="pt-5 border-t border-dashed border-slate-200 flex items-center justify-between">
                         <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Consultation Fee</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
+                            {t("consultationFee")}
+                          </p>
                           <p className={`text-xl font-black ${isSelected ? 'text-teal-700' : 'text-slate-900'}`}>
                             {doctor.currency} {doctor.fee.toLocaleString()}
                           </p>

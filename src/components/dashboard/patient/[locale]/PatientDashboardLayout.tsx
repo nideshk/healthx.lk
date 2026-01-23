@@ -137,7 +137,7 @@ export default function PatientDashboardLayout({
                 <p className="text-slate-500 text-sm mt-1">{t("subtitle")}</p>
               </div>
 
-              <LanguageToggle />
+             
             </header>
 
             <div className="min-h-[60vh]">

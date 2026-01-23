@@ -7,7 +7,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const locale = cookieStore.get("lang")?.value || "en";
+  const locale = cookieStore.get("locale")?.value || "en";
 
   const messages = (await import(`../../../messages/${locale}.json`)).default;
 

@@ -6,12 +6,12 @@ export default function LanguageToggle() {
   const [lang, setLang] = useState<"en" | "si">("en");
 
   useEffect(() => {
-    const match = document.cookie.match(/lang=(en|si)/);
+    const match = document.cookie.match(/locale=(en|si)/);
     if (match) setLang(match[1] as "en" | "si");
   }, []);
 
   const switchLang = (next: "en" | "si") => {
-    document.cookie = `lang=${next}; path=/; max-age=31536000`;
+    document.cookie = `locale=${next}; path=/; max-age=31536000`;
     window.location.reload();
   };
 
@@ -27,6 +27,7 @@ export default function LanguageToggle() {
       >
         EN
       </button>
+
       <button
         onClick={() => switchLang("si")}
         className={`px-3 py-1 rounded-full text-xs font-bold transition ${

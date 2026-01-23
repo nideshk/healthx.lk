@@ -1,17 +1,10 @@
-import { NextIntlClientProvider } from "next-intl";
-import { getLocaleFromCookie } from "@/utils/getLocale";
+import AppHeader from "@/components/common/AppHeader";
 
-export default async function AppointmentLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const locale = await getLocaleFromCookie();
-  const messages = (await import(`@/messages/${locale}.json`)).default;
-
+export default function PrivateLayout({ children }: { children: React.ReactNode }) {
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <div className="min-h-screen bg-white">
+      <AppHeader />
       {children}
-    </NextIntlClientProvider>
+    </div>
   );
 }
