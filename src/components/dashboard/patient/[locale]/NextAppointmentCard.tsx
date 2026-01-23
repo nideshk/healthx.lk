@@ -4,11 +4,11 @@ import { useTranslations } from "next-intl";
 import { formatDate, formatTime, formatTimeLeft } from "@/utils/formatters";
 import { getLocaleFromCookie } from "@/utils/getLocale";
 
-export function NextAppointmentCard({ appt }: any) {
+export async function NextAppointmentCard({ appt }: any) {
   const t = useTranslations("nextAppointment");
 
   const start = new Date(appt.starts_at);
-  const locale = getLocaleFromCookie();
+  const locale = await getLocaleFromCookie();
   const timeLeft = formatTimeLeft(appt.starts_at, locale);
   const isLive = timeLeft === "now";
 

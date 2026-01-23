@@ -107,5 +107,21 @@
     "defaultDoctor": "වෛද්‍යවරයා",
     "reason": "හේතුව",
     "cancelledByUser": "පරිශීලකයා විසින් අවලංගු කර ඇත"
+  },
+  "serviceSelection": {
+    "selectBeforeContinue": "කරුණාකර ඉදිරියට යාමට පෙර සේවා වර්ගයක් තෝරන්න.",
+    "failedToLoadServices": "සේවා පූරණය කිරීමට අසමත් විය.",
+    "selectServiceToProceed": "ඉදිරියට යාමට සේවාවක් තෝරන්න.",
+    "preparingServices": "සේවා සූදානම් කරමින්",
+    "stepLabel": "පියවර 1: විශේෂීකරණය",
+    "title": "උපදේශන වර්ගය",
+    "subtitle": "ඔබගේ වත්මන් සෞඛ්‍ය අවශ්‍යතාවයන්ට සුදුසු වෛද්‍ය විශේෂීකරණය තෝරන්න.",
+    "defaultServiceDescription": "ඔබගේ රෝග ලක්ෂණ හා සෞඛ්‍ය ඉලක්ක අනුව විශේෂඥ වෛද්‍ය උපදේශනය.",
+    "currentSelection": "වත්මන් තේරීම",
+    "selectType": "වර්ගය තෝරන්න",
+    "currentProgress": "වත්මන් ප්‍රගතිය",
+    "selectServicePrompt": "කරුණාකර සේවාවක් තෝරන්න",
+    "back": "ආපසු",
+    "continueToDoctors": "වෛද්‍යවරුන් වෙත ඉදිරියට"
   }
 }

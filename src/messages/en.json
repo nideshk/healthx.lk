@@ -107,5 +107,25 @@
     "defaultDoctor": "Medical Professional",
     "reason": "Reason",
     "cancelledByUser": "Cancelled by user"
+  },
+  
+  "serviceSelection": {
+    "selectBeforeContinue": "Please select a consultation type before continuing.",
+    "failedToLoadServices": "Failed to load services.",
+    "selectServiceToProceed": "Please select a service to proceed.",
+    "preparingServices": "Preparing Services",
+    "stepLabel": "Step 1: Specialization",
+    "title": "Consultation Type",
+    "subtitle": "Select the medical specialization that best fits your current health needs.",
+    "defaultServiceDescription": "Expert medical consultation tailored to your specific symptoms and health goals.",
+    "currentSelection": "Current Selection",
+    "selectType": "Select Type",
+    "currentProgress": "Current Progress",
+    "selectServicePrompt": "Please select a service",
+    "back": "Back",
+    "continueToDoctors": "Continue to Doctors"
   }
+
+
 }
+

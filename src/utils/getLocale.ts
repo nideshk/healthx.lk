@@ -1,5 +1,6 @@
-export function getLocaleFromCookie() {
-  if (typeof document === "undefined") return "en";
-  const match = document.cookie.match(/lang=(en|si)/);
-  return (match?.[1] as "en" | "si") || "en";
+import { cookies } from "next/headers";
+
+export async function getLocaleFromCookie() {
+  const locale = (await cookies()).get("locale")?.value;
+  return locale === "si" ? "si" : "en";
 }
