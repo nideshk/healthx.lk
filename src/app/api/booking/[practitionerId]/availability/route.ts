@@ -5,6 +5,14 @@ import { DateTime } from "luxon";
 // ------------------------
 // TIME HELPERS
 // ------------------------
+const BLOCKING_STATUSES = [
+  "pending",
+  "scheduled",
+  "confirmed",
+  "payment_initiated",
+  "awaiting_payment",
+];
+
 function toMinutes(t: string) {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -112,7 +120,7 @@ export async function GET(
     const nowInTZ = DateTime.now().setZone(timezone);
     const todayInTZ = nowInTZ.toISODate();
 
-    const requestedDate = DateTime.fromISO(date).setZone(timezone);
+    const requestedDate = DateTime.fromISO(date, { zone: timezone });
     if (requestedDate < nowInTZ.startOf("day")) {
       return NextResponse.json({
         practitioner_id: practitionerId,
@@ -167,16 +175,31 @@ export async function GET(
       );
     }
 
-    // ---------------------------
-    // STEP 6: Fetch booked appointments
-    // ---------------------------
+    const dayStartUTC = DateTime
+      .fromISO(date, { zone: timezone })
+      .startOf("day")
+      .toUTC()
+      .toISO();
+
+    const dayEndUTC = DateTime
+      .fromISO(date, { zone: timezone })
+      .endOf("day")
+      .toUTC()
+      .toISO();
+
+    const nowUTC = DateTime.utc().toISO();
+
     const { data: booked } = await supabaseClient
       .from("appointments")
-      .select("starts_at, ends_at")
+      .select("starts_at, ends_at, status, payment_status, expires_at")
       .eq("practitioner_id", practitionerId)
-      .gte("starts_at", `${date}T00:00:00`)
-      .lte("starts_at", `${date}T23:59:59`)
-      .neq("status", "cancelled");
+      .gte("starts_at", dayStartUTC)
+      .lte("starts_at", dayEndUTC)
+      .in("status", ["pending", "scheduled", "confirmed"])
+      .or(`expires_at.is.null,expires_at.gt.${nowUTC}`)
+      .neq("payment_status", "failed");
+
+
 
     const bookedIntervals =
       booked?.map((appt) => {

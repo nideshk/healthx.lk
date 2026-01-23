@@ -17,7 +17,6 @@ import {
   Loader2
 } from "lucide-react";
 import Calendar from "../atom/Calendar/Calendar";
-import { AppointmentFormInputs } from "@/types/FormType";
 import Loader from "@/components/atom/Loader/Loader";
 
 const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookingData }: any, ref) => {

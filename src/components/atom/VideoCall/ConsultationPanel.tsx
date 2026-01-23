@@ -85,7 +85,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
           Clinician Notes
         </label>
         <textarea
-          className="mt-2 w-full min-h-[160px] p-3 rounded-lg border bg-gray-50"
+          className="mt-2 w-full min-h-[160px] p-3 rounded-lg border bg-gray-50 text-black"
           placeholder="Write clinical notes here..."
           value={clinicianNotes}
           onChange={(e) => setClinicianNotes(e.target.value)}
@@ -98,7 +98,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
           Prescriptions / Advice
         </label>
         <textarea
-          className="mt-2 w-full min-h-[120px] p-3 rounded-lg border bg-gray-50"
+          className="mt-2 w-full min-h-[120px] p-3 rounded-lg border bg-gray-50 text-black"
           placeholder="Medicines, dosage, instructions..."
           value={prescriptions}
           onChange={(e) => setPrescriptions(e.target.value)}
@@ -111,6 +111,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
           <input
             type="checkbox"
             checked={followUpNeeded}
+            className="text-black"
             onChange={(e) => setFollowUpNeeded(e.target.checked)}
           />
           Follow-up required
@@ -119,7 +120,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
         {followUpNeeded && (
           <input
             type="date"
-            className="mt-3 w-full p-2 rounded-lg border"
+            className="mt-3 w-full p-2 rounded-lg border text-black"
             value={followUpDate ?? ""}
             onChange={(e) => setFollowUpDate(e.target.value)}
           />

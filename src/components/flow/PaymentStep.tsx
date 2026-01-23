@@ -61,6 +61,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
   ({ prevStep, updateData, bookingData, goToStep, bookingControllerRef, isManualCheckout = false, preExistingId = null }, stepRef) => {
 
     // --- State ---
+    console.log("booking data from payment", bookingData)
     const [paymentDone, setPaymentDone] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
@@ -155,8 +156,11 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
       router.push('/dashboard/appointment');
     };
 
+    const [coupon, setCoupon] = useState();
+
     // --- Payment Execution ---
-    const handlePayment = async () => {
+    const handlePayment = async (payload: any) => {
+      console.log(coupon)
       if (isPaymentProcessing || isVerifying) return;
 
       if (typeof window === "undefined" || !window.payhere) {
@@ -176,11 +180,16 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         if (!isManualCheckout || !currentAppointmentId) {
           const date = bookingData.starts_at?.split('T')[0];
           const time = new Date(bookingData.starts_at || '').toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-
           const res = await authFetch(`/api/booking/${practitionerId}/book-appointment`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date, time, appointment_type_id, attendeeList: bookingData.selectedAttendees }),
+            body: JSON.stringify({
+              starts_at: bookingData.starts_at,
+              ends_at: bookingData.ends_at,
+              appointment_type_id,
+              attendeeList: bookingData.selectedAttendees,
+              coupon_code: coupon
+            }),
           });
 
           const data = await res.json();
@@ -269,6 +278,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     return (
       <>
         <PaymentStepUI
+          setCoupon={setCoupon}
           bookingData={bookingData}
           consultationFee={consultationFee}
           attendeeCount={attendeeCount}
