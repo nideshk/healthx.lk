@@ -30,6 +30,7 @@ import { useModalStore } from "@/store/useModalStore";
 import Modal from "@/components/atom/Modal/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import { authFetch } from "@/lib/authFetch";
+import LanguageToggle from "@/components/common/LanguageToggle";
 
 const LOCAL_DRAFT_KEY = "bookingDraft";
 
@@ -38,7 +39,7 @@ export default function Header() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { isLoginModalOpen, openLoginModal, closeLoginModal } = useModalStore();
-
+  console.log("user", user)
   // --- UI States ---
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
@@ -149,7 +150,6 @@ export default function Header() {
   const redirectToSignup = () => {
     closeLoginModal()
     router.push("/create-account");
-
   }
   return (
     <>
@@ -166,6 +166,7 @@ export default function Header() {
                 <span className="text-2xl font-black tracking-tighter text-slate-900">Med<span className="text-teal-600">X</span></span>
               </Link>
 
+
               {/* DESKTOP NAV */}
               <nav className="hidden md:flex items-center gap-1">
                 {navLinks.map((link) => (
@@ -177,10 +178,11 @@ export default function Header() {
                   >
                     {link.name}
                   </Link>
-                ))}
+                ))
+                }
+                <LanguageToggle />
               </nav>
             </div>
-
             {/* ACTIONS */}
             <div className="flex items-center gap-3">
               {!user ? (
@@ -199,46 +201,79 @@ export default function Header() {
                     >
                       <Bell size={22} />
                       {unreadCount > 0 && (
-                        <span className="absolute top-2 right-2.5 w-4 h-4 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white animate-pulse">
+                        <span className="absolute top-2 right-2.5 p-2 w-4 h-4 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white animate-pulse">
                           {unreadCount}
                         </span>
                       )}
                     </button>
 
                     {isNotifOpen && (
-                      <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white border border-slate-100 rounded-3xl shadow-2xl shadow-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                          <div>
-                            <h3 className="text-sm font-black text-slate-900">Health Alerts</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{unreadCount} New Notifications</p>
-                          </div>
-                          <button className="text-[10px] font-black text-teal-600 uppercase tracking-widest hover:underline">Mark all read</button>
-                        </div>
-                        <div className="max-h-[350px] overflow-y-auto">
-                          {notifications.length > 0 ? (
-                            notifications.map((n) => (
-                              <div key={n.id} className="p-4 flex gap-4 hover:bg-slate-50 border-b border-slate-50 last:border-0 cursor-pointer bg-teal-50/20">
-                                <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center bg-teal-100 text-teal-600">
-                                  <Clock size={18} />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-xs font-black text-slate-900">{n.title || 'Notification'}</p>
-                                  <p className="text-[11px] text-slate-500 font-medium mt-0.5 leading-relaxed">{n.content || n.message}</p>
-                                  <p className="text-[9px] font-bold text-slate-400 uppercase mt-2">
-                                    {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </p>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="p-10 text-center">
-                              <Bell className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-                              <p className="text-xs font-bold text-slate-400">All caught up!</p>
+                      <>
+                        {/* Optional: Overlay to close dropdown when clicking outside on mobile */}
+                        <div
+                          className="fixed inset-0 z-40 md:hidden"
+                          onClick={() => setIsNotifOpen(false)}
+                        />
+
+                        <div className="
+      /* Positioning: Fixed center on mobile, absolute right on desktop */
+      fixed left-1/2 -translate-x-1/2 top-16 
+      md:absolute md:left-auto md:right-0 md:translate-x-0 md:top-full
+      
+      /* Sizing: Full width minus margin on mobile, fixed width on desktop */
+      w-[calc(100vw-32px)] sm:w-80 md:w-96 
+      
+      /* Styling */
+      mt-3 bg-white border border-slate-100 rounded-[2rem] 
+      shadow-2xl shadow-slate-200 z-50 overflow-hidden 
+      animate-in fade-in zoom-in-95 duration-200
+    ">
+                          {/* Header */}
+                          <div className="p-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                            <div>
+                              <h3 className="text-sm font-black text-slate-900">Health Alerts</h3>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                {unreadCount} New Notifications
+                              </p>
                             </div>
-                          )}
+                            <button className="text-xs font-black text-teal-600 uppercase tracking-widest hover:underline active:scale-95 transition-transform">
+                              Mark all read
+                            </button>
+                          </div>
+
+                          {/* Notification List */}
+                          <div className="max-h-[60vh] md:max-h-[350px] overflow-y-auto overscroll-contain">
+                            {notifications.length > 0 ? (
+                              notifications.map((n) => (
+                                <div
+                                  key={n.id}
+                                  className="p-4 flex gap-4 hover:bg-slate-50 border-b border-slate-50 last:border-0 cursor-pointer bg-teal-50/10 transition-colors"
+                                >
+                                  <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center bg-teal-100 text-teal-600">
+                                    <Clock size={18} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-xs font-black text-slate-900 line-clamp-1">
+                                      {n.title || 'Notification'}
+                                    </p>
+                                    <p className="text-[11px] text-slate-500 font-medium mt-0.5 leading-relaxed line-clamp-2">
+                                      {n.content || n.message}
+                                    </p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-2">
+                                      {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="p-10 text-center">
+                                <Bell className="w-8 h-8 text-slate-200 mx-auto mb-3" />
+                                <p className="text-xs font-bold text-slate-400">All caught up!</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <Link href="/notifications" onClick={() => setIsNotifOpen(false)} className="block p-4 text-center text-[11px] font-black text-slate-500 hover:bg-slate-50 border-t border-slate-50">View All Activity</Link>
-                      </div>
+                      </>
                     )}
                   </div>
 
@@ -252,10 +287,28 @@ export default function Header() {
                         <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{firstName}</span>
                         <span className="text-[10px] text-teal-600 font-bold uppercase">{user.role}</span>
                       </div>
-                      <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-inner">
-                        {userInitial}
+
+                      {/* Avatar / Initial Container */}
+                      <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-inner overflow-hidden shrink-0">
+                        {user.profile?.avatar_url ? (
+                          <img
+                            src={user.profile.avatar_url}
+                            alt={firstName}
+                            className="w-full h-full object-cover"
+                            // Fallback if image fails to load
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          userInitial
+                        )}
                       </div>
-                      <ChevronDown size={14} className={`text-slate-400 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+
+                      <ChevronDown
+                        size={14}
+                        className={`text-slate-400 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`}
+                      />
                     </button>
 
                     {isUserDropdownOpen && (
@@ -264,12 +317,15 @@ export default function Header() {
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Signed in as</p>
                           <p className="text-sm font-bold text-slate-900 truncate">{user.user.email}</p>
                         </div>
+
                         <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
                           <LayoutDashboard size={18} /> Dashboard
                         </Link>
+
                         <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
                           <User size={18} /> My Profile
                         </Link>
+
                         <button
                           onClick={() => {
                             router.push("/")

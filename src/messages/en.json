@@ -16,11 +16,9 @@
       "follow-up": "Follow-Ups"
     }
   },
-
   "patientCard": {
     "deletePermanent": "Delete Permanent"
   },
-
   "appointmentTab": {
     "syncing": "Syncing your appointments…",
     "activeUrgent": "Active & Urgent",
@@ -31,7 +29,6 @@
     "emptyTitle": "No appointments yet",
     "emptyDescription": "You don’t have any appointments at the moment."
   },
-
   "appointmentCard": {
     "cancelled": "Cancelled",
     "actionRequired": "Action Required",
@@ -43,7 +40,6 @@
     "viewDetails": "View Details",
     "cancelledMessage": "Session was cancelled"
   },
-
   "fileManagerTab": {
     "title": "Medical Records",
     "subtitle": "Access and manage your uploaded medical files",
@@ -61,7 +57,6 @@
     "emptyTitle": "No files uploaded",
     "emptyDescription": "Your uploaded medical documents will appear here."
   },
-
   "rescheduleTab": {
     "title": "Reschedule Appointment",
     "subtitle": "Select an appointment to reschedule",
@@ -69,7 +64,6 @@
     "emptyDescription": "You don’t have any appointments available for rescheduling.",
     "reschedule": "Reschedule"
   },
-
   "followUpRequest": {
     "title": "Follow-Up Requests",
     "subtitle": "Consultations that require a follow-up",
@@ -83,12 +77,10 @@
     "lastUpdated": "Last Updated",
     "book": "Book Follow-Up"
   },
-
   "followUpSummary": {
     "title": "Follow-Ups",
     "overdue": "{count} overdue"
   },
-
   "nextAppointment": {
     "defaultPractitioner": "Your Practitioner",
     "live": "Happening now",
@@ -108,7 +100,6 @@
     "reason": "Reason",
     "cancelledByUser": "Cancelled by user"
   },
-
   "serviceSelection": {
     "selectBeforeContinue": "Please select a consultation type before continuing.",
     "failedToLoadServices": "Failed to load services.",
@@ -137,7 +128,6 @@
     "verifiedSpecialist": "Verified Specialist",
     "consultationFee": "Consultation Fee"
   },
-
   "bookAppointment": {
     "loadDoctorError": "වෛද්‍ය විස්තර පූරණය කළ නොහැකි විය",
     "loadSlotsError": "ලබා ගත හැකි වේලාවන් පූරණය කළ නොහැකි විය",
@@ -145,60 +135,45 @@
     "selectTypeError": "කාලය වර්ගයක් තෝරන්න",
     "selectDateError": "දිනයක් තෝරන්න",
     "selectTimeError": "වේලාවක් තෝරන්න",
-
     "changeDoctor": "වෛද්‍යවරයා වෙනස් කරන්න",
     "secured": "HIPAA ආරක්ෂිතයි",
-
     "specialist": "විශේෂඥ",
     "clinicalPractice": "සාමාන්‍ය වෛද්‍ය සේවාව",
-
     "experience": "අත්දැකීම",
     "years": "වසර",
     "rating": "ඇගයීම",
-
     "languages": "භාෂා",
-
     "sessionType": "සැසි වර්ගය",
     "minuteSession": "මිනිත්තු සැසි",
-
     "chooseDate": "දිනය තෝරන්න",
     "availableSlots": "ලබාගත හැකි වේලාවන්",
-
     "pickDate": "ලබාගත හැකි වේලාවන් බැලීමට දිනයක් තෝරන්න",
     "fullyBooked": "සම්පූර්ණයෙන් වෙන් වී ඇත",
     "tryAnotherDate": "වෙනත් දිනයක් උත්සාහ කරන්න",
-
     "summary": "අපොයින්ට්මන්ට් සාරාංශය",
-
     "confirming": "තහවුරු කරමින්...",
     "continuePayment": "ගෙවීමට ඉදිරියට යන්න"
   },
   "consentForm": {
     "acceptBothError": "Please accept both agreements to continue.",
-
     "declineTitle": "Wait, Consent is Required",
     "declineMessage": "To provide legal telehealth care and protect your privacy, we must have your signed agreement. Exiting now will cancel your booking progress.",
     "exitBooking": "Yes, Exit Booking",
     "goBackReview": "Go Back & Review",
-
     "title": "Review & Sign",
     "subtitle": "Almost done! We just need your legal consent.",
-
     "telehealthTitle": "Telehealth Consent",
     "telehealthHeading": "Digital Healthcare Agreement",
     "telehealthP1": "Telehealth involves electronic communication technologies to provide care when the provider and patient are not in the same location.",
     "telehealthP2": "By checking the box, you acknowledge that you understand the limitations of virtual care, including technical risks and the lack of physical examination.",
     "telehealthP3": "I understand I can withdraw consent at any time without affecting my right to future care or treatment.",
-
     "termsTitle": "Terms & Conditions",
     "termsHeading": "Service Agreement",
     "termsP1": "Appointments must be cancelled 24 hours in advance to avoid a no-show fee. Payment is processed securely via our encrypted partner.",
     "termsP2": "The platform acts as a facilitator and does not directly provide medical advice. All medical outcomes are the responsibility of the licensed practitioner.",
     "termsP3": "By proceeding, you agree to abide by the platform's legal and ethical policies.",
-
     "scrollToRead": "Scroll to read",
     "agreeText": "I have read and agree to the {section}",
-
     "finalize": "Finalize Appointment",
     "declineTerms": "I do not agree to these terms"
   },
@@ -207,26 +182,19 @@
     "subtitle": "Help us prepare for your session with Dr. {doctor}",
     "privacy": "Clinical Privacy",
     "maxLabel": "MAX",
-
     "concern": "Main Concern",
     "concernPlaceholder": "Describe your primary symptoms or concerns...",
-
     "outcome": "Desired Outcome",
     "outcomePlaceholder": "What do you hope to achieve today?",
-
     "referral": "How did you hear about us?",
     "selectOption": "Select an option...",
     "customReferral": "Please specify source...",
-
     "attachments": "Attachments (Optional)",
     "uploadHint": "Medical Records / Photos",
-
     "attendees": "Attendees",
     "invitePlaceholder": "Invite via email",
-
     "back": "Back",
     "continue": "Continue to Payment",
-
     "errors": {
       "concern": "Main concern is required",
       "outcome": "Desired outcome is required",
@@ -237,7 +205,7 @@
       "selfInvite": "You cannot add yourself as an attendee."
     }
   },
-   "paymentStep": {
+  "paymentStep": {
     "errors": {
       "completePayment": "Please complete the payment to finalize.",
       "paymentLoading": "Payment system loading...",
@@ -246,11 +214,9 @@
       "cancelled": "Payment cancelled",
       "unexpected": "Unexpected error occurred"
     },
-
     "warnings": {
       "attachmentUploadFailed": "Attachment upload failed. You can re-upload later."
     },
-
     "status": {
       "sessionExpired": "Session Expired",
       "completePayment": "Complete payment to secure slot",
@@ -285,9 +251,18 @@
       "invalidCoupon": "Invalid coupon",
       "couponFailed": "Failed to validate coupon"
     }
-  
   },
-   "homepage": {
+  "homepage": {
+    "practitioner": {
+      "title": "Are you a healthcare professional?",
+      "subtitle": "Join Clinico to manage your appointments, reach more patients, and streamline your practice with our digital tools.",
+      "benefits": {
+        "1": "Reach new patients in your area",
+        "2": "Full-featured scheduling dashboard",
+        "3": "Secure, HIPAA-compliant patient data"
+      },
+      "cta": "Register as a Practitioner"
+    },
     "hero": {
       "title": "Consult verified doctors in minutes",
       "subtitle": "Book online consultations with trusted specialists. Browse services, doctors and availability — no login required.",
@@ -320,5 +295,4 @@
       }
     }
   }
-
 }
