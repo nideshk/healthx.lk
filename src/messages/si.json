@@ -175,7 +175,8 @@
     "scrollToRead": "කියවීමට පහළට ස්ක්‍රෝල් කරන්න",
     "agreeText": "{section} කියවා එකඟ වෙමි",
     "finalize": "අපොයින්ට්මන්ට් අවසන් කරන්න",
-    "declineTerms": "මෙම නියමයන්ට එකඟ නොවේ"
+    "declineTerms": "මෙම නියමයන්ට එකඟ නොවේ",
+    "back": "ආපසු"
   },
   "preConsultation": {
     "title": "පූර්ව වෛද්‍ය උපදේශනය",

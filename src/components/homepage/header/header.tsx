@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Mail,
   Lock,
@@ -20,8 +20,9 @@ import {
   Search,
   Bell,
   Clock,
-  CheckCircle2,
-  AlertCircle
+  Languages,
+  File,
+  BarChart3
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -32,14 +33,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authFetch } from "@/lib/authFetch";
 import LanguageToggle from "@/components/common/LanguageToggle";
 
-const LOCAL_DRAFT_KEY = "bookingDraft";
-
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { isLoginModalOpen, openLoginModal, closeLoginModal } = useModalStore();
-  console.log("user", user)
+
   // --- UI States ---
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
@@ -47,10 +47,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-
-  // --- Notification State ---
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
 
   // --- MFA States ---
   const [mfa, setMfa] = useState<{ factorId: string; challengeId: string } | null>(null);
@@ -60,41 +57,42 @@ export default function Header() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
 
-  const navLinks = [
+  // --- Navigation Arrays ---
+
+  // Visible on both Desktop Header and Mobile Sidebar
+  const publicLinks = [
     { name: "Find Doctors", href: "/dashboard", icon: Search },
     { name: "About us", href: "/about-us", icon: ShieldCheck },
     { name: "Book Now", href: "/appointment", icon: Calendar },
   ];
 
-  /* ------------------------------------------------
-     1. NOTIFICATION LOGIC (Using your API)
-  ------------------------------------------------ */
-  const fetchNotifications = async () => {
-    if (!user) return;
-    setLoadingNotifs(true);
-    try {
-      const res = await authFetch("/api/notification");
-      const data = await res.json();
-      if (data.notifications) {
-        setNotifications(data.notifications);
-      }
-    } catch (err) {
-      console.error("Notif fetch error:", err);
-    } finally {
-      setLoadingNotifs(false);
-    }
-  };
+  // Visible ONLY in the Mobile Sidebar (Left Drawer)
+  const patientPortalLinks = [
+    { name: "Appointments", href: "/dashboard?tab=appointments", icon: Calendar },
+    { name: "Reschedule", href: "/dashboard?tab=reschedule", icon: Calendar },
+    { name: "Medical Records", href: "/dashboard?tab=file-manager", icon: File },
+    { name: "Follow ups", href: "/dashboard?tab=follow-ups", icon: BarChart3 },
+  ];
 
+  // --- Effects ---
+
+  // Prevent background scroll when sidebar is open
   useEffect(() => {
-    fetchNotifications();
-    // Refresh notifications every 2 minutes
-    const interval = setInterval(fetchNotifications, 120000);
-    return () => clearInterval(interval);
-  }, [user]);
+    document.body.style.overflow = isMenuOpen ? "hidden" : "unset";
+  }, [isMenuOpen]);
 
-  /* ------------------------------------------------
-     2. AUTH & MFA LOGIC
-  ------------------------------------------------ */
+  // Handle outside clicks for dropdowns
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setIsUserDropdownOpen(false);
+      if (notifMenuRef.current && !notifMenuRef.current.contains(e.target as Node)) setIsNotifOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // --- Auth Logic ---
+
   async function finalizeLogin(session: any) {
     setMfa(null);
     setOtp("");
@@ -131,45 +129,47 @@ export default function Header() {
     }
   }
 
-  /* ------------------------------------------------
-     3. CLICK OUTSIDE HANDLERS
-  ------------------------------------------------ */
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setIsUserDropdownOpen(false);
-      if (notifMenuRef.current && !notifMenuRef.current.contains(e.target as Node)) setIsNotifOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  // Derived Values
+  // --- Helpers ---
   const firstName = user?.profile?.first_name || "User";
   const userInitial = firstName[0]?.toUpperCase() || "U";
-  const unreadCount = notifications.length;
-  const redirectToSignup = () => {
-    closeLoginModal()
-    router.push("/create-account");
-  }
+
+  // Check if a link is active (considering query params for tabs)
+  const isLinkActive = (href: string) => {
+    if (href.includes('?tab=')) {
+      const [basePath, query] = href.split('?');
+      const targetTab = query.split('=')[1];
+      return pathname === basePath && searchParams.get('tab') === targetTab;
+    }
+    return pathname === href;
+  };
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
 
-            {/* LOGO */}
-            <div className="flex items-center gap-10">
+            {/* LEFT SIDE: MOBILE BURGER + LOGO + DESKTOP NAV */}
+            <div className="flex items-center gap-6 md:gap-10">
+              <button
+                className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                onClick={() => setIsMenuOpen(true)}
+              >
+                <Menu size={26} />
+              </button>
+
               <Link href="/" className="flex items-center gap-2 group">
                 <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-teal-200 group-hover:rotate-6 transition-transform">
                   <ShieldCheck size={24} />
                 </div>
-                <span className="text-2xl font-black tracking-tighter text-slate-900">Med<span className="text-teal-600">X</span></span>
+                <span className="text-2xl font-black tracking-tighter text-slate-900">
+                  Med<span className="text-teal-600">X</span>
+                </span>
               </Link>
 
-
-              {/* DESKTOP NAV */}
+              {/* DESKTOP NAVIGATION (Public Only) */}
               <nav className="hidden md:flex items-center gap-1">
-                {navLinks.map((link) => (
+                {publicLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
@@ -178,106 +178,33 @@ export default function Header() {
                   >
                     {link.name}
                   </Link>
-                ))
-                }
-                <LanguageToggle />
+                ))}
               </nav>
             </div>
-            {/* ACTIONS */}
+
+            {/* RIGHT SIDE: PROFILE / AUTH */}
             <div className="flex items-center gap-3">
+              <div className="hidden md:block mr-2">
+                <LanguageToggle />
+              </div>
+
               {!user ? (
                 <div className="flex items-center gap-2">
-                  <button onClick={openLoginModal} className="hidden sm:block px-5 py-2.5 text-sm font-bold text-slate-700 hover:text-teal-600 transition-colors">Log In</button>
-                  <button onClick={openLoginModal} className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-teal-600 shadow-lg shadow-slate-200 transition-all active:scale-95">Get Started</button>
+                  <button onClick={openLoginModal} className="hidden sm:block px-5 py-2.5 text-sm font-bold text-slate-700 hover:text-teal-600 transition-colors">
+                    Log In
+                  </button>
+                  <button onClick={openLoginModal} className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-teal-600 shadow-lg transition-all active:scale-95">
+                    Get Started
+                  </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 md:gap-4">
+                <div className="flex items-center gap-4">
+                  {/* Notification Bell (Simplified for full code) */}
+                  <button className="p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl transition-all relative">
+                    <Bell size={22} />
+                  </button>
 
-                  {/* NOTIFICATION BELL */}
-                  <div className="relative" ref={notifMenuRef}>
-                    <button
-                      onClick={() => setIsNotifOpen(!isNotifOpen)}
-                      className={`p-2.5 rounded-xl transition-all relative ${isNotifOpen ? "bg-teal-50 text-teal-600" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"}`}
-                    >
-                      <Bell size={22} />
-                      {unreadCount > 0 && (
-                        <span className="absolute top-2 right-2.5 p-2 w-4 h-4 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white animate-pulse">
-                          {unreadCount}
-                        </span>
-                      )}
-                    </button>
-
-                    {isNotifOpen && (
-                      <>
-                        {/* Optional: Overlay to close dropdown when clicking outside on mobile */}
-                        <div
-                          className="fixed inset-0 z-40 md:hidden"
-                          onClick={() => setIsNotifOpen(false)}
-                        />
-
-                        <div className="
-      /* Positioning: Fixed center on mobile, absolute right on desktop */
-      fixed left-1/2 -translate-x-1/2 top-16 
-      md:absolute md:left-auto md:right-0 md:translate-x-0 md:top-full
-      
-      /* Sizing: Full width minus margin on mobile, fixed width on desktop */
-      w-[calc(100vw-32px)] sm:w-80 md:w-96 
-      
-      /* Styling */
-      mt-3 bg-white border border-slate-100 rounded-[2rem] 
-      shadow-2xl shadow-slate-200 z-50 overflow-hidden 
-      animate-in fade-in zoom-in-95 duration-200
-    ">
-                          {/* Header */}
-                          <div className="p-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                            <div>
-                              <h3 className="text-sm font-black text-slate-900">Health Alerts</h3>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                {unreadCount} New Notifications
-                              </p>
-                            </div>
-                            <button className="text-xs font-black text-teal-600 uppercase tracking-widest hover:underline active:scale-95 transition-transform">
-                              Mark all read
-                            </button>
-                          </div>
-
-                          {/* Notification List */}
-                          <div className="max-h-[60vh] md:max-h-[350px] overflow-y-auto overscroll-contain">
-                            {notifications.length > 0 ? (
-                              notifications.map((n) => (
-                                <div
-                                  key={n.id}
-                                  className="p-4 flex gap-4 hover:bg-slate-50 border-b border-slate-50 last:border-0 cursor-pointer bg-teal-50/10 transition-colors"
-                                >
-                                  <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center bg-teal-100 text-teal-600">
-                                    <Clock size={18} />
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-xs font-black text-slate-900 line-clamp-1">
-                                      {n.title || 'Notification'}
-                                    </p>
-                                    <p className="text-[11px] text-slate-500 font-medium mt-0.5 leading-relaxed line-clamp-2">
-                                      {n.content || n.message}
-                                    </p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-2">
-                                      {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="p-10 text-center">
-                                <Bell className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-                                <p className="text-xs font-bold text-slate-400">All caught up!</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* USER DROP_DOWN */}
+                  {/* USER DROPDOWN */}
                   <div className="relative" ref={userMenuRef}>
                     <button
                       onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
@@ -287,49 +214,25 @@ export default function Header() {
                         <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{firstName}</span>
                         <span className="text-[10px] text-teal-600 font-bold uppercase">{user.role}</span>
                       </div>
-
-                      {/* Avatar / Initial Container */}
-                      <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-inner overflow-hidden shrink-0">
+                      <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-xs overflow-hidden shrink-0 shadow-inner">
                         {user.profile?.avatar_url ? (
-                          <img
-                            src={user.profile.avatar_url}
-                            alt={firstName}
-                            className="w-full h-full object-cover"
-                            // Fallback if image fails to load
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
+                          <img src={user.profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
                           userInitial
                         )}
                       </div>
-
-                      <ChevronDown
-                        size={14}
-                        className={`text-slate-400 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`}
-                      />
+                      <ChevronDown size={14} className={`text-slate-400 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     {isUserDropdownOpen && (
-                      <div className="absolute right-0 mt-3 w-60 bg-white border border-slate-100 rounded-2xl shadow-2xl shadow-slate-200 p-2 z-50 animate-in fade-in zoom-in duration-200">
-                        <div className="p-4 mb-2 border-b border-slate-50">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Signed in as</p>
-                          <p className="text-sm font-bold text-slate-900 truncate">{user.user.email}</p>
-                        </div>
-
+                      <div className="absolute right-0 mt-3 w-60 bg-white border border-slate-100 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in duration-200">
                         <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
                           <LayoutDashboard size={18} /> Dashboard
                         </Link>
-
-                        <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
-                          <User size={18} /> My Profile
-                        </Link>
-
                         <button
                           onClick={() => {
-                            router.push("/")
-                            supabaseBrowser.auth.signOut()
+                            supabaseBrowser.auth.signOut();
+                            router.push("/");
                           }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all mt-1"
                         >
@@ -340,27 +243,110 @@ export default function Header() {
                   </div>
                 </div>
               )}
-
-              {/* MOBILE MENU TOGGLE */}
-              <button className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
             </div>
           </div>
         </div>
-
-        {/* MOBILE DRAWER */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white border-t border-slate-100 p-4 space-y-2 animate-in slide-in-from-top duration-300">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 p-4 text-base font-bold text-slate-700 hover:bg-teal-50 hover:text-teal-600 rounded-2xl transition-all">
-                <link.icon size={20} /> {link.name}
-              </Link>
-            ))}
-          </div>
-        )}
       </header>
 
+      {/* --- MOBILE SIDEBAR (LEFT SIDE) --- */}
+      <div
+        className={`fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 md:hidden ${isMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
+        onClick={() => setIsMenuOpen(false)}
+      />
+
+      <div className={`fixed inset-y-0 left-0 z-[70] w-[300px] bg-white shadow-2xl transform transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] md:hidden ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}>
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-white shadow-md">
+                <ShieldCheck size={18} />
+              </div>
+              <span className="text-xl font-black tracking-tighter text-slate-900">Med<span className="text-teal-600">X</span></span>
+            </div>
+            <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 rounded-xl transition-all">
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-8">
+
+            {/* Section: Main Menu */}
+            <div>
+              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Explore</p>
+              <div className="space-y-1">
+                {publicLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`flex items-center gap-4 p-4 text-sm font-bold rounded-2xl transition-all group ${isLinkActive(link.href) ? "bg-teal-50 text-teal-700 shadow-sm shadow-teal-100/50" : "text-slate-600 hover:bg-slate-50"
+                      }`}
+                  >
+                    <div className={`p-2 rounded-lg transition-colors ${isLinkActive(link.href) ? "bg-white text-teal-600" : "bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-teal-600"}`}>
+                      <link.icon size={18} />
+                    </div>
+                    {link.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Section: Dashboard (Only visible if user logged in) */}
+            {user && (
+              <div>
+                <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Patient Portal</p>
+                <div className="space-y-1">
+                  {patientPortalLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center gap-4 p-4 text-sm font-bold rounded-2xl transition-all group ${isLinkActive(link.href) ? "bg-teal-50 text-teal-700 shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                        }`}
+                    >
+                      <div className={`p-2 rounded-lg transition-colors ${isLinkActive(link.href) ? "bg-white text-teal-600" : "bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-teal-600"}`}>
+                        <link.icon size={18} />
+                      </div>
+                      {link.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-slate-100">
+              <LanguageToggle />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 border-t border-slate-50 bg-slate-50/30">
+            {!user ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => { setIsMenuOpen(false); openLoginModal(); }} className="py-3.5 text-xs font-black text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm">
+                  Log In
+                </button>
+                <button onClick={() => { setIsMenuOpen(false); openLoginModal(); }} className="py-3.5 text-xs font-black text-white bg-slate-900 rounded-xl shadow-lg">
+                  Join Now
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setIsMenuOpen(false); supabaseBrowser.auth.signOut(); router.push("/"); }}
+                className="w-full flex items-center justify-center gap-3 py-4 text-sm font-bold text-red-500 bg-red-50 rounded-2xl active:scale-95 transition-all"
+              >
+                <LogOut size={18} /> Sign Out
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* --- LOGIN MODAL --- */}
       <Modal
         isOpen={isLoginModalOpen}
         onClose={() => { setShowForgot(false); setMfa(null); closeLoginModal(); }}
@@ -369,13 +355,10 @@ export default function Header() {
         <div className="px-1 py-2">
           {mfa ? (
             <div className="space-y-6">
-              <div className="p-4 bg-teal-50 text-teal-700 rounded-2xl text-xs font-bold flex gap-3 leading-relaxed">
-                <ShieldCheck className="w-5 h-5 shrink-0" /> Enter the 6-digit verification code from your authenticator app.
-              </div>
               <input
                 type="text" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 placeholder="0 0 0 0 0 0"
-                className="w-full text-center tracking-[0.5em] font-black text-3xl py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500 focus:bg-white transition-all"
+                className="w-full text-center tracking-[0.5em] font-black text-3xl py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500"
               />
               <button
                 onClick={async () => {
@@ -386,37 +369,37 @@ export default function Header() {
                   finalizeLogin(data.session);
                 }}
                 disabled={mfaInProgress || otp.length !== 6}
-                className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-2 hover:bg-teal-600 transition-all shadow-xl shadow-teal-100"
+                className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-2 hover:bg-teal-600 transition-all"
               >
-                {mfaInProgress && <Loader2 className="w-5 h-5 animate-spin" />} Confirm & Continue
+                {mfaInProgress && <Loader2 className="w-5 h-5 animate-spin" />} Confirm
               </button>
             </div>
           ) : !showForgot ? (
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600 transition-colors" />
-                  <input name="email" type="email" required className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500 focus:bg-white transition-all font-medium" placeholder="anirudh@example.com" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600" />
+                  <input name="email" type="email" required className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500" placeholder="email@example.com" />
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between items-center ml-1">
+                <div className="flex justify-between items-center">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password</label>
-                  <button type="button" onClick={() => setShowForgot(true)} className="text-[10px] font-black text-teal-600 hover:underline uppercase tracking-wider">Forgot?</button>
+                  <button type="button" onClick={() => setShowForgot(true)} className="text-[10px] font-black text-teal-600 hover:underline uppercase">Forgot?</button>
                 </div>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600 transition-colors" />
-                  <input name="password" type={showPassword ? "text" : "password"} required className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500 focus:bg-white transition-all font-medium" placeholder="••••••••" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 transition-colors">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600" />
+                  <input name="password" type={showPassword ? "text" : "password"} required className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500" placeholder="••••••••" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
-              <button disabled={isSubmitting} className="w-full bg-slate-900 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-3 transition-all active:scale-[0.98] shadow-xl shadow-slate-200">
+              <button disabled={isSubmitting} className="w-full bg-slate-900 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-3 shadow-xl transition-all">
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
               </button>
-              <button onClick={redirectToSignup} className="w-full bg-slate-900 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-3 transition-all active:scale-[0.98] shadow-xl shadow-slate-200">
+              <button type="button" onClick={() => { closeLoginModal(); router.push("/create-account"); }} className="w-full bg-slate-100 text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all">
                 Create Account
               </button>
             </form>
@@ -429,7 +412,6 @@ export default function Header() {
   );
 }
 
-// ... ForgotPasswordForm remains same as previous ...
 function ForgotPasswordForm({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -442,23 +424,23 @@ function ForgotPasswordForm({ onDone }: { onDone: () => void }) {
     });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Recovery link sent to your email!");
+    toast.success("Recovery link sent!");
     onDone();
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Email</label>
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account Email</label>
         <div className="relative">
           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500 focus:bg-white transition-all" placeholder="anirudh@example.com" />
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500" placeholder="email@example.com" />
         </div>
       </div>
-      <button disabled={loading} className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl hover:bg-teal-600 transition-all flex justify-center items-center gap-2 shadow-xl shadow-slate-100">
-        {loading && <Loader2 className="w-4 h-4 animate-spin" />} Send Recovery Link
+      <button disabled={loading} className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl hover:bg-teal-600 transition-all">
+        {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Send Recovery Link
       </button>
-      <button type="button" onClick={onDone} className="w-full text-[10px] font-black text-slate-400 hover:text-slate-800 uppercase tracking-widest">Back to Login</button>
+      <button type="button" onClick={onDone} className="w-full text-[10px] font-black text-slate-400 hover:text-slate-800 uppercase text-center">Back to Login</button>
     </form>
   );
 }

@@ -209,25 +209,35 @@ const ConsentFormStep = forwardRef(
             </div>
 
             {/* ACTION FOOTER */}
-            <div className="mt-10 flex flex-col sm:flex-row-reverse items-center justify-between gap-4 border-t pt-8">
+            <div className="mt-10 flex flex-col sm:flex-row-reverse items-center gap-4 border-t border-slate-100 pt-8">
+              {/* Primary Action: Finalize */}
               <button
                 onClick={handleContinue}
                 disabled={!consent.telehealth || !consent.terms}
-                className={`w-full sm:w-auto px-10 py-4 rounded-xl font-bold text-lg transition-all transform active:scale-95 ${
-                  consent.telehealth && consent.terms
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                }`}
+                className={`w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all transform active:scale-95 shadow-xl ${consent.telehealth && consent.terms
+                    ? "bg-slate-900 text-white shadow-slate-200 hover:bg-teal-600"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                  }`}
               >
                 {t("finalize")}
               </button>
 
-              <button
-                onClick={() => setShowDeclineModal(true)}
-                className="text-slate-500 hover:text-red-600 font-medium transition-colors text-sm"
-              >
-                {t("declineTerms")}
-              </button>
+              {/* Secondary Actions Group */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto sm:mr-auto">
+                <button
+                  onClick={() => prevStep()}
+                  className="w-full sm:w-auto px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                >
+                  {t("back")}
+                </button>
+
+                <button
+                  onClick={() => setShowDeclineModal(true)}
+                  className="w-full sm:w-auto px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  {t("declineTerms")}
+                </button>
+              </div>
             </div>
           </div>
         </div>

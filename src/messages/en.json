@@ -175,7 +175,8 @@
     "scrollToRead": "Scroll to read",
     "agreeText": "I have read and agree to the {section}",
     "finalize": "Finalize Appointment",
-    "declineTerms": "I do not agree to these terms"
+    "declineTerms": "I do not agree to these terms",
+    "back": "Back"
   },
   "preConsultation": {
     "title": "Pre-Consultation",
