@@ -10,7 +10,7 @@
     "privacyDescription": "Your medical data is encrypted and HIPAA compliant.",
     "subtitle": "Manage your healthcare journey and records",
     "tabs": {
-      "appointment": "Appointments",
+      "appointments": "Appointments",
       "reschedule": "Reschedule",
       "file-manager": "Medical Records",
       "follow-up": "Follow-Ups"
