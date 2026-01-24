@@ -1,0 +1,299 @@
+{
+  "patientDashboard": {
+    "menu": "Menu",
+    "appointments": "Appointments",
+    "reschedule": "Reschedule",
+    "medicalRecords": "Medical Records",
+    "followUps": "Follow-Ups",
+    "newBooking": "New Booking",
+    "privacyTitle": "Patient Privacy",
+    "privacyDescription": "Your medical data is encrypted and HIPAA compliant.",
+    "subtitle": "Manage your healthcare journey and records",
+    "tabs": {
+      "appointments": "Appointments",
+      "reschedule": "Reschedule",
+      "file-manager": "Medical Records",
+      "follow-up": "Follow-Ups"
+    }
+  },
+  "patientCard": {
+    "deletePermanent": "Delete Permanent"
+  },
+  "appointmentTab": {
+    "syncing": "Syncing your appointments…",
+    "activeUrgent": "Active & Urgent",
+    "paymentRequired": "Payment Required",
+    "upcoming": "Upcoming Appointments",
+    "past": "Past Appointments",
+    "cancelled": "Cancelled Appointments",
+    "emptyTitle": "No appointments yet",
+    "emptyDescription": "You don’t have any appointments at the moment."
+  },
+  "appointmentCard": {
+    "cancelled": "Cancelled",
+    "actionRequired": "Action Required",
+    "liveNow": "Live Now",
+    "completed": "Completed",
+    "specialist": "Specialist",
+    "completePayment": "Complete Payment",
+    "joinConsultation": "Join Consultation",
+    "viewDetails": "View Details",
+    "cancelledMessage": "Session was cancelled"
+  },
+  "fileManagerTab": {
+    "title": "Medical Records",
+    "subtitle": "Access and manage your uploaded medical files",
+    "file": "file",
+    "files": "files",
+    "saved": "saved",
+    "uploaded": "Uploaded",
+    "view": "View",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this file?",
+    "deleteSuccess": "File deleted successfully",
+    "deleteError": "Failed to delete file",
+    "loadError": "Unable to load files",
+    "openError": "Unable to open file",
+    "emptyTitle": "No files uploaded",
+    "emptyDescription": "Your uploaded medical documents will appear here."
+  },
+  "rescheduleTab": {
+    "title": "Reschedule Appointment",
+    "subtitle": "Select an appointment to reschedule",
+    "emptyTitle": "No upcoming appointments",
+    "emptyDescription": "You don’t have any appointments available for rescheduling.",
+    "reschedule": "Reschedule"
+  },
+  "followUpRequest": {
+    "title": "Follow-Up Requests",
+    "subtitle": "Consultations that require a follow-up",
+    "loading": "Loading…",
+    "loadError": "Unable to load follow-up requests",
+    "empty": "No follow-ups pending 🎉",
+    "overdue": "Overdue",
+    "required": "Follow-Up Required",
+    "originalAppointment": "Original Appointment",
+    "followUpDate": "Follow-Up Date",
+    "lastUpdated": "Last Updated",
+    "book": "Book Follow-Up"
+  },
+  "followUpSummary": {
+    "title": "Follow-Ups",
+    "overdue": "{count} overdue"
+  },
+  "nextAppointment": {
+    "defaultPractitioner": "Your Practitioner",
+    "live": "Happening now",
+    "startsIn": "Starts in {time}",
+    "join": "Join Appointment"
+  },
+  "allAppointments": {
+    "title": "Your Appointments",
+    "subtitle": "View and manage your entire care history with MedX.",
+    "upcoming": "Upcoming Sessions",
+    "past": "Past Visits",
+    "cancelled": "Cancelled",
+    "emptyUpcoming": "No upcoming appointments scheduled.",
+    "emptyPast": "Your completed appointments will appear here.",
+    "emptyCancelled": "No cancelled appointments.",
+    "defaultDoctor": "Medical Professional",
+    "reason": "Reason",
+    "cancelledByUser": "Cancelled by user"
+  },
+  "serviceSelection": {
+    "selectBeforeContinue": "Please select a consultation type before continuing.",
+    "failedToLoadServices": "Failed to load services.",
+    "selectServiceToProceed": "Please select a service to proceed.",
+    "preparingServices": "Preparing Services",
+    "stepLabel": "Step 1: Specialization",
+    "title": "Consultation Type",
+    "subtitle": "Select the medical specialization that best fits your current health needs.",
+    "defaultServiceDescription": "Expert medical consultation tailored to your specific symptoms and health goals.",
+    "currentSelection": "Current Selection",
+    "selectType": "Select Type",
+    "currentProgress": "Current Progress",
+    "selectServicePrompt": "Please select a service",
+    "back": "Back",
+    "continueToDoctors": "Continue to Doctors"
+  },
+  "doctorSelection": {
+    "selectDoctorError": "Please select a healthcare professional.",
+    "fetchDoctorError": "Unable to retrieve practitioner list.",
+    "backToSpecialization": "Back to specialisation",
+    "title": "Choose your Doctor",
+    "subtitle": "Available specialists for",
+    "loadingDoctors": "Finding best specialists...",
+    "noDoctors": "No doctors available for this service yet.",
+    "tryAnotherService": "Try another service",
+    "verifiedSpecialist": "Verified Specialist",
+    "consultationFee": "Consultation Fee"
+  },
+  "bookAppointment": {
+    "loadDoctorError": "වෛද්‍ය විස්තර පූරණය කළ නොහැකි විය",
+    "loadSlotsError": "ලබා ගත හැකි වේලාවන් පූරණය කළ නොහැකි විය",
+    "completeStepsError": "කරුණාකර සියලු පියවර සම්පූර්ණ කරන්න",
+    "selectTypeError": "කාලය වර්ගයක් තෝරන්න",
+    "selectDateError": "දිනයක් තෝරන්න",
+    "selectTimeError": "වේලාවක් තෝරන්න",
+    "changeDoctor": "වෛද්‍යවරයා වෙනස් කරන්න",
+    "secured": "HIPAA ආරක්ෂිතයි",
+    "specialist": "විශේෂඥ",
+    "clinicalPractice": "සාමාන්‍ය වෛද්‍ය සේවාව",
+    "experience": "අත්දැකීම",
+    "years": "වසර",
+    "rating": "ඇගයීම",
+    "languages": "භාෂා",
+    "sessionType": "සැසි වර්ගය",
+    "minuteSession": "මිනිත්තු සැසි",
+    "chooseDate": "දිනය තෝරන්න",
+    "availableSlots": "ලබාගත හැකි වේලාවන්",
+    "pickDate": "ලබාගත හැකි වේලාවන් බැලීමට දිනයක් තෝරන්න",
+    "fullyBooked": "සම්පූර්ණයෙන් වෙන් වී ඇත",
+    "tryAnotherDate": "වෙනත් දිනයක් උත්සාහ කරන්න",
+    "summary": "අපොයින්ට්මන්ට් සාරාංශය",
+    "confirming": "තහවුරු කරමින්...",
+    "continuePayment": "ගෙවීමට ඉදිරියට යන්න"
+  },
+  "consentForm": {
+    "acceptBothError": "Please accept both agreements to continue.",
+    "declineTitle": "Wait, Consent is Required",
+    "declineMessage": "To provide legal telehealth care and protect your privacy, we must have your signed agreement. Exiting now will cancel your booking progress.",
+    "exitBooking": "Yes, Exit Booking",
+    "goBackReview": "Go Back & Review",
+    "title": "Review & Sign",
+    "subtitle": "Almost done! We just need your legal consent.",
+    "telehealthTitle": "Telehealth Consent",
+    "telehealthHeading": "Digital Healthcare Agreement",
+    "telehealthP1": "Telehealth involves electronic communication technologies to provide care when the provider and patient are not in the same location.",
+    "telehealthP2": "By checking the box, you acknowledge that you understand the limitations of virtual care, including technical risks and the lack of physical examination.",
+    "telehealthP3": "I understand I can withdraw consent at any time without affecting my right to future care or treatment.",
+    "termsTitle": "Terms & Conditions",
+    "termsHeading": "Service Agreement",
+    "termsP1": "Appointments must be cancelled 24 hours in advance to avoid a no-show fee. Payment is processed securely via our encrypted partner.",
+    "termsP2": "The platform acts as a facilitator and does not directly provide medical advice. All medical outcomes are the responsibility of the licensed practitioner.",
+    "termsP3": "By proceeding, you agree to abide by the platform's legal and ethical policies.",
+    "scrollToRead": "Scroll to read",
+    "agreeText": "I have read and agree to the {section}",
+    "finalize": "Finalize Appointment",
+    "declineTerms": "I do not agree to these terms",
+    "back": "Back"
+  },
+  "preConsultation": {
+    "title": "Pre-Consultation",
+    "subtitle": "Help us prepare for your session with Dr. {doctor}",
+    "privacy": "Clinical Privacy",
+    "maxLabel": "MAX",
+    "concern": "Main Concern",
+    "concernPlaceholder": "Describe your primary symptoms or concerns...",
+    "outcome": "Desired Outcome",
+    "outcomePlaceholder": "What do you hope to achieve today?",
+    "referral": "How did you hear about us?",
+    "selectOption": "Select an option...",
+    "customReferral": "Please specify source...",
+    "attachments": "Attachments (Optional)",
+    "uploadHint": "Medical Records / Photos",
+    "attendees": "Attendees",
+    "invitePlaceholder": "Invite via email",
+    "back": "Back",
+    "continue": "Continue to Payment",
+    "errors": {
+      "concern": "Main concern is required",
+      "outcome": "Desired outcome is required",
+      "referral": "Please let us know how you heard about us",
+      "email": "Enter a valid email address.",
+      "maxAttendees": "Maximum {count} attendees allowed.",
+      "duplicateEmail": "Email already added.",
+      "selfInvite": "You cannot add yourself as an attendee."
+    }
+  },
+  "paymentStep": {
+    "errors": {
+      "completePayment": "Please complete the payment to finalize.",
+      "paymentLoading": "Payment system loading...",
+      "bookingFailed": "Booking session failed",
+      "paymentInitFailed": "Payment initialization failed",
+      "cancelled": "Payment cancelled",
+      "unexpected": "Unexpected error occurred"
+    },
+    "warnings": {
+      "attachmentUploadFailed": "Attachment upload failed. You can re-upload later."
+    },
+    "status": {
+      "sessionExpired": "Session Expired",
+      "completePayment": "Complete payment to secure slot",
+      "timeLeft": "Time Left",
+      "verifying": "Verifying Payment",
+      "confirming": "Confirming your booking with the bank..."
+    }
+  },
+  "paymentUI": {
+    "title": "Review & Complete Payment",
+    "doctorDetails": "Doctor Details",
+    "appointmentDetails": "Appointment Details",
+    "service": "Service",
+    "type": "Type",
+    "duration": "Duration",
+    "minutes": "mins",
+    "date": "Date",
+    "time": "Time",
+    "pricingSummary": "Pricing Summary",
+    "haveCoupon": "Have a coupon?",
+    "enterCode": "ENTER CODE",
+    "apply": "Apply",
+    "applying": "Applying…",
+    "couponApplied": "Coupon applied successfully",
+    "consultation": "Consultation",
+    "additionalAttendees": "Additional Attendees",
+    "couponDiscount": "Coupon Discount",
+    "total": "Total",
+    "payNow": "Pay Now →",
+    "back": "← Back",
+    "errors": {
+      "invalidCoupon": "Invalid coupon",
+      "couponFailed": "Failed to validate coupon"
+    }
+  },
+  "homepage": {
+    "practitioner": {
+      "title": "Are you a healthcare professional?",
+      "subtitle": "Join Clinico to manage your appointments, reach more patients, and streamline your practice with our digital tools.",
+      "benefits": {
+        "1": "Reach new patients in your area",
+        "2": "Full-featured scheduling dashboard",
+        "3": "Secure, HIPAA-compliant patient data"
+      },
+      "cta": "Register as a Practitioner"
+    },
+    "hero": {
+      "title": "Consult verified doctors in minutes",
+      "subtitle": "Book online consultations with trusted specialists. Browse services, doctors and availability — no login required.",
+      "trust": {
+        "verified": "Verified doctors",
+        "secure": "Secure & private",
+        "instant": "Instant booking"
+      },
+      "cta": {
+        "bookNow": "Book now",
+        "dashboard": "Dashboard",
+        "login": "Log in"
+      }
+    },
+    "features": {
+      "title": "Why Clinico?",
+      "items": {
+        "verified": {
+          "title": "Verified doctors",
+          "text": "All doctors are vetted and approved before listing"
+        },
+        "secure": {
+          "title": "Secure platform",
+          "text": "HIPAA-compliant, privacy-first healthcare experience"
+        },
+        "fast": {
+          "title": "Fast booking",
+          "text": "Book consultations in under a minute"
+        }
+      }
+    }
+  }
+}

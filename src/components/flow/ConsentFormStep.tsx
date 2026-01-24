@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { CheckCircle, XCircle, AlertCircle, ChevronDown } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 interface Props {
   nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
@@ -21,7 +22,9 @@ interface Props {
 
 const ConsentFormStep = forwardRef(
   ({ nextStep, prevStep, updateData, bookingData }: Props, ref) => {
+    const t = useTranslations("consentForm");
     const router = useRouter();
+
     const [consent, setConsent] = useState({
       telehealth: bookingData?.consent?.telehealth || false,
       terms: bookingData?.consent?.terms || false,
@@ -34,7 +37,6 @@ const ConsentFormStep = forwardRef(
     const telehealthRef = useRef<HTMLDivElement>(null);
     const termsRef = useRef<HTMLDivElement>(null);
 
-    // 1. Logic: Auto-enable if content is too short to scroll
     useEffect(() => {
       const checkScrollable = (ref: React.RefObject<HTMLDivElement | null>, setter: (v: boolean) => void) => {
         if (ref.current && ref.current.scrollHeight <= ref.current.clientHeight) {
@@ -48,7 +50,7 @@ const ConsentFormStep = forwardRef(
     useImperativeHandle(ref, () => ({
       validateStep: () => {
         if (!consent.telehealth || !consent.terms) {
-          toast.error("Please accept both agreements to continue.");
+          toast.error(t("acceptBothError"));
           return false;
         }
         return true;
@@ -80,9 +82,11 @@ const ConsentFormStep = forwardRef(
                 <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="w-10 h-10 text-red-500" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Wait, Consent is Required</h3>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {t("declineTitle")}
+                </h3>
                 <p className="text-sm text-gray-600 mt-3 leading-relaxed">
-                  To provide legal telehealth care and protect your privacy, we must have your signed agreement. Exiting now will cancel your booking progress.
+                  {t("declineMessage")}
                 </p>
               </div>
 
@@ -91,13 +95,13 @@ const ConsentFormStep = forwardRef(
                   onClick={() => router.push("/dashboard")}
                   className="w-full py-3 rounded-xl bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition-colors"
                 >
-                  Yes, Exit Booking
+                  {t("exitBooking")}
                 </button>
                 <button
                   onClick={() => setShowDeclineModal(false)}
                   className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-transform active:scale-95"
                 >
-                  Go Back & Review
+                  {t("goBackReview")}
                 </button>
               </div>
             </div>
@@ -108,40 +112,49 @@ const ConsentFormStep = forwardRef(
         <div className="min-h-screen bg-[#F8FAFC] py-12 px-4 sm:px-6">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-10">
-              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Review & Sign</h2>
-              <p className="text-slate-500 mt-2">Almost done! We just need your legal consent.</p>
+              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {t("title")}
+              </h2>
+              <p className="text-slate-500 mt-2">
+                {t("subtitle")}
+              </p>
             </div>
 
             <div className="space-y-6">
               {[
                 {
                   id: "telehealth",
-                  title: "Telehealth Consent",
+                  title: t("telehealthTitle"),
                   ref: telehealthRef,
                   read: telehealthRead,
                   setter: setTelehealthRead,
                   checked: consent.telehealth,
                   content: (
                     <>
-                      <p className="font-bold text-slate-900 underline underline-offset-4">Digital Healthcare Agreement</p>
-                      <p>Telehealth involves electronic communication technologies to provide care when the provider and patient are not in the same location.</p>
-                      <p>By checking the box, you acknowledge that you understand the limitations of virtual care, including technical risks and the lack of physical examination.</p>
-                      <p>I understand I can withdraw consent at any time without affecting my right to future care or treatment.</p>
+                      <p className="font-bold text-slate-900 underline underline-offset-4">
+                        {t("telehealthHeading")}
+                      </p>
+                      <p>{t("telehealthP1")}</p>
+                      <p>{t("telehealthP2")}</p>
+                      <p>{t("telehealthP3")}</p>
                     </>
                   ),
                 },
                 {
                   id: "terms",
-                  title: "Terms & Conditions",
+                  title: t("termsTitle"),
                   ref: termsRef,
                   read: termsRead,
                   setter: setTermsRead,
                   checked: consent.terms,
                   content: (
                     <>
-                      <p className="font-bold text-slate-900 underline underline-offset-4">Service Agreement</p>
-                      <p>Appointments must be cancelled 24 hours in advance to avoid a no-show fee. Payment is processed securely via our encrypted partner.</p>
-                      <p>The platform acts as a facilitator and does not directly provide medical advice. All medical outcomes are the responsibility of the licensed practitioner.</p>
+                      <p className="font-bold text-slate-900 underline underline-offset-4">
+                        {t("termsHeading")}
+                      </p>
+                      <p>{t("termsP1")}</p>
+                      <p>{t("termsP2")}</p>
+                      <p>{t("termsP3")}</p>
                     </>
                   ),
                 },
@@ -155,7 +168,7 @@ const ConsentFormStep = forwardRef(
                       </h3>
                       {!section.read && (
                         <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-1 bg-amber-100 text-amber-700 rounded-md animate-pulse">
-                          Scroll to read
+                          {t("scrollToRead")}
                         </span>
                       )}
                     </div>
@@ -168,7 +181,7 @@ const ConsentFormStep = forwardRef(
                       >
                         <div className="space-y-4">{section.content}</div>
                       </div>
-                      
+
                       {!section.read && (
                         <div className="absolute bottom-2 right-4 animate-bounce pointer-events-none">
                           <ChevronDown className="w-5 h-5 text-slate-400" />
@@ -187,7 +200,7 @@ const ConsentFormStep = forwardRef(
                         />
                       </div>
                       <span className={`text-sm font-semibold ${section.checked ? 'text-blue-700' : 'text-slate-600'}`}>
-                        I have read and agree to the {section.title}
+                        {t("agreeText", { section: section.title })}
                       </span>
                     </label>
                   </div>
@@ -196,25 +209,35 @@ const ConsentFormStep = forwardRef(
             </div>
 
             {/* ACTION FOOTER */}
-            <div className="mt-10 flex flex-col sm:flex-row-reverse items-center justify-between gap-4 border-t pt-8">
+            <div className="mt-10 flex flex-col sm:flex-row-reverse items-center gap-4 border-t border-slate-100 pt-8">
+              {/* Primary Action: Finalize */}
               <button
                 onClick={handleContinue}
                 disabled={!consent.telehealth || !consent.terms}
-                className={`w-full sm:w-auto px-10 py-4 rounded-xl font-bold text-lg transition-all transform active:scale-95 ${
-                  consent.telehealth && consent.terms
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                }`}
+                className={`w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all transform active:scale-95 shadow-xl ${consent.telehealth && consent.terms
+                    ? "bg-slate-900 text-white shadow-slate-200 hover:bg-teal-600"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                  }`}
               >
-                Finalize Appointment
+                {t("finalize")}
               </button>
 
-              <button
-                onClick={() => setShowDeclineModal(true)}
-                className="text-slate-500 hover:text-red-600 font-medium transition-colors text-sm"
-              >
-                I do not agree to these terms
-              </button>
+              {/* Secondary Actions Group */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto sm:mr-auto">
+                <button
+                  onClick={() => prevStep()}
+                  className="w-full sm:w-auto px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                >
+                  {t("back")}
+                </button>
+
+                <button
+                  onClick={() => setShowDeclineModal(true)}
+                  className="w-full sm:w-auto px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  {t("declineTerms")}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -12,8 +12,11 @@ import {
   Inbox
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import { useTranslations } from "next-intl";
 
 export default function AppointmentTab() {
+  const t = useTranslations("appointmentTab");
+
   const [data, setData] = useState({
     ongoing: [],
     upcoming: [],
@@ -35,7 +38,7 @@ export default function AppointmentTab() {
           pending: j.pending_payment || [],
         });
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -43,7 +46,9 @@ export default function AppointmentTab() {
     return (
       <div className="min-h-[400px] flex flex-col justify-center items-center gap-4">
         <Loader size="lg" />
-        <p className="text-slate-400 text-sm font-medium animate-pulse">Syncing your clinical records...</p>
+        <p className="text-slate-400 text-sm font-medium animate-pulse">
+          {t("syncing")}
+        </p>
       </div>
     );
   }
@@ -56,11 +61,10 @@ export default function AppointmentTab() {
 
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
-      {/* 1. CRITICAL ACTIONS (Ongoing & Pending) */}
       {(data.ongoing.length > 0 || data.pending.length > 0) && (
         <div className="grid grid-cols-1 gap-6">
           <Section
-            title="Active & Urgent"
+            title={t("activeUrgent")}
             items={data.ongoing}
             icon={<Activity className="text-emerald-500" />}
             accent="emerald"
@@ -69,7 +73,7 @@ export default function AppointmentTab() {
           </Section>
 
           <Section
-            title="Action Required: Payment"
+            title={t("paymentRequired")}
             items={data.pending}
             icon={<CreditCard className="text-amber-500" />}
             accent="amber"
@@ -79,19 +83,17 @@ export default function AppointmentTab() {
         </div>
       )}
 
-      {/* 2. SCHEDULED */}
       <Section
-        title="Upcoming Consultations"
+        title={t("upcoming")}
         items={data.upcoming}
         icon={<CalendarClock className="text-blue-500" />}
       >
         {(a: any) => <AppointmentCard appt={a} />}
       </Section>
 
-      {/* 3. RECORDS */}
       <div className="pt-8 border-t border-slate-200">
         <Section
-          title="Past Visits"
+          title={t("past")}
           items={data.past}
           icon={<History className="text-slate-400" />}
           gridCols="lg:grid-cols-3"
@@ -100,10 +102,9 @@ export default function AppointmentTab() {
         </Section>
       </div>
 
-      {/* 4. CANCELLED (Subtle) */}
       {data.cancelled.length > 0 && (
         <Section
-          title="Cancelled"
+          title={t("cancelled")}
           items={data.cancelled}
           icon={<XCircle className="text-slate-300" />}
           isCollapsedInitial
@@ -114,8 +115,6 @@ export default function AppointmentTab() {
     </div>
   );
 }
-
-/* ---------- Sub-Components ---------- */
 
 function Section({ title, items, children, icon, accent = "blue", gridCols = "lg:grid-cols-2" }: any) {
   if (items.length === 0) return null;
@@ -133,7 +132,9 @@ function Section({ title, items, children, icon, accent = "blue", gridCols = "lg
           <div className={`p-2 rounded-lg ${accentColors[accent]}`}>
             {icon}
           </div>
-          <h2 className="text-lg font-bold text-slate-800 tracking-tight">{title}</h2>
+          <h2 className="text-lg font-bold text-slate-800 tracking-tight">
+            {title}
+          </h2>
         </div>
         <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-xs font-bold border border-slate-200">
           {items.length}
@@ -152,14 +153,18 @@ function Section({ title, items, children, icon, accent = "blue", gridCols = "lg
 }
 
 function EmptyDashboardState() {
+  const t = useTranslations("appointmentTab");
+
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-12 flex flex-col items-center text-center shadow-sm">
       <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
         <Inbox className="w-8 h-8 text-slate-300" />
       </div>
-      <h3 className="text-xl font-bold text-slate-900">No appointments found</h3>
+      <h3 className="text-xl font-bold text-slate-900">
+        {t("emptyTitle")}
+      </h3>
       <p className="text-slate-500 max-w-sm mt-2">
-        You don't have any scheduled sessions yet. Book a consultation with one of our specialists to get started.
+        {t("emptyDescription")}
       </p>
     </div>
   );

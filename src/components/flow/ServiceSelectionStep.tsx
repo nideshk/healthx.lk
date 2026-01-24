@@ -12,6 +12,7 @@ import { Stethoscope, CheckCircle2, ArrowRight, ChevronRight, Loader2 } from 'lu
 import { toast } from 'react-toastify';
 import { AppointmentFormInputs } from '@/types/FormType';
 import Loader from '@/components/atom/Loader/Loader';
+import { useTranslations } from 'next-intl';
 
 type Service = {
   id: string | number;
@@ -31,6 +32,8 @@ interface Props {
 
 const ConsultationStep = forwardRef(
   ({ updateData, bookingData, draftData, nextStep, prevStep }: Props, ref) => {
+    const t = useTranslations("serviceSelection");
+
     const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,7 +46,7 @@ const ConsultationStep = forwardRef(
     useImperativeHandle(ref, () => ({
       validateStep: () => {
         if (!selectedServiceId) {
-          toast.error('Please select a consultation type before continuing.');
+          toast.error(t("selectBeforeContinue"));
           return false;
         }
         return true;
@@ -57,7 +60,7 @@ const ConsultationStep = forwardRef(
           setServices((res.data.services as Service[]) || []);
         } catch (err) {
           console.error('Failed to fetch services:', err);
-          toast.error('Failed to load services.');
+          toast.error(t("failedToLoadServices"));
         } finally {
           setLoading(false);
         }
@@ -74,7 +77,7 @@ const ConsultationStep = forwardRef(
 
     const handleNext = async () => {
       if (!selectedServiceId) {
-        toast.error('Please select a service to proceed.');
+        toast.error(t("selectServiceToProceed"));
         return;
       }
       setIsSubmitting(true);
@@ -89,23 +92,25 @@ const ConsultationStep = forwardRef(
       return (
         <div className="flex flex-col items-center justify-center h-96 space-y-4">
           <Loader size="lg" />
-          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Preparing Services</p>
+          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">
+            {t("preparingServices")}
+          </p>
         </div>
       );
     }
 
     return (
-      <div className="pb-32 pt-10"> {/* Added pb-32 to make room for the fixed footer */}
+      <div className="pb-32 pt-10">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 text-teal-700 text-[10px] font-black uppercase tracking-widest mb-4 border border-teal-100">
-              Step 1: Specialization
+              {t("stepLabel")}
             </div>
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-3">
-              Consultation Type
+              {t("title")}
             </h2>
             <p className="text-slate-500 max-w-xl mx-auto font-medium">
-              Select the medical specialization that best fits your current health needs.
+              {t("subtitle")}
             </p>
           </div>
 
@@ -142,12 +147,12 @@ const ConsultationStep = forwardRef(
                   </h3>
 
                   <p className={`text-sm font-medium leading-relaxed mb-8 line-clamp-3 ${isSelected ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {service.description || 'Expert medical consultation tailored to your specific symptoms and health goals.'}
+                    {service.description || t("defaultServiceDescription")}
                   </p>
 
                   <div className="mt-auto flex items-center justify-between">
                     <span className={`text-xs font-black uppercase tracking-widest ${isSelected ? 'text-teal-400' : 'text-slate-300 group-hover:text-teal-600'}`}>
-                      {isSelected ? 'Current Selection' : 'Select Type'}
+                      {isSelected ? t("currentSelection") : t("selectType")}
                     </span>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
                         isSelected ? 'bg-teal-400 text-slate-900' : 'bg-slate-50 text-slate-400 group-hover:bg-teal-600 group-hover:text-white group-hover:rotate-[-45deg]'
@@ -165,23 +170,24 @@ const ConsultationStep = forwardRef(
         <div className="fixed bottom-0 inset-x-0 bg-white/80 backdrop-blur-lg border-t border-slate-100 p-4 md:p-6 z-50">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div className="hidden md:block">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Current Progress</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                {t("currentProgress")}
+              </p>
               <p className="text-sm font-bold text-slate-900">
                 {selectedServiceId 
                   ? services.find(s => s.id === selectedServiceId)?.name 
-                  : "Please select a service"}
+                  : t("selectServicePrompt")}
               </p>
             </div>
 
             <div className="flex items-center gap-4 w-full md:w-auto">
-              {/* Back button hidden or disabled on first step */}
               <button
                 type="button"
                 onClick={prevStep}
-                disabled={true} // First step has no "Back"
+                disabled={true}
                 className="flex-1 md:flex-none px-6 py-3 rounded-2xl text-sm font-bold text-slate-400 border border-slate-100 disabled:opacity-30"
               >
-                Back
+                {t("back")}
               </button>
 
               <button
@@ -194,7 +200,7 @@ const ConsultationStep = forwardRef(
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    Continue to Doctors
+                    {t("continueToDoctors")}
                     <ChevronRight size={16} />
                   </>
                 )}

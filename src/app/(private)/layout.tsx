@@ -1,11 +1,7 @@
-import { requireUser } from "@/lib/authGuard";
-import { redirect } from "next/navigation";
-
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-
-  return <>{children}</>;
+export default function PrivateLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-white">
+      {children}
+    </div>
+  );
 }

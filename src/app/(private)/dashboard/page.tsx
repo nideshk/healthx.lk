@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 
 import AdminDashboard from "@/components/dashboard/admin/AdminDashboard";
-import PatientDashboard from "@/components/dashboard/patient/PatientDashboard";
+import PatientDashboard from "@/components/dashboard/patient/[locale]/PatientDashboard";
 import PractitionerDashboard from "@/components/dashboard/practitioner/PractitionerDashboard";
 import Loader from "@/components/atom/Loader/Loader";
 import { authFetch } from "@/lib/authFetch";
