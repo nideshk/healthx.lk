@@ -286,6 +286,39 @@
       "couponFailed": "Failed to validate coupon"
     }
   
+  },
+   "homepage": {
+    "hero": {
+      "title": "Consult verified doctors in minutes",
+      "subtitle": "Book online consultations with trusted specialists. Browse services, doctors and availability — no login required.",
+      "trust": {
+        "verified": "Verified doctors",
+        "secure": "Secure & private",
+        "instant": "Instant booking"
+      },
+      "cta": {
+        "bookNow": "Book now",
+        "dashboard": "Dashboard",
+        "login": "Log in"
+      }
+    },
+    "features": {
+      "title": "Why Clinico?",
+      "items": {
+        "verified": {
+          "title": "Verified doctors",
+          "text": "All doctors are vetted and approved before listing"
+        },
+        "secure": {
+          "title": "Secure platform",
+          "text": "HIPAA-compliant, privacy-first healthcare experience"
+        },
+        "fast": {
+          "title": "Fast booking",
+          "text": "Book consultations in under a minute"
+        }
+      }
+    }
   }
 
 }
