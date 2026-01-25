@@ -10,7 +10,7 @@ import { supabaseAdmin } from "../supabaseAdmin";
 
 export async function auditLog(event: AuditEvent) {
   try {
-    const {data, error} =  await supabaseAdmin.from("hipaa_audit_log").insert({
+    const { data, error } = await supabaseAdmin.from("hipaa_audit_log").insert({
       actor_user_id: event.actorUserId ?? null,
       actor_role: event.actorRole,
       action: event.action,
@@ -23,7 +23,6 @@ export async function auditLog(event: AuditEvent) {
       ip_address: event.ipAddress ?? null,
       user_agent: event.userAgent ?? null,
     });
-    console.log("AUDIT_LOGGED", {data, error});
   } catch (err) {
     // 🚨 NEVER crash the API because of audit logging
     console.error("AUDIT_LOG_FAILED", err);

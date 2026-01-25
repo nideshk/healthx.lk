@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       role: profile.role, // patient | practitioner | admin | superadmin
       eventType: "auth.login",
       title: "New Login Detected",
-      message: "You’ve successfully signed in to your Clinico account.",
+      message: "You’ve successfully signed in to your Medx account.",
       channels: ["email"], // 👈 keep email optional
       payload: {
         ip: req.headers.get("x-forwarded-for") || "unknown",

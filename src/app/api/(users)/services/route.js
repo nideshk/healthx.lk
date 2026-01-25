@@ -15,7 +15,6 @@ export async function GET(req) {
       .select("*")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
-
     if (error) {
       console.error("DB error:", error);
       return Response.json({ error: error.message }, { status: 500 });

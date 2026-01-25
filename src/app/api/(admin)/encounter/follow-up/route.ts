@@ -231,7 +231,7 @@ Follow-up Date:
 ${new Date(data.follow_up_date).toLocaleDateString()}
 
 Regards,
-Clinico Team
+Medx Team
     `.trim(),
     channels: ["email"],
     payload: {
