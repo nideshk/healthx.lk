@@ -296,5 +296,110 @@
         }
       }
     }
+  },
+  "howto": {
+    "title": "How It Works",
+    "subtitle": "Everything you need to know before booking a telehealth consultation",
+    "sections": {
+      "gettingStarted": {
+        "title": "Getting Started",
+        "items": [
+          {
+            "q": "How do I create an account?",
+            "a": "Select the service you need and follow the steps to book your appointment. During this process, you can sign up using your email address."
+          },
+          {
+            "q": "Can I create an account for a family member?",
+            "a": "Yes. You can create an account for yourself or a family member, and you may also attend the consultation with them."
+          }
+        ]
+      },
+      "booking": {
+        "title": "Booking an Appointment",
+        "items": [
+          {
+            "q": "How do I book a session with a doctor or specialist?",
+            "a": "Go to the home page and select the service you need. Choose the number of attendees, confirm a date and time, log in or create an account, complete the payment, and you will receive an email with the appointment confirmation and video link."
+          },
+          {
+            "q": "How do I know which specialist to book?",
+            "a": "Each specialty is explained on the home page. After selecting a specialist, you can view their expertise, languages spoken, and profile details. If unsure, you may book a general practitioner first."
+          },
+          {
+            "q": "Can I reschedule or cancel an appointment?",
+            "a": "Yes. If you cancel or reschedule at least 12 hours before your appointment, there is no fee. Changes within 12 hours may incur a fee."
+          }
+        ]
+      },
+      "consultation": {
+        "title": "During the Consultation",
+        "items": [
+          {
+            "q": "What do I need for the video call?",
+            "a": "You only need a smartphone, tablet, or computer with internet access. Ensure your camera and microphone are enabled."
+          },
+          {
+            "q": "What if my internet connection drops?",
+            "a": "You can rejoin the consultation using the same link. If issues continue, the clinician may switch to an audio call or reschedule."
+          },
+          {
+            "q": "Are consultations private?",
+            "a": "Yes. Consultations are never recorded. Only you and your clinician have access unless you invite an additional attendee."
+          }
+        ]
+      },
+      "prescriptions": {
+        "title": "Prescriptions & Reports",
+        "items": [
+          {
+            "q": "How can I send reports to the doctor?",
+            "a": "During booking, you can upload up to three medical documents or photos, which will be shared directly with your doctor."
+          },
+          {
+            "q": "How do I receive a prescription?",
+            "a": "Prescriptions are sent as images via our official WhatsApp number. This number is not a direct line to the doctor."
+          },
+          {
+            "q": "Can I get a medical certificate?",
+            "a": "No. Under Sri Lankan regulations, medical certificates cannot be issued through telehealth without a physical examination."
+          }
+        ]
+      },
+      "payments": {
+        "title": "Payments",
+        "items": [
+          {
+            "q": "How do I pay for my appointment?",
+            "a": "You can pay using debit/credit cards or supported Sri Lankan mobile payment methods."
+          },
+          {
+            "q": "Is my payment information secure?",
+            "a": "Yes. Payments are processed through secure gateways and card details are never stored."
+          }
+        ]
+      },
+      "technical": {
+        "title": "Technical Help",
+        "items": [
+          {
+            "q": "What devices can I use?",
+            "a": "Any smartphone, tablet, or computer with a stable internet connection, camera, and microphone."
+          },
+          {
+            "q": "What should I do if I cannot join the video call?",
+            "a": "Check your internet connection and browser permissions. If the issue persists, contact our support team."
+          }
+        ]
+      },
+      "clinicians": {
+        "title": "Clinicians",
+        "items": [
+          {
+            "q": "Are the clinicians qualified and registered?",
+            "a": "Yes. All clinicians are verified Sri Lankan medical professionals registered with relevant medical councils."
+          }
+        ]
+      }
+    }
   }
 }

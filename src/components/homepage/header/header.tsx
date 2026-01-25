@@ -63,7 +63,7 @@ export default function Header() {
   const publicLinks = [
     { name: "Find Doctors", href: "/dashboard", icon: Search },
     { name: "About us", href: "/about-us", icon: ShieldCheck },
-    { name: "Book Now", href: "/appointment", icon: Calendar },
+    { name: "Help", href: "/help", icon: Calendar },
   ];
 
   // Visible ONLY in the Mobile Sidebar (Left Drawer)
