@@ -62,7 +62,7 @@ export default function Header() {
   // Visible on both Desktop Header and Mobile Sidebar
   const publicLinks = [
     { name: "Find Doctors", href: "/dashboard", icon: Search },
-    { name: "About us", href: "/about-us", icon: ShieldCheck },
+    { name: "Our Story", href: "/about-us", icon: ShieldCheck },
     { name: "Help", href: "/help", icon: Calendar },
   ];
 
