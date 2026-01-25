@@ -159,12 +159,7 @@ export default function Header() {
               </button>
 
               <Link href="/" className="flex items-center gap-2 group">
-                <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-teal-200 group-hover:rotate-6 transition-transform">
-                  <ShieldCheck size={24} />
-                </div>
-                <span className="text-2xl font-black tracking-tighter text-slate-900">
-                  Med<span className="text-teal-600">X</span>
-                </span>
+                <img src="/assets/logo.png" alt="" className="w-24 h-24" />
               </Link>
 
               {/* DESKTOP NAVIGATION (Public Only) */}

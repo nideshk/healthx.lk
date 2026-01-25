@@ -215,8 +215,8 @@ const ConsentFormStep = forwardRef(
                 onClick={handleContinue}
                 disabled={!consent.telehealth || !consent.terms}
                 className={`w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all transform active:scale-95 shadow-xl ${consent.telehealth && consent.terms
-                    ? "bg-slate-900 text-white shadow-slate-200 hover:bg-teal-600"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                  ? "bg-slate-900 text-white shadow-slate-200 hover:bg-teal-600"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
                   }`}
               >
                 {t("finalize")}

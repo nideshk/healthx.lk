@@ -169,6 +169,7 @@ export async function POST(
 
     console.log("fees chargedd", appointment)
     if (insertError || !appointment) {
+      console.log(insertError)
       return NextResponse.json(
         { error: "Failed to create appointment" },
         { status: 500 }
