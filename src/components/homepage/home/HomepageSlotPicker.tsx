@@ -25,6 +25,8 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
   const [availability, setAvailability] = useState<any>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  const updateDraft = useBookingDraftStore((s) => s.update);
+
   /* ---------- Load practitioner ---------- */
   useEffect(() => {
     axios
@@ -44,11 +46,12 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
       .finally(() => setLoadingSlots(false));
   }, [selectedDate, selectedType, practitionerId]);
 
+  /* ---------- Slots by type ---------- */
   const slots = useMemo(() => {
     if (!availability || !selectedType) return [];
     return availability.slots_by_type?.[selectedType.name] || [];
   }, [availability, selectedType]);
-  const updateDraft = useBookingDraftStore((s) => s.update);
+
   /* ---------- Continue ---------- */
   const handleContinue = () => {
     if (!selectedType || !selectedDate || !selectedTime) {
@@ -56,16 +59,22 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
       return;
     }
 
-    const [H, M] = selectedTime.split(":").map(Number);
-    const [yr, mo, da] = selectedDate.split("-").map(Number);
+    const [hour, minute] = selectedTime.split(":").map(Number);
+    const [year, month, day] = selectedDate.split("-").map(Number);
 
     const tz =
       availability?.timezone ||
       practitioner?.timezone ||
-      "UTC";
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const startLocal = DateTime.fromObject(
-      { year: yr, month: mo, day: da, hour: H, minute: M },
+      {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+      },
       { zone: tz }
     );
 
@@ -87,7 +96,6 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
     // 🔐 Gate login
     openLoginModal();
   };
-
 
   if (!practitioner) return null;
 
@@ -119,7 +127,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
                 setSelectedTime(null);
               }}
               className={`px-4 py-2 rounded-full text-sm font-medium border transition
-              ${selectedType?.id === type.id
+                ${selectedType?.id === type.id
                   ? "bg-cyan-600 text-white border-cyan-600"
                   : "bg-white border-gray-300 hover:border-cyan-500"
                 }`}
@@ -140,7 +148,18 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
             value={selectedDate ? new Date(selectedDate) : undefined}
             onChange={(date) => {
               if (!date) return;
-              setSelectedDate(date.toISOString().slice(0, 10));
+
+              const tz =
+                practitioner?.timezone ||
+                availability?.timezone ||
+                Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+              // ✅ FIX: Preserve local/practitioner timezone
+              const formattedDate = DateTime.fromJSDate(date)
+                .setZone(tz)
+                .toFormat("yyyy-MM-dd");
+
+              setSelectedDate(formattedDate);
               setSelectedTime(null);
             }}
             theme="light"
@@ -175,7 +194,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
                   key={time}
                   onClick={() => setSelectedTime(time)}
                   className={`px-4 py-2 rounded-lg text-sm border transition
-                  ${selectedTime === time
+                    ${selectedTime === time
                       ? "bg-green-600 text-white border-green-600"
                       : "bg-white border-gray-300 hover:border-cyan-500"
                     }`}
@@ -202,7 +221,6 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
       </p>
     </div>
   );
-
 };
 
 export default HomepageSlotPicker;
