@@ -9,6 +9,8 @@ import { useModalStore } from "@/store/useModalStore";
 import { toast } from "sonner";
 import Calendar from "@/components/atom/Calendar/Calendar";
 import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface Props {
   practitionerId: string;
@@ -17,7 +19,7 @@ interface Props {
 
 const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
   const { openLoginModal } = useModalStore();
-
+  const { user } = useAuth();
   const [practitioner, setPractitioner] = useState<any>(null);
   const [selectedType, setSelectedType] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -26,7 +28,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const updateDraft = useBookingDraftStore((s) => s.update);
-
+  const router = useRouter();
   /* ---------- Load practitioner ---------- */
   useEffect(() => {
     axios
@@ -94,7 +96,14 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
     });
 
     // 🔐 Gate login
-    openLoginModal();
+
+    if (!user) {
+      openLoginModal();
+      return;
+    }
+    else {
+      router.push('/appointment');
+    }
   };
 
   if (!practitioner) return null;
