@@ -449,7 +449,7 @@ export async function PATCH(
     ${reason || "No reason provided"}
 
     Regards,
-    Clinico Team
+    Medx Team
           `.trim(),
           channels: ["email"],
           payload: {
@@ -475,7 +475,7 @@ export async function PATCH(
     ${reason || "No reason provided"}
 
     Regards,
-    Clinico Team
+    Medx Team
           `.trim(),
           channels: ["email"],
           payload: {

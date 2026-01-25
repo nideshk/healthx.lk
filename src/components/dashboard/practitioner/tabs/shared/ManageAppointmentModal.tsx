@@ -93,7 +93,7 @@ Join your appointment using the link below:
 ${meetingUrl}
 
 Regards,
-Clinico Team
+Medx Team
       `.trim();
 
       const response = await authFetch("/api/notify-send", {
@@ -250,14 +250,14 @@ Clinico Team
         </p>
 
         <div className="flex justify-between mt-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setScreen("menu")}
             disabled={isSubmitting}
           >
             Back
           </Button>
-          <Button 
+          <Button
             onClick={handleResendDetails}
             disabled={isSubmitting}
           >

@@ -21,6 +21,7 @@ type Service = {
   slug: string;
   icon: string | null;
   description: string;
+  sin_description: string;
 };
 
 type Doctor = {
@@ -143,18 +144,16 @@ const ProgressHeader = ({ step }: { step: number }) => {
             <div key={s.label} className="flex-1 flex flex-col items-center">
               <div
                 className={`w-9 h-9 rounded-full flex items-center justify-center mb-2
-                  ${
-                    active
-                      ? "bg-cyan-600 text-white"
-                      : "bg-gray-200 text-gray-500"
+                  ${active
+                    ? "bg-cyan-600 text-white"
+                    : "bg-gray-200 text-gray-500"
                   }`}
               >
                 {s.icon}
               </div>
               <span
-                className={`text-xs font-medium ${
-                  active ? "text-cyan-600" : "text-gray-400"
-                }`}
+                className={`text-xs font-medium ${active ? "text-cyan-600" : "text-gray-400"
+                  }`}
               >
                 {s.label}
               </span>
@@ -227,6 +226,9 @@ const ServicePicker = ({
 
                 <p className="text-sm text-gray-500 mt-1 leading-snug">
                   {s.description}
+                </p>
+                <p className="text-sm text-gray-500 mt-1 leading-snug">
+                  {s.sin_description}
                 </p>
               </div>
             </div>

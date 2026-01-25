@@ -139,7 +139,7 @@ export async function createPractitioner(
   }
 
   /* 3️⃣ Create practitioner */
-  const {data: practitioner, error: practitionerErr} = await supabaseAdmin
+  const { data: practitioner, error: practitionerErr } = await supabaseAdmin
     .from("practitioners")
     .insert({
       ...(practitioner_id ? { id: practitioner_id } : {}),
@@ -163,17 +163,17 @@ export async function createPractitioner(
     .single();
 
   if (practitionerErr) {
-      console.error("PRACTITIONER CREATION FAILED — ROLLING BACK", practitionerErr);
+    console.error("PRACTITIONER CREATION FAILED — ROLLING BACK", practitionerErr);
 
-      // 🔥 Rollback
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      await supabaseAdmin.from("profiles").delete().eq("id", userId);
+    // 🔥 Rollback
+    await supabaseAdmin.auth.admin.deleteUser(userId);
+    await supabaseAdmin.from("profiles").delete().eq("id", userId);
 
-      return {
-        success: false,
-        message: "Failed to create practitioner record",
-      };
-    }
+    return {
+      success: false,
+      message: "Failed to create practitioner record",
+    };
+  }
 
   const finalPractitionerId = practitioner.id;
 
@@ -182,7 +182,7 @@ export async function createPractitioner(
     const toISO = (t: string) =>
       new Date(`2000-01-01T${t}:00`).toISOString();
 
-     const { error: availabilityErr } = await supabaseAdmin
+    const { error: availabilityErr } = await supabaseAdmin
       .from("practitioner_availability")
       .insert({
         practitioner_id: finalPractitionerId,
@@ -225,12 +225,12 @@ export async function createPractitioner(
   }
 
   /* 6️⃣ Notify */
-      await notify({
-      userId, // auth.users.id
-      role: "practitioner",
-      eventType: "practitioner_account_created",
-      title: "Your Doctor Account Has Been Created",
-      message: `
+  await notify({
+    userId, // auth.users.id
+    role: "practitioner",
+    eventType: "practitioner_account_created",
+    title: "Your Doctor Account Has Been Created",
+    message: `
 Hello ${full_name},
 Your doctor account has been created.
 Login details:
@@ -238,16 +238,16 @@ Username: ${email}
 Password: ${password}
 Please keep these credentials secure.
 Regards,
-Clinico Team
+Medx Team
       `.trim(),
-      channels: ["email"],
-      payload: {
-        email,
-        username: email,
-        password,
-        finalPractitionerId,
-      },
-    });
+    channels: ["email"],
+    payload: {
+      email,
+      username: email,
+      password,
+      finalPractitionerId,
+    },
+  });
 
   return { success: true, userId, finalPractitionerId };
 }

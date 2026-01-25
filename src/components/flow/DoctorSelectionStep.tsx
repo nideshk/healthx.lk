@@ -48,7 +48,7 @@ const DoctorSelectionStep = forwardRef(
             license_number: p.license_number,
             email: p.contact_email,
             qualification: p.qualification,
-            profileImage: p.profile_picture_url || '/images/default-doctor.png',
+            profileImage: p.profile_picture_url || null,
             fee: 950 + (p.fees || 0),
             currency: 'LKR',
             rating: { overall: 4.8 },
@@ -149,23 +149,37 @@ const DoctorSelectionStep = forwardRef(
                       }`}
                   >
                     <div className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="relative">
+                      <div className="relative">
+                        {doctor.profileImage ? (
+                          // Render the image if it exists
                           <img
                             src={doctor.profileImage}
                             alt={doctor.name}
                             className={`w-20 h-20 rounded-2xl object-cover border-2 transition-all ${isSelected ? 'border-teal-300 shadow-md' : 'border-slate-50'
                               }`}
                           />
-                          <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-md">
-                            <div className="bg-teal-500 rounded-full p-1">
-                              <BadgeCheck className="w-4 h-4 text-white" />
-                            </div>
+                        ) : (
+                          // Fallback: Render first two initials
+                          <div
+                            className={`w-20 h-20 rounded-2xl border-2 flex items-center justify-center text-xl font-bold transition-all ${isSelected
+                              ? 'border-teal-300 bg-teal-50 text-teal-700 shadow-md'
+                              : 'border-slate-100 bg-slate-100 text-slate-500'
+                              }`}
+                          >
+                            {doctor.name
+                              .split(' ')
+                              .map((n: any) => n[0])
+                              .join('')
+                              .toUpperCase()
+                              .slice(0, 2)}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1.5 rounded-xl border border-amber-100 shadow-sm">
-                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                          <span className="text-xs font-black text-amber-700">{doctor.rating.overall}</span>
+                        )}
+
+                        {/* The Badge remains in the same position for both cases */}
+                        <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-md">
+                          <div className="bg-teal-500 rounded-full p-1">
+                            <BadgeCheck className="w-4 h-4 text-white" />
+                          </div>
                         </div>
                       </div>
 

@@ -90,7 +90,7 @@ export default function PractitionerRegisterPage() {
       first_name: "",
       last_name: "",
       city: "",
-      state: "",                
+      state: "",
       qualification: "",
       specialization: [],
       license_number: "",
@@ -355,7 +355,7 @@ export default function PractitionerRegisterPage() {
   };
 
   const weekdays = [
-    "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
   ];
 
   /* ---------------- JSX (UNCHANGED) ---------------- */
@@ -448,7 +448,7 @@ export default function PractitionerRegisterPage() {
                 />
 
               </div>
-              <div  className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                 <Controller
                   name="email"
                   control={control}
@@ -501,7 +501,7 @@ export default function PractitionerRegisterPage() {
                       onChange={field.onChange}
                     />
                   )}
-                />                
+                />
                 <Controller
                   name="license_number"
                   control={control}
@@ -570,18 +570,18 @@ export default function PractitionerRegisterPage() {
               </div>
 
               <Controller
-                  name="experience_years"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      className="mt-4"
-                      type="number"
-                      placeholder="Experience (years)"
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
+                name="experience_years"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    className="mt-4"
+                    type="number"
+                    placeholder="Experience (years)"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
 
               <Controller
                 name="profile_bio"
@@ -909,7 +909,7 @@ export default function PractitionerRegisterPage() {
                 control={control}
                 render={({ field }) => (
                   <Textarea
-                    className = "mt-4 h-20"
+                    className="mt-4 h-20"
                     placeholder="Branch Address"
                     value={field.value || ""}
                     onChange={field.onChange}

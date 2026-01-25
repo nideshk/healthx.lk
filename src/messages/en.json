@@ -11,6 +11,7 @@
     "subtitle": "Manage your healthcare journey and records",
     "tabs": {
       "appointments": "Appointments",
+      "appointment": "Appointments",
       "reschedule": "Reschedule",
       "file-manager": "Medical Records",
       "follow-up": "Follow-Ups"
@@ -126,33 +127,33 @@
     "noDoctors": "No doctors available for this service yet.",
     "tryAnotherService": "Try another service",
     "verifiedSpecialist": "Verified Specialist",
-    "consultationFee": "Consultation Fee"
+    "consultationFee": "Avg. Consultation Fee"
   },
   "bookAppointment": {
-    "loadDoctorError": "වෛද්‍ය විස්තර පූරණය කළ නොහැකි විය",
-    "loadSlotsError": "ලබා ගත හැකි වේලාවන් පූරණය කළ නොහැකි විය",
-    "completeStepsError": "කරුණාකර සියලු පියවර සම්පූර්ණ කරන්න",
-    "selectTypeError": "කාලය වර්ගයක් තෝරන්න",
-    "selectDateError": "දිනයක් තෝරන්න",
-    "selectTimeError": "වේලාවක් තෝරන්න",
-    "changeDoctor": "වෛද්‍යවරයා වෙනස් කරන්න",
-    "secured": "HIPAA ආරක්ෂිතයි",
-    "specialist": "විශේෂඥ",
-    "clinicalPractice": "සාමාන්‍ය වෛද්‍ය සේවාව",
-    "experience": "අත්දැකීම",
-    "years": "වසර",
-    "rating": "ඇගයීම",
-    "languages": "භාෂා",
-    "sessionType": "සැසි වර්ගය",
-    "minuteSession": "මිනිත්තු සැසි",
-    "chooseDate": "දිනය තෝරන්න",
-    "availableSlots": "ලබාගත හැකි වේලාවන්",
-    "pickDate": "ලබාගත හැකි වේලාවන් බැලීමට දිනයක් තෝරන්න",
-    "fullyBooked": "සම්පූර්ණයෙන් වෙන් වී ඇත",
-    "tryAnotherDate": "වෙනත් දිනයක් උත්සාහ කරන්න",
-    "summary": "අපොයින්ට්මන්ට් සාරාංශය",
-    "confirming": "තහවුරු කරමින්...",
-    "continuePayment": "ගෙවීමට ඉදිරියට යන්න"
+    "loadDoctorError": "Unable to load doctor details",
+    "loadSlotsError": "Unable to load available time slots",
+    "completeStepsError": "Please complete all the steps",
+    "selectTypeError": "Please select a session type",
+    "selectDateError": "Please select a date",
+    "selectTimeError": "Please select a time",
+    "changeDoctor": "Change doctor",
+    "secured": "HIPAA Secure",
+    "specialist": "Specialist",
+    "clinicalPractice": "General Medical Practice",
+    "experience": "Experience",
+    "years": "Years",
+    "rating": "Rating",
+    "languages": "Languages",
+    "sessionType": "Session Type",
+    "minuteSession": "Minute Session",
+    "chooseDate": "Choose a date",
+    "availableSlots": "Available Time Slots",
+    "pickDate": "Select a date to view available time slots",
+    "fullyBooked": "Fully booked",
+    "tryAnotherDate": "Try another date",
+    "summary": "Appointment Summary",
+    "confirming": "Confirming...",
+    "continuePayment": "Continue to payment"
   },
   "consentForm": {
     "acceptBothError": "Please accept both agreements to continue.",
@@ -256,7 +257,7 @@
   "homepage": {
     "practitioner": {
       "title": "Are you a healthcare professional?",
-      "subtitle": "Join Clinico to manage your appointments, reach more patients, and streamline your practice with our digital tools.",
+      "subtitle": "Join Medx to manage your appointments, reach more patients, and streamline your practice with our digital tools.",
       "benefits": {
         "1": "Reach new patients in your area",
         "2": "Full-featured scheduling dashboard",
@@ -279,7 +280,7 @@
       }
     },
     "features": {
-      "title": "Why Clinico?",
+      "title": "Why Medx?",
       "items": {
         "verified": {
           "title": "Verified doctors",

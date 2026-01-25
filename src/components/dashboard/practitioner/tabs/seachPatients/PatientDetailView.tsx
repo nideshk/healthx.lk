@@ -87,11 +87,10 @@ const renderTab = (
       key={id}
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${
-        active
+      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${active
           ? "bg-white text-slate-900 shadow-sm"
           : "text-slate-500 hover:text-slate-900"
-      }`}
+        }`}
     >
       {label}
     </button>
@@ -376,13 +375,13 @@ const AppointmentRow: React.FC<{
 
           <p style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
             Regards,<br />
-            <strong>Clinico Team</strong>
+            <strong>Medx Team</strong>
           </p>
         </div>
       `.trim();
 
       // Plain text fallback for SMS/In-app
-      const textMessage = `Hello ${patient.name},\n\nAppointment: ${appointment.date} at ${appointment.time}\nJoin here: ${meetingUrl}\n\nRegards, Clinico Team`;
+      const textMessage = `Hello ${patient.name},\n\nAppointment: ${appointment.date} at ${appointment.time}\nJoin here: ${meetingUrl}\n\nRegards, Medx Team`;
 
       const res = await authFetch("/api/notify-send", {
         method: "POST",
@@ -673,11 +672,10 @@ const AppointmentRow: React.FC<{
                   />
                 ) : (
                   <span
-                    className={`inline-flex h-3 w-3 rounded-full border-4 ${
-                      appointment.followUpNeeded
+                    className={`inline-flex h-3 w-3 rounded-full border-4 ${appointment.followUpNeeded
                         ? "border-blue-500"
                         : "border-slate-300"
-                    } bg-white`}
+                      } bg-white`}
                   />
                 )}
                 <span>Follow-up appointment needed</span>

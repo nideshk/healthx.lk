@@ -16,11 +16,6 @@ export async function POST(
       );
     }
 
-    // const { user, role } = await requireUser();
-    // if (!user || ["admin", "superadmin"].includes(role)) {
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // }
-
     const { documents } = await req.json();
 
     if (!Array.isArray(documents)) {

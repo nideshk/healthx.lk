@@ -99,7 +99,7 @@ export default function Header() {
     closeLoginModal();
     router.push("/dashboard");
   }
-
+  console.log(user)
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -184,9 +184,9 @@ export default function Header() {
 
             {/* RIGHT SIDE: PROFILE / AUTH */}
             <div className="flex items-center gap-3">
-              <div className="hidden md:block mr-2">
+              {user?.role === "patient" && <div className="hidden md:block mr-2">
                 <LanguageToggle />
-              </div>
+              </div>}
 
               {!user ? (
                 <div className="flex items-center gap-2">
@@ -229,6 +229,9 @@ export default function Header() {
                         <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
                           <LayoutDashboard size={18} /> Dashboard
                         </Link>
+                        {user.role === "patient" || user.role === "practitioner" ? <Link href={"/profile"} className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
+                          <User size={18} /> profile
+                        </Link> : null}
                         <button
                           onClick={() => {
                             supabaseBrowser.auth.signOut();

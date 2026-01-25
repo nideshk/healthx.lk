@@ -129,11 +129,24 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
 
               <div className="flex flex-col items-center text-center">
                 <div className="relative mb-5">
-                  <img
-                    src={bookingData.selectedDoctor.profileImage || "/images/default-doctor.png"}
-                    className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-slate-50 shadow-md"
-                    alt={practitioner.full_name}
-                  />
+                  {bookingData.selectedDoctor.profileImage ? (
+                    <img
+                      src={bookingData.selectedDoctor.profileImage}
+                      className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-slate-50 shadow-md"
+                      alt={practitioner.full_name}
+                    />
+                  ) : (
+                    <div
+                      className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-slate-100 to-slate-200 ring-8 ring-slate-50 shadow-md flex items-center justify-center text-3xl font-black text-slate-400"
+                    >
+                      {practitioner.full_name
+                        .split(' ')
+                        .map((n: any) => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2)}
+                    </div>
+                  )}
                 </div>
                 <h2 className="text-2xl font-black text-slate-900 leading-tight">
                   Dr. {practitioner.full_name}
@@ -203,11 +216,10 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                       setSelectedTime(null);
                       updateData({ appointmentType: type });
                     }}
-                    className={`group relative p-6 rounded-3xl border-2 text-left transition-all ${
-                      selectedType?.id === type.id
-                        ? "border-teal-500 bg-teal-50/30"
-                        : "border-slate-100 hover:border-teal-200 bg-white"
-                    }`}
+                    className={`group relative p-6 rounded-3xl border-2 text-left transition-all ${selectedType?.id === type.id
+                      ? "border-teal-500 bg-teal-50/30"
+                      : "border-slate-100 hover:border-teal-200 bg-white"
+                      }`}
                   >
                     {selectedType?.id === type.id && (
                       <CheckCircle2 className="absolute top-6 right-6 w-6 h-6 text-teal-500 fill-teal-50" />
@@ -304,11 +316,10 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                                 ends_at: start.toUTC().plus({ minutes: selectedType.duration_mins }).toISO()
                               });
                             }}
-                            className={`py-4 rounded-2xl text-[13px] font-black transition-all ${
-                              selectedTime === time
-                                ? "bg-teal-500 text-white shadow-lg shadow-teal-100"
-                                : "bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-700"
-                            }`}
+                            className={`py-4 rounded-2xl text-[13px] font-black transition-all ${selectedTime === time
+                              ? "bg-teal-500 text-white shadow-lg shadow-teal-100"
+                              : "bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-700"
+                              }`}
                           >
                             {time}
                           </button>
