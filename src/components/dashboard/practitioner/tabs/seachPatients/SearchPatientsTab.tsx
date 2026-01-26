@@ -88,6 +88,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
             : p.allergies || "",
           lastConsultation: "",
           consentGiven: false,
+          addressLine1: p.address,
           city: p.city,
           country: p.country
         });

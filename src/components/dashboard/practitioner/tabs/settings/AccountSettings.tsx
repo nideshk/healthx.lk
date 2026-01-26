@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import { authFetch } from "@/lib/authFetch";
+import { Eye, EyeOff } from "lucide-react";
 
 const AccountSettings: React.FC = () => {
   const [form, setForm] = useState({
@@ -15,6 +16,8 @@ const AccountSettings: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   /* --------------------------------------------------
    * Fetch logged-in user's email for username
@@ -111,27 +114,43 @@ const AccountSettings: React.FC = () => {
           disabled
         />
 
-        <Input
-          label="New Password"
-          type="password"
-          placeholder="Enter new password"
-          value={form.newPassword}
-          onChange={(e) =>
-            setForm({ ...form, newPassword: e.target.value })
-          }
-        />
+        <div className="relative">
+          <Input
+            label="New Password"
+            type={showNewPassword ? "text" : "password"}
+            placeholder="Enter new password"
+            value={form.newPassword}
+            onChange={(e) =>
+              setForm({ ...form, newPassword: e.target.value })
+            }
+          />
+          <button
+            type="button"
+            onClick={() => setShowNewPassword(!showNewPassword)}
+            className="absolute right-3 top-[34px] text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 relative">
         <Input
           label="Confirm New Password"
-          type="password"
+          type={showConfirmPassword ? "text" : "password"}
           placeholder="Re-enter new password"
           value={form.confirmPassword}
           onChange={(e) =>
             setForm({ ...form, confirmPassword: e.target.value })
           }
         />
+        <button
+          type="button"
+          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+          className="absolute right-3 top-[34px] text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
       </div>
 
       {/* Error */}
