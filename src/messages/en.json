@@ -456,5 +456,85 @@
       "sendLink": "Send Recovery Link",
       "backLogin": "Back to Login"
     }
+  },
+  "signup": {
+    "title": "Patient Signup",
+    "countryDefault": "Sri Lanka",
+    "buttonDefault": "Sign Up",
+    "buttonLoading": "Signing up...",
+    "placeholders": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "password": "Password",
+      "emergencyContact": "Emergency Contact (optional)",
+      "idNumber": "ID Number",
+      "address": "Address",
+      "province": "State / Province",
+      "city": "City",
+      "pinCode": "Postal Code (e.g. 00100)"
+    },
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "nonBinary": "Non-binary",
+      "unspecified": "Prefer not to say"
+    },
+    "idType": {
+      "passport": "Passport",
+      "nic": "National Identity Card",
+      "license": "Driving License"
+    },
+    "messages": {
+      "verifyEmail": "Check your email to verify your account",
+      "signupFailed": "Signup failed",
+      "signupSuccess": "Account created successfully 🎉",
+      "unexpectedError": "Unexpected error occurred"
+    }
+  },
+  "bookingFlow": {
+    "back": "Back",
+    "loadingText": "Loading available options...",
+    "progress": {
+      "service": "Service",
+      "doctor": "Doctor",
+      "time": "Time"
+    },
+    "servicePicker": {
+      "title": "Choose a service",
+      "subtitle": "Choose from our comprehensive range of medical specialties and connect with the right healthcare professional for your needs.",
+      "actionText": "View doctors →"
+    },
+    "doctorPicker": {
+      "title": "Select a doctor",
+      "subtitle": "Choose from verified specialists available for consultation",
+      "verified": "Verified",
+      "new": "New",
+      "fallbackQualification": "Qualified specialist",
+      "actionText": "View availability →"
+    }
+  },
+  "slotFlow": {
+    "slotPicker": {
+      "stepLabel": "Step 3 of 3",
+      "title": "Choose appointment time",
+      "subtitle": "Select how and when you’d like to consult",
+      "typeLabel": "Appointment type",
+      "minLabel": "min",
+      "dateLabel": "Select date",
+      "timeLabel": "Select time",
+      "buttonText": "Continue",
+      "footerNote": "You’ll be asked to log in only to confirm the booking",
+      "messages": {
+        "selectDatePrompt": "Select a date to view available times",
+        "loading": "Loading available slots…",
+        "noSlots": "No slots available on this date.",
+        "tryAnotherDay": "Try another day."
+      },
+      "errors": {
+        "loadDoctor": "Failed to load doctor details",
+        "missingSelection": "Please select appointment type, date and time"
+      }
+    }
   }
 }

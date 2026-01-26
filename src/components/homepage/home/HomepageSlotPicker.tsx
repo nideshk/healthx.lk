@@ -11,6 +11,7 @@ import Calendar from "@/components/atom/Calendar/Calendar";
 import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 interface Props {
   practitionerId: string;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
+  const t = useTranslations("slotFlow.slotPicker");
   const { openLoginModal } = useModalStore();
   const { user } = useAuth();
   const [practitioner, setPractitioner] = useState<any>(null);
@@ -34,8 +36,8 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
     axios
       .get(`/api/practitioners/${practitionerId}`)
       .then((res) => setPractitioner(res.data.practitioner))
-      .catch(() => toast.error("Failed to load doctor details"));
-  }, [practitionerId]);
+      .catch(() => toast.error(t("errors.loadDoctor")));
+  }, [practitionerId, t]);
 
   /* ---------- Load availability ---------- */
   useEffect(() => {
@@ -57,7 +59,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
   /* ---------- Continue ---------- */
   const handleContinue = () => {
     if (!selectedType || !selectedDate || !selectedTime) {
-      toast.error("Please select appointment type, date and time");
+      toast.error(t("errors.missingSelection"));
       return;
     }
 
@@ -111,19 +113,19 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
       {/* Step Header */}
       <div className="mb-6">
         <p className="text-sm font-medium text-cyan-600">
-          Step 3 of 3
+          {t("stepLabel")}
         </p>
         <h3 className="text-xl font-semibold text-gray-900">
-          Choose appointment time
+          {t("title")}
         </h3>
         <p className="text-sm text-gray-500 mt-1">
-          Select how and when you’d like to consult
+          {t("subtitle")}
         </p>
       </div>
 
       {/* Appointment Type */}
       <div className="mb-8">
-        <h4 className="font-medium mb-3">Appointment type</h4>
+        <h4 className="font-medium mb-3">{t("typeLabel")}</h4>
         <div className="flex flex-wrap gap-3">
           {practitioner.appointment_types?.map((type: any) => (
             <button
@@ -139,7 +141,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
                   : "bg-white border-gray-300 hover:border-cyan-500"
                 }`}
             >
-              {type.name} · {type.duration_mins} min
+              {type.name} · {type.duration_mins} {t("minLabel")}
             </button>
           ))}
         </div>
@@ -149,7 +151,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Date */}
         <div>
-          <h4 className="font-medium mb-2">Select date</h4>
+          <h4 className="font-medium mb-2">{t("dateLabel")}</h4>
           <Calendar
             minDate={new Date()}
             value={selectedDate ? new Date(selectedDate) : undefined}
@@ -177,22 +179,22 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
         <div>
           <h4 className="font-medium mb-2 flex items-center gap-2">
             <Clock className="w-4 h-4 text-cyan-600" />
-            Select time
+            {t("timeLabel")}
           </h4>
 
           {!selectedDate ? (
             <p className="text-sm text-gray-400 mt-4">
-              Select a date to view available times
+              {t("messages.selectDatePrompt")}
             </p>
           ) : loadingSlots ? (
             <p className="text-sm text-gray-500 mt-4">
-              Loading available slots…
+              {t("messages.loading")}
             </p>
           ) : slots.length === 0 ? (
             <div className="text-sm text-gray-500 mt-4">
-              No slots available on this date.
+              {t("messages.noSlots")}
               <br />
-              Try another day.
+              {t("messages.tryAnotherDay")}
             </div>
           ) : (
             <div className="flex flex-wrap gap-2 mt-2">
@@ -220,11 +222,11 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
         disabled={!selectedType || !selectedDate || !selectedTime}
         onClick={handleContinue}
       >
-        Continue
+        {t("buttonText")}
       </Button>
 
       <p className="text-xs text-gray-500 mt-3 text-center">
-        You’ll be asked to log in only to confirm the booking
+        {t("footerNote")}
       </p>
     </div>
   );
