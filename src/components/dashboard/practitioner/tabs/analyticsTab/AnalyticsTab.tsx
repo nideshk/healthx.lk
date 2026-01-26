@@ -636,10 +636,10 @@ const BookingsView = ({
 }) => {
   const statCards = [
     { id: "total", label: "Total Bookings", value: stats.totalBookings, bg: "bg-blue-500" },
-    { id: "completed", label: "Appts. Completed", value: stats.completed, bg: "bg-green-500" },
-    { id: "cancelled", label: "Cancelled Bookings", value: stats.cancelled, bg: "bg-red-500" },
+    { id: "completed bookings", label: "Appointments Completed", value: stats.completed, bg: "bg-green-500" },
+    { id: "cancelled bookings", label: "Cancelled Bookings", value: stats.cancelled, bg: "bg-red-500" },
     ...(showRefunds ? [{ id: "refunds", label: "Refunds Requested", value: stats.refunds, bg: "bg-amber-400" }] : []),
-    { id: "upcoming", label: "Upcoming Appointments", value: stats.upcoming, bg: "bg-orange-500" },
+    { id: "upcoming bookings", label: "Upcoming Appointments", value: stats.upcoming, bg: "bg-orange-500" },
   ];
 
   return (
