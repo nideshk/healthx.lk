@@ -12,11 +12,9 @@ type AuthorizeResponse =
     role: "patient" | "practitioner" | "attendee";
     appointmentId: string;
     roomKey: string;
+    error?: string | null;
   }
-  | {
-    authorized: false;
-    error?: string;
-  };
+
 
 export default function MeetingPage() {
   const params = useSearchParams();
@@ -26,7 +24,7 @@ export default function MeetingPage() {
 
   const [loading, setLoading] = useState(true);
   const [authData, setAuthData] = useState<AuthorizeResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<any>(null);
 
   useEffect(() => {
     async function authorize() {
@@ -49,13 +47,13 @@ export default function MeetingPage() {
         });
 
         const json = (await res.json()) as AuthorizeResponse;
-
+        console.log(json)
         if (res.ok && json.authorized) {
           // ✅ persist token for audit logging
           localStorage.setItem("telehealth_token", json.token);
           setAuthData(json);
         } else {
-          setError("Access denied");
+          setError(json.error);
         }
       } catch (e) {
         console.error(e);

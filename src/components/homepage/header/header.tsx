@@ -39,7 +39,7 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { isLoginModalOpen, openLoginModal, closeLoginModal } = useModalStore();
 
   // --- UI States ---
@@ -101,7 +101,6 @@ export default function Header() {
     closeLoginModal();
     router.push("/dashboard");
   }
-  console.log(user)
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -144,6 +143,26 @@ export default function Header() {
     }
     return pathname === href;
   };
+
+
+  if (loading) {
+    return (
+      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          {/* Left: Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <img src="/assets/logo.png" alt="MedX" className="w-24 h-24" />
+          </Link>
+
+          {/* Right: Skeleton */}
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-8 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="w-10 h-10 bg-slate-200 rounded-full animate-pulse" />
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <>
