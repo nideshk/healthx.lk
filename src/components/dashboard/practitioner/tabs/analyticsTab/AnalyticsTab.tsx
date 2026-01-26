@@ -146,9 +146,8 @@ const AnalyticsTab: React.FC = () => {
       const pId = me?.user?.practitioner_id ?? me?.practitioner_id;
       if (!pId) throw new Error("Practitioner profile not found");
 
-      const query = `?from=${fromDate}&to=${toDate}`;
       const [analyticsRes, transactionRes] = await Promise.all([
-        authFetch(`/api/practitioners/${pId}/analytics`),
+        authFetch(`/api/practitioners/${pId}/analytics?from=${fromDate}&to=${toDate}`),
         authFetch(`/api/analytics/transactions/practitioner`)
       ]);
 
@@ -189,7 +188,6 @@ const AnalyticsTab: React.FC = () => {
   const fetchDetailData = useCallback(async () => {
     if (!selectedDetail) return;
     
-    // Safety check: if user is clinician and somehow selected refunds, abort
     if (selectedDetail === "refunds" && !showRefunds) {
         setSelectedDetail(null);
         return;
@@ -226,14 +224,16 @@ const AnalyticsTab: React.FC = () => {
         }
       } 
       else {
-        const url = new URL(`/api/booking`);
-        url.searchParams.append("from", fromDate);
-        url.searchParams.append("to", toDate);
-        url.searchParams.append("type", selectedDetail);
-        url.searchParams.append("page", pagination.currentPage.toString());
-        url.searchParams.append("per_page", pagination.perPage.toString());
+        // FIXED: Using template strings instead of new URL() to avoid "Invalid URL" error
+        const queryParams = new URLSearchParams({
+          from: fromDate,
+          to: toDate,
+          type: selectedDetail,
+          page: pagination.currentPage.toString(),
+          per_page: pagination.perPage.toString()
+        }).toString();
 
-        const response = await authFetch(url.toString());
+        const response = await authFetch(`/api/booking?${queryParams}`);
         const result = await response.json();
 
         if (result.success) {
@@ -257,13 +257,14 @@ const AnalyticsTab: React.FC = () => {
     if (activeTab !== "timestamps") return;
     setAuditLoading(true);
     try {
-      const url = new URL(`/api/consultation/audit-log`);
-      url.searchParams.append("from", fromDate);
-      url.searchParams.append("to", toDate);
-      url.searchParams.append("page", auditPagination.currentPage.toString());
-      url.searchParams.append("per_page", auditPagination.perPage.toString());
+      const queryParams = new URLSearchParams({
+        from: fromDate,
+        to: toDate,
+        page: auditPagination.currentPage.toString(),
+        per_page: auditPagination.perPage.toString()
+      }).toString();
 
-      const response = await authFetch(url.toString());
+      const response = await authFetch(`/api/consultation/audit-log?${queryParams}`);
       const result = await response.json();
 
       if (result.data) {
@@ -468,7 +469,7 @@ const AnalyticsTab: React.FC = () => {
 
   const detailTitle = useMemo(() => {
     if (!selectedDetail) return "";
-    return `${selectedDetail.charAt(0).toUpperCase() + selectedDetail.slice(1)} List`.replace("Total", "All");
+    return `${selectedDetail.charAt(0).toUpperCase() + selectedDetail.slice(1)} List`.replace("Total", "Total Bookings");
   }, [selectedDetail]);
 
   const paginatedData = useMemo(() => {
@@ -532,7 +533,7 @@ const AnalyticsTab: React.FC = () => {
             onRevenueClick={() => setShowRevenueModal(true)}
             onStatClick={handleStatClick}
             activeDetail={selectedDetail}
-            showRefunds={showRefunds} // Pass role flag down
+            showRefunds={showRefunds} 
           />
 
           {selectedDetail && (
@@ -621,7 +622,7 @@ const BookingsView = ({
   onRevenueClick,
   onStatClick,
   activeDetail,
-  showRefunds, // Receive role flag
+  showRefunds, 
 }: {
   stats: BookingStats;
   fromDate: string;
@@ -633,13 +634,12 @@ const BookingsView = ({
   activeDetail: DetailType;
   showRefunds: boolean;
 }) => {
-  // Filter out refunds card if user is clinician
   const statCards = [
     { id: "total", label: "Total Bookings", value: stats.totalBookings, bg: "bg-blue-500" },
-    { id: "completed", label: "Appts. Completed", value: stats.completed, bg: "bg-green-500" },
-    { id: "cancelled", label: "Cancelled Bookings", value: stats.cancelled, bg: "bg-red-500" },
+    { id: "completed bookings", label: "Appointments Completed", value: stats.completed, bg: "bg-green-500" },
+    { id: "cancelled bookings", label: "Cancelled Bookings", value: stats.cancelled, bg: "bg-red-500" },
     ...(showRefunds ? [{ id: "refunds", label: "Refunds Requested", value: stats.refunds, bg: "bg-amber-400" }] : []),
-    { id: "upcoming", label: "Upcoming Appointments", value: stats.upcoming, bg: "bg-orange-500" },
+    { id: "upcoming bookings", label: "Upcoming Appointments", value: stats.upcoming, bg: "bg-orange-500" },
   ];
 
   return (
