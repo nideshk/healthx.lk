@@ -95,8 +95,6 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
       last_visited_step: 3,
     });
 
-    // 🔐 Gate login
-
     if (!user) {
       openLoginModal();
       return;

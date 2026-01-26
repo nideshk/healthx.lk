@@ -152,9 +152,7 @@ export async function POST(
           status: "pending",
           source: "web",
           room_key: crypto.randomUUID(),
-
           additional_attendees: attendeeList,
-
           // 💰 PRICING SNAPSHOT
           fee_charged: fees_charged,
           consultation_fee: consultation_fee,
