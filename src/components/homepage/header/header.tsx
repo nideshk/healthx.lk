@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl"; // Added for translations
 import {
   Mail,
   Lock,
@@ -34,6 +35,7 @@ import { authFetch } from "@/lib/authFetch";
 import LanguageToggle from "@/components/common/LanguageToggle";
 
 export default function Header() {
+  const t = useTranslations("header"); // Initialize translations
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -61,17 +63,17 @@ export default function Header() {
 
   // Visible on both Desktop Header and Mobile Sidebar
   const publicLinks = [
-    { name: "Find Doctors", href: "/dashboard", icon: Search },
-    { name: "Our Story", href: "/about-us", icon: ShieldCheck },
-    { name: "Help", href: "/help", icon: Calendar },
+    { name: t("nav.findDoctors"), href: "/dashboard", icon: Search },
+    { name: t("nav.ourStory"), href: "/about-us", icon: ShieldCheck },
+    { name: t("nav.help"), href: "/help", icon: Calendar },
   ];
 
   // Visible ONLY in the Mobile Sidebar (Left Drawer)
   const patientPortalLinks = [
-    { name: "Appointments", href: "/dashboard?tab=appointments", icon: Calendar },
-    { name: "Reschedule", href: "/dashboard?tab=reschedule", icon: Calendar },
-    { name: "Medical Records", href: "/dashboard?tab=file-manager", icon: File },
-    { name: "Follow ups", href: "/dashboard?tab=follow-ups", icon: BarChart3 },
+    { name: t("portal.appointments"), href: "/dashboard?tab=appointments", icon: Calendar },
+    { name: t("portal.reschedule"), href: "/dashboard?tab=reschedule", icon: Calendar },
+    { name: t("portal.medicalRecords"), href: "/dashboard?tab=file-manager", icon: File },
+    { name: t("portal.followUps"), href: "/dashboard?tab=follow-ups", icon: BarChart3 },
   ];
 
   // --- Effects ---
@@ -205,10 +207,10 @@ export default function Header() {
               {!user ? (
                 <div className="flex items-center gap-2">
                   <button onClick={openLoginModal} className="hidden sm:block px-5 py-2.5 text-sm font-bold text-slate-700 hover:text-teal-600 transition-colors">
-                    Log In
+                    {t("auth.logIn")}
                   </button>
                   <button onClick={openLoginModal} className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-teal-600 shadow-lg transition-all active:scale-95">
-                    Get Started
+                    {t("auth.getStarted")}
                   </button>
                 </div>
               ) : (
@@ -241,10 +243,10 @@ export default function Header() {
                     {isUserDropdownOpen && (
                       <div className="absolute right-0 mt-3 w-60 bg-white border border-slate-100 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in duration-200">
                         <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
-                          <LayoutDashboard size={18} /> Dashboard
+                          <LayoutDashboard size={18} /> {t("dropdown.dashboard")}
                         </Link>
                         {user.role === "patient" || user.role === "practitioner" ? <Link href={"/profile"} className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
-                          <User size={18} /> profile
+                          <User size={18} /> {t("dropdown.profile")}
                         </Link> : null}
                         <button
                           onClick={() => {
@@ -253,7 +255,7 @@ export default function Header() {
                           }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all mt-1"
                         >
-                          <LogOut size={18} /> Sign Out
+                          <LogOut size={18} /> {t("dropdown.signOut")}
                         </button>
                       </div>
                     )}
@@ -293,7 +295,7 @@ export default function Header() {
 
             {/* Section: Main Menu */}
             <div>
-              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Explore</p>
+              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">{t("sidebar.explore")}</p>
               <div className="space-y-1">
                 {publicLinks.map((link) => (
                   <Link
@@ -315,7 +317,7 @@ export default function Header() {
             {/* Section: Dashboard (Only visible if user logged in) */}
             {user && (
               <div>
-                <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Patient Portal</p>
+                <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">{t("sidebar.patientPortal")}</p>
                 <div className="space-y-1">
                   {patientPortalLinks.map((link) => (
                     <Link
@@ -345,10 +347,10 @@ export default function Header() {
             {!user ? (
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => { setIsMenuOpen(false); openLoginModal(); }} className="py-3.5 text-xs font-black text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm">
-                  Log In
+                  {t("auth.logIn")}
                 </button>
                 <button onClick={() => { setIsMenuOpen(false); openLoginModal(); }} className="py-3.5 text-xs font-black text-white bg-slate-900 rounded-xl shadow-lg">
-                  Join Now
+                  {t("auth.joinNow")}
                 </button>
               </div>
             ) : (
@@ -356,7 +358,7 @@ export default function Header() {
                 onClick={() => { setIsMenuOpen(false); supabaseBrowser.auth.signOut(); router.push("/"); }}
                 className="w-full flex items-center justify-center gap-3 py-4 text-sm font-bold text-red-500 bg-red-50 rounded-2xl active:scale-95 transition-all"
               >
-                <LogOut size={18} /> Sign Out
+                <LogOut size={18} /> {t("dropdown.signOut")}
               </button>
             )}
           </div>
@@ -367,7 +369,7 @@ export default function Header() {
       <Modal
         isOpen={isLoginModalOpen}
         onClose={() => { setShowForgot(false); setMfa(null); closeLoginModal(); }}
-        title={mfa ? "Two-Factor Auth" : showForgot ? "Recover Account" : "Sign In"}
+        title={mfa ? t("modal.mfaTitle") : showForgot ? t("modal.recoverTitle") : t("modal.signInTitle")}
       >
         <div className="px-1 py-2">
           {mfa ? (
@@ -388,13 +390,13 @@ export default function Header() {
                 disabled={mfaInProgress || otp.length !== 6}
                 className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-2 hover:bg-teal-600 transition-all"
               >
-                {mfaInProgress && <Loader2 className="w-5 h-5 animate-spin" />} Confirm
+                {mfaInProgress && <Loader2 className="w-5 h-5 animate-spin" />} {t("modal.confirm")}
               </button>
             </div>
           ) : !showForgot ? (
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t("modal.emailLabel")}</label>
                 <div className="relative group">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600" />
                   <input name="email" type="email" required className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500" placeholder="email@example.com" />
@@ -402,8 +404,8 @@ export default function Header() {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password</label>
-                  <button type="button" onClick={() => setShowForgot(true)} className="text-[10px] font-black text-teal-600 hover:underline uppercase">Forgot?</button>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t("modal.passwordLabel")}</label>
+                  <button type="button" onClick={() => setShowForgot(true)} className="text-[10px] font-black text-teal-600 hover:underline uppercase">{t("modal.forgot")}</button>
                 </div>
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600" />
@@ -414,14 +416,14 @@ export default function Header() {
                 </div>
               </div>
               <button disabled={isSubmitting} className="w-full bg-slate-900 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-3 shadow-xl transition-all">
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : t("modal.signInTitle")}
               </button>
               <button type="button" onClick={() => { closeLoginModal(); router.push("/create-account"); }} className="w-full bg-slate-100 text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all">
-                Create Account
+                {t("modal.createAccount")}
               </button>
             </form>
           ) : (
-            <ForgotPasswordForm onDone={() => setShowForgot(false)} />
+            <ForgotPasswordForm t={t} onDone={() => setShowForgot(false)} />
           )}
         </div>
       </Modal>
@@ -429,7 +431,7 @@ export default function Header() {
   );
 }
 
-function ForgotPasswordForm({ onDone }: { onDone: () => void }) {
+function ForgotPasswordForm({ onDone, t }: { onDone: () => void, t: any }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -448,16 +450,18 @@ function ForgotPasswordForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account Email</label>
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t("modal.accountEmail")}</label>
         <div className="relative">
           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500" placeholder="email@example.com" />
         </div>
       </div>
       <button disabled={loading} className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl hover:bg-teal-600 transition-all">
-        {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Send Recovery Link
+        {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} {t("modal.sendLink")}
       </button>
-      <button type="button" onClick={onDone} className="w-full text-[10px] font-black text-slate-400 hover:text-slate-800 uppercase text-center">Back to Login</button>
+      <button type="button" onClick={onDone} className="text-[10px] font-black text-slate-400 hover:text-slate-800 uppercase text-center w-full">
+        {t("modal.backLogin")}
+      </button>
     </form>
   );
 }

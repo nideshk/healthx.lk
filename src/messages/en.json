@@ -181,19 +181,20 @@
   },
   "preConsultation": {
     "title": "Pre-Consultation",
-    "subtitle": "Help us prepare for your session with Dr. {doctor}",
+    "subtitle": "Please provide some information to help your doctor prepare for the consultation",
     "privacy": "Clinical Privacy",
     "maxLabel": "MAX",
-    "concern": "Main Concern",
-    "concernPlaceholder": "Describe your primary symptoms or concerns...",
-    "outcome": "Desired Outcome",
-    "outcomePlaceholder": "What do you hope to achieve today?",
+    "concern": "What is your main concern today?",
+    "concernPlaceholder": "Please describe your main health concerns or symptoms",
+    "outcome": "What are you hoping to achieve from this consultation?",
+    "outcomePlaceholder": "Diagnosis, treatment options, second opinion, prescription renewal etc",
     "referral": "How did you hear about us?",
     "selectOption": "Select an option...",
     "customReferral": "Please specify source...",
     "attachments": "Attachments (Optional)",
     "uploadHint": "Medical Records / Photos",
     "attendees": "Attendees",
+    "attendeesSubtitle": "Will there be additional family members?",
     "invitePlaceholder": "Invite via email",
     "back": "Back",
     "continue": "Continue to Payment",
@@ -202,7 +203,7 @@
       "outcome": "Desired outcome is required",
       "referral": "Please let us know how you heard about us",
       "email": "Enter a valid email address.",
-      "maxAttendees": "Maximum {count} attendees allowed.",
+      "maxAttendees": "Maximum attendees allowed.",
       "duplicateEmail": "Email already added.",
       "selfInvite": "You cannot add yourself as an attendee."
     }
@@ -266,8 +267,8 @@
       "cta": "Register as a Practitioner"
     },
     "hero": {
-      "title": "Consult verified doctors in minutes",
-      "subtitle": "Book online consultations with trusted specialists. Browse services, doctors and availability — no login required.",
+      "title": "Healthcare at Your Fingertips",
+      "subtitle": "Connect with certified healthcare professionals from the comfort of your home. Quality care, anytime, anywhere",
       "trust": {
         "verified": "Verified doctors",
         "secure": "Secure & private",
@@ -399,6 +400,140 @@
             "a": "Yes. All clinicians are verified Sri Lankan medical professionals registered with relevant medical councils."
           }
         ]
+      }
+    }
+  },
+
+  "footer": {
+    "links": {
+      "about": "About Us",
+      "contact": "Contact Support",
+      "help": "Help Center & FAQs",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy (HIPAA Compliant)"
+    },
+    "secure": "Secure & HIPAA Compliant Platform",
+    "disclaimerTitle": "Disclaimer",
+    "disclaimerText": "Please do not use this service for emergencies or if you require medical certificates.For emergencies: Go to your nearest hospital or emergency service immediately, or call 110. For medical certificates or physical examinations: Please visit a doctor in person, as these services cannot be provided through telehealth. This platform is intended only for telehealth consultations that do not require in-person care.",
+    "rights": "All rights reserved."
+  },
+  "header": {
+    "nav": {
+      "findDoctors": "Find Doctors",
+      "ourStory": "Our Story",
+      "help": "Help"
+    },
+    "portal": {
+      "appointments": "Appointments",
+      "reschedule": "Reschedule",
+      "medicalRecords": "Medical Records",
+      "followUps": "Follow ups"
+    },
+    "auth": {
+      "logIn": "Log In",
+      "getStarted": "Get Started",
+      "joinNow": "Join Now"
+    },
+    "dropdown": {
+      "dashboard": "Dashboard",
+      "profile": "Profile",
+      "signOut": "Sign Out"
+    },
+    "sidebar": {
+      "explore": "Explore",
+      "patientPortal": "Patient Portal"
+    },
+    "modal": {
+      "mfaTitle": "Two-Factor Auth",
+      "recoverTitle": "Recover Account",
+      "signInTitle": "Sign In",
+      "confirm": "Confirm",
+      "emailLabel": "Email Address",
+      "passwordLabel": "Password",
+      "forgot": "Forgot Password?",
+      "createAccount": "Create Account",
+      "accountEmail": "Account Email",
+      "sendLink": "Send Recovery Link",
+      "backLogin": "Back to Login"
+    }
+  },
+  "signup": {
+    "title": "Patient Signup",
+    "countryDefault": "Sri Lanka",
+    "buttonDefault": "Sign Up",
+    "buttonLoading": "Signing up...",
+    "placeholders": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "password": "Password",
+      "emergencyContact": "Emergency Contact (optional)",
+      "idNumber": "ID Number",
+      "address": "Address",
+      "province": "State / Province",
+      "city": "City",
+      "pinCode": "Postal Code (e.g. 00100)"
+    },
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "nonBinary": "Non-binary",
+      "unspecified": "Prefer not to say"
+    },
+    "idType": {
+      "passport": "Passport",
+      "nic": "National Identity Card",
+      "license": "Driving License"
+    },
+    "messages": {
+      "verifyEmail": "Check your email to verify your account",
+      "signupFailed": "Signup failed",
+      "signupSuccess": "Account created successfully 🎉",
+      "unexpectedError": "Unexpected error occurred"
+    }
+  },
+  "bookingFlow": {
+    "back": "Back",
+    "loadingText": "Loading available options...",
+    "progress": {
+      "service": "Service",
+      "doctor": "Doctor",
+      "time": "Time"
+    },
+    "servicePicker": {
+      "title": "Choose a service",
+      "subtitle": "Choose from our comprehensive range of medical specialties and connect with the right healthcare professional for your needs.",
+      "actionText": "View doctors →"
+    },
+    "doctorPicker": {
+      "title": "Select a doctor",
+      "subtitle": "Choose from verified specialists available for consultation",
+      "verified": "Verified",
+      "new": "New",
+      "fallbackQualification": "Qualified specialist",
+      "actionText": "View availability →"
+    }
+  },
+  "slotFlow": {
+    "slotPicker": {
+      "stepLabel": "Step 3 of 3",
+      "title": "Choose appointment time",
+      "subtitle": "Select how and when you’d like to consult",
+      "typeLabel": "Appointment type",
+      "minLabel": "min",
+      "dateLabel": "Select date",
+      "timeLabel": "Select time",
+      "buttonText": "Continue",
+      "footerNote": "You’ll be asked to log in only to confirm the booking",
+      "messages": {
+        "selectDatePrompt": "Select a date to view available times",
+        "loading": "Loading available slots…",
+        "noSlots": "No slots available on this date.",
+        "tryAnotherDay": "Try another day."
+      },
+      "errors": {
+        "loadDoctor": "Failed to load doctor details",
+        "missingSelection": "Please select appointment type, date and time"
       }
     }
   }
