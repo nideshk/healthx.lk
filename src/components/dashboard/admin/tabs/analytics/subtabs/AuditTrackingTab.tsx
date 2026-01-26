@@ -93,6 +93,9 @@ const AuditTrackingTab: React.FC = () => {
       if (result?.success) {
         setLogs(result.data || []);
         setTotalLogs(result.total || 0);
+
+        console.log("logs -----------")
+        console.log(result.data)
       }
     } catch (error) {
       toast.error("Failed to fetch logs");
@@ -106,6 +109,44 @@ const AuditTrackingTab: React.FC = () => {
   }, [fetchAuditLogs]);
 
   const totalPages = useMemo(() => Math.ceil(totalLogs / perPage) || 1, [totalLogs, perPage]);
+
+  const handleExportExcel = () => {
+    if (!logs.length) {
+      toast.warning("No data available to export");
+      return;
+    }
+
+    const rows = logs.map((log) => ({
+      "Timestamp": DateTime
+        .fromISO(log.occurred_at)
+        .toFormat("yyyy-MM-dd HH:mm:ss"),
+
+      "Actor": log.actor_role,
+
+      "Action": log.action,
+
+      "Entity": log.entity_type,
+
+      "Source": log.source,
+
+      // Since table shows a "View Details" button,
+      // Excel should get readable content
+      "Metadata": JSON.stringify(log.metadata, null, 2),
+
+      "IP Address": log.ip_address,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Audit Logs");
+
+    const fileName = `audit_logs_${fromDate}_to_${toDate}.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
+
+    toast.success("Audit logs exported successfully");
+  };
 
   const columns: Column<AuditLogItem>[] = [
     {
@@ -155,7 +196,7 @@ const AuditTrackingTab: React.FC = () => {
         <Input type="date" label="Start Date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
         <Input type="date" label="End Date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
         <div className="md:col-span-2 flex justify-end">
-          <Button icon={<Download size={14} />} onClick={() => {}}>Extract Excel</Button>
+          <Button icon={<Download size={14} />} onClick={handleExportExcel}>Extract Excel</Button>
         </div>
       </div>
 
