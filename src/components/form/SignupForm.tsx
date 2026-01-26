@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
+import { useTranslations } from "next-intl"; // Added for translations
 
 /* ─────────────────────────────────────────────
    Sri Lanka Static Location Data
@@ -20,6 +21,7 @@ const SRI_LANKA_LOCATIONS: Record<string, string[]> = {
 };
 
 export default function SignupForm() {
+  const t = useTranslations("signup"); // Initialize translations
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -68,23 +70,23 @@ export default function SignupForm() {
 
       const data = await res.json();
       if (data.requires_email_verification) {
-        toast.info("Check your email to verify your account");
+        toast.info(t("messages.verifyEmail"));
         router.push("/");
         return;
       }
 
       if (!res.ok) {
-        throw new Error(data.error || "Signup failed");
+        throw new Error(data.error || t("messages.signupFailed"));
       }
 
-      toast.success("Account created successfully 🎉");
+      toast.success(t("messages.signupSuccess"));
 
       setTimeout(() => {
         router.push("/");
       }, 1200);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Unexpected error occurred");
+      setError(err.message || t("messages.unexpectedError"));
     } finally {
       setLoading(false);
     }
@@ -103,7 +105,7 @@ export default function SignupForm() {
         className="w-full max-w-xl space-y-4 rounded-lg bg-white p-8 shadow-lg"
       >
         <h1 className="text-center text-2xl font-bold">
-          Patient Signup
+          {t("title")}
         </h1>
 
         {error && (
@@ -116,7 +118,7 @@ export default function SignupForm() {
         <div className="grid grid-cols-2 gap-4">
           <input
             name="first_name"
-            placeholder="First Name"
+            placeholder={t("placeholders.firstName")}
             value={form.first_name}
             onChange={handleChange}
             required
@@ -124,7 +126,7 @@ export default function SignupForm() {
           />
           <input
             name="last_name"
-            placeholder="Last Name"
+            placeholder={t("placeholders.lastName")}
             value={form.last_name}
             onChange={handleChange}
             required
@@ -136,7 +138,7 @@ export default function SignupForm() {
         <input
           name="email"
           type="email"
-          placeholder="Email"
+          placeholder={t("placeholders.email")}
           value={form.email}
           onChange={handleChange}
           required
@@ -147,7 +149,7 @@ export default function SignupForm() {
         <input
           name="password"
           type="password"
-          placeholder="Password"
+          placeholder={t("placeholders.password")}
           value={form.password}
           onChange={handleChange}
           required
@@ -171,10 +173,10 @@ export default function SignupForm() {
             onChange={handleChange}
             className="input"
           >
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="non-binary">Non-binary</option>
-            <option value="unspecified">Prefer not to say</option>
+            <option value="male">{t("gender.male")}</option>
+            <option value="female">{t("gender.female")}</option>
+            <option value="non-binary">{t("gender.nonBinary")}</option>
+            <option value="unspecified">{t("gender.unspecified")}</option>
           </select>
         </div>
 
@@ -191,7 +193,7 @@ export default function SignupForm() {
         {/* Emergency Contact */}
         <input
           name="emergency_contact"
-          placeholder="Emergency Contact (optional)"
+          placeholder={t("placeholders.emergencyContact")}
           value={form.emergency_contact}
           onChange={handleChange}
           className="input"
@@ -205,14 +207,14 @@ export default function SignupForm() {
             onChange={handleChange}
             className="input"
           >
-            <option value="passport">Passport</option>
-            <option value="nic">National Identity Card</option>
-            <option value="driving_license">Driving License</option>
+            <option value="passport">{t("idType.passport")}</option>
+            <option value="nic">{t("idType.nic")}</option>
+            <option value="driving_license">{t("idType.license")}</option>
           </select>
 
           <input
             name="government_id_number"
-            placeholder="ID Number"
+            placeholder={t("placeholders.idNumber")}
             value={form.government_id_number}
             onChange={handleChange}
             required
@@ -223,7 +225,7 @@ export default function SignupForm() {
         {/* Address */}
         <input
           name="address"
-          placeholder="Address"
+          placeholder={t("placeholders.address")}
           value={form.address}
           onChange={handleChange}
           className="input"
@@ -231,7 +233,7 @@ export default function SignupForm() {
 
         {/* Country */}
         <input
-          value="Sri Lanka"
+          value={t("countryDefault")}
           disabled
           className="input bg-gray-100"
         />
@@ -240,7 +242,7 @@ export default function SignupForm() {
         <input
           list="province-list"
           name="state_province"
-          placeholder="State / Province"
+          placeholder={t("placeholders.province")}
           value={form.state_province}
           onChange={handleChange}
           required
@@ -256,7 +258,7 @@ export default function SignupForm() {
         <input
           list="city-list"
           name="city"
-          placeholder="City"
+          placeholder={t("placeholders.city")}
           value={form.city}
           onChange={handleChange}
           required
@@ -271,7 +273,7 @@ export default function SignupForm() {
         {/* PIN */}
         <input
           name="pin_code"
-          placeholder="Postal Code (e.g. 00100)"
+          placeholder={t("placeholders.pinCode")}
           value={form.pin_code}
           onChange={handleChange}
           required
@@ -284,7 +286,7 @@ export default function SignupForm() {
           disabled={loading}
           className="w-full rounded-md bg-indigo-600 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
         >
-          {loading ? "Signing up..." : "Sign Up"}
+          {loading ? t("buttonLoading") : t("buttonDefault")}
         </button>
       </form>
 
