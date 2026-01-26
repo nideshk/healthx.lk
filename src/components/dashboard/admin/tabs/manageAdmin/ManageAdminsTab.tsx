@@ -62,17 +62,23 @@ const ManageAdminsTab: React.FC = () => {
         method: "DELETE",
       });
 
-      if (!res.ok) {
-        throw new Error(`Failed to delete admin: ${res.status}`);
-      }
       const json = await res.json();
       if (res.ok) {
         toast.success(json.message || "Admin removed successfully");
         fetchAdmins(); // Refresh list
         setRemoveTarget(null);
       }
+      else if (!res.ok) {
+        console.log(json)
+        throw new Error(json?.message || `Failed to delete admin: ${res.status}`);
+      }
     } catch (err) {
-      toast.error("Error deleting admin");
+
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Error deleting admin");
+      }
     }
   };
 

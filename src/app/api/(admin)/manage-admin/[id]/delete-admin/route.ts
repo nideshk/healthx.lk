@@ -35,7 +35,7 @@ export async function DELETE(
   if (user.admin.id === targetAdminId) {
     return NextResponse.json(
       { success: false, message: "You cannot delete yourself" },
-      { status: 400 }
+      { status: 403 }
     );
   }
 

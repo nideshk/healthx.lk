@@ -77,9 +77,9 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
         patientMap.set(p.id, {
           id: p.id,
           patientId: p.id,
-          name: p.full_name || `${p.first_name} ${p.last_name}`,
+          full_name: p.full_name || `${p.first_name} ${p.last_name}`,
           email: p.email,
-          phone: p.contact_number || p.phone,
+          contact_number: p.contact_number || p.phone,
           age: p.age ?? 0,
           gender: p.gender ?? "",
           dob: p.dob ?? "",
@@ -116,9 +116,9 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
 
     return patients.filter(
       (p) =>
-        (p.name?.toLowerCase() || "").includes(q) ||
+        (p.full_name?.toLowerCase() || "").includes(q) ||
         (p.email?.toLowerCase() || "").includes(q) ||
-        (p.phone?.toLowerCase() || "").includes(q)
+        (p.contact_number?.toLowerCase() || "").includes(q)
     );
   }, [patients, search]);
 
@@ -248,10 +248,10 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
                   className="text-blue-600 font-semibold text-left hover:underline"
                   onClick={() => onSelectPatient(p)}
                 >
-                  {p.name}
+                  {p.full_name}
                 </button>
                 <span className="text-xs text-slate-500">{p.email}</span>
-                <span className="text-xs text-slate-500">{p.phone}</span>
+                <span className="text-xs text-slate-500">{p.full_name}</span>
               </div>
 
               <Button
@@ -279,7 +279,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
           <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900">Confirm Deletion</h3>
             <p className="text-sm text-slate-500 mt-2">
-              Are you sure you want to delete <span className="font-bold">{patientToDelete.name}</span>?
+              Are you sure you want to delete <span className="font-bold">{patientToDelete.full_name}</span>?
               This action will remove them from your appointments and cannot be undone.
             </p>
             <div className="flex gap-3 mt-6">

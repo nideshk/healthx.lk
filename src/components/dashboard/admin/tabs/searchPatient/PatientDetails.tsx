@@ -24,6 +24,23 @@ interface PatientDetailViewProps {
   onBack: () => void;
 }
 
+function calculateAge(dob: string): number {
+  const birthDate = new Date(dob);
+  const today = new Date();
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+
+  return age;
+}
+
 const PatientDetails: React.FC<PatientDetailViewProps> = ({
   patient,
   appointments,
@@ -31,7 +48,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
   onBack,
 }) => {
   const [activeTab, setActiveTab] = useState<PatientDetailTab>("overview");
-
+  console.log("patient details  -----------", patient)
   return (
     <div className="space-y-4">
       {/* Back */}
@@ -49,13 +66,13 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
         <CardBody className="flex flex-col md:flex-row md:items-center md:justify-between bg-blue-50 rounded-xl">
           <div className="space-y-1">
             <div className="text-lg font-semibold text-slate-900">
-              {patient.name}
+              {patient.full_name}
             </div>
             <div className="flex flex-wrap gap-6 text-xs text-slate-700">
-              <DetailLine label="Patient ID" value={patient.patientId} />
+              <DetailLine label="Patient ID" value={patient.id} />
               <DetailLine label="Date of Birth" value={patient.dob} />
-              <DetailLine label="Age" value={`${patient.age} years`} />
-              <DetailLine label="Gender" value={patient.gender} />
+              <DetailLine label="Age" value={`${calculateAge(patient.dob)} years`} />
+              <DetailLine label="Gender" value={patient.gender || "N/A"} />
             </div>
           </div>
         </CardBody>
@@ -127,10 +144,10 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => (
         </div>
       </CardHeader>
       <CardBody className="space-y-3 text-xs">
-        <InfoRow label="Full Name" value={patient.name} />
+        <InfoRow label="Full Name" value={patient.full_name} />
         <InfoRow label="Date of Birth" value={patient.dob} />
-        <InfoRow label="Gender" value={patient.gender} />
-        <InfoRow label="Age" value={`${patient.age} years`} />
+        <InfoRow label="Gender" value={patient.gender || "N/A"} />
+        <InfoRow label="Age" value={`${calculateAge(patient.dob)} years`} />
       </CardBody>
     </Card>
 
@@ -142,7 +159,7 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => (
       </CardHeader>
       <CardBody className="space-y-3 text-xs">
         <InfoRow label="Email" value={patient.email} />
-        <InfoRow label="Phone" value={patient.phone} />
+        <InfoRow label="Phone" value={patient.contact_number} />
         <InfoRow label="Address" value={patient.addressLine1 || "-"} />
         <InfoRow label="City" value={patient.city || "-"} />
         <InfoRow label="Country" value={patient.country || "-"} />

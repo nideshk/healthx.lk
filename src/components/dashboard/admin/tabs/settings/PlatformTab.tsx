@@ -10,11 +10,11 @@ interface PlatformFee {
   id: string;
   name: string;
   description: string;
-  duration_mins: number;
-  base_fee: number;
-  max_attendee: number;
-  extra_fee_per_attendee: number | null;
-  platform_fee: number;
+  duration_mins: number | "";
+  base_fee: number | "";
+  max_attendee: number | "";
+  extra_fee_per_attendee: number | "" ;
+  platform_fee: number | "";
 }
 
 const PlatformTab: React.FC = () => {
@@ -66,11 +66,16 @@ const PlatformTab: React.FC = () => {
         id: f.id,
         name: f.name,
         description: f.description,
-        duration_mins: f.duration_mins,
-        base_fee: f.base_fee,
-        max_attendee: f.max_attendee,
-        platform_fee: f.platform_fee,
-        extra_fee_per_attendee: f.extra_fee_per_attendee
+        base_fee: Number(f.base_fee) || 0,
+        platform_fee: Number(f.platform_fee) || 0,
+        duration_mins: Number(f.duration_mins) || 0,
+        max_attendee: Number(f.max_attendee) || 1,
+        extra_fee_per_attendee:
+            f.max_attendee === 1 ||
+            f.extra_fee_per_attendee === "" ||
+            f.extra_fee_per_attendee === 0
+              ? null
+              : Number(f.extra_fee_per_attendee),      
       }));
       const res = await authFetch("/api/platform_fee", {
         method: "PUT",
@@ -195,19 +200,33 @@ const PlatformTab: React.FC = () => {
                   <input type="text" className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium" value={fee.name} onChange={(e) => updateFeeField(fee.id, "name", e.target.value)} />
                 </td>
                 <td className="p-4 border-b">
-                  <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.base_fee} onChange={(e) => updateFeeField(fee.id, "base_fee", Number(e.target.value))} />
+                  <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.base_fee} onChange={(e) => updateFeeField(fee.id, "base_fee", e.target.value === "" ? "" : Number(e.target.value))} />
                 </td>
                 <td className="p-4 border-b">
-                  <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 text-blue-700 font-bold" value={fee.platform_fee} onChange={(e) => updateFeeField(fee.id, "platform_fee", Number(e.target.value))} />
+                  <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 text-blue-700 font-bold" value={fee.platform_fee} onChange={(e) => updateFeeField(fee.id, "platform_fee", e.target.value === "" ? "" : Number(e.target.value))} />
                 </td>
                 <td className="p-4 border-b">
-                  <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.extra_fee_per_attendee ?? 0} onChange={(e) => updateFeeField(fee.id, "extra_fee_per_attendee", Number(e.target.value))} />
+                  {/* <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.extra_fee_per_attendee ?? 0} onChange={(e) => updateFeeField(fee.id, "extra_fee_per_attendee", e.target.value === "" ? "" : Number(e.target.value))} /> */}
+                  <input
+                    type="number"
+                    className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 disabled:bg-slate-100 disabled:text-slate-400"
+                    value={fee.max_attendee === 1 ? "" : fee.extra_fee_per_attendee ?? ""}
+                    disabled={fee.max_attendee === 1}
+                    onChange={(e) =>
+                      updateFeeField(
+                        fee.id,
+                        "extra_fee_per_attendee",
+                        e.target.value === "" ? "" : Number(e.target.value)
+                      )
+                    }
+                  />
+
                 </td>
                 <td className="p-4 border-b">
-                  <input type="number" className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.max_attendee} onChange={(e) => updateFeeField(fee.id, "max_attendee", Number(e.target.value))} />
+                  <input type="number" className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.max_attendee} onChange={(e) => updateFeeField(fee.id, "max_attendee", e.target.value === "" ? "" : Number(e.target.value))} />
                 </td>
                 <td className="p-4 border-b">
-                  <input type="number" className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.duration_mins} onChange={(e) => updateFeeField(fee.id, "duration_mins", Number(e.target.value))} />
+                  <input type="number" className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.duration_mins} onChange={(e) => updateFeeField(fee.id, "duration_mins", e.target.value === "" ? "" : Number(e.target.value))} />
                 </td>
                 <td className="p-4 border-b">
                   <input type="text" className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 italic" value={fee.description} onChange={(e) => updateFeeField(fee.id, "description", e.target.value)} />

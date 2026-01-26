@@ -392,7 +392,7 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
             <p className="text-sm text-slate-600 leading-relaxed mb-6">
               Are you sure you want to permanently delete the record for{" "}
               <span className="font-bold text-slate-900">
-                {patientToDelete.name || patientToDelete.name}
+                {patientToDelete.full_name || patientToDelete.full_name}
               </span>
               ? This will remove all associated appointment history and cannot
               be undone.

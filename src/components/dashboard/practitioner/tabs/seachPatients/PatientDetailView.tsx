@@ -41,7 +41,7 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
         <CardBody className="flex flex-col md:flex-row md:items-center md:justify-between bg-blue-50 rounded-xl">
           <div className="space-y-1">
             <div className="text-lg font-semibold text-slate-900">
-              {patient.name}
+              {patient.full_name}
             </div>
             <div className="flex flex-wrap gap-6 text-xs text-slate-700">
               <DetailLine label="Patient ID" value={patient.patientId} />
@@ -112,13 +112,13 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
   const [isEditing] = React.useState(false);
 
   const [formData, setFormData] = React.useState({
-    name: patient.name,
+    name: patient.full_name,
     dob: patient.dob,
     gender: patient.gender,
     age: patient.age.toString(),
     allergies: patient.allergies || "",
     email: patient.email,
-    phone: patient.phone,
+    phone: patient.contact_number,
     address: patient.addressLine1 || "",
     city: patient.city || "",
     country: patient.country || "",
@@ -354,7 +354,7 @@ const AppointmentRow: React.FC<{
       // Constructing the styled HTML template
       const htmlMessage = `
         <div style="font-family: Arial, sans-serif; color: #334155; line-height: 1.6; max-width: 600px;">
-          <p ${patient.name},</p>
+          <p ${patient.full_name},</p>
           
           <p>Here are your appointment details:</p>
           
@@ -381,7 +381,7 @@ const AppointmentRow: React.FC<{
       `.trim();
 
       // Plain text fallback for SMS/In-app
-      const textMessage = `Hello ${patient.name},\n\nAppointment: ${appointment.date} at ${appointment.time}\nJoin here: ${meetingUrl}\n\nRegards, Medx Team`;
+      const textMessage = `Hello ${patient.full_name},\n\nAppointment: ${appointment.date} at ${appointment.time}\nJoin here: ${meetingUrl}\n\nRegards, Medx Team`;
 
       const res = await authFetch("/api/notify-send", {
         method: "POST",
@@ -395,7 +395,7 @@ const AppointmentRow: React.FC<{
           channels: channels,
           payload: {
             email: patient.email,
-            phone: patient.phone,
+            phone: patient.full_name,
             appointment_id: appointment.id,
             meeting_url: meetingUrl,
           },
@@ -746,7 +746,7 @@ const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-2xl rounded-2xl bg-white shadow-lg p-6">
         <div className="text-sm font-semibold mb-4 text-slate-900">
-          Create Appointment for {patient.name}
+          Create Appointment for {patient.full_name}
         </div>
         <p className="text-xs text-slate-500 mb-6">
           Appointment creation logic goes here.

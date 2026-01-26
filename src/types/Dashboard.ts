@@ -10,10 +10,10 @@ export type ClinicianStats = {
 export type Patient = {
   id: string;
   patientId: string;
-  name: string;
+  full_name: string;
   age: number;
   email: string;
-  phone: string;
+  contact_number: string;
   gender: "Male" | "Female" | "Other";
   dob: string;
   allergies?: string;
