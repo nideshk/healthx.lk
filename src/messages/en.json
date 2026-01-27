@@ -90,7 +90,7 @@
   },
   "allAppointments": {
     "title": "Your Appointments",
-    "subtitle": "View and manage your entire care history with MedX.",
+    "subtitle": "View and manage your entire care history with Clinecxa.",
     "upcoming": "Upcoming Sessions",
     "past": "Past Visits",
     "cancelled": "Cancelled",
@@ -258,7 +258,7 @@
   "homepage": {
     "practitioner": {
       "title": "Are you a healthcare professional?",
-      "subtitle": "Join Medx to manage your appointments, reach more patients, and streamline your practice with our digital tools.",
+      "subtitle": "Join Clinecxa to manage your appointments, reach more patients, and streamline your practice with our digital tools.",
       "benefits": {
         "1": "Reach new patients in your area",
         "2": "Full-featured scheduling dashboard",
@@ -281,7 +281,7 @@
       }
     },
     "features": {
-      "title": "Why Medx?",
+      "title": "Why Clinecxa?",
       "items": {
         "verified": {
           "title": "Verified doctors",
@@ -403,7 +403,6 @@
       }
     }
   },
-
   "footer": {
     "links": {
       "about": "About Us",
@@ -419,7 +418,7 @@
   },
   "header": {
     "nav": {
-      "findDoctors": "Find Doctors",
+      "dashboard": "Dashboard",
       "ourStory": "Our Story",
       "help": "Help"
     },

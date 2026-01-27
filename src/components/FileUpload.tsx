@@ -21,7 +21,7 @@ export default function FileUpload() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("patient_id", "1798559871122023774"); // Cliniko patient ID
-      formData.append("description", "Uploaded via Medx");
+      formData.append("description", "Uploaded via Clinecxa");
 
       const res = await authFetch("/api/patient/attachment", {
         method: "POST",

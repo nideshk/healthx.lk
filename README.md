@@ -1,4 +1,4 @@
-# 🏥 MEDx – Telehealth Platform Backend
+# 🏥 Clinecxa – Telehealth Platform Backend
 
 Clinco is a secure, HIPAA-aligned telehealth backend powering appointment management, authentication, audit logging, document uploads, and admin operations for a medical platform.
 
@@ -200,6 +200,6 @@ All changes must:
 ## 📄 License
 
 Private / Proprietary
-© MEDx
+© Clinecxa
 
 ---

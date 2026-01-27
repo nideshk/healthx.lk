@@ -227,7 +227,7 @@ export default function Consultation() {
       </div>
 
       <footer className="bg-white border-t border-gray-100 p-4 text-center text-sm text-gray-500">
-        © {new Date().getFullYear()} Medx. All rights reserved.
+        © {new Date().getFullYear()} Clinecxa. All rights reserved.
       </footer>
     </div>
   );

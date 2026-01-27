@@ -1,6 +1,5 @@
 "use client";
 
-import LanguageToggle from "@/components/common/LanguageToggle";
 
 export default function AppHeader() {
   return (

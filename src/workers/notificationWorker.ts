@@ -119,7 +119,7 @@ export async function processNotifications() {
           default:
             // Fallback to generic template
             html = generateGenericEmail({
-              title: n.title || "MedX Notification",
+              title: n.title || "Clinecxa Notification",
               message: n.message,
               recipientName: n.payload?.recipientName,
               actionUrl: n.payload?.actionUrl,
@@ -130,7 +130,7 @@ export async function processNotifications() {
 
         await sendEmail({
           to: n.payload.email,
-          subject: n.title || "MedX Notification",
+          subject: n.title || "Clinecxa Notification",
           html,
         });
       }
