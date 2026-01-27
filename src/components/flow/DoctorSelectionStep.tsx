@@ -41,7 +41,7 @@ const DoctorSelectionStep = forwardRef(
       const fetchDoctors = async () => {
         setLoading(true);
         try {
-          const res = await axios.get(`/api/specialisation/${bookingData.selectedService.slug}`);
+          const res = await axios.get(`/api/specialisation/${bookingData.selectedService.slug.toLowerCase()}`);
           const mapped = res.data.practitioners.map((p: any) => ({
             id: p.id,
             name: p.full_name,
