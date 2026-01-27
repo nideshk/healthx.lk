@@ -7,7 +7,8 @@ import Header from "@/components/homepage/header/header";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getMessages } from "next-intl/server";
+import { getLocaleFromCookie } from "@/utils/getLocale";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,29 +31,33 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
 
+  const locale = await getLocaleFromCookie();
+  const messages = await getMessages({ locale });
 
   return (
-    <html lang="en">
+    <html lang={"en"}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
 
+        <NextIntlClientProvider locale={locale} messages={messages}>
 
-        <AuthProvider>
+          <AuthProvider>
 
-          {/* Adding this for blur effect while triggering payment */}
-          <div id="main-app-layout" className="transition-all duration-500">
-            <Header />
-            {children}
-          </div>
+            {/* Adding this for blur effect while triggering payment */}
+            <div id="main-app-layout" className="transition-all duration-500">
+              <Header />
+              {children}
+            </div>
 
-          <Script
-            src="https://www.payhere.lk/lib/payhere.js"
-            strategy="lazyOnload"
-          />
+            <Script
+              src="https://www.payhere.lk/lib/payhere.js"
+              strategy="lazyOnload"
+            />
 
-          <ToastProvider />
+            <ToastProvider />
 
-        </AuthProvider>
+          </AuthProvider>
 
+        </NextIntlClientProvider>
 
       </body>
     </html>
