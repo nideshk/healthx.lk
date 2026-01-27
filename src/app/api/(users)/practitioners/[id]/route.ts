@@ -182,3 +182,89 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: practitionerId } = await context.params;
+
+    if (!practitionerId) {
+      return NextResponse.json(
+        { error: "Practitioner identifier is required." },
+        { status: 400 }
+      );
+    }
+
+    const { authorized, role } = await requireUser(request);
+
+    if (!authorized) {
+      return NextResponse.json(
+        { error: "You are not authorized to perform this action." },
+        { status: 401 }
+      );
+    }
+
+    const isAdmin = ["admin", "superadmin"].includes(role);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Only administrators can delete practitioners." },
+        { status: 403 }
+      );
+    }
+
+    /** Fetch practitioner (includes supabase_id) */
+    const { data: practitioner, error: fetchError } = await supabaseAdmin
+      .from("practitioners")
+      .select("id, supabase_user_id, is_active, deleted_at")
+      .eq("id", practitionerId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    if (!practitioner || practitioner.deleted_at) {
+      return NextResponse.json(
+        { error: "Practitioner already deleted or does not exist." },
+        { status: 404 }
+      );
+    }
+
+    const deletedAt = new Date().toISOString();
+
+    /** 1️⃣ Soft delete practitioner */
+    const { error: practitionerError } = await supabaseAdmin
+      .from("practitioners")
+      .update({
+        is_active: false,
+        deleted_at: deletedAt,
+      })
+      .eq("id", practitionerId);
+
+    if (practitionerError) throw practitionerError;
+
+    /** 2️⃣ Soft delete linked profile (by supabase_id) */
+    if (practitioner.supabase_user_id) {
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          is_active: false,
+          deleted_at: deletedAt,
+        })
+        .eq("id", practitioner.supabase_user_id);
+
+      if (profileError) throw profileError;
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Practitioner and profile soft-deleted successfully.",
+    });
+  } catch (err: any) {
+    console.error("DELETE /practitioner error:", err);
+    return NextResponse.json(
+      { error: err?.message ?? "Unable to delete practitioner." },
+      { status: 500 }
+    );
+  }
+}

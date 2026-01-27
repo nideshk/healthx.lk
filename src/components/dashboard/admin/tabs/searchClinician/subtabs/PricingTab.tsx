@@ -11,7 +11,7 @@ interface PricingApiItem {
   type: string;
   platform_fee: number;
   duration_mins: number;
-  max_attendees: number;
+  max_attendee: number;
   extra_fee_per_attendee: number;
 }
 
@@ -65,7 +65,7 @@ const PricingTab: React.FC<PricingTabProps> = ({ clinicianId }) => {
             duration: `${item.duration_mins} mins`,
             fee: item.fee,
             platformFee: item.platform_fee,
-            maxAttendees: item.max_attendees,
+            maxAttendees: item.max_attendee,
             extraFeePerAttendee: item.extra_fee_per_attendee,
           })
         );
