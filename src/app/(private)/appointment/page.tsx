@@ -6,7 +6,7 @@ import { RoleGuard } from '@/components/auth/RoleGuard';
 export default async function AppointmentPage() {
   const locale = await getLocaleFromCookie();
   const messages = (await import(`@/messages/${locale}.json`)).default;
-
+  console.log("locale", locale, messages)
   return (
     <RoleGuard allowed={["patient"]} redirectTo="/">
       <NextIntlClientProvider locale={locale} messages={messages}>

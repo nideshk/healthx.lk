@@ -11,6 +11,7 @@ export default function LocaleProvider({
   messages: any;
   children: React.ReactNode;
 }) {
+  console.log(locale, messages)
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       {children}
