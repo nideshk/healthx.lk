@@ -8,5 +8,7 @@ export default createMiddleware({
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/appointment/:path*"],
+  matcher: [
+    "/((?!api|_next|_vercel|.*\\..*).*)",
+  ],
 };
