@@ -7,7 +7,7 @@ export default function LocaleProvider({
   messages,
   children,
 }: {
-  locale: string;
+  locale?: string;
   messages: any;
   children: React.ReactNode;
 }) {
