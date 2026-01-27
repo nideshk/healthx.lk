@@ -3,9 +3,16 @@ import createMiddleware from "next-intl/middleware";
 export default createMiddleware({
   locales: ["en", "si"],
   defaultLocale: "en",
-  localeDetection: false, // 👈 THIS LINE
+  localeDetection: false,
+  localePrefix: "never", // 🔴 THIS WAS MISSING
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/appointment/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/appointment/:path*",
+    "/consultation/:path*",
+    "/payments/:path*",
+    "/profile/:path*",
+  ],
 };
