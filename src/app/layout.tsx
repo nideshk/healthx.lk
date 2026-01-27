@@ -31,33 +31,31 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  const locale = await getLocaleFromCookie();
-  const messages = await getMessages({ locale });
 
   return (
-    <html lang={locale}>
+    <html lang={"en"}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
 
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        {/* <NextIntlClientProvider locale={locale} messages={messages}> */}
 
-          <AuthProvider>
+        <AuthProvider>
 
-            {/* Adding this for blur effect while triggering payment */}
-            <div id="main-app-layout" className="transition-all duration-500">
-              <Header />
-              {children}
-            </div>
+          {/* Adding this for blur effect while triggering payment */}
+          <div id="main-app-layout" className="transition-all duration-500">
+            <Header />
+            {children}
+          </div>
 
-            <Script
-              src="https://www.payhere.lk/lib/payhere.js"
-              strategy="lazyOnload"
-            />
+          <Script
+            src="https://www.payhere.lk/lib/payhere.js"
+            strategy="lazyOnload"
+          />
 
-            <ToastProvider />
+          <ToastProvider />
 
-          </AuthProvider>
+        </AuthProvider>
 
-        </NextIntlClientProvider>
+        {/* </NextIntlClientProvider> */}
 
       </body>
     </html>
