@@ -137,7 +137,7 @@ export default function AppointmentConfirmPage() {
         practitioner_id: formData.selectedDoctor.cliniko_practitioner_id,
         starts_at: formData.starts_at,
         ends_at: formData.ends_at,
-        notes: formData?.pre_consultation?.concern || "Created from Medx Portal",
+        notes: formData?.pre_consultation?.concern || "Created from Clinecxa Portal",
       };
 
       await axios.post('/api/appointment', payload);
@@ -222,8 +222,8 @@ export default function AppointmentConfirmPage() {
               disabled={!canGoForward()}
               onClick={handleNext}
               className={`px-5 py-2 rounded-md text-white ${canGoForward()
-                  ? 'bg-blue-600 hover:bg-blue-700'
-                  : 'bg-gray-400 cursor-not-allowed'
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-gray-400 cursor-not-allowed'
                 }`}
             >
               Next
@@ -335,8 +335,8 @@ export default function AppointmentConfirmPage() {
               disabled={!canGoForward()}
               onClick={handleNext}
               className={`px-5 py-2 rounded-md text-white ${canGoForward()
-                  ? 'bg-blue-600 hover:bg-blue-700'
-                  : 'bg-gray-400 cursor-not-allowed'
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-gray-400 cursor-not-allowed'
                 }`}
             >
               {uploading ? 'Uploading...' : 'Next'}

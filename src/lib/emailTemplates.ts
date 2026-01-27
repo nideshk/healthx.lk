@@ -56,7 +56,7 @@ export function generateAppointmentConfirmationEmail({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Appointment Confirmed - MedX</title>
+  <title>Appointment Confirmed - Clinecxa</title>
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
     .container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -71,7 +71,7 @@ export function generateAppointmentConfirmationEmail({
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">MedX</div>
+      <div class="logo">Clinecxa</div>
       <div class="title">Appointment Confirmed</div>
     </div>
     <div class="message">
@@ -92,7 +92,7 @@ export function generateAppointmentConfirmationEmail({
       ${appointment.meetingUrl ? `<a href="${appointment.meetingUrl}" class="join-button">Join Meeting</a>` : ''}
     </div>
     <div class="footer">
-      <p>This email was sent by MedX Telehealth Platform.</p>
+      <p>This email was sent by Clinecxa Telehealth Platform.</p>
       <p>If you have any questions, please contact our support team.</p>
     </div>
   </div>
@@ -115,7 +115,7 @@ export function generateAppointmentReminderEmail({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Appointment Reminder - MedX</title>
+  <title>Appointment Reminder - Clinecxa</title>
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
     .container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -130,7 +130,7 @@ export function generateAppointmentReminderEmail({
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">MedX</div>
+      <div class="logo">Clinecxa</div>
       <div class="title">⏰ Appointment Reminder</div>
     </div>
     <div class="message">
@@ -150,7 +150,7 @@ export function generateAppointmentReminderEmail({
       ${appointment.meetingUrl ? `<a href="${appointment.meetingUrl}" class="join-button">Join Meeting</a>` : ''}
     </div>
     <div class="footer">
-      <p>This email was sent by MedX Telehealth Platform.</p>
+      <p>This email was sent by Clinecxa Telehealth Platform.</p>
       <p>If you have any questions, please contact our support team.</p>
     </div>
   </div>
@@ -172,7 +172,7 @@ export function generatePaymentSuccessEmail({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Payment Successful - MedX</title>
+  <title>Payment Successful - Clinecxa</title>
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
     .container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -187,7 +187,7 @@ export function generatePaymentSuccessEmail({
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">MedX</div>
+      <div class="logo">Clinecxa</div>
       <div class="title">💳 Payment Successful</div>
     </div>
     <div class="message">
@@ -204,7 +204,7 @@ export function generatePaymentSuccessEmail({
       <p>You will receive a confirmation of your appointment details shortly if you haven't already.</p>
     </div>
     <div class="footer">
-      <p>This email was sent by MedX Telehealth Platform.</p>
+      <p>This email was sent by Clinecxa Telehealth Platform.</p>
       <p>If you have any questions, please contact our support team.</p>
     </div>
   </div>
@@ -247,7 +247,7 @@ export function generateGenericEmail({
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">MedX</div>
+      <div class="logo">Clinecxa</div>
       <div class="title">${title}</div>
     </div>
     <div class="message">
@@ -256,7 +256,7 @@ export function generateGenericEmail({
       ${actionButton}
     </div>
     <div class="footer">
-      <p>This email was sent by MedX Telehealth Platform.</p>
+      <p>This email was sent by Clinecxa Telehealth Platform.</p>
       <p>If you have any questions, please contact our support team.</p>
     </div>
   </div>

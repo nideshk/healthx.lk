@@ -35,7 +35,7 @@ export async function createAppointment(bookingData: any) {
       practitioner_id: bookingData.selectedDoctor.registration,
       starts_at: startTime.toISOString(),
       ends_at: endTime.toISOString(),
-      notes: "Created from MedX Portal",
+      notes: "Created from Clinecxa Portal",
       patient_case_id: null,
       repeat_rule: null,
     };

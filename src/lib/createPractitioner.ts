@@ -238,7 +238,7 @@ Username: ${email}
 Password: ${password}
 Please keep these credentials secure.
 Regards,
-Medx Team
+Clinecxa Team
       `.trim(),
     channels: ["email"],
     payload: {

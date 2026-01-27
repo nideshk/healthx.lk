@@ -18,7 +18,6 @@ import FollowUpRequest from "./FollowUpRequest";
 import { ReviewModal } from "@/components/atom/Modal/ReviewModal";
 import { authFetch } from "@/lib/authFetch";
 import { useTranslations } from "next-intl";
-import LanguageToggle from "@/components/common/LanguageToggle";
 
 export default function PatientDashboardLayout({
   activeTab,
@@ -133,11 +132,6 @@ export default function PatientDashboardLayout({
                 </h1>
                 <p className="text-slate-500 text-sm mt-1">{t("subtitle")}</p>
               </div>
-
-              {/* Language toggle stays visible or moves to top-right */}
-              <div className="shrink-0">
-                <LanguageToggle />
-              </div>
             </header>
 
             <div className="min-h-[60vh]">
@@ -165,8 +159,8 @@ function SidebarLink({ href, active, icon, label }: any) {
     <Link
       href={href}
       className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${active
-          ? "bg-teal-50 text-teal-700 font-bold border border-teal-100/50"
-          : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
+        ? "bg-teal-50 text-teal-700 font-bold border border-teal-100/50"
+        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
         }`}
     >
       <span
