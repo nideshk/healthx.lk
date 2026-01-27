@@ -31,7 +31,6 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { useModalStore } from "@/store/useModalStore";
 import Modal from "@/components/atom/Modal/Modal";
 import { useAuth } from "@/contexts/AuthContext";
-import { authFetch } from "@/lib/authFetch";
 import LanguageToggle from "@/components/common/LanguageToggle";
 
 export default function Header() {
@@ -63,7 +62,7 @@ export default function Header() {
 
   // Visible on both Desktop Header and Mobile Sidebar
   const publicLinks = [
-    { name: t("nav.findDoctors"), href: "/dashboard", icon: Search },
+    { name: t("nav.dashboard"), href: "/dashboard", icon: Search },
     { name: t("nav.ourStory"), href: "/about-us", icon: ShieldCheck },
     { name: t("nav.help"), href: "/help", icon: Calendar },
   ];
@@ -151,7 +150,7 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           {/* Left: Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <img src="/assets/logo.png" alt="MedX" className="w-24 h-24" />
+            <img src="/assets/logo.png" alt="Clinecxa" className="w-24 h-24" />
           </Link>
 
           {/* Right: Skeleton */}

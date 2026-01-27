@@ -11,7 +11,7 @@ const mainLinks = [
   { key: "privacy", href: "/privacy" },
 ];
 
-const companyName = "Medx";
+const companyName = "Clinecxa";
 const currentYear = new Date().getFullYear();
 
 const ClincoLogo = () => (

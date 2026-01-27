@@ -93,7 +93,7 @@ Join your appointment using the link below:
 ${meetingUrl}
 
 Regards,
-Medx Team
+Clinecxa Team
       `.trim();
 
       const response = await authFetch("/api/notify-send", {

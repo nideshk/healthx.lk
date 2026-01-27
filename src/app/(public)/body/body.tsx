@@ -83,7 +83,7 @@ const TrustItem = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
   </div>
 );
 
-/* ================= WHY Medx ================= */
+/* ================= WHY Clinecxa ================= */
 
 const FeaturesSection = () => {
   const t = useTranslations("homepage.features");

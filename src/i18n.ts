@@ -1,19 +1,17 @@
 // src/i18n.ts
 import { getRequestConfig } from "next-intl/server";
 
-export default getRequestConfig(async ({ locale }) => {
-  switch (locale) {
-    case "si":
-      return {
-        locale: "si",
-        messages: (await import("./messages/si.json")).default,
-      };
+export default getRequestConfig(async ({ requestLocale }) => {
+  let locale = await requestLocale;
 
-    case "en":
-    default:
-      return {
-        locale: "en",
-        messages: (await import("./messages/en.json")).default,
-      };
+  // Validate that the incoming `locale` parameter is valid
+  if (!locale || !["en", "si"].includes(locale)) {
+    locale = "en";
   }
+
+  return {
+    locale,
+    timeZone: "Asia/Colombo",
+    messages: (await import(`./messages/${locale}.json`)).default,
+  };
 });
