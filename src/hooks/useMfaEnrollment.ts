@@ -4,9 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { toast } from "react-toastify";
 
+type PersistedEnrollment = {
+  factorId: string;
+  qr: string;
+};
+
 export const useMfaEnrollment = () => {
   /* --------------------------------
-     STATE (UNCHANGED)
+     STATE
   --------------------------------- */
   const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean | null>(null);
 
@@ -17,11 +22,10 @@ export const useMfaEnrollment = () => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const latestFactorId = useRef<string | null>(null);
-  const latestQr = useRef<string | null>(null);
-  const latestTwoFactorEnabled = useRef<boolean | null>(null);
 
-
+  /* --------------------------------
+     DEBUG
+  --------------------------------- */
   console.log("🧩 [RENDER] useMfaEnrollment", {
     twoFactorEnabled,
     factorId,
@@ -29,8 +33,33 @@ export const useMfaEnrollment = () => {
   });
 
   /* --------------------------------
-     CP-1: LOAD MFA STATUS
-     (IDENTICAL – including missing deps)
+     RESTORE VERIFIED MFA (UI PERSISTENCE)
+  --------------------------------- */
+  useEffect(() => {
+    const verified = sessionStorage.getItem("mfa_verified");
+    if (verified === "true") {
+      setTwoFactorEnabled(true);
+    }
+  }, []);
+
+  /* --------------------------------
+     RESTORE IN-PROGRESS ENROLLMENT (QR)
+  --------------------------------- */
+  useEffect(() => {
+    const raw = sessionStorage.getItem("mfa_enrollment");
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw) as PersistedEnrollment;
+      setFactorId(parsed.factorId);
+      setQr(parsed.qr);
+    } catch {
+      sessionStorage.removeItem("mfa_enrollment");
+    }
+  }, []);
+
+  /* --------------------------------
+     LOAD MFA STATUS (AUTHORITATIVE, GUARDED)
   --------------------------------- */
   useEffect(() => {
     const loadStatus = async () => {
@@ -38,71 +67,56 @@ export const useMfaEnrollment = () => {
         await supabaseClient.auth.mfa.listFactors();
 
       if (error) {
-        toast.error("Unable to load MFA status");
-        setTwoFactorEnabled(false);
+        console.error("❌ [MFA] listFactors error:", error);
         return;
       }
 
       const enabled = !!factors && factors.totp.length > 0;
-      setTwoFactorEnabled(enabled);
+
+      // 🔒 NEVER downgrade verified MFA from a background read
+      setTwoFactorEnabled(prev => {
+        if (prev === true) return true;
+        return enabled;
+      });
+      sessionStorage.removeItem("mfa_enrollment");
+
     };
 
     loadStatus();
   }, []);
 
   /* --------------------------------
-    CP-REFS-SYNC: KEEP REFS UPDATED
-  --------------------------------- */
-  useEffect(() => {
-    latestFactorId.current = factorId;
-    latestQr.current = qr;
-    latestTwoFactorEnabled.current = twoFactorEnabled;
-  }, [factorId, qr, twoFactorEnabled]);
-
-
-  /* --------------------------------
-    CP-CLEANUP: UNMOUNT ONLY
-    Cancel ONLY unfinished enrollment
-  --------------------------------- */
-  useEffect(() => {
-    return () => {
-      const factorId = latestFactorId.current;
-      const qr = latestQr.current;
-      const enabled = latestTwoFactorEnabled.current;
-
-      // ✅ Cancel ONLY if enrollment was started but NOT verified
-      if (qr && enabled !== true && factorId) {
-        supabaseClient.auth.mfa
-          .unenroll({ factorId })
-          .catch(() => {
-            // ignore errors during unmount
-          });
-      }
-    };
-  }, []); // 👈 EMPTY deps = unmount only
-
-
-  /* --------------------------------
-     CP-2: ENROLL (QR CODE)
+     START ENROLLMENT (QR)
   --------------------------------- */
   const startEnrollment = async () => {
-    if (factorId) return;
+    if (factorId || twoFactorEnabled === true) return;
 
     setLoading(true);
     setError(null);
-    toast.info("Starting two-factor authentication…");
 
     const { data, error } =
-      await supabaseClient.auth.mfa.enroll({
-        factorType: "totp",
-      });
+      await supabaseClient.auth.mfa.enroll({ factorType: "totp" });
 
-    if (error || !data) {
-      toast.error(error?.message || "Failed to start MFA enrollment");
-      setError(error?.message ?? "Failed to start MFA enrollment");
+    // 🧠 Factor already exists → treat as enabled
+    if (error?.message?.includes("already exists")) {
+      setTwoFactorEnabled(true);
+      sessionStorage.setItem("mfa_verified", "true");
       setLoading(false);
       return;
     }
+
+    if (error || !data) {
+      toast.error(error?.message || "Failed to start MFA enrollment");
+      setLoading(false);
+      return;
+    }
+
+    const enrollment: PersistedEnrollment = {
+      factorId: data.id,
+      qr: data.totp.qr_code,
+    };
+
+    sessionStorage.setItem("mfa_enrollment", JSON.stringify(enrollment));
 
     setFactorId(data.id);
     setQr(data.totp.qr_code);
@@ -110,7 +124,7 @@ export const useMfaEnrollment = () => {
   };
 
   /* --------------------------------
-     CP-4: CREATE CHALLENGE
+     CREATE CHALLENGE
   --------------------------------- */
   const createChallenge = async () => {
     if (!factorId) return;
@@ -119,14 +133,10 @@ export const useMfaEnrollment = () => {
     setError(null);
 
     const { data, error } =
-      await supabaseClient.auth.mfa.challenge({
-        factorId,
-      });
+      await supabaseClient.auth.mfa.challenge({ factorId });
 
     if (error || !data) {
-      console.error("🔴 [CP-4] challenge error:", error);
       toast.error(error?.message || "Unable to start verification");
-      setError(error?.message ?? "Failed to create challenge");
       setLoading(false);
       return;
     }
@@ -136,7 +146,7 @@ export const useMfaEnrollment = () => {
   };
 
   /* --------------------------------
-     CP-5: VERIFY OTP
+     VERIFY OTP
   --------------------------------- */
   const verifyEnrollment = async () => {
     if (!factorId || !challengeId) return;
@@ -148,22 +158,23 @@ export const useMfaEnrollment = () => {
       await supabaseClient.auth.mfa.verify({
         factorId,
         challengeId,
-        code: otp,
+        code: otp.trim(),
       });
 
     if (error) {
-      toast.error(error?.message || "Invalid code. Please try again.");
-      setError(error.message);
+      toast.error(error.message || "Invalid code");
       setLoading(false);
       return;
     }
 
     toast.success("MFA enrollment successful");
 
-    const { data: factors } =
-      await supabaseClient.auth.mfa.listFactors();
+    // 🔥 AUTHORITATIVE UPDATE
+    setTwoFactorEnabled(true);
 
-    setTwoFactorEnabled(!!factors && factors.totp.length > 0);
+    // 🧹 Clear enrollment state
+    sessionStorage.removeItem("mfa_verified");
+    sessionStorage.removeItem("mfa_enrollment");
 
     setFactorId(null);
     setChallengeId(null);
@@ -173,45 +184,47 @@ export const useMfaEnrollment = () => {
   };
 
   /* --------------------------------
-     CP-7: DISABLE MFA
+     DISABLE MFA (EXPLICIT USER ACTION)
   --------------------------------- */
   const disableMfa = async () => {
-    const { data: factors, error } =
+    const { data: factors } =
       await supabaseClient.auth.mfa.listFactors();
 
-    if (error || !factors || factors.totp.length === 0) return;
+    if (!factors || factors.totp.length === 0) return;
 
-    const { error: disable_error } =
+    const { error } =
       await supabaseClient.auth.mfa.unenroll({
         factorId: factors.totp[0].id,
       });
 
-    if (disable_error) {
+    if (error) {
+      console.log(error)
       toast.error("Unable to disable two-factor authentication");
       return;
     }
 
-    toast.success("MFA enrollment disabled successful");
+    toast.success("MFA disabled");
+
     setTwoFactorEnabled(false);
+    sessionStorage.removeItem("mfa_verified");
+    sessionStorage.removeItem("mfa_enrollment");
   };
 
   /* --------------------------------
-    CP-8: CANCEL ENROLLMENT (USER ACTION)
+     CANCEL ENROLLMENT (USER ACTION)
   --------------------------------- */
   const cancelEnrollment = async () => {
-    // Only cancel if enrollment is actually in progress
-    if (!factorId || !qr || twoFactorEnabled === true) return;
+    if (!factorId || twoFactorEnabled === true) return;
 
     setLoading(true);
-    setError(null);
 
     try {
       await supabaseClient.auth.mfa.unenroll({ factorId });
-      toast.info("MFA enrollment cancelled");
     } catch {
-      toast.error("Unable to cancel MFA enrollment");
+      // ignore
     } finally {
-      // Reset local state
+      sessionStorage.removeItem("mfa_enrollment");
+
       setFactorId(null);
       setChallengeId(null);
       setQr(null);

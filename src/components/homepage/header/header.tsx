@@ -367,7 +367,13 @@ export default function Header() {
       {/* --- LOGIN MODAL --- */}
       <Modal
         isOpen={isLoginModalOpen}
-        onClose={() => { setShowForgot(false); setMfa(null); closeLoginModal(); }}
+        onClose={async () => {
+          if (mfa) {
+            // MFA was required but not completed
+            await supabaseBrowser.auth.signOut();
+          }
+          setShowForgot(false); setMfa(null); closeLoginModal();
+        }}
         title={mfa ? t("modal.mfaTitle") : showForgot ? t("modal.recoverTitle") : t("modal.signInTitle")}
       >
         <div className="px-1 py-2">
@@ -386,10 +392,10 @@ export default function Header() {
                   const { data } = await supabaseBrowser.auth.getSession();
                   finalizeLogin(data.session);
                 }}
-                disabled={mfaInProgress || otp.length !== 6}
+                disabled={otp.length !== 6}
                 className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-2 hover:bg-teal-600 transition-all"
               >
-                {mfaInProgress && <Loader2 className="w-5 h-5 animate-spin" />} {t("modal.confirm")}
+                {t("modal.confirm")}
               </button>
             </div>
           ) : !showForgot ? (

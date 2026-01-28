@@ -79,6 +79,10 @@ const HomeTab: React.FC = () => {
   /* FETCH OVERVIEW                                */
   /* -------------------------------------------------------------------------- */
 
+  if (loading) {
+    return <Loader />;
+  }
+
   useEffect(() => {
     const fetchOverview = async () => {
       try {
@@ -139,7 +143,7 @@ const HomeTab: React.FC = () => {
             specialty: d.specialization?.join(", ") || "-",
           }))
         );
-        setCurrentPage(1); 
+        setCurrentPage(1);
       } catch (err) {
         console.error(err);
       }
@@ -337,20 +341,18 @@ const HomeTab: React.FC = () => {
               currentData.map((c) => (
                 <button
                   key={c.id}
-                  className={`w-full text-left px-5 py-3 transition-colors flex items-center justify-between group ${
-                    selectedClinician?.id === c.id
-                      ? "bg-blue-50"
-                      : "hover:bg-slate-50"
-                  }`}
+                  className={`w-full text-left px-5 py-3 transition-colors flex items-center justify-between group ${selectedClinician?.id === c.id
+                    ? "bg-blue-50"
+                    : "hover:bg-slate-50"
+                    }`}
                   onClick={() => handleSelectClinician(c)}
                 >
                   <div className="flex items-center gap-4">
                     <div
-                      className={`p-2 rounded-full ${
-                        selectedClinician?.id === c.id
-                          ? "bg-blue-100 text-blue-600"
-                          : "bg-slate-100 text-slate-400 group-hover:text-blue-500 transition-colors"
-                      }`}
+                      className={`p-2 rounded-full ${selectedClinician?.id === c.id
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-slate-100 text-slate-400 group-hover:text-blue-500 transition-colors"
+                        }`}
                     >
                       <User size={18} />
                     </div>
