@@ -79,9 +79,6 @@ const HomeTab: React.FC = () => {
   /* FETCH OVERVIEW                                */
   /* -------------------------------------------------------------------------- */
 
-  if (loading) {
-    return <Loader />;
-  }
 
   useEffect(() => {
     const fetchOverview = async () => {
