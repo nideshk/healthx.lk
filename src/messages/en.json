@@ -535,5 +535,46 @@
         "missingSelection": "Please select appointment type, date and time"
       }
     }
+  },
+  "about": {
+    "hero": {
+      "badge": "Our Journey",
+      "title": "Healthcare Built on Empathy"
+    },
+    "story": {
+      "title": "The Founder’s Story",
+      "para1": "Our journey began with someone very close to our founder—his little sister. She is autistic, and for her, everyday environments can feel overwhelming. A trip to the doctor, which most of us take for granted, was a source of intense anxiety.",
+      "para2": "While living abroad, Nidesh watched his parents handle these exhausting appointments alone. He realized that telehealth should be a necessity for dignity and comfort, not just a video call.",
+      "quote": "I wondered why Sri Lanka didn’t have something like this. Existing attempts were technology-first, not people-first. They weren’t shaped by the realities of Sri Lankan families.",
+      "para3": "He returned to the drawing board and spent months speaking with doctors and patients. Built from personal savings, Clinecxa was created to provide a kinder way to access care for everyone."
+    },
+    "vision": {
+      "text": "To be Sri Lanka’s number-one telehealth service: where patients feel safe, care is stress-free, clinicians thrive, and privacy is uncompromised.",
+      "label": "Clinecxa Vision"
+    },
+    "commitments": {
+      "heading": "Our Core Commitments",
+      "trust": {
+        "title": "Trust and Safety First",
+        "description": "Every decision, from clinical workflows to data security, is driven by an uncompromising commitment to ethics, privacy, and patient safety."
+      },
+      "quality": {
+        "title": "Medical Quality First",
+        "description": "Clinecxa is clinically led. Technology exists to support great medicine and enhance care, never to override professional clinical judgment."
+      },
+      "equality": {
+        "title": "Equal Care for All",
+        "description": "We exist to remove barriers. We believe every patient and clinician deserves equal access to high-quality tools regardless of location."
+      }
+    },
+    "founder": {
+      "role": "Founder, Clinecxa",
+      "noteTitle": "A Note from the Founder",
+      "greeting": "Hi friend, thank you for being here.",
+      "para1": "Clinecxa was born because I watched my sister struggle with appointments and wanted to support my family from afar. I realized healthcare shouldn't add to a family's burden.",
+      "para2": "I also saw the challenges clinicians face. By giving doctors better tools and a better work-life balance, we ensure they can provide even better care to their patients.",
+      "para3": "Our mission is to put people first—patients, caregivers, and clinicians alike. We are building something safer and more compassionate for everyone.",
+      "signoff": "Nidesh Kulatunga"
+    }
   }
 }
