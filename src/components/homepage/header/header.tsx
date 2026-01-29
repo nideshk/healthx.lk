@@ -199,9 +199,9 @@ export default function Header() {
 
             {/* RIGHT SIDE: PROFILE / AUTH */}
             <div className="flex items-center gap-3">
-              {(user?.role === "patient" || !user) && <div className="hidden md:block mr-2">
+              <div className="hidden md:block mr-2">
                 <LanguageToggle />
-              </div>}
+              </div>
 
               {!user ? (
                 <div className="flex items-center gap-2">
