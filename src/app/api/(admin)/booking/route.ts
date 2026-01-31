@@ -1,8 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/authGuard";
+
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { auditLog } from "@/lib/audit/auditLog";
-import { getAuditContext } from "@/lib/audit/getAuditContext";
 
 export const runtime = "nodejs";
 
@@ -13,12 +10,20 @@ const STATUS_MAP: Record<string, string[]> = {
   cancelled: ["cancelled"],
 };
 
+import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/authGuard";
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { pool } from "@/lib/db";
+
 export async function GET(req: NextRequest) {
+  console.log("NEW API HITS")
   try {
     const { authorized, user } = await requireUser(req);
-    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    /** RBAC */
     const isAdmin =
       user?.admin && ["admin", "superadmin"].includes(user.admin.role);
 
@@ -33,20 +38,23 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-
     const fromDate = searchParams.get("from");
     const toDate = searchParams.get("to");
     const type = searchParams.get("type");
 
     if (!fromDate || !toDate || !type) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "`from`, `to`, and `type` are required",
-        },
+        { success: false, message: "`from`, `to`, and `type` are required" },
         { status: 400 }
       );
     }
+
+    const STATUS_MAP: Record<string, string[]> = {
+      total: ["scheduled", "confirmed", "completed", "cancelled", "pending"],
+      upcoming: ["scheduled", "confirmed", "pending"],
+      completed: ["completed"],
+      cancelled: ["cancelled"],
+    };
 
     const statuses = STATUS_MAP[type];
     if (!statuses) {
@@ -58,90 +66,71 @@ export async function GET(req: NextRequest) {
 
     const perPage = Math.min(Number(searchParams.get("per_page")) || 20, 100);
     const page = Math.max(Number(searchParams.get("page")) || 1, 1);
+    const offset = (page - 1) * perPage;
 
-    const from = (page - 1) * perPage;
-    const to = from + perPage - 1;
-    let query = supabaseAdmin
-      .from("appointments")
-      .select(
-        `
-    id,
-    starts_at,
-    ends_at,
-    appointment_type_id,
-    cancellation_reason,
-    payment_status,
-    status,
-    notes,
-    patient:patient_id(full_name, email),
-    practitioner:practitioner_id(full_name, contact_email),
-    appointment_type:appointment_type!fk_appointments_type (
-      name
-    )
-    `,
-        { count: "exact" }
-      )
-      .gte("starts_at", `${fromDate}T00:00:00`)
-      .lte("starts_at", `${toDate}T23:59:59`)
-      .in("status", statuses)
-    // .range(from, to);
+    const params: any[] = [
+      `${fromDate}T00:00:00`,
+      `${toDate}T23:59:59`,
+      statuses,
+      perPage,
+      offset,
+    ];
 
+    let practitionerFilter = "";
     if (isPractitioner) {
-      query = query.eq("practitioner_id", user.practitioner_id);
+      practitionerFilter = `AND a.practitioner_id = $6`;
+      params.push(user.practitioner_id);
     }
 
-    query = query.range(from, to);
+    const { rows } = await pool.query(
+      `
+      SELECT
+        a.id,
+        a.starts_at,
+        a.ends_at,
+        a.cancellation_reason,
+        a.payment_status,
+        a.status,
+        a.notes,
 
-    const cnx = getAuditContext(req, user);
-    await auditLog({
-      ...cnx,
-      action: "VIEWED",
-      entityType: "APPOINTMENT",
-      purpose: "analytics",
-      source: "dashboard",
-      metadata: { filters: { from: fromDate, to: toDate, type } }
-    })
+        p.full_name AS patient_name,
+        p.email AS patient_email,
 
-    const { data, error, count } = await query;
-    if (!count || from >= count) {
-      return NextResponse.json({
-        success: true,
-        meta: {
-          total: count ?? 0,
-          page,
-          per_page: perPage,
-          total_pages: count ? Math.ceil(count / perPage) : 0,
-        },
-        data: [],
-      });
-    }
+        pr.full_name AS practitioner_name,
+        pr.contact_email AS practitioner_email,
 
-    if (error) {
-      console.error("DB Error:", error);
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to fetch appointments",
-        },
-        { status: 500 }
-      );
-    }
+        at.name AS appointment_type_name,
 
-    const formatted = (data).map((a: any) => {
+        COUNT(*) OVER() AS total_count
+      FROM phi.appointments a
+      LEFT JOIN phi.patients p ON p.id = a.patient_id
+      LEFT JOIN phi.practitioners pr ON pr.id = a.practitioner_id
+      LEFT JOIN phi.appointment_type at ON at.id = a.appointment_type_id
+      WHERE
+        a.starts_at >= $1
+        AND a.starts_at <= $2
+        AND a.status = ANY($3)
+        ${practitionerFilter}
+      ORDER BY a.starts_at DESC
+      LIMIT $4 OFFSET $5
+      `,
+      params
+    );
+
+    const total = rows.length ? Number(rows[0].total_count) : 0;
+
+    const formatted = rows.map((a) => {
       const start = new Date(a.starts_at);
       const end = a.ends_at ? new Date(a.ends_at) : null;
 
       return {
         id: a.id,
-
         appointment_date: start.toISOString().split("T")[0],
-
         start_time: start.toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
           hour12: true,
         }),
-
         end_time: end
           ? end.toLocaleTimeString([], {
             hour: "2-digit",
@@ -149,64 +138,47 @@ export async function GET(req: NextRequest) {
             hour12: true,
           })
           : null,
-
         status: a.status,
         payment_status: a.payment_status ?? "unpaid",
-
-        patient: a.patient
+        patient: a.patient_name
+          ? { name: a.patient_name, email: a.patient_email }
+          : null,
+        practitioner: a.practitioner_name
           ? {
-            name: a.patient.full_name,
-            email: a.patient.email,
+            name: a.practitioner_name,
+            email: a.practitioner_email,
           }
           : null,
-
-        practitioner: a.practitioner
-          ? {
-            name: a.practitioner.full_name,
-            email: a.practitioner.contact_email,
-          }
-          : null,
-
-        appointment_type: a.appointment_type?.name ?? null,
-        cancellation_reason: a.cancellation_reason ?? null,
-        notes: a.notes ?? null,
+        appointment_type: a.appointment_type_name,
+        cancellation_reason: a.cancellation_reason,
+        notes: a.notes,
       };
     });
 
-
+    const cnx = getAuditContext(req, user);
     await auditLog({
       ...cnx,
       action: "VIEWED",
       entityType: "APPOINTMENT",
       purpose: "operations",
       source: "dashboard",
-      metadata: {
-        total: count ?? 0,
-        page,
-        per_page: perPage,
-        total_pages: count ? Math.ceil(count / perPage) : 0,
-      }
-    })
+      metadata: { total, page, perPage },
+    });
 
     return NextResponse.json({
       success: true,
       meta: {
-        total: count ?? 0,
+        total,
         page,
         per_page: perPage,
-        total_pages: count ? Math.ceil(count / perPage) : 0,
+        total_pages: Math.ceil(total / perPage),
       },
       data: formatted,
     });
-  } catch (error: any) {
-    console.error("❌ Appointments Fetch Error:", error);
+  } catch (err: any) {
+    console.error("Appointments fetch error:", err);
     return NextResponse.json(
-      {
-        success: false, message:
-          typeof error?.message === "string"
-            ? error.message
-            : "Internal server error"
-      },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
@@ -214,19 +186,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1️⃣ Auth check
     const { user } = await requireUser(req);
-    console.log("User creating appointment:", user);
-    // const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
-    // if (!isAdmin) {
-    //   return NextResponse.json(
-    //     { error: "Unauthorized" },
-    //     { status: 401 }
-    //   );
-    // }
-
-    // 2️⃣ Parse body
     const {
       patient_id,
       practitioner_id,
@@ -250,44 +211,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3️⃣ Expiry = 24 hours
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // 4️⃣ Insert appointment
-    const { data, error } = await supabaseAdmin
-      .from("appointments")
-      .insert({
+    const { rows } = await pool.query(
+      `
+      INSERT INTO phi.appointments (
         patient_id,
         practitioner_id,
         appointment_type_id,
         starts_at,
         ends_at,
-        status: "pending",
-        payment_status: "pending",
-        expires_at: expiresAt.toISOString(),
-        fee_charged: fee,
-        currency: currency || "INR",
-        source: "admin",
-        created_by_admin_id: user?.admin?.id || user?.auth_user_id, // 🔥 THIS LINE
-      })
-      .select()
-      .single();
+        status,
+        payment_status,
+        expires_at,
+        fee_charged,
+        currency,
+        source,
+        created_by_admin_id
+      )
+      VALUES ($1,$2,$3,$4,$5,'pending','pending',$6,$7,$8,'admin',$9)
+      RETURNING *
+      `,
+      [
+        patient_id,
+        practitioner_id,
+        appointment_type_id,
+        starts_at,
+        ends_at,
+        expiresAt.toISOString(),
+        fee,
+        currency || "INR",
+        user?.admin?.id || user?.auth_user_id,
+      ]
+    );
 
-    if (error) {
-      console.error(error);
-      return NextResponse.json(
-        { error: "Failed to create appointment" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      appointment: data,
-      status: 201,
-    });
+    return NextResponse.json(
+      { success: true, appointment: rows[0] },
+      { status: 201 }
+    );
   } catch (err) {
-    console.error(err);
+    console.error("Create appointment error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

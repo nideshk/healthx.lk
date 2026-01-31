@@ -1,30 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
+import { pool } from "@/lib/db";
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  // 1️⃣ Auth
   const { id: targetAdminId } = await context.params;
-  const { authorized, user } = await requireUser(_req);
-  if (!authorized)
+
+  // 1️⃣ Auth
+  const { authorized, user } = await requireUser(req);
+  if (!authorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   if (!user?.admin) {
-    auditLog({
-      ...getAuditContext(_req as any, user),
+    await auditLog({
+      ...getAuditContext(req as any, user),
       action: "FAILED_ACCESS",
       entityType: "ADMIN_USER",
       entityId: targetAdminId,
       purpose: "operations",
       source: "dashboard",
-      metadata: {
-        reason: "insufficient_privileges",
-      },
+      metadata: { reason: "insufficient_privileges" },
     });
+
     return NextResponse.json(
       { success: false, message: "Not an admin" },
       { status: 403 }
@@ -40,18 +42,23 @@ export async function DELETE(
   }
 
   // 3️⃣ Fetch target admin
-  const { data: target, error } = await supabaseAdmin
-    .from("admin_users")
-    .select("id, supabase_user_id, role, delete_status")
-    .eq("id", targetAdminId)
-    .single();
+  const { rows } = await pool.query(
+    `
+    SELECT id, supabase_user_id, role, delete_status
+    FROM phi.admin_users
+    WHERE id = $1
+    `,
+    [targetAdminId]
+  );
 
-  if (error || !target) {
+  if (!rows.length) {
     return NextResponse.json(
       { success: false, message: "Admin not found" },
       { status: 404 }
     );
   }
+
+  const target = rows[0];
 
   // 4️⃣ Already deleted
   if (target.delete_status === "deleted") {
@@ -67,18 +74,16 @@ export async function DELETE(
    * ----------------------------------------------------
    */
 
-  // 5️⃣ NORMAL ADMIN → CANNOT TOUCH SUPER ADMIN (AT ALL)
+  // 5️⃣ NORMAL ADMIN → CANNOT TOUCH SUPER ADMIN
   if (user.admin.role === "admin" && target.role === "superadmin") {
-    auditLog({
-      ...getAuditContext(_req as any, user),
+    await auditLog({
+      ...getAuditContext(req as any, user),
       action: "FAILED_ACCESS",
       entityType: "ADMIN_USER",
       entityId: targetAdminId,
       purpose: "operations",
       source: "dashboard",
-      metadata: {
-        reason: "insufficient_privileges",
-      },
+      metadata: { reason: "insufficient_privileges" },
     });
 
     return NextResponse.json(
@@ -97,21 +102,18 @@ export async function DELETE(
    * ----------------------------------------------------
    */
   if (user.admin.role === "superadmin") {
-    // Policy check only when deleting another super admin
     if (
       target.role === "superadmin" &&
       !user.admin.policies.includes("super_admin:delete")
     ) {
-      auditLog({
-        ...getAuditContext(_req as any, user),
+      await auditLog({
+        ...getAuditContext(req as any, user),
         action: "FAILED_ACCESS",
         entityType: "ADMIN_USER",
         entityId: targetAdminId,
         purpose: "operations",
         source: "dashboard",
-        metadata: {
-          reason: "insufficient_privileges",
-        },
+        metadata: { reason: "missing_policy" },
       });
 
       return NextResponse.json(
@@ -126,36 +128,39 @@ export async function DELETE(
     const deletedAt = new Date().toISOString();
 
     // 6️⃣ Soft delete admin_users
-    await supabaseAdmin
-      .from("admin_users")
-      .update({
-        is_active: false,
-        delete_status: "deleted",
-        delete_approved_by: user.admin.id,
-        delete_approved_at: deletedAt,
-      })
-      .eq("id", targetAdminId);
+    await pool.query(
+      `
+      UPDATE phi.admin_users
+      SET
+        is_active = false,
+        delete_status = 'deleted',
+        delete_approved_by = $1,
+        delete_approved_at = $2
+      WHERE id = $3
+      `,
+      [user.admin.id, deletedAt, targetAdminId]
+    );
 
     // 7️⃣ Soft delete profiles
-    await supabaseAdmin
-      .from("profiles")
-      .update({
-        is_active: false,
-        deleted_at: deletedAt,
-      })
-      .eq("id", target.supabase_user_id);
+    await pool.query(
+      `
+      UPDATE phi.profiles
+      SET
+        is_active = false,
+        deleted_at = $1
+      WHERE id = $2
+      `,
+      [deletedAt, target.supabase_user_id]
+    );
 
-    // ✅ Audit: admin requested delete
-    auditLog({
-      ...getAuditContext(_req as any, user),
+    await auditLog({
+      ...getAuditContext(req as any, user),
       action: "DELETED",
       entityType: "ADMIN_USER",
       entityId: targetAdminId,
       purpose: "operations",
       source: "dashboard",
-      metadata: {
-        event: "delete_requested",
-      },
+      metadata: { event: "delete_approved" },
     });
 
     return NextResponse.json({
@@ -166,7 +171,7 @@ export async function DELETE(
 
   /**
    * ----------------------------------------------------
-   * NORMAL ADMIN → REQUEST DELETE (NORMAL ADMIN ONLY)
+   * NORMAL ADMIN → REQUEST DELETE
    * ----------------------------------------------------
    */
   if (!user.admin.policies.includes("admin:delete")) {
@@ -179,15 +184,18 @@ export async function DELETE(
     );
   }
 
-  // 8️⃣ Create delete request (soft state)
-  await supabaseAdmin
-    .from("admin_users")
-    .update({
-      delete_status: "requested",
-      delete_requested_by: user.admin.id,
-      delete_requested_at: new Date().toISOString(),
-    })
-    .eq("id", targetAdminId);
+  // 8️⃣ Create delete request
+  await pool.query(
+    `
+    UPDATE phi.admin_users
+    SET
+      delete_status = 'requested',
+      delete_requested_by = $1,
+      delete_requested_at = now()
+    WHERE id = $2
+    `,
+    [user.admin.id, targetAdminId]
+  );
 
   return NextResponse.json(
     {

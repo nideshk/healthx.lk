@@ -3,11 +3,13 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
+import { pool } from "@/lib/db"; // 🔁 MIGRATED
 
 export async function POST(req: NextRequest) {
   // 1️⃣ Auth
   const { authorized, user } = await requireUser(req);
-  if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (!authorized)
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   if (!user?.admin) {
     return NextResponse.json({ message: "Not an admin" }, { status: 403 });
@@ -51,30 +53,32 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 3️⃣ Authorization
-  console.log(user)
-  // Adding SUPER ADMIN
+  // 3️⃣ Authorization checks (unchanged)
   if (role === "superadmin") {
     if (user.admin.role !== "superadmin") {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     if (!user.admin.policies.includes("super_admin:add")) {
-      return NextResponse.json({ message: "This super admin has missing policy" }, { status: 403 });
+      return NextResponse.json(
+        { message: "Missing super_admin:add policy" },
+        { status: 403 }
+      );
     }
   }
 
-  // Adding NORMAL ADMIN
-  if (role === "admin") {
-    if (
-      user.admin.role === "admin" &&
-      !user.admin.policies.includes("admin:add")
-    ) {
-      return NextResponse.json({ message: "This admin has Missing policy" }, { status: 403 });
-    }
+  if (
+    role === "admin" &&
+    user.admin.role === "admin" &&
+    !user.admin.policies.includes("admin:add")
+  ) {
+    return NextResponse.json(
+      { message: "Missing admin:add policy" },
+      { status: 403 }
+    );
   }
 
-  // 4️⃣ Create auth user
+  // 4️⃣ Create auth user (Supabase stays)
   const { data: authUser, error: authError } =
     await supabaseAdmin.auth.admin.createUser({
       email,
@@ -92,37 +96,38 @@ export async function POST(req: NextRequest) {
 
   const authUserId = authUser.user.id;
 
-  // 5️⃣ Profile
-  const { error: profileError } = await supabaseAdmin
-    .from("profiles")
-    .insert({
-      id: authUserId,
-      display_name: full_name,
-      role,
-      created_at: new Date().toISOString(),
-    });
-
-  if (profileError) {
-    await supabaseAdmin.auth.admin.deleteUser(authUserId);
-    return NextResponse.json(
-      { message: "Profile creation failed" },
-      { status: 500 }
+  try {
+    // 5️⃣ Create profile (AWS)
+    await pool.query(
+      `
+      INSERT INTO phi.profiles (
+        id,
+        display_name,
+        role,
+        created_at
+      )
+      VALUES ($1, $2, $3, now())
+      `,
+      [authUserId, full_name, role]
     );
-  }
 
-  // 6️⃣ Admin user
-  const { data: adminData, error: adminError } = await supabaseAdmin
-    .from("admin_users")
-    .insert({
-      supabase_user_id: authUserId,
-      full_name,
-      gender,
-      email,
-      role,
-      created_at: new Date().toISOString(),
-    });
-
-  if (adminError) {
+    // 6️⃣ Create admin user (AWS)
+    await pool.query(
+      `
+      INSERT INTO phi.admin_users (
+        supabase_user_id,
+        full_name,
+        gender,
+        email,
+        role,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, now())
+      `,
+      [authUserId, full_name, gender, email, role]
+    );
+  } catch (dbError) {
+    // 🔥 Rollback auth user if DB insert fails
     await supabaseAdmin.auth.admin.deleteUser(authUserId);
     return NextResponse.json(
       { message: "Admin creation failed" },
@@ -130,6 +135,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // 7️⃣ Audit
   const cnx = getAuditContext(req, user);
   await auditLog({
     ...cnx,
@@ -139,10 +145,10 @@ export async function POST(req: NextRequest) {
     purpose: "operations",
     source: "dashboard",
     metadata: {
-      user_created: adminData,
+      full_name,
       role,
-    }
-  })
+    },
+  });
 
   return NextResponse.json(
     { message: "Admin created successfully" },

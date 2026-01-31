@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { pool } from "@/lib/db";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { auditLog } from "@/lib/audit/auditLog";
 
 export const dynamic = "force-dynamic";
+
+//to be removed since not used - verify with shravya
 
 export async function GET(
   req: NextRequest,
@@ -25,57 +27,59 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const specialization = searchParams.get("specialization");
 
-    let query = supabaseClient
-      .from("practitioners")
-      .select("*")
-      .eq("id", id)
-      .limit(1)
-      .order("created_at", { ascending: false });
+    // ---- SQL construction (safe) ----
+    let sql = `
+      SELECT *
+      FROM phi.practitioners
+      WHERE id = $1
+    `;
+    const values: any[] = [id];
 
     if (specialization) {
-      query = query.ilike("specialization", `%${specialization}%`);
+      sql += ` AND specialization ILIKE $2`;
+      values.push(`%${specialization}%`);
     }
 
-    const { data, error } = await query;
+    sql += `
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
 
-    if (error) {
-      return NextResponse.json(
-        { error: "Failed to fetch practitioner", details: error.message },
-        { status: 500 }
-      );
-    }
+    const { rows } = await pool.query(sql, values);
 
-    if (!data || data.length === 0) {
+    if (!rows || rows.length === 0) {
       return NextResponse.json(
         { message: "Practitioner not found", data: [] },
         { status: 404 }
       );
     }
 
+    const practitioner = rows[0];
+
+    // ---- Audit logging ----
     const cnx = getAuditContext(req, user);
 
-    await auditLog(
-      {
-        ...cnx,
-        action: "VIEWED",
-        entityType: "PRACTITIONER",
-        purpose: "operations",
-        entityId: data[0].id,
-        source: "dashboard",
-        metadata: {
-          practitioner_viewed: data[0]
-        }
-      }
-    );
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      entityType: "PRACTITIONER",
+      purpose: "operations",
+      entityId: practitioner.id,
+      source: "dashboard",
+      metadata: {
+        practitioner_viewed: practitioner,
+      },
+    });
 
     return NextResponse.json(
       {
         message: "Practitioner retrieved successfully",
-        data: data[0],
+        data: practitioner,
       },
       { status: 200 }
     );
   } catch (err: any) {
+    console.error("Practitioner fetch error:", err);
     return NextResponse.json(
       { error: "Internal Server Error", details: err.message },
       { status: 500 }

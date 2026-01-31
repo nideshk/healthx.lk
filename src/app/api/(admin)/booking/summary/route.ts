@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { auditLog } from "@/lib/audit/auditLog";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { pool } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
-    const { authorized, user, } = await requireUser(request);
-    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { authorized, user } = await requireUser(request);
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     /** RBAC: admin + superadmin */
     if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
@@ -31,19 +33,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("appointments")
-      .select("id, status")
-      .gte("starts_at", `${from}T00:00:00`)
-      .lte("starts_at", `${to}T23:59:59`);
-
-    if (error) throw error;
+    // 🔁 MIGRATED: SQL query instead of Supabase
+    const { rows } = await pool.query(
+      `
+        SELECT id, status
+        FROM phi.appointments
+        WHERE starts_at >= $1
+          AND starts_at <= $2
+      `,
+      [
+        `${from}T00:00:00`,
+        `${to}T23:59:59`,
+      ]
+    );
 
     let upcoming = 0;
     let completed = 0;
     let cancelled = 0;
 
-    (data ?? []).forEach((appt) => {
+    for (const appt of rows) {
       if (["scheduled", "confirmed", "pending"].includes(appt.status)) {
         upcoming++;
       }
@@ -55,7 +63,7 @@ export async function GET(request: NextRequest) {
       if (appt.status === "cancelled") {
         cancelled++;
       }
-    });
+    }
 
     const cnx = getAuditContext(request, user);
     await auditLog({
@@ -70,9 +78,9 @@ export async function GET(request: NextRequest) {
           upcoming,
           completed,
           cancelled,
-        }
+        },
       },
-    })
+    });
 
     return NextResponse.json({
       success: true,
