@@ -48,10 +48,14 @@ export async function POST(req: NextRequest) {
 
 
         // Anchor times to today (only time-of-day matters)
-        const today = new Date().toISOString().split("T")[0];
+        const getLocalDate = (timeZone: string) =>
+            new Date().toLocaleDateString("en-CA", { timeZone });
 
-        const startsAt = `${today}T${start_time}:00`;
-        const endsAt = `${today}T${end_time}:00`;
+        const localDate = getLocalDate(timezone);
+
+        const startsAt = new Date(`${localDate}T${start_time}:00`);
+        const endsAt = new Date(`${localDate}T${end_time}:00`);
+
 
         const { data, error } = await supabaseAdmin
             .from("practitioner_availability")
@@ -131,14 +135,16 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // Convert timestamp → HH:mm
-        const startTime = new Date(data.starts_at)
-            .toISOString()
-            .substring(11, 16);
+        const formatTime = (date: string, timeZone: string) =>
+            new Intl.DateTimeFormat("en-GB", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+                timeZone,
+            }).format(new Date(date));
 
-        const endTime = new Date(data.ends_at)
-            .toISOString()
-            .substring(11, 16);
+        const startTime = formatTime(data.starts_at, data.timezone);
+        const endTime = formatTime(data.ends_at, data.timezone);
 
         return NextResponse.json({
             availability: {
