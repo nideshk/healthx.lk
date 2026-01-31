@@ -55,10 +55,6 @@ export default function VideoCallContainer({
   } = useVideoCall({
     appointmentId,
     roomKey,
-    localUserId,
-    token,
-    role,
-    iceServers,
     onUserJoin: (id: string) =>
       addToast(`User ${id.slice(0, 5)} joined`),
     onUserLeave: (id: string) =>
@@ -119,7 +115,7 @@ export default function VideoCallContainer({
         setFollowUpDate(res.encounter.follow_up_date ?? null);
         setFollowUpComments(res.encounter.follow_up_comments ?? "");
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [appointmentId, isPractitioner]);
 
   /* -------------------- SAVE ENCOUNTER ---------------------- */
@@ -153,14 +149,13 @@ export default function VideoCallContainer({
 
       {/* LEFT — VIDEO */}
       <div
-        className={`flex flex-col h-full ${
-          isPractitioner ? "w-[70%]" : "w-full"
-        } border-r border-white/10`}
+        className={`flex flex-col h-full ${isPractitioner ? "w-[70%]" : "w-full"
+          } border-r border-white/10`}
       >
         {!joined ? (
           <div className="flex flex-col items-center justify-center h-full gap-6">
             <h1 className="text-3xl font-bold flex items-center gap-4">
-              <Camera size={36}/> Telehealth Consultation
+              <Camera size={36} /> Telehealth Consultation
             </h1>
             <button
               onClick={handleJoin}
@@ -198,7 +193,7 @@ export default function VideoCallContainer({
 
       {/* RIGHT — PRACTITIONER PANEL */}
       {isPractitioner && (
-        <ConsultationPanel appointmentId={appointmentId}/>
+        <ConsultationPanel appointmentId={appointmentId} />
       )}
 
       <Toaster toasts={toasts} removeToast={removeToast} />
