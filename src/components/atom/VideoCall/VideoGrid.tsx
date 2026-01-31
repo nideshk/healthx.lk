@@ -1,84 +1,80 @@
 "use client";
 
-import React from "react";
 import { User } from "lucide-react";
-
-type Props = {
-  localVideoRef: React.RefObject<HTMLVideoElement | null>;
-  peers: { [id: string]: MediaStream };
-  peerCameras: { [id: string]: boolean };
-  isCameraOff: boolean;
-};
+import React from "react";
 
 export default function VideoGrid({
   localVideoRef,
   peers,
-  peerCameras,
   isCameraOff,
-}: Props) {
-  return (
-    <div
-      className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-6 transition-all duration-300 flex-1 items-center justify-center place-items-center`}
-      style={{ height: "100%", gridAutoRows: "1fr" }}
-    >
-      {/* ---------- LOCAL VIDEO ---------- */}
-      <div className="relative bg-black rounded-2xl overflow-hidden border border-white/10 w-full h-full flex items-center justify-center aspect-video max-h-[50vh]">
-        {isCameraOff ? (
-          <div className="flex flex-col items-center justify-center w-full h-full text-gray-300">
-            <div className="bg-gray-700/40 rounded-full p-4 sm:p-5 mb-2">
-              <User size={36} className="opacity-80" />
-            </div>
-            <span className="text-sm sm:text-base text-gray-400">
-              Camera Off
-            </span>
-          </div>
-        ) : (
-          <video
-            ref={localVideoRef as any}
-            autoPlay
-            playsInline
-            muted
-            className="object-cover w-full h-full rounded-2xl"
-          />
-        )}
-        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-xs sm:text-sm px-2 py-1 rounded-full">
-          You
-        </div>
-      </div>
+}: {
+  localVideoRef: React.RefObject<HTMLVideoElement | null>;
+  peers: Record<string, MediaStream>;
+  isCameraOff: boolean;
+}) {
+  const peerEntries = Object.entries(peers);
+  const totalTiles = 1 + peerEntries.length;
 
-      {/* ---------- PEERS ---------- */}
-      {Object.entries(peers).map(([id, stream]) => {
-        const cameraOn = peerCameras[id] ?? true;
+  // Dynamic grid columns
+  const gridCols =
+    totalTiles === 1
+      ? "grid-cols-1"
+      : totalTiles === 2
+        ? "grid-cols-2"
+        : "grid-cols-2 lg:grid-cols-3";
+
+  return (
+    <div className={`grid ${gridCols} gap-4 p-4 h-full`}>
+      {/* ---------- REMOTE PEERS ---------- */}
+      {peerEntries.map(([id, stream]) => {
+        const hasVideo = stream.getVideoTracks().some(
+          (t) => t.readyState === "live" && t.enabled
+        );
+
         return (
-          <div
-            key={id}
-            className="relative bg-black rounded-2xl overflow-hidden border border-white/10 w-full h-full flex items-center justify-center aspect-video max-h-[50vh]"
-          >
-            {cameraOn ? (
-              <video
-                autoPlay
-                playsInline
-                ref={(v) => {
-                  if (v && stream && v.srcObject !== stream) v.srcObject = stream;
-                }}
-                className="object-cover w-full h-full rounded-2xl"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center w-full h-full text-gray-300">
-                <div className="bg-gray-700/40 rounded-full p-4 sm:p-5 mb-2">
-                  <User size={36} className="opacity-80" />
-                </div>
-                <span className="text-sm sm:text-base text-gray-400">
-                  Camera Off
-                </span>
-              </div>
-            )}
-            <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-xs sm:text-sm px-2 py-1 rounded-full">
-              {id.slice(0, 5)}
-            </div>
+          <div key={id} className="relative bg-black rounded-xl">
+            {hasVideo ? <VideoTile stream={stream} /> : <CameraOff />}
+            <Label>{id.slice(0, 5)}</Label>
           </div>
         );
       })}
     </div>
+  );
+}
+
+/* ---------- Helpers ---------- */
+
+function VideoTile({ stream }: { stream: MediaStream }) {
+  const ref = React.useRef<HTMLVideoElement>(null);
+
+  React.useEffect(() => {
+    if (ref.current && ref.current.srcObject !== stream) {
+      ref.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  return (
+    <video
+      ref={ref}
+      autoPlay
+      playsInline
+      className="w-full h-full object-cover"
+    />
+  );
+}
+
+function CameraOff() {
+  return (
+    <div className="flex items-center justify-center w-full h-full text-gray-400">
+      <User size={40} />
+    </div>
+  );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="absolute bottom-2 left-2 text-xs bg-black/60 px-2 py-1 rounded">
+      {children}
+    </span>
   );
 }

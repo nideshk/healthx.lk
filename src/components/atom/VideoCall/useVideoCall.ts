@@ -1,58 +1,54 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams, useParams } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { useRef, useState } from "react";
 
-const supabase = supabaseClient;
+type IVSModule = typeof import("amazon-ivs-web-broadcast");
 
-export function useVideoCall(opts?: {
-  roomKey?: string;
-  appointmentId?: string;
-  onUserJoin?: (id: string) => void;
-  onUserLeave?: (id: string) => void;
-}) {
-  const searchParams = useSearchParams();
-  const params = useParams();
+export function useVideoCall({ token }: { token: string }) {
+  if (!token || typeof token !== "string") {
+    throw new Error("IVS token must be a raw participant JWT");
+  }
 
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [joined, setJoined] = useState(false);
-  const [peers, setPeers] = useState<Record<string, MediaStream>>({});
-  const [peerCameras, setPeerCameras] = useState<Record<string, boolean>>({});
-  const [isMuted, setIsMuted] = useState(false);
-  const [isCameraOff, setIsCameraOff] = useState(true);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const stageRef = useRef<any>(null);
+  const ivsRef = useRef<IVSModule | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
+
+  const [joined, setJoined] = useState(false);
+  const [peers, setPeers] = useState<Record<string, MediaStream>>({});
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
+
   const localStreamRef = useRef<MediaStream | null>(null);
-  const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
-  const channelRef = useRef<any>(null);
-  const peerId = useRef(uuidv4());
+  const audioTrackRef = useRef<MediaStreamTrack | null>(null);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
 
-  const makingOffer = useRef(false);
-  const isPolite = (remoteId: string) => peerId.current > remoteId;
+  /* ---------------- JOIN ---------------- */
 
-  /* ------------------ ROOM ID ------------------ */
-  useEffect(() => {
-    const id =
-      searchParams.get("room") ||
-      opts?.roomKey ||
-      (params as any)?.roomId;
+  const joinRoom = async () => {
+    if (stageRef.current) return;
 
-    if (id) setRoomId(id);
-  }, [searchParams, params, opts?.roomKey]);
+    // 🔥 Dynamic import (SSR-safe)
+    if (!ivsRef.current) {
+      ivsRef.current = await import("amazon-ivs-web-broadcast");
+    }
 
-  /* ------------------ LOCAL MEDIA ------------------ */
-  const setupLocalStream = async () => {
-    if (localStreamRef.current) return localStreamRef.current;
+    const {
+      Stage,
+      StageEvents,
+      LocalStageStream,
+      SubscribeType,
+    } = ivsRef.current;
 
+    // 1️⃣ Get local media
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
-      video: false, // start camera off
+      video: true,
     });
 
     localStreamRef.current = stream;
+    audioTrackRef.current = stream.getAudioTracks()[0];
+    videoTrackRef.current = stream.getVideoTracks()[0];
 
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
@@ -60,262 +56,89 @@ export function useVideoCall(opts?: {
       await localVideoRef.current.play().catch(() => { });
     }
 
-    setIsCameraOff(true);
-    return stream;
-  };
+    // 2️⃣ Create publishable streams
+    const audioStream = new LocalStageStream(audioTrackRef.current);
+    const videoStream = new LocalStageStream(videoTrackRef.current);
 
-  /* ------------------ PEER CONNECTION ------------------ */
-  const createPeerConnection = (remoteId: string, stream: MediaStream) => {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
+    // 3️⃣ TYPE-CORRECT strategy
+    const strategy = {
+      stageStreamsToPublish() {
+        return [audioStream, videoStream];
+      },
 
-    stream.getTracks().forEach((track) => {
-      pc.addTrack(track, stream);
-    });
+      shouldPublishParticipant(_participant: any) {
+        return true;
+      },
 
-    pc.ontrack = (event) => {
-      setPeers((prev) => {
-        const existing = prev[remoteId] ?? new MediaStream();
-
-        event.streams[0].getTracks().forEach((track) => {
-          if (!existing.getTracks().some((t) => t.id === track.id)) {
-            existing.addTrack(track);
-          }
-        });
-
-        return { ...prev, [remoteId]: existing };
-      });
+      shouldSubscribeToParticipant(_participant: any) {
+        return SubscribeType.AUDIO_VIDEO;
+      },
     };
 
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        sendSignal({
-          type: "ice-candidate",
-          to: remoteId,
-          from: peerId.current,
-          candidate: e.candidate,
+    // 4️⃣ Create Stage
+    const stage = new Stage(token, strategy);
+
+    stage.on(
+      StageEvents.STAGE_PARTICIPANT_STREAMS_ADDED,
+      (participant: any, streams: any[]) => {
+        const mediaStream = new MediaStream();
+        streams.forEach((s) =>
+          mediaStream.addTrack(s.mediaStreamTrack)
+        );
+        setPeers((prev) => ({ ...prev, [participant.id]: mediaStream }));
+      }
+    );
+
+    stage.on(
+      StageEvents.STAGE_PARTICIPANT_LEFT,
+      (participant: any) => {
+        setPeers((prev) => {
+          const copy = { ...prev };
+          delete copy[participant.id];
+          return copy;
         });
       }
-    };
+    );
 
-    pc.onnegotiationneeded = async () => {
-      if (makingOffer.current || pc.signalingState !== "stable") return;
-      try {
-        makingOffer.current = true;
-        await pc.setLocalDescription(await pc.createOffer());
-        sendSignal({
-          type: "offer",
-          to: remoteId,
-          from: peerId.current,
-          sdp: pc.localDescription,
-        });
-      } finally {
-        makingOffer.current = false;
-      }
-    };
-
-    peerConnections.current[remoteId] = pc;
-    return pc;
+    await stage.join();
+    stageRef.current = stage;
+    setJoined(true);
   };
 
-  /* ------------------ SIGNALING ------------------ */
-  const sendSignal = async (payload: any) => {
-    await channelRef.current?.send({
-      type: "broadcast",
-      event: "signal",
-      payload: JSON.stringify(payload),
-    });
-  };
+  /* ---------------- LEAVE ---------------- */
 
-  /* ------------------ JOIN ROOM ------------------ */
-  const joinRoom = async () => {
-    if (!roomId || joined) return;
-
-    const stream = await setupLocalStream();
-
-    const channel = supabase.channel(roomId, {
-      config: { broadcast: { self: false } },
-    });
-
-    channelRef.current = channel;
-
-    channel.on("broadcast", { event: "signal" }, async ({ payload }: any) => {
-      const msg = JSON.parse(payload);
-      if (!msg || msg.from === peerId.current) return;
-
-      switch (msg.type) {
-        case "join": {
-          const pc = createPeerConnection(msg.from, stream);
-          opts?.onUserJoin?.(msg.from);
-          break;
-        }
-
-        case "offer": {
-          const pc =
-            peerConnections.current[msg.from] ??
-            createPeerConnection(msg.from, stream);
-
-          const collision =
-            makingOffer.current || pc.signalingState !== "stable";
-
-          if (collision && !isPolite(msg.from)) return;
-
-          if (collision) {
-            await pc.setLocalDescription({ type: "rollback" });
-          }
-
-          await pc.setRemoteDescription(msg.sdp);
-          await pc.setLocalDescription(await pc.createAnswer());
-
-          sendSignal({
-            type: "answer",
-            to: msg.from,
-            from: peerId.current,
-            sdp: pc.localDescription,
-          });
-          break;
-        }
-
-        case "answer": {
-          await peerConnections.current[msg.from]?.setRemoteDescription(
-            msg.sdp
-          );
-          break;
-        }
-
-        case "ice-candidate": {
-          await peerConnections.current[msg.from]?.addIceCandidate(
-            msg.candidate
-          );
-          break;
-        }
-
-        case "leave": {
-          peerConnections.current[msg.from]?.close();
-          delete peerConnections.current[msg.from];
-
-          setPeers((p) => {
-            const copy = { ...p };
-            delete copy[msg.from];
-            return copy;
-          });
-
-          opts?.onUserLeave?.(msg.from);
-          break;
-        }
-
-        case "camera-state": {
-          setPeerCameras((p) => ({ ...p, [msg.from]: msg.cameraOn }));
-          break;
-        }
-      }
-    });
-
-    await channel.subscribe(() => {
-      setJoined(true);
-      sendSignal({ type: "join", from: peerId.current });
-    });
-  };
-
-  /* ------------------ TOGGLES ------------------ */
-  const toggleMic = () => {
-    const track = localStreamRef.current?.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    setIsMuted(!track.enabled);
-  };
-
-  const toggleCamera = async () => {
-    const stream = localStreamRef.current;
-    if (!stream) return;
-
-    let track = stream.getVideoTracks()[0];
-
-    if (track) {
-      track.enabled = !track.enabled;
-      setIsCameraOff(!track.enabled);
-    } else {
-      const cam = await navigator.mediaDevices.getUserMedia({ video: true });
-      track = cam.getVideoTracks()[0];
-      stream.addTrack(track);
-
-      Object.values(peerConnections.current).forEach((pc) => {
-        const sender = pc.getSenders().find((s) => s.track?.kind === "video");
-        sender ? sender.replaceTrack(track) : pc.addTrack(track, stream);
-      });
-
-      setIsCameraOff(false);
-    }
-
-    sendSignal({
-      type: "camera-state",
-      from: peerId.current,
-      cameraOn: !isCameraOff,
-    });
-  };
-
-  const toggleScreenShare = async () => {
-    if (!localStreamRef.current) return;
-
-    if (!isScreenSharing) {
-      const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const screenTrack = screen.getVideoTracks()[0];
-
-      screenTrack.onended = () => toggleScreenShare();
-
-      Object.values(peerConnections.current).forEach((pc) => {
-        pc.getSenders()
-          .find((s) => s.track?.kind === "video")
-          ?.replaceTrack(screenTrack);
-      });
-
-      localVideoRef.current!.srcObject = screen;
-      setIsScreenSharing(true);
-    } else {
-      const camTrack = localStreamRef.current.getVideoTracks()[0];
-      Object.values(peerConnections.current).forEach((pc) => {
-        pc.getSenders()
-          .find((s) => s.track?.kind === "video")
-          ?.replaceTrack(camTrack);
-      });
-
-      localVideoRef.current!.srcObject = localStreamRef.current;
-      setIsScreenSharing(false);
-    }
-  };
-
-  /* ------------------ LEAVE ------------------ */
   const leaveRoom = async () => {
+    await stageRef.current?.leave();
+    stageRef.current = null;
+
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
-    Object.values(peerConnections.current).forEach((pc) => pc.close());
-
-    await sendSignal({ type: "leave", from: peerId.current });
-    await channelRef.current?.unsubscribe();
-
-    setJoined(false);
     setPeers({});
-    localStreamRef.current = null;
+    setJoined(false);
   };
 
-  /* ------------------ AUTO JOIN ------------------ */
-  useEffect(() => {
-    if (roomId && !joined) joinRoom();
-  }, [roomId]);
+  /* ---------------- CONTROLS ---------------- */
+
+  const toggleMic = () => {
+    if (!audioTrackRef.current) return;
+    audioTrackRef.current.enabled = !audioTrackRef.current.enabled;
+    setIsMuted(!audioTrackRef.current.enabled);
+  };
+
+  const toggleCamera = () => {
+    if (!videoTrackRef.current) return;
+    videoTrackRef.current.enabled = !videoTrackRef.current.enabled;
+    setIsCameraOff(!videoTrackRef.current.enabled);
+  };
 
   return {
     localVideoRef,
     peers,
-    peerCameras,
     joined,
-    roomId,
     isMuted,
     isCameraOff,
-    isScreenSharing,
     joinRoom,
     leaveRoom,
     toggleMic,
     toggleCamera,
-    toggleScreenShare,
   };
 }
