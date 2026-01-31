@@ -86,7 +86,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     const router = useRouter();
     const { user } = useAuth();
 
-    const consultationFee =
+    const consultationFee = (bookingData?.consultation_fee + bookingData?.platform_fee) ||
       (bookingData?.appointmentType?.platform_fee || 950) +
       (bookingData?.appointmentType?.fee || 1450);
     const attendeeCount = bookingData?.selectedAttendees?.length || 0;

@@ -103,11 +103,10 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
         key={id}
         type="button"
         onClick={() => setActiveTab(id)}
-        className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center ${
-          active
-            ? "bg-white text-slate-900 shadow-sm"
-            : "text-slate-500 hover:text-slate-900"
-        }`}
+        className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center ${active
+          ? "bg-white text-slate-900 shadow-sm"
+          : "text-slate-500 hover:text-slate-900"
+          }`}
       >
         {label}
       </button>

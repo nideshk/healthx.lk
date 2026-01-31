@@ -19,6 +19,13 @@ const emptyDraft: AppointmentFormInputs = {
   payment_status: null,
   selectedService: null,
   last_visited_step: 0,
+  consultation_fee: 0,
+  platform_fee: 0,
+  fee_charged: 0,
+  address: "",
+  phone: "",
+  email: "",
+  fullName: "",
 };
 
 type DraftStore = {
