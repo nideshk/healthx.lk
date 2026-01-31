@@ -47,14 +47,30 @@ export async function POST(req: NextRequest) {
         }
 
 
-        // Anchor times to today (only time-of-day matters)
-        const getLocalDate = (timeZone: string) =>
-            new Date().toLocaleDateString("en-CA", { timeZone });
+        const toUtcDate = (date: string, time: string, timeZone: string) => {
+            const [hour, minute] = time.split(":").map(Number);
 
-        const localDate = getLocalDate(timezone);
+            const dt = new Date(`${date}T00:00:00Z`);
 
-        const startsAt = new Date(`${localDate}T${start_time}:00`);
-        const endsAt = new Date(`${localDate}T${end_time}:00`);
+            const parts = new Intl.DateTimeFormat("en-US", {
+                timeZone,
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+            }).formatToParts(dt);
+
+            const offsetHours = hour - Number(parts.find(p => p.type === "hour")?.value || 0);
+            const offsetMinutes = minute - Number(parts.find(p => p.type === "minute")?.value || 0);
+
+            dt.setUTCHours(offsetHours, offsetMinutes, 0, 0);
+            return dt;
+        };
+
+        const localDate = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+
+        const startsAt = toUtcDate(localDate, start_time, timezone);
+        const endsAt = toUtcDate(localDate, end_time, timezone);
+
 
 
         const { data, error } = await supabaseAdmin
