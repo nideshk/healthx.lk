@@ -20,6 +20,7 @@ type Specialization = {
   id: string;
   name: string;
   active: boolean;
+  slug: string;
 };
 
 type FormValues = {
@@ -162,12 +163,12 @@ export default function PractitionerRegisterPage() {
   }, []);
 
   /* ---------------- SPECIALIZATION ---------------- */
-  const toggleSpecialization = (name: string) => {
+  const toggleSpecialization = (slug: string) => {
     setValue(
       "specialization",
-      specialization.includes(name)
-        ? specialization.filter(s => s !== name)
-        : [...specialization, name]
+      specialization.includes(slug)
+        ? specialization.filter(s => s !== slug)
+        : [...specialization, slug]
     );
   };
 
@@ -527,14 +528,19 @@ export default function PractitionerRegisterPage() {
                     {specialization.length === 0 ? (
                       <span className="text-gray-400">Select specializations</span>
                     ) : (
-                      specialization.map(name => (
-                        <span
-                          key={name}
-                          className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm"
-                        >
-                          {name}
-                        </span>
-                      ))
+                      specialization.map((slug) => {
+                        const spec = specializations.find(s => s.slug === slug);
+
+                        return (
+                          <span
+                            key={slug}
+                            className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm"
+                          >
+                            {spec?.name || slug}
+                          </span>
+                        );
+                      })
+
                     )}
                   </div>
 
@@ -559,8 +565,9 @@ export default function PractitionerRegisterPage() {
                           <input
                             type="checkbox"
                             className="rounded accent-teal-600"
-                            checked={specialization.includes(spec.name)}
-                            onChange={() => toggleSpecialization(spec.name)}
+                            checked={specialization.includes(spec.slug)}
+                            onChange={() => toggleSpecialization(spec.slug)}
+
                           />
                           <span className="text-gray-700">{spec.name}</span>
                         </label>

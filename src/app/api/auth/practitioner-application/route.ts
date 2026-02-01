@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       first_name,
       last_name,
       state,   // ✅ NEW
-      city,  
+      city,
       qualification,
       specialization,
       license_number,
@@ -115,6 +115,7 @@ export async function POST(req: Request) {
       .single();;
 
     if (error) {
+      console.log("error", error);
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }
@@ -127,6 +128,7 @@ export async function POST(req: Request) {
       application_id: data?.id,
     });
   } catch (err: any) {
+    console.log(err)
     return NextResponse.json(
       { success: false, message: err.message },
       { status: 500 }
