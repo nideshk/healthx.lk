@@ -1,34 +1,51 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type IVSModule = typeof import("amazon-ivs-web-broadcast");
 
 export function useVideoCall({ token }: { token: string }) {
-  if (!token || typeof token !== "string") {
-    throw new Error("IVS token must be a raw participant JWT");
-  }
+  if (!token) throw new Error("IVS token required");
 
-  const stageRef = useRef<any>(null);
+  /* ---------------- REFS ---------------- */
+
   const ivsRef = useRef<IVSModule | null>(null);
+  const stageRef = useRef<any>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
+
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const audioTrackRef = useRef<MediaStreamTrack | null>(null);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+
+  /* ---------------- STATE ---------------- */
 
   const [joined, setJoined] = useState(false);
   const [peers, setPeers] = useState<Record<string, MediaStream>>({});
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
 
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const audioTrackRef = useRef<MediaStreamTrack | null>(null);
-  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+  /* ---------------- LOGGER ---------------- */
+
+  const logEvent = (event: string, meta?: any) => {
+    console.log("[CALL LOG]", {
+      event,
+      meta,
+      at: new Date().toISOString(),
+    });
+
+    // Optional backend logging
+    // fetch("/api/call-logs", {
+    //   method: "POST",
+    //   body: JSON.stringify({ event, meta }),
+    // });
+  };
 
   /* ---------------- JOIN ---------------- */
 
   const joinRoom = async () => {
     if (stageRef.current) return;
 
-    // 🔥 Dynamic import (SSR-safe)
     if (!ivsRef.current) {
       ivsRef.current = await import("amazon-ivs-web-broadcast");
     }
@@ -40,7 +57,7 @@ export function useVideoCall({ token }: { token: string }) {
       SubscribeType,
     } = ivsRef.current;
 
-    // 1️⃣ Get local media
+    /* 1️⃣ Get local media */
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
       video: true,
@@ -56,41 +73,49 @@ export function useVideoCall({ token }: { token: string }) {
       await localVideoRef.current.play().catch(() => { });
     }
 
-    // 2️⃣ Create publishable streams
-    const audioStream = new LocalStageStream(audioTrackRef.current);
-    const videoStream = new LocalStageStream(videoTrackRef.current);
-
-    // 3️⃣ TYPE-CORRECT strategy
+    /* 2️⃣ Publish strategy */
     const strategy = {
       stageStreamsToPublish() {
-        return [audioStream, videoStream];
+        return [
+          new LocalStageStream(audioTrackRef.current!),
+          new LocalStageStream(videoTrackRef.current!),
+        ];
       },
-
-      shouldPublishParticipant(_participant: any) {
+      shouldPublishParticipant() {
         return true;
       },
-
-      shouldSubscribeToParticipant(_participant: any) {
+      shouldSubscribeToParticipant() {
         return SubscribeType.AUDIO_VIDEO;
       },
     };
 
-    // 4️⃣ Create Stage
+    /* 3️⃣ Create stage */
     const stage = new Stage(token, strategy);
+
+    /* ---------------- REMOTE EVENTS ---------------- */
+
+    stage.on(StageEvents.STAGE_PARTICIPANT_JOINED, (participant: any) => {
+      logEvent("PEER_JOINED", { participantId: participant.id });
+    });
 
     stage.on(
       StageEvents.STAGE_PARTICIPANT_STREAMS_ADDED,
       (participant: any, streams: any[]) => {
         const mediaStream = new MediaStream();
+
         streams.forEach((s) =>
           mediaStream.addTrack(s.mediaStreamTrack)
         );
-        setPeers((prev) => ({ ...prev, [participant.id]: mediaStream }));
+
+        setPeers((prev) => ({
+          ...prev,
+          [participant.id]: mediaStream,
+        }));
       }
     );
 
     stage.on(
-      StageEvents.STAGE_PARTICIPANT_LEFT,
+      StageEvents.STAGE_PARTICIPANT_STREAMS_REMOVED,
       (participant: any) => {
         setPeers((prev) => {
           const copy = { ...prev };
@@ -100,35 +125,86 @@ export function useVideoCall({ token }: { token: string }) {
       }
     );
 
+    stage.on(StageEvents.STAGE_PARTICIPANT_LEFT, (participant: any) => {
+      setPeers((prev) => {
+        const copy = { ...prev };
+        delete copy[participant.id];
+        return copy;
+      });
+
+      logEvent("PEER_LEFT", { participantId: participant.id });
+    });
+
+    stage.on(StageEvents.ERROR, (error: any) => {
+      logEvent("STAGE_ERROR", error);
+    });
+
+    /* 4️⃣ Join */
     await stage.join();
     stageRef.current = stage;
     setJoined(true);
+
+    logEvent("JOIN_CALL");
   };
 
   /* ---------------- LEAVE ---------------- */
 
   const leaveRoom = async () => {
+    logEvent("LEAVE_CALL");
+
     await stageRef.current?.leave();
     stageRef.current = null;
 
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
+
     setPeers({});
     setJoined(false);
   };
+
+  /* ---------------- PAGE EXIT SAFETY ---------------- */
+
+  useEffect(() => {
+    const forceLeave = async () => {
+      if (!stageRef.current) return;
+      await stageRef.current.leave().catch(() => { });
+      stageRef.current = null;
+    };
+
+    window.addEventListener("beforeunload", forceLeave);
+    window.addEventListener("pagehide", forceLeave);
+
+    return () => {
+      forceLeave();
+      window.removeEventListener("beforeunload", forceLeave);
+      window.removeEventListener("pagehide", forceLeave);
+    };
+  }, []);
 
   /* ---------------- CONTROLS ---------------- */
 
   const toggleMic = () => {
     if (!audioTrackRef.current) return;
+
     audioTrackRef.current.enabled = !audioTrackRef.current.enabled;
     setIsMuted(!audioTrackRef.current.enabled);
+
+    logEvent("TOGGLE_MIC", {
+      enabled: audioTrackRef.current.enabled,
+    });
   };
 
   const toggleCamera = () => {
     if (!videoTrackRef.current) return;
+
     videoTrackRef.current.enabled = !videoTrackRef.current.enabled;
     setIsCameraOff(!videoTrackRef.current.enabled);
+
+    logEvent("TOGGLE_CAMERA", {
+      enabled: videoTrackRef.current.enabled,
+    });
   };
+
+  /* ---------------- EXPORT ---------------- */
 
   return {
     localVideoRef,
