@@ -29,6 +29,7 @@ export default function VideoCallContainer({
     leaveRoom,
     toggleMic,
     toggleCamera,
+    localStream,
   } = useVideoCall({ token: token! });
 
   /* ---------------- JOIN / LEAVE ---------------- */
@@ -138,6 +139,7 @@ export default function VideoCallContainer({
               localVideoRef={localVideoRef}
               peers={peers}
               isCameraOff={isCameraOff}
+              localStream={localStream}
             />
             <ControlsBar
               isMuted={isMuted}

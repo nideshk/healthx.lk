@@ -11,6 +11,7 @@ export function useVideoCall({ token }: { token: string }) {
 
   const ivsRef = useRef<IVSModule | null>(null);
   const stageRef = useRef<any>(null);
+  const joiningRef = useRef(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -33,118 +34,139 @@ export function useVideoCall({ token }: { token: string }) {
       meta,
       at: new Date().toISOString(),
     });
-
-    // Optional backend logging
-    // fetch("/api/call-logs", {
-    //   method: "POST",
-    //   body: JSON.stringify({ event, meta }),
-    // });
   };
 
   /* ---------------- JOIN ---------------- */
 
   const joinRoom = async () => {
-    if (stageRef.current) return;
+    if (joiningRef.current || stageRef.current) return;
+    joiningRef.current = true;
 
-    if (!ivsRef.current) {
-      ivsRef.current = await import("amazon-ivs-web-broadcast");
-    }
-
-    const {
-      Stage,
-      StageEvents,
-      LocalStageStream,
-      SubscribeType,
-    } = ivsRef.current;
-
-    /* 1️⃣ Get local media */
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: true,
-    });
-
-    localStreamRef.current = stream;
-    audioTrackRef.current = stream.getAudioTracks()[0];
-    videoTrackRef.current = stream.getVideoTracks()[0];
-
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
-      localVideoRef.current.muted = true;
-      await localVideoRef.current.play().catch(() => { });
-    }
-
-    /* 2️⃣ Publish strategy */
-    const strategy = {
-      stageStreamsToPublish() {
-        return [
-          new LocalStageStream(audioTrackRef.current!),
-          new LocalStageStream(videoTrackRef.current!),
-        ];
-      },
-      shouldPublishParticipant() {
-        return true;
-      },
-      shouldSubscribeToParticipant() {
-        return SubscribeType.AUDIO_VIDEO;
-      },
-    };
-
-    /* 3️⃣ Create stage */
-    const stage = new Stage(token, strategy);
-
-    /* ---------------- REMOTE EVENTS ---------------- */
-
-    stage.on(StageEvents.STAGE_PARTICIPANT_JOINED, (participant: any) => {
-      logEvent("PEER_JOINED", { participantId: participant.id });
-    });
-
-    stage.on(
-      StageEvents.STAGE_PARTICIPANT_STREAMS_ADDED,
-      (participant: any, streams: any[]) => {
-        const mediaStream = new MediaStream();
-
-        streams.forEach((s) =>
-          mediaStream.addTrack(s.mediaStreamTrack)
-        );
-
-        setPeers((prev) => ({
-          ...prev,
-          [participant.id]: mediaStream,
-        }));
+    try {
+      if (!ivsRef.current) {
+        ivsRef.current = await import("amazon-ivs-web-broadcast");
       }
-    );
 
-    stage.on(
-      StageEvents.STAGE_PARTICIPANT_STREAMS_REMOVED,
-      (participant: any) => {
+      const {
+        Stage,
+        StageEvents,
+        LocalStageStream,
+        SubscribeType,
+      } = ivsRef.current;
+
+      /* 1️⃣ Get local media */
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true,
+      });
+
+      localStreamRef.current = stream;
+      audioTrackRef.current = stream.getAudioTracks()[0];
+      videoTrackRef.current = stream.getVideoTracks()[0];
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.muted = true;
+        await localVideoRef.current.play().catch(() => { });
+      }
+
+      /* 2️⃣ Publish / Subscribe strategy */
+      const strategy = {
+        stageStreamsToPublish() {
+          const streams = [];
+          if (audioTrackRef.current) {
+            streams.push(new LocalStageStream(audioTrackRef.current));
+          }
+          if (videoTrackRef.current?.enabled) {
+            streams.push(new LocalStageStream(videoTrackRef.current));
+          }
+          return streams;
+        },
+
+        shouldPublishParticipant() {
+          return true;
+        },
+
+        // 🚫 CRITICAL FIX: NEVER subscribe to yourself
+        shouldSubscribeToParticipant(participant: any) {
+          return participant.isLocal
+            ? SubscribeType.NONE
+            : SubscribeType.AUDIO_VIDEO;
+        },
+      };
+
+      /* 3️⃣ Create stage */
+      const stage = new Stage(token, strategy);
+
+      /* ---------------- REMOTE EVENTS ---------------- */
+
+      stage.on(StageEvents.STAGE_PARTICIPANT_JOINED, (participant: any) => {
+        logEvent("PEER_JOINED", { participantId: participant.id });
+      });
+
+      stage.on(
+        StageEvents.STAGE_PARTICIPANT_STREAMS_ADDED,
+        (participant: any, streams: any[]) => {
+          if (participant.isLocal) return;
+
+          setPeers((prev) => {
+            const mediaStream =
+              prev[participant.id] ?? new MediaStream();
+
+            streams.forEach((s) => {
+              if (!mediaStream.getTracks().includes(s.mediaStreamTrack)) {
+                mediaStream.addTrack(s.mediaStreamTrack);
+              }
+            });
+
+            return {
+              ...prev,
+              [participant.id]: mediaStream,
+            };
+          });
+        }
+      );
+
+      stage.on(
+        StageEvents.STAGE_PARTICIPANT_STREAMS_REMOVED,
+        (participant: any) => {
+          setPeers((prev) => {
+            const stream = prev[participant.id];
+            stream?.getTracks().forEach((t) => t.stop());
+
+            const copy = { ...prev };
+            delete copy[participant.id];
+            return copy;
+          });
+        }
+      );
+
+      stage.on(StageEvents.STAGE_PARTICIPANT_LEFT, (participant: any) => {
         setPeers((prev) => {
+          const stream = prev[participant.id];
+          stream?.getTracks().forEach((t) => t.stop());
+
           const copy = { ...prev };
           delete copy[participant.id];
           return copy;
         });
-      }
-    );
 
-    stage.on(StageEvents.STAGE_PARTICIPANT_LEFT, (participant: any) => {
-      setPeers((prev) => {
-        const copy = { ...prev };
-        delete copy[participant.id];
-        return copy;
+        logEvent("PEER_LEFT", { participantId: participant.id });
       });
 
-      logEvent("PEER_LEFT", { participantId: participant.id });
-    });
+      stage.on(StageEvents.ERROR, (error: any) => {
+        logEvent("STAGE_ERROR", error);
+      });
 
-    stage.on(StageEvents.ERROR, (error: any) => {
-      logEvent("STAGE_ERROR", error);
-    });
+      /* 4️⃣ Join */
+      await stage.join();
+      stageRef.current = stage;
+      setJoined(true);
 
-    /* 4️⃣ Join */
-    await stage.join();
-    stageRef.current = stage;
-    setJoined(true);
-
-    logEvent("JOIN_CALL");
+      logEvent("JOIN_CALL");
+    } finally {
+      joiningRef.current = false;
+    }
   };
 
   /* ---------------- LEAVE ---------------- */
@@ -152,8 +174,15 @@ export function useVideoCall({ token }: { token: string }) {
   const leaveRoom = async () => {
     logEvent("LEAVE_CALL");
 
-    await stageRef.current?.leave();
-    stageRef.current = null;
+    try {
+      if (stageRef.current) {
+        await stageRef.current.leave();
+      }
+    } catch {
+      // ignore leave errors
+    } finally {
+      stageRef.current = null;
+    }
 
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
 
@@ -216,5 +245,7 @@ export function useVideoCall({ token }: { token: string }) {
     leaveRoom,
     toggleMic,
     toggleCamera,
+    localStream: localStreamRef.current, // 👈 ADD THIS
+
   };
 }
