@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { User } from "lucide-react";
+import { User, Mic, MicOff, Video, VideoOff, PhoneOff, MoreVertical } from "lucide-react";
 
 interface VideoGridProps {
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
   peers: Record<string, MediaStream>;
   isCameraOff: boolean;
   localStream: MediaStream | null;
+
 }
 
 export default function VideoGrid({
@@ -15,24 +16,44 @@ export default function VideoGrid({
   peers,
   isCameraOff,
   localStream,
+
 }: VideoGridProps) {
   const peerEntries = Object.entries(peers);
-  const totalTiles = 1 + peerEntries.length;
+  const peerCount = peerEntries.length;
 
+  // Grid logic only for remote participants
   const getGridLayout = () => {
-    if (totalTiles === 1) return "max-w-xl grid-cols-1";
-    if (totalTiles === 2) return "max-w-4xl grid-cols-1 md:grid-cols-2";
-    if (totalTiles === 3) return "max-w-6xl grid-cols-1 md:grid-cols-2";
-    if (totalTiles >= 4) return "max-w-7xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
-    return "grid-cols-1";
+    if (peerCount === 0) return "max-w-md grid-cols-1";
+    if (peerCount === 1) return "max-w-5xl grid-cols-1";
+    if (peerCount === 2) return "max-w-6xl grid-cols-1 md:grid-cols-2";
+    return "max-w-7xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
   };
 
   return (
-    <div className="w-full h-screen bg-zinc-950 p-4 md:p-8 flex items-center justify-center overflow-hidden">
-      <div
-        className={`grid gap-4 w-full transition-all duration-500 ${getGridLayout()}`}
-      >
-        {/* 🔵 LOCAL USER TILE */}
+    <div className="relative w-full h-screen bg-zinc-950 flex flex-col overflow-hidden font-sans">
+
+      {/* 🟢 MAIN REMOTE GRID AREA */}
+      <div className="flex-1 p-4 md:p-8 flex items-center justify-center">
+        <div className={`grid gap-4 w-full transition-all duration-500 ${getGridLayout()}`}>
+          {peerCount === 0 ? (
+            <div className="flex flex-col items-center gap-4 text-zinc-500">
+              <div className="w-16 h-16 rounded-full border-2 border-dashed border-zinc-700 animate-spin flex items-center justify-center">
+                <User size={24} />
+              </div>
+              <p className="text-sm font-medium tracking-wide uppercase">Waiting for others to join...</p>
+            </div>
+          ) : (
+            peerEntries.map(([id, stream]) => (
+              <TileContainer key={id} label={`User ${id.slice(0, 4)}`}>
+                <RemoteVideoTile stream={stream} />
+              </TileContainer>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 🔵 LOCAL USER TILE (Floating Picture-in-Picture) */}
+      <div className="absolute bottom-24 right-6 w-40 md:w-64 aspect-video z-50 shadow-2xl transition-all duration-300">
         <TileContainer label="You" isLocal>
           {isCameraOff ? (
             <CameraOffPlaceholder />
@@ -40,35 +61,25 @@ export default function VideoGrid({
             <LocalVideoTile
               videoRef={localVideoRef}
               stream={localStream}
-              isCameraOff={isCameraOff}
             />
           )}
         </TileContainer>
-
-        {/* 🟢 REMOTE PEERS */}
-        {peerEntries.map(([id, stream]) => (
-          <TileContainer key={id} label={`User ${id.slice(0, 4)}`}>
-            <RemoteVideoTile stream={stream} />
-          </TileContainer>
-        ))}
       </div>
     </div>
   );
 }
 
+/* ---------------- SUB COMPONENTS ---------------- */
 
 function LocalVideoTile({
   videoRef,
   stream,
-  isCameraOff,
 }: {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   stream: MediaStream | null;
-  isCameraOff: boolean;
 }) {
   useEffect(() => {
     if (!videoRef.current || !stream) return;
-
     if (videoRef.current.srcObject !== stream) {
       videoRef.current.srcObject = stream;
       videoRef.current.muted = true;
@@ -76,21 +87,16 @@ function LocalVideoTile({
     }
   }, [stream, videoRef]);
 
-  if (isCameraOff) return <CameraOffPlaceholder />;
-
   return (
     <video
       ref={videoRef}
       autoPlay
       playsInline
       muted
-      className="w-full h-full object-cover bg-black"
+      className="w-full h-full object-cover bg-black scale-x-[-1]" // Mirrored for local user
     />
   );
 }
-
-
-/* ---------------- SUB COMPONENTS ---------------- */
 
 function RemoteVideoTile({ stream }: { stream: MediaStream }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -98,22 +104,13 @@ function RemoteVideoTile({ stream }: { stream: MediaStream }) {
 
   useEffect(() => {
     const videoTrack = stream.getVideoTracks()[0];
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-    }
-
+    if (videoRef.current) videoRef.current.srcObject = stream;
     if (!videoTrack) {
       setIsVideoEnabled(false);
       return;
     }
 
-    const update = () => {
-      setIsVideoEnabled(
-        videoTrack.enabled && videoTrack.readyState === "live"
-      );
-    };
-
+    const update = () => setIsVideoEnabled(videoTrack.enabled && videoTrack.readyState === "live");
     videoTrack.onmute = update;
     videoTrack.onunmute = update;
     update();
@@ -146,30 +143,21 @@ function TileContainer({
   isLocal?: boolean;
 }) {
   return (
-    <div className="relative w-full aspect-video bg-zinc-900 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+    <div className="relative w-full h-full aspect-video bg-zinc-900 rounded-2xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-lg">
       {children}
-
-      <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1 bg-black/60 backdrop-blur-md rounded-full border border-white/5">
-        <span
-          className={`w-2 h-2 rounded-full ${isLocal ? "bg-blue-500" : "bg-green-500"
-            }`}
-        />
-        <span className="text-[11px] text-white font-medium uppercase tracking-wider">
-          {label}
-        </span>
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1 bg-black/40 backdrop-blur-md rounded-lg">
+        <span className="text-[12px] text-white font-medium">{label}</span>
       </div>
     </div>
   );
 }
 
+
 function CameraOffPlaceholder() {
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full bg-zinc-900 text-zinc-600">
-      <div className="relative">
-        <User size={64} strokeWidth={1.5} />
-        <div className="absolute -bottom-1 -right-1 bg-zinc-950 p-1 rounded-full border border-zinc-800">
-          <User size={16} className="text-red-500/80" />
-        </div>
+    <div className="flex items-center justify-center w-full h-full bg-zinc-900">
+      <div className="w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center border border-white/5">
+        <User size={40} className="text-zinc-600" />
       </div>
     </div>
   );
