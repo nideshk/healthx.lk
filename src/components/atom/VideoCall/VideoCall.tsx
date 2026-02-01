@@ -58,7 +58,6 @@ export default function VideoCallContainer({
               toggleMic={toggleMic}
               toggleCamera={toggleCamera}
               leaveRoom={leaveRoom}
-              onJoin={joinRoom}
             />
           </>
         )}
