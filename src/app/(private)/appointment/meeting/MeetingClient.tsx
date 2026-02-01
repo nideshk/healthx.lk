@@ -1,34 +1,33 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import VideoCallContainer from "@/components/atom/VideoCall/VideoCall";
 import { authFetch } from "@/lib/authFetch";
 
-type AuthorizeResponse =
-  | {
-    authorized: true;
-    token: string;
-    role: "patient" | "practitioner" | "attendee";
-    appointmentId: string;
-    roomKey: string;
-    error?: string | null;
-  }
-
+type AuthorizeResponse = {
+  authorized: true;
+  role: "patient" | "practitioner" | "attendee";
+  appointmentId: string;
+  roomKey: string;
+  token: string; // APP AUTH TOKEN (NOT IVS)
+  error?: string | null;
+};
 
 export default function MeetingPage() {
   const params = useSearchParams();
-
   const roomKey = params.get("room");
   const inviteToken = params.get("token");
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [ivsToken, setIvsToken] = useState<string | null>(null);
   const [authData, setAuthData] = useState<AuthorizeResponse | null>(null);
-  const [error, setError] = useState<any>(null);
 
   useEffect(() => {
-    async function authorize() {
+    async function init() {
       try {
+        /* -------- STEP 1: AUTHORIZE -------- */
         const body = inviteToken
           ? { token: inviteToken }
           : roomKey
@@ -37,33 +36,47 @@ export default function MeetingPage() {
 
         if (!body) {
           setError("Missing meeting information");
-          setLoading(false);
           return;
         }
 
-        const res = await authFetch("/api/telehealth/authorize", {
+        const authRes = await authFetch("/api/telehealth/authorize", {
           method: "POST",
           body: JSON.stringify(body),
         });
 
-        const json = (await res.json()) as AuthorizeResponse;
-        console.log(json)
-        if (res.ok && json.authorized) {
-          // ✅ persist token for audit logging
-          localStorage.setItem("telehealth_token", json.token);
-          setAuthData(json);
-        } else {
-          setError(json.error);
+        const authJson = (await authRes.json()) as AuthorizeResponse;
+
+        if (!authRes.ok || !authJson.authorized) {
+          setError(authJson.error ?? "Authorization failed");
+          return;
         }
+
+        setAuthData(authJson);
+        localStorage.setItem("telehealth_token", authJson.token);
+
+        /* -------- STEP 2: FETCH IVS TOKEN -------- */
+        const ivsRes = await authFetch("/api/ivs/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appointmentId: authJson.appointmentId,
+            role: authJson.role,
+          }),
+        });
+
+        const ivsJson = await ivsRes.json();
+
+        // ✅ THIS MUST BE THE IVS PARTICIPANT TOKEN
+        setIvsToken(ivsJson.token.token);
       } catch (e) {
         console.error(e);
-        setError("Authorization failed");
+        setError("Failed to prepare video call");
       } finally {
         setLoading(false);
       }
     }
 
-    authorize();
+    init();
   }, [roomKey, inviteToken]);
 
   if (loading) {
@@ -74,7 +87,7 @@ export default function MeetingPage() {
     );
   }
 
-  if (!authData || !authData.authorized) {
+  if (!ivsToken || !authData) {
     return (
       <div className="h-screen flex items-center justify-center bg-black text-white">
         {error ?? "You are not allowed to join this consultation"}
@@ -85,11 +98,8 @@ export default function MeetingPage() {
   return (
     <VideoCallContainer
       appointmentId={authData.appointmentId}
-      roomKey={authData.roomKey}
-      token={authData.token}
       role={authData.role}
-      localUserId={authData.role}
-      iceServers={[]}
+      token={ivsToken}   // ✅ IVS TOKEN ONLY
     />
   );
 }

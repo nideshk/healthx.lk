@@ -1,84 +1,164 @@
 "use client";
 
-import React from "react";
-import { User } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { User, Mic, MicOff, Video, VideoOff, PhoneOff, MoreVertical } from "lucide-react";
 
-type Props = {
+interface VideoGridProps {
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
-  peers: { [id: string]: MediaStream };
-  peerCameras: { [id: string]: boolean };
+  peers: Record<string, MediaStream>;
   isCameraOff: boolean;
-};
+  localStream: MediaStream | null;
+
+}
 
 export default function VideoGrid({
   localVideoRef,
   peers,
-  peerCameras,
   isCameraOff,
-}: Props) {
+  localStream,
+
+}: VideoGridProps) {
+  const peerEntries = Object.entries(peers);
+  const peerCount = peerEntries.length;
+
+  // Grid logic only for remote participants
+  const getGridLayout = () => {
+    if (peerCount === 0) return "max-w-md grid-cols-1";
+    if (peerCount === 1) return "max-w-5xl grid-cols-1";
+    if (peerCount === 2) return "max-w-6xl grid-cols-1 md:grid-cols-2";
+    return "max-w-7xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+  };
+
   return (
-    <div
-      className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-6 transition-all duration-300 flex-1 items-center justify-center place-items-center`}
-      style={{ height: "100%", gridAutoRows: "1fr" }}
-    >
-      {/* ---------- LOCAL VIDEO ---------- */}
-      <div className="relative bg-black rounded-2xl overflow-hidden border border-white/10 w-full h-full flex items-center justify-center aspect-video max-h-[50vh]">
-        {isCameraOff ? (
-          <div className="flex flex-col items-center justify-center w-full h-full text-gray-300">
-            <div className="bg-gray-700/40 rounded-full p-4 sm:p-5 mb-2">
-              <User size={36} className="opacity-80" />
+    <div className="relative w-full h-screen bg-zinc-950 flex flex-col overflow-hidden font-sans">
+
+      {/* 🟢 MAIN REMOTE GRID AREA */}
+      <div className="flex-1 p-4 md:p-8 flex items-center justify-center">
+        <div className={`grid gap-4 w-full transition-all duration-500 ${getGridLayout()}`}>
+          {peerCount === 0 ? (
+            <div className="flex flex-col items-center gap-4 text-zinc-500">
+              <div className="w-16 h-16 rounded-full border-2 border-dashed border-zinc-700 animate-spin flex items-center justify-center">
+                <User size={24} />
+              </div>
+              <p className="text-sm font-medium tracking-wide uppercase">Waiting for others to join...</p>
             </div>
-            <span className="text-sm sm:text-base text-gray-400">
-              Camera Off
-            </span>
-          </div>
-        ) : (
-          <video
-            ref={localVideoRef as any}
-            autoPlay
-            playsInline
-            muted
-            className="object-cover w-full h-full rounded-2xl"
-          />
-        )}
-        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-xs sm:text-sm px-2 py-1 rounded-full">
-          You
+          ) : (
+            peerEntries.map(([id, stream]) => (
+              <TileContainer key={id} label={`User ${id.slice(0, 4)}`}>
+                <RemoteVideoTile stream={stream} />
+              </TileContainer>
+            ))
+          )}
         </div>
       </div>
 
-      {/* ---------- PEERS ---------- */}
-      {Object.entries(peers).map(([id, stream]) => {
-        const cameraOn = peerCameras[id] ?? true;
-        return (
-          <div
-            key={id}
-            className="relative bg-black rounded-2xl overflow-hidden border border-white/10 w-full h-full flex items-center justify-center aspect-video max-h-[50vh]"
-          >
-            {cameraOn ? (
-              <video
-                autoPlay
-                playsInline
-                ref={(v) => {
-                  if (v && stream && v.srcObject !== stream) v.srcObject = stream;
-                }}
-                className="object-cover w-full h-full rounded-2xl"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center w-full h-full text-gray-300">
-                <div className="bg-gray-700/40 rounded-full p-4 sm:p-5 mb-2">
-                  <User size={36} className="opacity-80" />
-                </div>
-                <span className="text-sm sm:text-base text-gray-400">
-                  Camera Off
-                </span>
-              </div>
-            )}
-            <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-xs sm:text-sm px-2 py-1 rounded-full">
-              {id.slice(0, 5)}
-            </div>
-          </div>
-        );
-      })}
+      {/* 🔵 LOCAL USER TILE (Floating Picture-in-Picture) */}
+      <div className="absolute bottom-24 right-6 w-40 md:w-64 aspect-video z-50 shadow-2xl transition-all duration-300">
+        <TileContainer label="You" isLocal>
+          {isCameraOff ? (
+            <CameraOffPlaceholder />
+          ) : (
+            <LocalVideoTile
+              videoRef={localVideoRef}
+              stream={localStream}
+            />
+          )}
+        </TileContainer>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- SUB COMPONENTS ---------------- */
+
+function LocalVideoTile({
+  videoRef,
+  stream,
+}: {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  stream: MediaStream | null;
+}) {
+  useEffect(() => {
+    if (!videoRef.current || !stream) return;
+    if (videoRef.current.srcObject !== stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => { });
+    }
+  }, [stream, videoRef]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      className="w-full h-full object-cover bg-black scale-x-[-1]" // Mirrored for local user
+    />
+  );
+}
+
+function RemoteVideoTile({ stream }: { stream: MediaStream }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+
+  useEffect(() => {
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoRef.current) videoRef.current.srcObject = stream;
+    if (!videoTrack) {
+      setIsVideoEnabled(false);
+      return;
+    }
+
+    const update = () => setIsVideoEnabled(videoTrack.enabled && videoTrack.readyState === "live");
+    videoTrack.onmute = update;
+    videoTrack.onunmute = update;
+    update();
+
+    return () => {
+      videoTrack.onmute = null;
+      videoTrack.onunmute = null;
+    };
+  }, [stream]);
+
+  return isVideoEnabled ? (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      className="w-full h-full object-cover bg-black"
+    />
+  ) : (
+    <CameraOffPlaceholder />
+  );
+}
+
+function TileContainer({
+  children,
+  label,
+  isLocal = false,
+}: {
+  children: React.ReactNode;
+  label: string;
+  isLocal?: boolean;
+}) {
+  return (
+    <div className="relative w-full h-full aspect-video bg-zinc-900 rounded-2xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-lg">
+      {children}
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1 bg-black/40 backdrop-blur-md rounded-lg">
+        <span className="text-[12px] text-white font-medium">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+
+function CameraOffPlaceholder() {
+  return (
+    <div className="flex items-center justify-center w-full h-full bg-zinc-900">
+      <div className="w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center border border-white/5">
+        <User size={40} className="text-zinc-600" />
+      </div>
     </div>
   );
 }
