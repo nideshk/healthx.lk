@@ -69,7 +69,6 @@ export default function PatientDetailsPage({ prevStep, nextStep }: { prevStep: (
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900">Patient Details</h1>
-                            <p className="text-sm text-slate-500 font-medium">Step 2 of 4: Medical Information</p>
                         </div>
                     </div>
 
