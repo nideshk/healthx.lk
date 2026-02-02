@@ -14,6 +14,7 @@ type AuthorizedUser = {
   phone: string | null;
   patient_id: string | null;
   practitioner_id: string | null;
+  patient: any;
 };
 
 type RequireUserResult =
@@ -79,7 +80,7 @@ export async function requireUser(req: Request): Promise<RequireUserResult> {
   ------------------------------- */
   const { data: patient } = await supabaseAdmin
     .from("patients")
-    .select("id, contact_number")
+    .select("*")
     .eq("supabase_user_id", auth_user_id)
     .maybeSingle();
 
@@ -122,6 +123,7 @@ export async function requireUser(req: Request): Promise<RequireUserResult> {
       admin,
       phone: patient?.contact_number ?? null,
       patient_id: patient?.id ?? null,
+      patient: patient,
       practitioner_id: practitioner?.id ?? null,
     },
   };
