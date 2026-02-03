@@ -3,9 +3,14 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(
-    req: NextRequest,
-    context: { params: { id: string } }
-) {
+    req: Request,
+    {
+        params,
+    }: {
+        params: Promise<{ id: string }>;
+    }
+): Promise<Response> {
+
     const { user, authorized, response } = await requireUser(req);
     if (!authorized) return response;
 
@@ -16,7 +21,7 @@ export async function DELETE(
         );
     }
 
-    const availabilityId = context.params.id;
+    const availabilityId = (await params).id;
 
     if (!availabilityId) {
         return NextResponse.json(
