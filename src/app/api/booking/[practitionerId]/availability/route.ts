@@ -70,9 +70,9 @@ export async function GET(
       );
     }
 
-    // ---------------------------
-    // STEP 1: Practitioner Services
-    // ---------------------------
+    /* ---------------------------
+       STEP 1: Practitioner Services
+    --------------------------- */
     const { data: practitioner } = await supabaseClient
       .from("practitioners")
       .select("available_services")
@@ -96,27 +96,11 @@ export async function GET(
       });
     }
 
-    // ---------------------------
-    // STEP 2: Fetch Availability
-    // ---------------------------
-    const { data: availability } = await supabaseClient
-      .from("practitioner_availability")
-      .select("starts_at, ends_at, days_unavailable, timezone")
-      .eq("practitioner_id", practitionerId)
-      .single();
+    /* ---------------------------
+       STEP 2: Timezone + Guards
+    --------------------------- */
+    const timezone = "Asia/Kolkata"; // default, or derive per practitioner
 
-    if (!availability) {
-      return NextResponse.json(
-        { error: "Availability not configured" },
-        { status: 404 }
-      );
-    }
-
-    const timezone = availability.timezone || "UTC";
-
-    // ---------------------------
-    // STEP 2.5: TODAY / PAST GUARD (NEW)
-    // ---------------------------
     const nowInTZ = DateTime.now().setZone(timezone);
     const todayInTZ = nowInTZ.toISODate();
 
@@ -130,38 +114,32 @@ export async function GET(
       });
     }
 
-    // ---------------------------
-    // STEP 3: Day availability check
-    // ---------------------------
-    const dayName = requestedDate.toFormat("EEEE");
+    const dayStartUTC = requestedDate.startOf("day").toUTC().toISO();
+    const dayEndUTC = requestedDate.endOf("day").toUTC().toISO();
 
-    if (availability.days_unavailable?.includes(dayName)) {
+    /* ---------------------------
+       STEP 3: Fetch Availability Windows (NEW)
+    --------------------------- */
+    const { data: availabilityWindows } = await supabaseClient
+      .from("practitioner_availability")
+      .select("starts_at, ends_at, timezone")
+      .eq("practitioner_id", practitionerId)
+      .gte("starts_at", dayStartUTC)
+      .lte("starts_at", dayEndUTC);
+
+    if (!availabilityWindows || availabilityWindows.length === 0) {
+      console.log(availabilityWindows)
       return NextResponse.json({
         practitioner_id: practitionerId,
         date,
         available: false,
-        reason: `Unavailable on ${dayName}`,
+        reason: "No availability published",
       });
     }
 
-    // ---------------------------
-    // STEP 4: Convert availability UTC → local
-    // ---------------------------
-    const start_time = DateTime.fromISO(availability.starts_at, {
-      zone: "utc",
-    })
-      .setZone(timezone)
-      .toFormat("HH:mm");
-
-    const end_time = DateTime.fromISO(availability.ends_at, {
-      zone: "utc",
-    })
-      .setZone(timezone)
-      .toFormat("HH:mm");
-
-    // ---------------------------
-    // STEP 5: Fetch Appointment Types
-    // ---------------------------
+    /* ---------------------------
+       STEP 4: Appointment Types
+    --------------------------- */
     const { data: appointmentTypes } = await supabaseClient
       .from("appointment_type")
       .select("id, name, duration_mins")
@@ -175,31 +153,20 @@ export async function GET(
       );
     }
 
-    const dayStartUTC = DateTime
-      .fromISO(date, { zone: timezone })
-      .startOf("day")
-      .toUTC()
-      .toISO();
-
-    const dayEndUTC = DateTime
-      .fromISO(date, { zone: timezone })
-      .endOf("day")
-      .toUTC()
-      .toISO();
-
+    /* ---------------------------
+       STEP 5: Fetch Bookings
+    --------------------------- */
     const nowUTC = DateTime.utc().toISO();
 
     const { data: booked } = await supabaseClient
       .from("appointments")
-      .select("starts_at, ends_at, status, payment_status, expires_at")
+      .select("starts_at, ends_at")
       .eq("practitioner_id", practitionerId)
       .gte("starts_at", dayStartUTC)
       .lte("starts_at", dayEndUTC)
       .in("status", ["pending", "scheduled", "confirmed"])
       .or(`expires_at.is.null,expires_at.gt.${nowUTC}`)
       .neq("payment_status", "failed");
-
-
 
     const bookedIntervals =
       booked?.map((appt) => {
@@ -211,9 +178,9 @@ export async function GET(
         };
       }) || [];
 
-    // ---------------------------
-    // STEP 6b: Practitioner Leaves
-    // ---------------------------
+    /* ---------------------------
+       STEP 6: Practitioner Leaves (unchanged)
+    --------------------------- */
     const { data: leaves } = await supabaseClient
       .from("practitioner_leaves")
       .select("applied_windows")
@@ -223,38 +190,27 @@ export async function GET(
 
     const leaveIntervals: Array<{ start: string; end: string }> = [];
 
-    if (Array.isArray(leaves)) {
-      for (const lv of leaves) {
-        const forDate = lv.applied_windows?.find(
-          (w: any) => w.date === date
-        );
-        if (!forDate?.windows) continue;
+    for (const lv of leaves || []) {
+      const forDate = lv.applied_windows?.find((w: any) => w.date === date);
+      if (!forDate?.windows) continue;
 
-        for (const win of forDate.windows) {
-          const localStart = DateTime.fromISO(win.from, {
-            zone: "utc",
-          })
+      for (const win of forDate.windows) {
+        leaveIntervals.push({
+          start: DateTime.fromISO(win.from, { zone: "utc" })
             .setZone(timezone)
-            .toFormat("HH:mm");
-          const localEnd = DateTime.fromISO(win.to, {
-            zone: "utc",
-          })
+            .toFormat("HH:mm"),
+          end: DateTime.fromISO(win.to, { zone: "utc" })
             .setZone(timezone)
-            .toFormat("HH:mm");
-
-          leaveIntervals.push({ start: localStart, end: localEnd });
-        }
+            .toFormat("HH:mm"),
+        });
       }
     }
 
-    // ---------------------------
-    // STEP 7: Merge blocked intervals
-    // ---------------------------
     const blockedIntervals = [...bookedIntervals, ...leaveIntervals];
 
-    // ---------------------------
-    // STEP 8: Build slots (PAST FILTER FIX)
-    // ---------------------------
+    /* ---------------------------
+       STEP 7: Slot Generation (PER WINDOW)
+    --------------------------- */
     const MIN_BUFFER_MINUTES = 5;
     const cutoffMinutes =
       nowInTZ.hour * 60 + nowInTZ.minute + MIN_BUFFER_MINUTES;
@@ -262,40 +218,43 @@ export async function GET(
     const slots_by_type: Record<string, string[]> = {};
 
     for (const type of appointmentTypes) {
-      const generated = generateSlots(
-        start_time,
-        end_time,
-        type.duration_mins
-      );
+      const allSlots: string[] = [];
 
-      const filtered = generated.filter((slot) => {
-        // block overlaps
-        if (isOverlapping(slot, type.duration_mins, blockedIntervals)) {
-          return false;
+      for (const window of availabilityWindows) {
+        const winTZ = window.timezone || timezone;
+
+        const start_time = DateTime.fromISO(window.starts_at, { zone: "utc" })
+          .setZone(winTZ)
+          .toFormat("HH:mm");
+
+        const end_time = DateTime.fromISO(window.ends_at, { zone: "utc" })
+          .setZone(winTZ)
+          .toFormat("HH:mm");
+
+        const generated = generateSlots(
+          start_time,
+          end_time,
+          type.duration_mins
+        );
+
+        for (const slot of generated) {
+          if (isOverlapping(slot, type.duration_mins, blockedIntervals)) continue;
+          if (date === todayInTZ && toMinutes(slot) < cutoffMinutes) continue;
+          allSlots.push(slot);
         }
+      }
 
-        // 👇 remove past slots for TODAY
-        if (date === todayInTZ) {
-          if (toMinutes(slot) < cutoffMinutes) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-
-      slots_by_type[type.name] = filtered;
+      slots_by_type[type.name] = allSlots;
     }
 
-    // ---------------------------
-    // RESPONSE
-    // ---------------------------
+    /* ---------------------------
+       RESPONSE
+    --------------------------- */
     return NextResponse.json({
       practitioner_id: practitionerId,
       date,
       timezone,
-      start_time,
-      end_time,
+      availability_windows: availabilityWindows.length,
       offered_types: appointmentTypes,
       booked_intervals: bookedIntervals,
       slots_by_type,

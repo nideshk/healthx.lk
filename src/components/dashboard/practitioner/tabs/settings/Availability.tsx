@@ -5,8 +5,9 @@ import Button from "@/components/atom/Button/Button";
 import Loader from "@/components/atom/Loader/Loader";
 import { toast } from "react-toastify";
 import { authFetch } from "@/lib/authFetch";
-import AvailabilitySelector from "../../AvailabilitySelector";
+import AvailabilitySelector, { AvailabilityInput } from "../../AvailabilitySelector";
 import { userAgent } from "next/server";
+import { Calendar, CalendarX2, Clock, Trash2 } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                                                      */
@@ -72,7 +73,12 @@ interface CancelModalState {
 /* -------------------------------------------------------------------------- */
 /* CONSTANTS                                                                  */
 /* -------------------------------------------------------------------------- */
-
+interface AvailabilityWindow {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  timezone: string;
+}
 const LEAVE_TYPES: {
   label: string;
   value: LeaveType;
@@ -125,6 +131,7 @@ const getLeaveShorthand = (type: LeaveType): string => {
 const isDateInRange = (date: Date, today: Date, maxDate: Date): boolean => {
   return date >= today && date <= maxDate;
 };
+
 
 /* -------------------------------------------------------------------------- */
 /* CANCEL LEAVE MODAL COMPONENT                                               */
@@ -215,6 +222,8 @@ const Availability: React.FC = () => {
 
   const maxAllowedDate = new Date();
   maxAllowedDate.setDate(today.getDate() + MAX_DAYS_AHEAD);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const [availability, setAvailability] = useState({
     start_time: "09:00",
@@ -229,8 +238,6 @@ const Availability: React.FC = () => {
   const [leaveType, setLeaveType] = useState<LeaveType>("full_day");
   const [reason, setReason] = useState("");
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [warning, setWarning] = useState<string>("");
   const [conflicts, setConflicts] = useState<ConflictAppointment[]>([]);
@@ -239,6 +246,66 @@ const Availability: React.FC = () => {
   const [undoState, setUndoState] = useState<UndoState | null>(null);
   const [undoTimeLeft, setUndoTimeLeft] = useState<number>(0);
   const [cancelModal, setCancelModal] = useState<CancelModalState>({ isOpen: false, leaveId: null, leaveDetails: null });
+  const [availabilityInput, setAvailabilityInput] =
+    useState<AvailabilityInput>({
+      date: "",
+      start_time: "09:00",
+      end_time: "17:00",
+      timezone: "Asia/Kolkata",
+    });
+
+  const [availabilityList, setAvailabilityList] =
+    useState<AvailabilityWindow[]>([]);
+
+  const saveAvailability = async () => {
+    if (!availabilityInput.date) {
+      toast.error("Select a date");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await authFetch("/api/practitioner/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(availabilityInput),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+
+      setAvailabilityList((prev) => [...prev, data.availability]);
+      setAvailabilityInput({ ...availabilityInput, date: "" });
+
+      toast.success("Availability added");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  /* -------------------- DELETE AVAILABILITY -------------------- */
+
+  const deleteAvailability = async (id: string) => {
+    setLoading(true);
+    try {
+      const res = await authFetch(`/api/practitioner/availability/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error();
+
+      setAvailabilityList((prev) =>
+        prev.filter((a) => a.id !== id)
+      );
+      toast.success("Availability removed");
+    } catch {
+      toast.error("Failed to delete availability");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchAvailability = async () => {
@@ -250,23 +317,25 @@ const Availability: React.FC = () => {
     fetchAvailability();
   }, [])
   useEffect(() => {
-    const fetchPractitionerData = async () => {
-      try {
-        const authRes = await authFetch("/api/auth/me");
-        const authData = await authRes.json();
-        const id = authData?.user?.practitioner_id;
-        if (!id) throw new Error("No practitioner ID found");
-        setPractitionerId(id);
-        const res = await authFetch(`/api/practitioners/${id}/leaves`);
-        const data = await res.json();
-        if (data.leaves) setLeaveRequests(data.leaves);
-      } catch (err) {
-        setError("Failed to load availability data");
-      } finally {
-        setInitialLoading(false);
-      }
+    const fetchData = async () => {
+      const authRes = await authFetch("/api/auth/me");
+      const authData = await authRes.json();
+      setPractitionerId(authData.user.practitioner_id);
+
+      const availRes = await authFetch("/api/practitioner/availability");
+      const availData = await availRes.json();
+      setAvailabilityList(availData.availability || []);
+
+      const leaveRes = await authFetch(
+        `/api/practitioners/${authData.user.practitioner_id}/leaves`
+      );
+      const leaveData = await leaveRes.json();
+      setLeaveRequests(leaveData.leaves || []);
+
+      setInitialLoading(false);
     };
-    fetchPractitionerData();
+
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -407,39 +476,103 @@ const Availability: React.FC = () => {
 
   if (initialLoading) return <div className="p-12 flex justify-center"><Loader /></div>;
 
-  const handleAvailabilitySave = async (value: any) => {
-    setLoading(true);
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-    try {
-      const res = await authFetch("/api/practitioner/availability", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          practitioner_id: practitionerId,
-          availability: value,
-        }),
-      });
-
-      const data: ApiResponse = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to save availability");
-      }
-
-      toast.success("Availability saved successfully");
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
-      <AvailabilitySelector onChange={(value) => setAvailability(value)} onSave={() => handleAvailabilitySave(availability)}
-        value={availability} disabled={loading} saving={loading} />
+      <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+        {/* 1. Page Header: Context is key */}
+        <div className="max-w-5xl mx-auto mb-8">
+          <h1 className="text-2xl font-bold text-slate-900">Manage Availability</h1>
+          <p className="text-slate-600 mt-1">Set the dates and times you are free to meet.</p>
+        </div>
+
+        {/* 2. Main Layout: Stacks on mobile, 2 columns on desktop */}
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+          {/* Left Column: The Input (Selector) - Takes 5/12 width */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-800 mb-4">Add New Slot</h2>
+              <AvailabilitySelector
+                value={availabilityInput}
+                onChange={setAvailabilityInput}
+                onSave={saveAvailability}
+                saving={loading}
+              />
+            </div>
+
+            {/* Optional: Helper text or illustration could go here */}
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <p className="text-sm text-blue-800">
+                <strong>Tip:</strong> Adding specific time blocks helps reduce back-and-forth scheduling emails.
+              </p>
+            </div>
+          </div>
+
+          {/* Right Column: The List (Output) - Takes 7/12 width */}
+          <div className="lg:col-span-7">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm w-full">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  Current Schedule
+                </h2>
+                <span className="text-xs font-medium px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full">
+                  {availabilityList.length} Slots
+                </span>
+              </div>
+
+              {availabilityList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
+                  <div className="p-3 bg-white rounded-full shadow-sm mb-3">
+                    <CalendarX2 className="w-6 h-6 text-slate-400" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-900">No slots added yet</p>
+                  <p className="text-sm text-slate-500 mt-1 max-w-xs">
+                    Use the form on the left to add your first availability window.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {availabilityList.map((a) => (
+                    <div
+                      key={a.id}
+                      className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-slate-800 font-medium">
+                          <span>{formatDate(new Date(a.starts_at))}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>
+                            {formatTime(a.starts_at)} – {formatTime(a.ends_at)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => deleteAvailability(a.id)}
+                        className="mt-3 sm:mt-0 flex items-center justify-center p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors sm:opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        aria-label="Delete slot"
+                        title="Remove this slot"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 border border-slate-200 rounded-xl p-6 bg-white shadow-sm">
           <div className="flex justify-between items-start mb-6">
