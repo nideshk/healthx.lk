@@ -1,9 +1,11 @@
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(
-    req: Request,
+    req: NextRequest,
     {
         params,
     }: {
@@ -14,13 +16,6 @@ export async function DELETE(
     const { user, authorized, response } = await requireUser(req);
     if (!authorized) return response;
 
-    if (!user?.practitioner_id) {
-        return NextResponse.json(
-            { error: "Not a practitioner" },
-            { status: 403 }
-        );
-    }
-
     const availabilityId = (await params).id;
 
     if (!availabilityId) {
@@ -30,12 +25,22 @@ export async function DELETE(
         );
     }
 
-    /* ---- Ownership check (IMPORTANT) ---- */
+    const isPractitioner = user?.role === "practitioner";
+    const isAdmin = ["admin", "superadmin"].includes(user?.role || "");
+
+    if (!isPractitioner && !isAdmin) {
+        return NextResponse.json(
+            { error: "Unauthorized" },
+            { status: 403 }
+        );
+    }
+
+    /* ---------------- FETCH AVAILABILITY ---------------- */
+
     const { data: existing, error: fetchError } = await supabaseAdmin
         .from("practitioner_availability")
-        .select("id")
+        .select("id, practitioner_id")
         .eq("id", availabilityId)
-        .eq("practitioner_id", user.practitioner_id)
         .maybeSingle();
 
     if (fetchError) {
@@ -53,7 +58,26 @@ export async function DELETE(
         );
     }
 
-    /* ---- Delete ---- */
+    /* ---------------- OWNERSHIP CHECK ---------------- */
+
+    if (isPractitioner) {
+        if (!user?.practitioner_id) {
+            return NextResponse.json(
+                { error: "Not a practitioner" },
+                { status: 403 }
+            );
+        }
+
+        if (existing.practitioner_id !== user.practitioner_id) {
+            return NextResponse.json(
+                { error: "Forbidden" },
+                { status: 403 }
+            );
+        }
+    }
+
+    /* ---------------- DELETE ---------------- */
+
     const { error: deleteError } = await supabaseAdmin
         .from("practitioner_availability")
         .delete()
@@ -66,6 +90,17 @@ export async function DELETE(
             { status: 500 }
         );
     }
+
+    const cnx = getAuditContext(req, user);
+
+    await auditLog({
+        ...cnx,
+        action: "DELETED",
+        entityType: "PRACTITIONER_AVAILABILITY",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: { availability_id: availabilityId },
+    })
 
     return NextResponse.json({
         success: true,
