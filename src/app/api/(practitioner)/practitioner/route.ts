@@ -179,7 +179,7 @@ export async function GET(req: NextRequest) {
         id,
         full_name,
         specialization,
-        profile_image,
+        profile_picture_url,
         years_of_experience,
         avg_rating,
         review_count,

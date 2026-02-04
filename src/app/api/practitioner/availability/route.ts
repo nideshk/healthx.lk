@@ -24,15 +24,15 @@ export async function POST(req: NextRequest) {
     let targetPractitionerId: string | null = null;
 
     if (user.role === "practitioner") {
-        // Practitioner can only act for self
         if (!user.practitioner_id) {
-            return NextResponse.json({ error: "Not a practitioner" }, { status: 403 });
+            return NextResponse.json(
+                { error: "Not a practitioner" },
+                { status: 403 }
+            );
         }
         targetPractitionerId = user.practitioner_id;
     }
-
     else if (["admin", "superadmin"].includes(user.role)) {
-        // Admins MUST specify practitioner_id
         if (!bodyPractitionerId) {
             return NextResponse.json(
                 { error: "practitioner_id is required for admin actions" },
@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
         }
         targetPractitionerId = bodyPractitionerId;
     }
-
     else {
         return NextResponse.json(
             { error: "Unauthorized role" },
@@ -65,8 +64,19 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    /* ---- 4-week guard ---- */
+    /* -------------------- DATE GUARDS -------------------- */
+
     const requestedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (requestedDate < today) {
+        return NextResponse.json(
+            { error: "Cannot add availability in the past" },
+            { status: 400 }
+        );
+    }
+
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 28);
 
@@ -88,6 +98,22 @@ export async function POST(req: NextRequest) {
         .fromISO(`${date}T${end_time}`, { zone: timezone })
         .toUTC()
         .toISO();
+
+    /* -------------------- OVERLAP CHECK -------------------- */
+
+    const { data: overlapping } = await supabaseAdmin
+        .from("practitioner_availability")
+        .select("id")
+        .eq("practitioner_id", targetPractitionerId)
+        .lt("starts_at", ends_at)
+        .gt("ends_at", starts_at);
+
+    if (overlapping && overlapping.length > 0) {
+        return NextResponse.json(
+            { error: "Overlapping availability exists for this time range" },
+            { status: 409 }
+        );
+    }
 
     /* -------------------- INSERT -------------------- */
 
@@ -127,7 +153,7 @@ export async function POST(req: NextRequest) {
         purpose: "operations",
         source: "dashboard",
         metadata: { availability_id: data.id },
-    })
+    });
 
     return NextResponse.json({
         success: true,
@@ -135,19 +161,50 @@ export async function POST(req: NextRequest) {
     });
 }
 
-
 export async function GET(req: NextRequest) {
     const { user, authorized, response } = await requireUser(req);
     if (!authorized) return response;
 
-    if (!user?.practitioner_id || !user.admin) {
-        return NextResponse.json({ error: "Not a practitioner or admin" }, { status: 403 });
+    const { searchParams } = new URL(req.url);
+    const bodyPractitionerId = searchParams.get("practitioner_id");
+
+    let targetPractitionerId: string | null = null;
+
+    /* -------------------- ROLE CHECK -------------------- */
+
+    if (user.role === "practitioner") {
+        if (!user.practitioner_id) {
+            return NextResponse.json(
+                { error: "Not a practitioner" },
+                { status: 403 }
+            );
+        }
+        targetPractitionerId = user.practitioner_id;
     }
+
+    else if (["admin", "superadmin"].includes(user.role)) {
+        if (!bodyPractitionerId) {
+            return NextResponse.json(
+                { error: "practitioner_id query param required" },
+                { status: 400 }
+            );
+        }
+        targetPractitionerId = bodyPractitionerId;
+    }
+
+    else {
+        return NextResponse.json(
+            { error: "Unauthorized role" },
+            { status: 403 }
+        );
+    }
+
+    /* -------------------- FETCH -------------------- */
 
     const { data, error } = await supabaseAdmin
         .from("practitioner_availability")
         .select("id, starts_at, ends_at, timezone")
-        .eq("practitioner_id", user.practitioner_id)
+        .eq("practitioner_id", targetPractitionerId)
         .order("starts_at", { ascending: true });
 
     if (error) {
