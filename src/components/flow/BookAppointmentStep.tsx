@@ -19,11 +19,13 @@ import {
 import Calendar from "../atom/Calendar/Calendar";
 import Loader from "@/components/atom/Loader/Loader";
 import { useTranslations } from "next-intl";
+import { authFetch } from "@/lib/authFetch";
 
 const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
   const t = useTranslations("bookAppointment");
 
   const practitionerId = bookingData?.selectedDoctor?.id;
+  const [availableDates, setAvailableDates] = useState<any>([]);
 
   const [practitioner, setPractitioner] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -37,10 +39,42 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   const timeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    async function loadAvailabilityDates() {
+      if (!practitionerId) return;
+
+      try {
+        const res = await authFetch(
+          `/api/practitioner/availability?practitioner_id=${practitionerId}`
+        );
+        const data = await res.json();
+
+        const windows = data.availability || [];
+
+        const dates = windows.map((w: any) =>
+          DateTime.fromISO(w.starts_at)
+            .setZone(w.timezone || "UTC")
+            .toISODate()
+        );
+
+        // remove duplicates
+        const uniqueDates = Array.from(new Set(dates));
+
+        setAvailableDates(uniqueDates || []);
+      } catch (err) {
+        console.error(err);
+        setAvailableDates([]);
+      }
+    }
+
+    loadAvailabilityDates();
+  }, [practitionerId]);
+
+  useEffect(() => {
     async function load() {
       try {
-        const res = await axios.get(`/api/practitioners/${practitionerId}`);
-        setPractitioner(res.data.practitioner);
+        const res = await authFetch(`/api/practitioners/${practitionerId}`);
+        const data = await res.json();
+        setPractitioner(data.practitioner);
       } catch {
         toast.error(t("loadDoctorError"));
       } finally {
@@ -257,6 +291,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
 
                     <div className="flex justify-center md:justify-start scale-110 origin-top-left">
                       <Calendar
+                        highlightedDates={availableDates}
                         value={selectedDate ? new Date(selectedDate) : undefined}
                         onChange={(date) => {
                           if (!date) return;

@@ -194,41 +194,12 @@ export async function GET(req: NextRequest) {
 
     let targetPractitionerId: string | null = null;
 
-    /* -------------------- ROLE CHECK -------------------- */
-
-    if (user.role === "practitioner") {
-        if (!user.practitioner_id) {
-            return NextResponse.json(
-                { error: "Not a practitioner" },
-                { status: 403 }
-            );
-        }
-        targetPractitionerId = user.practitioner_id;
-    }
-
-    else if (["admin", "superadmin"].includes(user.role)) {
-        if (!bodyPractitionerId) {
-            return NextResponse.json(
-                { error: "practitioner_id query param required" },
-                { status: 400 }
-            );
-        }
-        targetPractitionerId = bodyPractitionerId;
-    }
-
-    else {
-        return NextResponse.json(
-            { error: "Unauthorized role" },
-            { status: 403 }
-        );
-    }
-
     /* -------------------- FETCH -------------------- */
 
     const { data, error } = await supabaseAdmin
         .from("practitioner_availability")
         .select("id, starts_at, ends_at, timezone")
-        .eq("practitioner_id", targetPractitionerId)
+        .eq("practitioner_id", targetPractitionerId || bodyPractitionerId)
         .order("starts_at", { ascending: true });
 
     if (error) {
@@ -238,6 +209,7 @@ export async function GET(req: NextRequest) {
             { status: 500 }
         );
     }
+    console.log(data)
 
     return NextResponse.json({
         availability: data ?? [],
