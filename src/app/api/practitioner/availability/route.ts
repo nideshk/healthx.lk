@@ -1,6 +1,7 @@
 import { auditLog } from "@/lib/audit/auditLog";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
+import { notify } from "@/lib/notify";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { DateTime } from "luxon";
 import { NextRequest, NextResponse } from "next/server";
@@ -115,6 +116,8 @@ export async function POST(req: NextRequest) {
         );
     }
 
+
+    const { data: practitoner } = await supabaseAdmin.from("practitioner").select("contact_email").eq("id", targetPractitionerId).single();
     /* -------------------- INSERT -------------------- */
 
     const { data, error } = await supabaseAdmin
@@ -124,6 +127,7 @@ export async function POST(req: NextRequest) {
             starts_at,
             ends_at,
             timezone,
+            added_by: user.practitioner_id || user.admin?.id
         })
         .select()
         .single();
@@ -154,6 +158,26 @@ export async function POST(req: NextRequest) {
         source: "dashboard",
         metadata: { availability_id: data.id },
     });
+
+    if (user?.role === "admin" || user?.role === "superadmin") {
+        await notify({
+            userId: targetPractitionerId,
+            role: "practitioner",
+            eventType: "availability_added_by_admin",
+            title: "Availability Updated",
+            message: `New availability added on ${date} from ${start_time} to ${end_time}.`,
+            channels: ["email", "in_app"],
+            payload: {
+                availability_id: data.id,
+                date,
+                start_time,
+                end_time,
+                email: practitoner?.contact_email,
+                added_by_role: user.role,
+            },
+        });
+    }
+
 
     return NextResponse.json({
         success: true,

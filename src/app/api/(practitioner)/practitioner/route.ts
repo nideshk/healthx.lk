@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
+import { notify } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -180,7 +181,6 @@ export async function GET(req: NextRequest) {
         full_name,
         specialization,
         profile_picture_url,
-        years_of_experience,
         avg_rating,
         review_count,
         city,
