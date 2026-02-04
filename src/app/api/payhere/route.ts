@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         const PAYHERE_RETURN_PATH = process.env.PAYHERE_RETURN_PATH;
         const PAYHERE_CANCEL_PATH = process.env.PAYHERE_CANCEL_PATH;
         const PAYHERE_NOTIFY_PATH = process.env.PAYHERE_NOTIFY_PATH;
+        const NEXT_PUBLIC_BASE_URL  = process.env.NEXT_PUBLIC_BASE_URL;
 
         const body = await request.json();
         const {
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
             .digest('hex')
             .toUpperCase();
 
-        const publicDomain = NGROK_URL || BASE_URL;
+        const publicDomain = NEXT_PUBLIC_BASE_URL ||  NGROK_URL || BASE_URL;
         const notifyUrl = `${publicDomain}${PAYHERE_NOTIFY_PATH}`;
         console.log(formattedAmount, "formattedAmount")
         const payHerePayload = {

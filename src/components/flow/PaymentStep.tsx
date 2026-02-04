@@ -52,7 +52,6 @@ const releaseAppointmentSlot = async (appointmentId: string | null) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ appointmentId }),
     });
-    if (res.ok) console.log("Slot released successfully:", appointmentId);
   } catch (err) {
     console.error("Error calling release-slot API:", err);
   }
@@ -72,8 +71,6 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     stepRef,
   ) => {
     const t = useTranslations("paymentStep");
-
-    console.log("booking data from payment", bookingData);
 
     const [paymentDone, setPaymentDone] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
@@ -253,7 +250,24 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           "pointer-events-none",
         );
 
+        // Payment verification logic
+        const verifyPayment = async () => {
+          try {
+            const res = await authFetch(`/api/booking/check-status?appointmentId=${currentAppointmentId}`);
+            if (!res.ok) return false;
+            const data = await res.json();
+            if (data.status === 'confirmed' && data.payment_status === 'paid') {
+              return true;
+            }
+            return false;
+          } catch (err) {
+            console.error("Polling error:", err);
+            return false;
+          }
+        }
+
         window.payhere.onCompleted = async () => {
+
           setIsPaymentProcessing(false);
           mainLayout?.classList.remove(
             "blur-md",
@@ -263,21 +277,25 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           setIsVerifying(true);
 
           let attempts = 0;
+          let maxAttempts = 15;
+
           const checkInterval = setInterval(async () => {
             attempts++;
-            const res = await authFetch(
-              `/api/booking/check-status?appointmentId=${currentAppointmentId}`,
-            );
-            const data = await res.json();
 
-            if (data.status === "confirmed") {
+            const isVerified = await verifyPayment();
+
+            if (isVerified) {
               clearInterval(checkInterval);
               await handlePostBookingActions(currentAppointmentId!);
-              setPaymentDone(true);
               setIsVerifying(false);
-            } else if (attempts >= 5) {
+              setPaymentDone(true);
+              toast.success("Payment verified! Your appointment is successfully booked.");
+            }
+            else if (attempts >= maxAttempts) {
               clearInterval(checkInterval);
               releaseAppointmentSlot(currentAppointmentId);
+              setIsVerifying(false);
+              toast.error("Booking cancelled, Payment could not be verified.");
               router.push("/dashboard/appointment");
             }
           }, 2000);

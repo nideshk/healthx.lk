@@ -64,7 +64,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
   --------------------------------------------------------- */
   return (
     <aside
-      className="w-[30%] bg-[#f9fafb] h-full p-6 flex flex-col overflow-y-auto border-l border-gray-200"
+      className="w-full bg-[#f9fafb] h-full p-6 flex flex-col overflow-y-auto border-l border-gray-200"
       style={{ minWidth: 340, maxWidth: 420 }}
     >
       <h2 className="text-xl font-semibold text-gray-800 mb-6">

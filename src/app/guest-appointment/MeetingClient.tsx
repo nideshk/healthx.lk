@@ -87,11 +87,8 @@ export default function MeetingPage() {
   return (
     <VideoCallContainer
       appointmentId={authData.appointmentId}
-      roomKey={authData.roomKey}
       token={authData.token}
       role={authData.role}
-      localUserId={authData.role}
-      iceServers={[]}
     />
   );
 }

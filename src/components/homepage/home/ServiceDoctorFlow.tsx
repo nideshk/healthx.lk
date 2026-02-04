@@ -63,7 +63,7 @@ export default function ServiceDoctorFlow() {
 
     setLoading(true);
     axios
-      .get(`/api/specialisation/${selectedService.slug}`)
+      .get(`/api/specialisation/${selectedService.slug.toLowerCase()}`)
       .then((res) => {
         setDoctors(res.data.practitioners || []);
       })

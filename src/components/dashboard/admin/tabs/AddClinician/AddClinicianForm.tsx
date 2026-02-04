@@ -22,6 +22,7 @@ type Specialization = {
   id: string;
   name: string;
   active: boolean;
+  slug: string;
 };
 
 type FormValues = {
@@ -175,12 +176,12 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
   }, []);
 
   /* ---------------- SPECIALIZATION ---------------- */
-  const toggleSpecialization = (name: string) => {
+  const toggleSpecialization = (slug: string) => {
     setValue(
       "specialization",
-      specialization.includes(name)
-        ? specialization.filter((s) => s !== name)
-        : [...specialization, name]
+      specialization.includes(slug)
+        ? specialization.filter((s) => s !== slug)
+        : [...specialization, slug]
     );
   };
 
@@ -540,14 +541,18 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                     {specialization.length === 0 ? (
                       <span className="text-gray-400">Select...</span>
                     ) : (
-                      specialization.map((s) => (
-                        <span
-                          key={s}
-                          className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded-md text-xs border border-teal-100"
-                        >
-                          {s}
-                        </span>
-                      ))
+                      specialization.map((slug) => {
+                        const spec = specializations.find(s => s.slug === slug);
+
+                        return (
+                          <span
+                            key={slug}
+                            className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm"
+                          >
+                            {spec?.name || slug}
+                          </span>
+                        );
+                      })
                     )}
                   </div>
                   <ChevronDown size={18} className="text-gray-400" />
@@ -565,8 +570,8 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                           <input
                             type="checkbox"
                             className="rounded accent-teal-600"
-                            checked={specialization.includes(spec.name)}
-                            onChange={() => toggleSpecialization(spec.name)}
+                            checked={specialization.includes(spec.slug)}
+                            onChange={() => toggleSpecialization(spec.slug)}
                           />
                           {spec.name}
                         </label>
