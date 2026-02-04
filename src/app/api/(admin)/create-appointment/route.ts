@@ -1,0 +1,244 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/authGuard";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Convert local date + time in practitioner's timezone → UTC Date
+ * date: YYYY-MM-DD
+ * time: HH:mm
+ */
+function toUtcFromLocal(
+    date: string,
+    time: string,
+    timeZone: string
+): Date {
+    const [year, month, day] = date.split("-").map(Number);
+    const [hour, minute] = time.split(":").map(Number);
+
+    // Guess UTC first
+    const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute));
+
+    // Convert using timezone offset
+    const tzDate = new Date(
+        utcGuess.toLocaleString("en-US", { timeZone })
+    );
+
+    const offsetMs = utcGuess.getTime() - tzDate.getTime();
+    return new Date(utcGuess.getTime() + offsetMs);
+}
+
+/* -------------------------------------------------------------------------- */
+/* API                                                                        */
+/* -------------------------------------------------------------------------- */
+
+export async function POST(req: NextRequest) {
+    try {
+        /* ---------------- AUTH ---------------- */
+
+        const { authorized, user } = await requireUser(req);
+
+        if (!authorized || !user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const role = user.profile?.role;
+        if (!["admin", "superadmin"].includes(role)) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        }
+
+        /* ---------------- INPUT ---------------- */
+
+        const body = await req.json();
+        const {
+            practitioner_id,
+            patient_id,
+            appointment_type_id,
+            date,        // YYYY-MM-DD
+            start_time, // HH:mm
+            notes,
+        } = body;
+
+        if (
+            !practitioner_id ||
+            !patient_id ||
+            !appointment_type_id ||
+            !date ||
+            !start_time
+        ) {
+            return NextResponse.json(
+                { error: "Missing required fields" },
+                { status: 400 }
+            );
+        }
+
+        /* ---------------- APPOINTMENT TYPE ---------------- */
+
+        const { data: appointmentType, error: typeErr } =
+            await supabaseAdmin
+                .from("appointment_type")
+                .select("id, duration_mins, base_fee, platform_fee")
+                .eq("id", appointment_type_id)
+                .single();
+
+        if (typeErr || !appointmentType) {
+            return NextResponse.json(
+                { error: "Invalid appointment type" },
+                { status: 400 }
+            );
+        }
+
+        /* ---------------- PRACTITIONER (FEES + TIMEZONE) ---------------- */
+
+        const { data: practitioner, error: practitionerErr } =
+            await supabaseAdmin
+                .from("practitioners")
+                .select("fees")
+                .eq("id", practitioner_id)
+                .single();
+
+        if (practitionerErr || !practitioner) {
+            return NextResponse.json(
+                { error: "Invalid practitioner" },
+                { status: 400 }
+            );
+        }
+
+        const { data: availability } = await supabaseAdmin
+            .from("practitioner_availability")
+            .select("timezone")
+            .eq("practitioner_id", practitioner_id)
+            .single();
+
+        const timezone = availability?.timezone || "Asia/Kolkata";
+
+        /* ---------------- TIME CALCULATION ---------------- */
+
+        const startsAt = toUtcFromLocal(date, start_time, timezone);
+        const endsAt = new Date(
+            startsAt.getTime() + appointmentType.duration_mins * 60 * 1000
+        );
+
+        /* ---------------- EXPIRY CALCULATION ---------------- */
+        /**
+         * expires_at = min(
+         *   now + 2 days,
+         *   starts_at - 15 minutes
+         * )
+         */
+
+        const now = new Date();
+
+        const twoDaysFromNow = new Date(
+            now.getTime() + 2 * 24 * 60 * 60 * 1000
+        );
+
+        const beforeAppointment = new Date(
+            startsAt.getTime() - 15 * 60 * 1000
+        );
+
+        let expiresAt = twoDaysFromNow;
+
+        if (beforeAppointment > now && beforeAppointment < expiresAt) {
+            expiresAt = beforeAppointment;
+        }
+
+        /* ---------------- PRICING (NO TAX) ---------------- */
+
+        const practitionerFees = practitioner.fees || {};
+        const practitionerFeeEntry = practitionerFees[appointment_type_id];
+
+        const consultationFee =
+            Number(practitionerFeeEntry?.fee) ||
+            Number(appointmentType.base_fee) ||
+            0;
+
+        const platformFee = Number(appointmentType.platform_fee || 0);
+        const taxAmount = 0; // ❌ No tax (explicit)
+
+        const totalFee =
+            consultationFee +
+            platformFee +
+            taxAmount;
+
+        /* ---------------- CONFLICT CHECK ---------------- */
+
+        const { data: conflicts, error: conflictErr } =
+            await supabaseAdmin
+                .from("appointments")
+                .select("id")
+                .eq("practitioner_id", practitioner_id)
+                .lt("starts_at", endsAt.toISOString())
+                .gt("ends_at", startsAt.toISOString())
+                .in("status", ["pending", "scheduled", "confirmed"]);
+
+        if (conflictErr) {
+            console.error(conflictErr);
+            return NextResponse.json(
+                { error: "Failed to validate availability" },
+                { status: 500 }
+            );
+        }
+
+        if (conflicts && conflicts.length > 0) {
+            return NextResponse.json(
+                { error: "Selected time slot is already booked" },
+                { status: 409 }
+            );
+        }
+
+        /* ---------------- INSERT ---------------- */
+
+        const { data: appointment, error: insertErr } =
+            await supabaseAdmin
+                .from("appointments")
+                .insert({
+                    practitioner_id,
+                    patient_id,
+                    appointment_type_id,
+
+                    starts_at: startsAt.toISOString(),
+                    ends_at: endsAt.toISOString(),
+                    expires_at: expiresAt.toISOString(),
+
+                    status: "pending",
+                    payment_status: "pending",
+
+                    // 💰 Pricing
+                    consultation_fee: consultationFee,
+                    platform_fee: platformFee,
+                    tax_amount: taxAmount,
+                    fee_charged: totalFee,
+                    currency: "LKR",
+                    pricing_version: "v1",
+
+                    notes: notes || null,
+                    created_by_admin_id: user.admin?.id,
+                    source: "admin",
+                })
+                .select()
+                .single();
+
+        if (insertErr) {
+            console.error(insertErr);
+            return NextResponse.json(
+                { error: "Failed to create appointment" },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            appointment,
+        });
+    } catch (err: any) {
+        console.error("POST /api/create-appointment", err);
+        return NextResponse.json(
+            { error: err?.message || "Internal server error" },
+            { status: 500 }
+        );
+    }
+}

@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         starts_at,
+        consultation_fee,
+        platform_fee,
         patient_id,
         practitioner_id,
         appointment_type_id,
@@ -52,6 +54,8 @@ export async function GET(request: NextRequest) {
       address: patientRes.data?.address,
       selectedService: { name: "Medical Consultation" },
       consents: consentsRes.data,
+      consultation_fee: appt?.consultation_fee,
+      platform_fee: appt?.platform_fee,
       selectedAttendees: []
     };
 

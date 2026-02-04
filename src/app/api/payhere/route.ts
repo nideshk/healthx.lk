@@ -52,6 +52,8 @@ export async function POST(request: NextRequest) {
             .eq('id', appointment_id)
             .single();
 
+        console.log(appt, "appt")
+
         if (!appt || apptError) {
             return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
         }
@@ -108,7 +110,7 @@ export async function POST(request: NextRequest) {
 
         const publicDomain = NEXT_PUBLIC_BASE_URL ||  NGROK_URL || BASE_URL;
         const notifyUrl = `${publicDomain}${PAYHERE_NOTIFY_PATH}`;
-
+        console.log(formattedAmount, "formattedAmount")
         const payHerePayload = {
             sandbox: process.env.NODE_ENV !== 'production',
             merchant_id: MERCHANT_ID,

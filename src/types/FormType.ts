@@ -1,4 +1,6 @@
 export interface AppointmentFormInputs {
+  platform_fee: any;
+  consultation_fee: any;
   selectedServiceId: string;
   selectedServiceTitle: string;
   appointment_id: string;

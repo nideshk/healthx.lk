@@ -30,7 +30,7 @@ function CheckoutContent() {
         }
 
         const data = await res.json();
-        // console.log("Data from booking-details : ", data);
+        console.log("Data from booking-details : ", data);
 
         const mappedData = {
           ...data,

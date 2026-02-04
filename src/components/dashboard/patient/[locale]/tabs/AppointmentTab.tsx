@@ -30,6 +30,7 @@ export default function AppointmentTab() {
     authFetch("/api/booking/appointment")
       .then((r) => r.json())
       .then((j) => {
+        console.log(j)
         setData({
           ongoing: j.ongoing || [],
           upcoming: j.upcoming || [],
@@ -38,7 +39,7 @@ export default function AppointmentTab() {
           pending: j.pending_payment || [],
         });
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
