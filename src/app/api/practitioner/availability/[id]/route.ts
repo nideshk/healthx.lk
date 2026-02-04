@@ -1,6 +1,7 @@
 import { auditLog } from "@/lib/audit/auditLog";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
+import { notify } from "@/lib/notify";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -101,6 +102,23 @@ export async function DELETE(
         source: "dashboard",
         metadata: { availability_id: availabilityId },
     })
+
+    const { data: practitoner } = await supabaseAdmin.from("practitioners").select("contact_email").eq("id", existing.practitioner_id).single();
+
+    if (user.role === "admin" || user.role === "superadmin") {
+        await notify({
+            userId: existing.practitioner_id,
+            role: "practitioner",
+            eventType: "availability_deleted_by_admin",
+            title: "Availability Updated",
+            message: `Availability deleted by Admin, please visit Clinecxa Dashboard to update your availability.`,
+            channels: ["email", "in_app"],
+            payload: {
+                email: practitoner?.contact_email,
+                added_by_role: user.role,
+            },
+        });
+    }
 
     return NextResponse.json({
         success: true,

@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     }
 
 
-    const { data: practitoner } = await supabaseAdmin.from("practitioner").select("contact_email").eq("id", targetPractitionerId).single();
+    const { data: practitoner } = await supabaseAdmin.from("practitioners").select("contact_email").eq("id", targetPractitionerId).single();
     /* -------------------- INSERT -------------------- */
 
     const { data, error } = await supabaseAdmin
