@@ -195,11 +195,11 @@ export async function GET(req: NextRequest) {
     let targetPractitionerId: string | null = null;
 
     /* -------------------- FETCH -------------------- */
-
+    console.log("id", targetPractitionerId, bodyPractitionerId)
     const { data, error } = await supabaseAdmin
         .from("practitioner_availability")
         .select("id, starts_at, ends_at, timezone")
-        .eq("practitioner_id", targetPractitionerId || bodyPractitionerId)
+        .eq("practitioner_id", targetPractitionerId || bodyPractitionerId || user.practitioner_id)
         .order("starts_at", { ascending: true });
 
     if (error) {
