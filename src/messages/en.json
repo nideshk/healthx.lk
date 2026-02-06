@@ -127,7 +127,10 @@
     "noDoctors": "No doctors available for this service yet.",
     "tryAnotherService": "Try another service",
     "verifiedSpecialist": "Verified Specialist",
-    "consultationFee": "Avg. Consultation Fee"
+    "consultationFee": "Avg. Consultation Fee",
+    "sortBy": "Sort",
+    "priceLowHigh": "Price: Low to High",
+    "priceHighLow": "Price: High to Low"
   },
   "bookAppointment": {
     "loadDoctorError": "Unable to load doctor details",
@@ -149,7 +152,7 @@
     "chooseDate": "Choose a date",
     "availableSlots": "Available Time Slots",
     "pickDate": "Select a date to view available time slots",
-    "fullyBooked": "Fully booked",
+    "fullyBooked": "No Slots Available",
     "tryAnotherDate": "Try another date",
     "summary": "Appointment Summary",
     "confirming": "Confirming...",
@@ -178,6 +181,29 @@
     "finalize": "Finalize Appointment",
     "declineTerms": "I do not agree to these terms",
     "back": "Back"
+  },
+  "PaymentConfirmation": {
+    "title": "Payment Made, Appointment Confirmed!",
+    "subtitle": "Congratulations",
+    "prepareTitle": "How to Prepare for Your Telehealth Appointment",
+    "email": {
+      "title": "Email Confirmation",
+      "description": "You will receive an email to your registered email address with the appointment link. Please check your SPAM folder if you don’t see this email in your inbox."
+    },
+    "appointmentDay": {
+      "title": "On Appointment Day",
+      "description": "Click on the link provided in your email to join the appointment. Your doctor will join you on time. Make sure you have a stable internet connection and are in a quiet environment."
+    },
+    "members": {
+      "title": "Additional Members",
+      "description": "If you selected additional members for this appointment, please forward the appointment link to them so they can join the consultation as well."
+    },
+    "followup": {
+      "title": "Follow-up Call",
+      "description": "Once your appointment is completed, we will call you to see how we did and how we can improve our services. Your feedback is valuable to us."
+    },
+    "footer": "Thank you for choosing our telehealth services. We look forward to providing you with excellent care.",
+    "returnHome": "Return to Home"
   },
   "preConsultation": {
     "title": "Pre-Consultation",
