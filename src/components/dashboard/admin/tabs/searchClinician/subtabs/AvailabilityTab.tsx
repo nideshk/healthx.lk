@@ -79,7 +79,7 @@ const AvailabilityTab: React.FC<AvailabilityTabProps> = ({
       date: "",
       start_time: "09:00",
       end_time: "17:00",
-      timezone: "Asia/Kolkata",
+      timezone: "Asia/Colombo",
     });
 
   const [loading, setLoading] = useState(false);

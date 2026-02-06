@@ -51,9 +51,10 @@ function generateSlots(startTime: string, endTime: string, duration: number) {
   return slots;
 }
 
-// ------------------------
-// MAIN HANDLER
-// ------------------------
+/* ----------------------------------
+   API
+----------------------------------- */
+
 export async function GET(
   req: Request,
   context: { params: Promise<{ practitionerId: string }> }
@@ -99,7 +100,7 @@ export async function GET(
     /* ---------------------------
        STEP 2: Timezone + Guards
     --------------------------- */
-    const timezone = "Asia/Kolkata"; // default, or derive per practitioner
+    const timezone = "Asia/Colombo";
 
     const nowInTZ = DateTime.now().setZone(timezone);
     const todayInTZ = nowInTZ.toISODate();
@@ -118,7 +119,7 @@ export async function GET(
     const dayEndUTC = requestedDate.endOf("day").toUTC().toISO();
 
     /* ---------------------------
-       STEP 3: Fetch Availability Windows (NEW)
+       STEP 3: Availability Windows
     --------------------------- */
     const { data: availabilityWindows } = await supabaseClient
       .from("practitioner_availability")
@@ -128,7 +129,6 @@ export async function GET(
       .lte("starts_at", dayEndUTC);
 
     if (!availabilityWindows || availabilityWindows.length === 0) {
-      console.log(availabilityWindows)
       return NextResponse.json({
         practitioner_id: practitionerId,
         date,
@@ -137,6 +137,7 @@ export async function GET(
       });
     }
 
+    console.log("Avaialblity", availabilityWindows)
     /* ---------------------------
        STEP 4: Appointment Types
     --------------------------- */
@@ -154,7 +155,7 @@ export async function GET(
     }
 
     /* ---------------------------
-       STEP 5: Fetch Bookings
+       STEP 5: Bookings
     --------------------------- */
     const nowUTC = DateTime.utc().toISO();
 
@@ -179,37 +180,78 @@ export async function GET(
       }) || [];
 
     /* ---------------------------
-       STEP 6: Practitioner Leaves (unchanged)
+       STEP 6: Leaves
     --------------------------- */
     const { data: leaves } = await supabaseClient
       .from("practitioner_leaves")
-      .select("applied_windows")
+      .select("applied_windows, leave_type")
       .eq("practitioner_id", practitionerId)
       .lte("start_date", date)
       .gte("end_date", date);
 
+    console.log("leaves", leaves)
+
     const leaveIntervals: Array<{ start: string; end: string }> = [];
 
     for (const lv of leaves || []) {
+      // explicit windows
       const forDate = lv.applied_windows?.find((w: any) => w.date === date);
-      if (!forDate?.windows) continue;
+      if (forDate?.windows) {
+        for (const win of forDate.windows) {
+          leaveIntervals.push({
+            start: DateTime.fromISO(win.from, { zone: "utc" })
+              .setZone(timezone)
+              .toFormat("HH:mm"),
+            end: DateTime.fromISO(win.to, { zone: "utc" })
+              .setZone(timezone)
+              .toFormat("HH:mm"),
+          });
+        }
+        continue;
+      }
 
-      for (const win of forDate.windows) {
-        leaveIntervals.push({
-          start: DateTime.fromISO(win.from, { zone: "utc" })
-            .setZone(timezone)
-            .toFormat("HH:mm"),
-          end: DateTime.fromISO(win.to, { zone: "utc" })
-            .setZone(timezone)
-            .toFormat("HH:mm"),
-        });
+      // derive from leave_type
+      for (const window of availabilityWindows) {
+        const winTZ = window.timezone || timezone;
+
+        const start = DateTime.fromISO(window.starts_at, {
+          zone: "utc",
+        }).setZone(winTZ);
+
+        const end = DateTime.fromISO(window.ends_at, {
+          zone: "utc",
+        }).setZone(winTZ);
+
+        const totalMinutes = end.diff(start, "minutes").minutes;
+        const midpoint = start.plus({ minutes: totalMinutes / 2 });
+
+        if (lv.leave_type === "full_day") {
+          leaveIntervals.push({
+            start: start.toFormat("HH:mm"),
+            end: end.toFormat("HH:mm"),
+          });
+        }
+
+        if (lv.leave_type === "first_half") {
+          leaveIntervals.push({
+            start: start.toFormat("HH:mm"),
+            end: midpoint.toFormat("HH:mm"),
+          });
+        }
+
+        if (lv.leave_type === "second_half") {
+          leaveIntervals.push({
+            start: midpoint.toFormat("HH:mm"),
+            end: end.toFormat("HH:mm"),
+          });
+        }
       }
     }
 
     const blockedIntervals = [...bookedIntervals, ...leaveIntervals];
 
     /* ---------------------------
-       STEP 7: Slot Generation (PER WINDOW)
+       STEP 7: Slot Generation
     --------------------------- */
     const MIN_BUFFER_MINUTES = 5;
     const cutoffMinutes =
@@ -223,11 +265,15 @@ export async function GET(
       for (const window of availabilityWindows) {
         const winTZ = window.timezone || timezone;
 
-        const start_time = DateTime.fromISO(window.starts_at, { zone: "utc" })
+        const start_time = DateTime.fromISO(window.starts_at, {
+          zone: "utc",
+        })
           .setZone(winTZ)
           .toFormat("HH:mm");
 
-        const end_time = DateTime.fromISO(window.ends_at, { zone: "utc" })
+        const end_time = DateTime.fromISO(window.ends_at, {
+          zone: "utc",
+        })
           .setZone(winTZ)
           .toFormat("HH:mm");
 
@@ -238,7 +284,8 @@ export async function GET(
         );
 
         for (const slot of generated) {
-          if (isOverlapping(slot, type.duration_mins, blockedIntervals)) continue;
+          if (isOverlapping(slot, type.duration_mins, blockedIntervals))
+            continue;
           if (date === todayInTZ && toMinutes(slot) < cutoffMinutes) continue;
           allSlots.push(slot);
         }
@@ -250,6 +297,7 @@ export async function GET(
     /* ---------------------------
        RESPONSE
     --------------------------- */
+    console.log("slots_by_type", slots_by_type)
     return NextResponse.json({
       practitioner_id: practitionerId,
       date,
@@ -257,6 +305,7 @@ export async function GET(
       availability_windows: availabilityWindows.length,
       offered_types: appointmentTypes,
       booked_intervals: bookedIntervals,
+      leave_intervals: leaveIntervals,
       slots_by_type,
     });
   } catch (err: any) {
@@ -267,3 +316,4 @@ export async function GET(
     );
   }
 }
+

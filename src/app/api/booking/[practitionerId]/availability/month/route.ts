@@ -16,7 +16,7 @@ export async function GET(
         );
     }
 
-    const timezone = "Asia/Kolkata";
+    const timezone = "Asia/Colombo";
 
     const monthStart = DateTime.fromISO(`${month}-01`, { zone: timezone });
     const monthEnd = monthStart.endOf("month");

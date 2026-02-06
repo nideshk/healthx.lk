@@ -251,7 +251,7 @@ const Availability: React.FC = () => {
       date: "",
       start_time: "09:00",
       end_time: "17:00",
-      timezone: "Asia/Kolkata",
+      timezone: "Asia/Colombo",
     });
 
   const [availabilityList, setAvailabilityList] =

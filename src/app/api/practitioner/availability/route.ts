@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
         date,
         start_time,
         end_time,
-        timezone = "Asia/Kolkata",
+        timezone = "Asia/Colombo",
     } = body;
 
     /* -------------------- ROLE CHECK -------------------- */
@@ -194,24 +194,64 @@ export async function GET(req: NextRequest) {
 
     let targetPractitionerId: string | null = null;
 
-    /* -------------------- FETCH -------------------- */
-    console.log("id", targetPractitionerId, bodyPractitionerId)
-    const { data, error } = await supabaseAdmin
-        .from("practitioner_availability")
-        .select("id, starts_at, ends_at, timezone")
-        .eq("practitioner_id", targetPractitionerId || bodyPractitionerId || user.practitioner_id)
-        .order("starts_at", { ascending: true });
+    const practitionerId =
+        targetPractitionerId ||
+        bodyPractitionerId ||
+        user.practitioner_id;
 
-    if (error) {
-        console.error(error);
+    try {
+        /* -------------------- STEP 1: FETCH FUTURE AVAILABILITY -------------------- */
+        const nowUTC = new Date().toISOString();
+
+        const { data: availability, error } = await supabaseAdmin
+            .from("practitioner_availability")
+            .select("id, starts_at, ends_at, timezone")
+            .eq("practitioner_id", practitionerId)
+            .gte("ends_at", nowUTC) // remove past windows
+            .order("starts_at", { ascending: true });
+
+        if (error) {
+            console.error(error);
+            return NextResponse.json(
+                { error: "Failed to fetch availability" },
+                { status: 500 }
+            );
+        }
+
+        /* -------------------- STEP 2: FETCH FULL-DAY LEAVES -------------------- */
+        const todayISO = DateTime.utc().toISODate();
+
+        const { data: fullDayLeaves } = await supabaseAdmin
+            .from("practitioner_leaves")
+            .select("start_date, end_date")
+            .eq("practitioner_id", practitionerId)
+            .eq("leave_type", "full_day")
+            .gte("end_date", todayISO); // only relevant leaves
+
+        /* -------------------- STEP 3: FILTER OUT FULL-DAY LEAVE WINDOWS -------------------- */
+        const filteredAvailability = (availability || []).filter((win) => {
+            const winDate = DateTime.fromISO(win.starts_at)
+                .setZone(win.timezone || "Asia/Colombo")
+                .toISODate();
+
+            if (!winDate) return false;
+
+            const isFullDayLeave = (fullDayLeaves || []).some((lv) => {
+                return winDate >= lv.start_date && winDate <= lv.end_date;
+            });
+
+            return !isFullDayLeave;
+        });
+
+        /* -------------------- RESPONSE -------------------- */
+        return NextResponse.json({
+            availability: filteredAvailability,
+        });
+    } catch (err: any) {
+        console.error("Availability fetch error:", err);
         return NextResponse.json(
-            { error: "Failed to fetch availability" },
+            { error: err.message || "Server error" },
             { status: 500 }
         );
     }
-    console.log(data)
-
-    return NextResponse.json({
-        availability: data ?? [],
-    });
 }

@@ -29,7 +29,7 @@ export default async function RootLayout({
       <body>
         <NextIntlClientProvider
           locale="en"
-          timeZone="Asia/Kolkata" // 👈 REQUIRED HERE
+          timeZone="Asia/Colombo" // 👈 REQUIRED HERE
           messages={messages}
         >
           <AuthProvider>
