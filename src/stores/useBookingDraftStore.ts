@@ -20,6 +20,13 @@ export const useBookingDraftStore = create<DraftState>((set, get) => ({
   dirty: false,
 
   data: {
+    consultation_fee: 0,
+    platform_fee: 0,
+    fee_charged: 0,
+    address: "",
+    phone: "",
+    email: "",
+    fullName: "",
     selectedServiceId: "",
     selectedServiceTitle: "",
     attendeeCount: 1,
@@ -57,6 +64,13 @@ export const useBookingDraftStore = create<DraftState>((set, get) => ({
     await localforage.removeItem(STORAGE_KEY);
     set({
       data: {
+        consultation_fee: 0,
+        platform_fee: 0,
+        fee_charged: 0,
+        address: "",
+        phone: "",
+        email: "",
+        fullName: "",
         selectedServiceId: "",
         selectedServiceTitle: "",
         attendeeCount: 1,
