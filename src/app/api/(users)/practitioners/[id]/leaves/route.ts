@@ -212,7 +212,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     // fetch practitioner's availability row
     const { data: availability, error: availErr } = await supabaseAdmin
       .from("practitioner_availability")
-      .select("id, practitioner_id, starts_at, ends_at, days_unavailable, timezone")
+      .select("id, practitioner_id, starts_at, ends_at, timezone")
       .eq("practitioner_id", practitionerId)
       .limit(1)
       .maybeSingle();
@@ -236,12 +236,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     for (const dateYmd of dates) {
       const weekday = weekdayNameForDate(dateYmd, availability.timezone || "UTC");
-      const daysUnavailable = Array.isArray(availability.days_unavailable)
-        ? availability.days_unavailable.map((s: string) => String(s).toLowerCase())
-        : [];
-      if (daysUnavailable.includes(weekday)) {
-        return NextResponse.json({ error: "You cannot apply leave on this day because it is already marked as a non-working day." }, { status: 400 });
-      }
 
       const windows = buildWindowsForDate(dateYmd, { starts_at_local, ends_at_local, timezone: availability.timezone }, leave_type);
       if (!windows || windows.length === 0) {

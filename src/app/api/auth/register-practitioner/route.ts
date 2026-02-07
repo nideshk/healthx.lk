@@ -110,12 +110,12 @@ export async function POST(req: Request) {
           branch_address: bank_details.branch_address ?? null, // ✅
           ifsc_code: bank_details.ifsc_code ?? null,
           swift_code: bank_details.swift_code ?? null,
-          is_default: true, 
+          is_default: true,
         });
 
       if (bankErr) {
         return NextResponse.json(
-          { error:  bankErr },
+          { error: bankErr },
           { status: 500 }
         );
       }
@@ -137,7 +137,7 @@ export async function POST(req: Request) {
           starts_at,
           ends_at,
           days_unavailable: availability.days_unavailable || [],
-          timezone: availability.timezone || "Asia/Kolkata",
+          timezone: availability.timezone || "Asia/Colombo",
         });
 
       if (availErr) {

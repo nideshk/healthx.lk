@@ -189,7 +189,7 @@ export async function createPractitioner(
         starts_at: toISO(availability.start_time),
         ends_at: toISO(availability.end_time),
         days_unavailable: availability.days_unavailable || [],
-        timezone: availability.timezone || "Asia/Kolkata",
+        timezone: availability.timezone || "Asia/Colombo",
       });
 
     if (availabilityErr) {
