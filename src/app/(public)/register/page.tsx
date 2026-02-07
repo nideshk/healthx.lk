@@ -115,7 +115,7 @@ export default function PractitionerRegisterPage() {
         start_time: "09:00",
         end_time: "18:00",
         days_unavailable: ["Sunday"],
-        timezone: "Asia/Kolkata",
+        timezone: "Asia/Colombo",
       },
     },
   });

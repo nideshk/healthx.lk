@@ -1,137 +1,216 @@
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
+import { notify } from "@/lib/notify";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { DateTime } from "luxon";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-    const { user } = await requireUser(req);
+    const { user, authorized, response } = await requireUser(req);
+    if (!authorized) return response;
 
+    const body = await req.json();
 
-    try {
-        const body = await req.json();
-        const { practitioner_id, availability } = body;
+    const {
+        practitioner_id: bodyPractitionerId,
+        date,
+        start_time,
+        end_time,
+        timezone = "Asia/Colombo",
+    } = body;
 
-        if (!practitioner_id) {
+    /* -------------------- ROLE CHECK -------------------- */
+
+    let targetPractitionerId: string | null = null;
+
+    if (user.role === "practitioner") {
+        if (!user.practitioner_id) {
             return NextResponse.json(
-                { error: "practitioner_id is required" },
+                { error: "Not a practitioner" },
+                { status: 403 }
+            );
+        }
+        targetPractitionerId = user.practitioner_id;
+    }
+    else if (["admin", "superadmin"].includes(user.role)) {
+        if (!bodyPractitionerId) {
+            return NextResponse.json(
+                { error: "practitioner_id is required for admin actions" },
                 { status: 400 }
             );
         }
-
-        if (user && user.practitioner_id != practitioner_id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
-        }
-
-        const {
-            start_time,
-            end_time,
-            days_unavailable = [],
-            timezone = "Asia/Colombo",
-        } = availability || {};
-
-        if (!start_time || !end_time) {
-            return NextResponse.json(
-                { error: "start_time and end_time are required" },
-                { status: 400 }
-            );
-        }
-
-        // ⚠️ Validation
-        if (start_time >= end_time) {
-            return NextResponse.json(
-                { error: "Start time must be before end time" },
-                { status: 400 }
-            );
-        }
-
-
-        const toUtcDate = (date: string, time: string, timeZone: string) => {
-            const [hour, minute] = time.split(":").map(Number);
-
-            const dt = new Date(`${date}T00:00:00Z`);
-
-            const parts = new Intl.DateTimeFormat("en-US", {
-                timeZone,
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-            }).formatToParts(dt);
-
-            const offsetHours = hour - Number(parts.find(p => p.type === "hour")?.value || 0);
-            const offsetMinutes = minute - Number(parts.find(p => p.type === "minute")?.value || 0);
-
-            dt.setUTCHours(offsetHours, offsetMinutes, 0, 0);
-            return dt;
-        };
-
-        const localDate = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
-
-        const startsAt = toUtcDate(localDate, start_time, timezone);
-        const endsAt = toUtcDate(localDate, end_time, timezone);
-
-
-
-        const { data, error } = await supabaseAdmin
-            .from("practitioner_availability")
-            .upsert(
-                {
-                    practitioner_id,
-                    starts_at: startsAt,
-                    ends_at: endsAt,
-                    days_unavailable,
-                    timezone,
-                    updated_at: new Date().toISOString(),
-                },
-                { onConflict: "practitioner_id" }
-            )
-            .select()
-            .single();
-
-        if (error) {
-            console.error(error);
-            return NextResponse.json(
-                { error: "Failed to update availability" },
-                { status: 500 }
-            );
-        }
-
-        return NextResponse.json({
-            success: true,
-            availability: data,
-        });
-    } catch (err) {
-        console.error(err);
+        targetPractitionerId = bodyPractitionerId;
+    }
+    else {
         return NextResponse.json(
-            { error: "Invalid request" },
+            { error: "Unauthorized role" },
+            { status: 403 }
+        );
+    }
+
+    /* -------------------- VALIDATION -------------------- */
+
+    if (!date || !start_time || !end_time) {
+        return NextResponse.json(
+            { error: "date, start_time, end_time required" },
             { status: 400 }
         );
     }
-}
+
+    if (start_time >= end_time) {
+        return NextResponse.json(
+            { error: "start_time must be before end_time" },
+            { status: 400 }
+        );
+    }
+
+    /* -------------------- DATE GUARDS -------------------- */
+
+    const requestedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (requestedDate < today) {
+        return NextResponse.json(
+            { error: "Cannot add availability in the past" },
+            { status: 400 }
+        );
+    }
+
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 28);
+
+    if (requestedDate > maxDate) {
+        return NextResponse.json(
+            { error: "Availability can only be added 4 weeks in advance" },
+            { status: 400 }
+        );
+    }
+
+    /* -------------------- TIME CONVERSION -------------------- */
+
+    const starts_at = DateTime
+        .fromISO(`${date}T${start_time}`, { zone: timezone })
+        .toUTC()
+        .toISO();
+
+    const ends_at = DateTime
+        .fromISO(`${date}T${end_time}`, { zone: timezone })
+        .toUTC()
+        .toISO();
+
+    /* -------------------- OVERLAP CHECK -------------------- */
+
+    const { data: overlapping } = await supabaseAdmin
+        .from("practitioner_availability")
+        .select("id")
+        .eq("practitioner_id", targetPractitionerId)
+        .lt("starts_at", ends_at)
+        .gt("ends_at", starts_at);
+
+    if (overlapping && overlapping.length > 0) {
+        return NextResponse.json(
+            { error: "Overlapping availability exists for this time range" },
+            { status: 409 }
+        );
+    }
 
 
-export async function GET(req: NextRequest) {
-    const { user } = await requireUser(req);
-    try {
-        const practitionerId = user?.practitioner_id
+    const { data: practitoner } = await supabaseAdmin.from("practitioners").select("contact_email").eq("id", targetPractitionerId).single();
+    /* -------------------- INSERT -------------------- */
 
-        if (!practitionerId) {
+    const { data, error } = await supabaseAdmin
+        .from("practitioner_availability")
+        .insert({
+            practitioner_id: targetPractitionerId,
+            starts_at,
+            ends_at,
+            timezone,
+            added_by: user.practitioner_id || user.admin?.id
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error(error);
+
+        if (error.code === "23505") {
             return NextResponse.json(
-                { error: "practitioner_id is required" },
-                { status: 400 }
+                { error: "This availability already exists" },
+                { status: 409 }
             );
         }
 
+        return NextResponse.json(
+            { error: "Failed to add availability" },
+            { status: 500 }
+        );
+    }
 
-        const { data, error } = await supabaseAdmin
+    const cnx = getAuditContext(req, user);
+
+    await auditLog({
+        ...cnx,
+        action: "CREATED",
+        entityType: "PRACTITIONER_AVAILABILITY",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: { availability_id: data.id },
+    });
+
+    if (user?.role === "admin" || user?.role === "superadmin") {
+        await notify({
+            userId: targetPractitionerId,
+            role: "practitioner",
+            eventType: "availability_added_by_admin",
+            title: "Availability Updated",
+            message: `New availability added on ${date} from ${start_time} to ${end_time}.`,
+            channels: ["email", "in_app"],
+            payload: {
+                availability_id: data.id,
+                date,
+                start_time,
+                end_time,
+                email: practitoner?.contact_email,
+                added_by_role: user.role,
+            },
+        });
+    }
+
+
+    return NextResponse.json({
+        success: true,
+        availability: data,
+    });
+}
+
+export async function GET(req: NextRequest) {
+    const { user, authorized, response } = await requireUser(req);
+    if (!authorized) return response;
+
+    const { searchParams } = new URL(req.url);
+    const bodyPractitionerId = searchParams.get("practitioner_id");
+
+    let targetPractitionerId: string | null = null;
+
+    const practitionerId =
+        targetPractitionerId ||
+        bodyPractitionerId ||
+        user.practitioner_id;
+
+    try {
+        /* -------------------- STEP 1: FETCH FUTURE AVAILABILITY -------------------- */
+        const nowUTC = new Date().toISOString();
+
+        const { data: availability, error } = await supabaseAdmin
             .from("practitioner_availability")
-            .select("starts_at, ends_at, days_unavailable, timezone")
+            .select("id, starts_at, ends_at, timezone")
             .eq("practitioner_id", practitionerId)
-            .single();
+            .gte("ends_at", nowUTC) // remove past windows
+            .order("starts_at", { ascending: true });
 
-        if (error && error.code !== "PGRST116") {
-            // PGRST116 = no rows found
+        if (error) {
             console.error(error);
             return NextResponse.json(
                 { error: "Failed to fetch availability" },
@@ -139,42 +218,40 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // If no availability exists yet → return defaults
-        if (!data) {
-            return NextResponse.json({
-                availability: {
-                    start_time: "09:00",
-                    end_time: "18:00",
-                    days_unavailable: [],
-                    timezone: "Asia/Kolkata",
-                },
+        /* -------------------- STEP 2: FETCH FULL-DAY LEAVES -------------------- */
+        const todayISO = DateTime.utc().toISODate();
+
+        const { data: fullDayLeaves } = await supabaseAdmin
+            .from("practitioner_leaves")
+            .select("start_date, end_date")
+            .eq("practitioner_id", practitionerId)
+            .eq("leave_type", "full_day")
+            .gte("end_date", todayISO); // only relevant leaves
+
+        /* -------------------- STEP 3: FILTER OUT FULL-DAY LEAVE WINDOWS -------------------- */
+        const filteredAvailability = (availability || []).filter((win) => {
+            const winDate = DateTime.fromISO(win.starts_at)
+                .setZone(win.timezone || "Asia/Colombo")
+                .toISODate();
+
+            if (!winDate) return false;
+
+            const isFullDayLeave = (fullDayLeaves || []).some((lv) => {
+                return winDate >= lv.start_date && winDate <= lv.end_date;
             });
-        }
 
-        const formatTime = (date: string, timeZone: string) =>
-            new Intl.DateTimeFormat("en-GB", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-                timeZone,
-            }).format(new Date(date));
-
-        const startTime = formatTime(data.starts_at, data.timezone);
-        const endTime = formatTime(data.ends_at, data.timezone);
-
-        return NextResponse.json({
-            availability: {
-                start_time: startTime,
-                end_time: endTime,
-                days_unavailable: data.days_unavailable,
-                timezone: data.timezone,
-            },
+            return !isFullDayLeave;
         });
-    } catch (err) {
-        console.error(err);
+
+        /* -------------------- RESPONSE -------------------- */
+        return NextResponse.json({
+            availability: filteredAvailability,
+        });
+    } catch (err: any) {
+        console.error("Availability fetch error:", err);
         return NextResponse.json(
-            { error: "Invalid request" },
-            { status: 400 }
+            { error: err.message || "Server error" },
+            { status: 500 }
         );
     }
 }
