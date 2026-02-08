@@ -6,12 +6,13 @@ import { DateTime } from "luxon";
 import { Clock } from "lucide-react";
 import Button from "@/components/atom/Button/Button";
 import { useModalStore } from "@/store/useModalStore";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import Calendar from "@/components/atom/Calendar/Calendar";
 import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { authFetch } from "@/lib/authFetch";
 
 interface Props {
   practitionerId: string;
@@ -38,6 +39,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
       .then((res) => setPractitioner(res.data.practitioner))
       .catch(() => toast.error(t("errors.loadDoctor")));
   }, [practitionerId, t]);
+
 
   /* ---------- Load availability ---------- */
   useEffect(() => {
@@ -107,6 +109,13 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
   };
 
   if (!practitioner) return null;
+  function extractAvailableDates(availableDays: any[]) {
+    return availableDays.map((day) => {
+      const d = new Date(day.starts_at);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    });
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
       {/* Step Header */}
@@ -153,8 +162,13 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
           <h4 className="font-medium mb-2">{t("dateLabel")}</h4>
           <Calendar
             minDate={new Date()}
+            highlightedDates={extractAvailableDates(practitioner.available_days)}
             value={selectedDate ? new Date(selectedDate) : undefined}
             onChange={(date) => {
+              if (!selectedType) {
+                toast.error("Please select type");
+                return;
+              }
               if (!date) return;
 
               const tz =
