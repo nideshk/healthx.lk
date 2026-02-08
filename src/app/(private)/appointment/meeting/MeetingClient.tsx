@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import VideoCallContainer from "@/components/atom/VideoCall/VideoCall";
 import { authFetch } from "@/lib/authFetch";
+import axios from "axios";
 
 type AuthorizeResponse = {
   authorized: true;
   role: "patient" | "practitioner" | "attendee";
   appointmentId: string;
   roomKey: string;
-  token: string; // APP AUTH TOKEN (NOT IVS)
+  token: string; // APP AUTH TOKEN
   error?: string | null;
 };
 
@@ -39,14 +40,14 @@ export default function MeetingPage() {
           return;
         }
 
-        const authRes = await authFetch("/api/telehealth/authorize", {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
+        const authRes = await axios.post<AuthorizeResponse>(
+          "/api/telehealth/authorize",
+          body
+        );
 
-        const authJson = (await authRes.json()) as AuthorizeResponse;
+        const authJson = authRes.data;
 
-        if (!authRes.ok || !authJson.authorized) {
+        if (!authJson.authorized) {
           setError(authJson.error ?? "Authorization failed");
           return;
         }
@@ -55,7 +56,7 @@ export default function MeetingPage() {
         localStorage.setItem("telehealth_token", authJson.token);
 
         /* -------- STEP 2: FETCH IVS TOKEN -------- */
-        const ivsRes = await authFetch("/api/ivs/token", {
+        const ivsRes = await axios.post("/api/ivs/token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -64,13 +65,15 @@ export default function MeetingPage() {
           }),
         });
 
-        const ivsJson = await ivsRes.json();
+        const ivsJson = await ivsRes.data;
 
-        // ✅ THIS MUST BE THE IVS PARTICIPANT TOKEN
         setIvsToken(ivsJson.token.token);
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
-        setError("Failed to prepare video call");
+        setError(
+          e?.response?.data?.error ||
+          "Failed to prepare video call"
+        );
       } finally {
         setLoading(false);
       }
@@ -99,7 +102,7 @@ export default function MeetingPage() {
     <VideoCallContainer
       appointmentId={authData.appointmentId}
       role={authData.role}
-      token={ivsToken}   // ✅ IVS TOKEN ONLY
+      token={ivsToken}
     />
   );
 }

@@ -23,7 +23,7 @@ export async function sendAppointmentInvites({
       room_key
     });
 
-    const inviteLink = `https://www.clinecxa.com//appointment/meeting?token=${token}`;
+    const inviteLink = `https://www.clinecxa.com/appointment/meeting?token=${token}`;
 
     await notify({
 
