@@ -349,7 +349,7 @@ const AppointmentRow: React.FC<{
   const handleNotify = async (channels: Array<"email" | "sms" | "in_app">) => {
     setIsNotifying(true);
     try {
-      const meetingUrl = `${baseUrl}/appointment/meeting?room=${appointment.room_key}`;
+      const meetingUrl = `${baseUrl}/meeting?room=${appointment.room_key}`;
 
       // Constructing the styled HTML template
       const htmlMessage = `
