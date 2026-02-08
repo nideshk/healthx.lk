@@ -98,7 +98,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
     });
 
     if (!user) {
-      openLoginModal();
+      openLoginModal("/appointment");
       return;
     }
     else {
@@ -107,7 +107,6 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
   };
 
   if (!practitioner) return null;
-
   return (
     <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
       {/* Step Header */}
@@ -141,7 +140,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
                   : "bg-white border-gray-300 hover:border-cyan-500"
                 }`}
             >
-              {type.name} · {type.duration_mins} {t("minLabel")}
+              {type.name} · {type.duration_mins} {t("minLabel")} · {type.fee} <span className="text-xs">LKR</span>
             </button>
           ))}
         </div>

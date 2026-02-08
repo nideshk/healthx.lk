@@ -74,8 +74,7 @@ export async function GET(
 
       if (validFees.length === 0) return null;
 
-      const avg =
-        validFees.reduce((sum, f) => sum + f, 0) / validFees.length;
+      const avg = Math.min(...validFees)
 
       return Math.round(avg);
     }

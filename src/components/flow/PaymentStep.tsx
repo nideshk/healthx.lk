@@ -71,7 +71,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     stepRef,
   ) => {
     const t = useTranslations("paymentStep");
-
+    console.log(bookingData)
     const [paymentDone, setPaymentDone] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);

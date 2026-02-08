@@ -127,10 +127,55 @@
     "noDoctors": "මෙම සේවාව සඳහා දැනට වෛද්‍යවරු නොමැත.",
     "tryAnotherService": "වෙනත් සේවාවක් උත්සාහ කරන්න",
     "verifiedSpecialist": "සත්‍යාපිත විශේෂඥ",
-    "consultationFee": "සාමාන්‍ය උපදේශන ගාස්තුව",
+    "consultationFee": "උපදේශනය ආරම්භ වේ",
     "sortBy": "වර්ග කරන්න",
     "priceLowHigh": "මිල: අඩු සිට වැඩි",
     "priceHighLow": "මිල: වැඩි සිට අඩු"
+  },
+  "paymentUI": {
+    "scheduleDetails": "වේලාව විස්තර",
+    "consultationDetails": "උපදේශන විස්තර",
+    "preConsultationNotes": "පූර්ව උපදේශන සටහන්",
+    "primaryConcern": "ප්‍රධාන ගැටලුව",
+    "expectedOutcome": "අපේක්ෂිත ප්‍රතිඵලය",
+    "referralSource": "ආරාධන මූලාශ්‍රය",
+    "consultationFee": "උපදේශන ගාස්තුව",
+    "serviceCharges": "සේවා ගාස්තු",
+    "discount": "වට්ටම",
+    "totalToPay": "මුළු ගෙවිය යුතු මුදල",
+    "secure": "ආරක්ෂිතයි",
+    "completePayment": "ගෙවීම සම්පූර්ණ කරන්න",
+    "editBooking": "වෙන්කිරීම සංස්කරණය කරන්න",
+    "status": {
+      "sessionExpired": "සැසිය කල් ඉකුත් විය",
+      "timeLeft": "ඉතිරි කාලය",
+      "completePayment": "වේලාව රඳවා ගැනීමට ගෙවීම සම්පූර්ණ කරන්න"
+    },
+    "title": "සමාලෝචනය කර ගෙවීම අවසන් කරන්න",
+    "doctorDetails": "වෛද්‍ය විස්තර",
+    "appointmentDetails": "නියෝජන විස්තර",
+    "service": "සේවාව",
+    "type": "වර්ගය",
+    "duration": "කාලය",
+    "minutes": "මිනිත්තු",
+    "date": "දිනය",
+    "time": "වේලාව",
+    "pricingSummary": "මිල සාරාංශය",
+    "haveCoupon": "කූපනයක් තිබේද?",
+    "enterCode": "කේතය ඇතුළත් කරන්න",
+    "apply": "යොදන්න",
+    "applying": "යොදමින්...",
+    "couponApplied": "කූපනය සාර්ථකව යොදන ලදී",
+    "consultation": "උපදේශන ගාස්තුව",
+    "additionalAttendees": "අමතර සහභාගීවන්නන්",
+    "couponDiscount": "කූපන් වට්ටම",
+    "total": "මුළු එකතුව",
+    "payNow": "දැන් ගෙවන්න →",
+    "back": "← ආපසු",
+    "errors": {
+      "invalidCoupon": "අවලංගු කූපනයක්",
+      "couponFailed": "කූපනය තහවුරු කළ නොහැකි විය"
+    }
   },
   "bookAppointment": {
     "loadDoctorError": "වෛද්‍ය විස්තර පූරණය කළ නොහැකි විය",
@@ -252,33 +297,6 @@
       "timeLeft": "ඉතිරි කාලය",
       "verifying": "ගෙවීම තහවුරු කරමින්",
       "confirming": "බැංකුව සමඟ ඔබගේ වෙන් කිරීම තහවුරු කරමින්..."
-    }
-  },
-  "paymentUI": {
-    "title": "සමාලෝචනය කර ගෙවීම අවසන් කරන්න",
-    "doctorDetails": "වෛද්‍ය විස්තර",
-    "appointmentDetails": "නියෝජන විස්තර",
-    "service": "සේවාව",
-    "type": "වර්ගය",
-    "duration": "කාලය",
-    "minutes": "මිනිත්තු",
-    "date": "දිනය",
-    "time": "වේලාව",
-    "pricingSummary": "මිල සාරාංශය",
-    "haveCoupon": "කූපනයක් තිබේද?",
-    "enterCode": "කේතය ඇතුළත් කරන්න",
-    "apply": "යොදන්න",
-    "applying": "යොදමින්...",
-    "couponApplied": "කූපනය සාර්ථකව යොදන ලදී",
-    "consultation": "උපදේශන ගාස්තුව",
-    "additionalAttendees": "අමතර සහභාගීවන්නන්",
-    "couponDiscount": "කූපන් වට්ටම",
-    "total": "මුළු එකතුව",
-    "payNow": "දැන් ගෙවන්න →",
-    "back": "← ආපසු",
-    "errors": {
-      "invalidCoupon": "අවලංගු කූපනයක්",
-      "couponFailed": "කූපනය තහවුරු කළ නොහැකි විය"
     }
   },
   "homepage": {
@@ -484,6 +502,7 @@
   },
   "signup": {
     "title": "රෝගී ලියාපදිංචිය",
+    "marketingConsent": "ඊමේල් හෝ SMS මගින් යාවත්කාලීන, දීමනා සහ සෞඛ්‍ය උපදෙස් ලබාගැනීමට මම එකඟ වෙමි. ඕනෑම වේලාවක ඉවත් විය හැක.",
     "countryDefault": "ශ්‍රී ලංකාව",
     "buttonDefault": "ලියාපදිංචි වන්න",
     "buttonLoading": "ලියාපදිංචි වෙමින් පවතී...",

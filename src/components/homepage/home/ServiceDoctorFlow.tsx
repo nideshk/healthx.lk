@@ -269,7 +269,7 @@ const DoctorPicker = ({
       </p>
 
       <div className="space-y-4">
-        {doctors.map((d) => (
+        {doctors.length > 0 ? doctors.slice(0, 6).map((d) => (
           <button
             key={d.id}
             onClick={() => onSelect(d)}
@@ -281,7 +281,6 @@ const DoctorPicker = ({
             "
           >
             <div className="flex items-start gap-4">
-              {/* Avatar */}
               <div className="flex-shrink-0">
                 {d.profile_picture_url ? (
                   <img
@@ -314,7 +313,7 @@ const DoctorPicker = ({
                 </p>
 
                 {d.profile_bio && (
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                  <p className="text-sm text-gray-500 mt-1 line-clamp-3">
                     {d.profile_bio}
                   </p>
                 )}
@@ -331,7 +330,7 @@ const DoctorPicker = ({
               {t("actionText")}
             </div>
           </button>
-        ))}
+        )) : <p className="text-sm text-gray-500 mt-1 line-clamp-3">No doctors found</p>}
       </div>
     </div>
   );

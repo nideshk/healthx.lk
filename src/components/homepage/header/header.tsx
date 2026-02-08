@@ -39,7 +39,7 @@ export default function Header() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
-  const { isLoginModalOpen, openLoginModal, closeLoginModal } = useModalStore();
+  const { isLoginModalOpen, openLoginModal, closeLoginModal, redirectTo } = useModalStore();
 
   // --- UI States ---
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,7 +98,7 @@ export default function Header() {
     setMfa(null);
     setOtp("");
     closeLoginModal();
-    router.push("/dashboard");
+    router.push(redirectTo || "/dashboard");
   }
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -205,10 +205,10 @@ export default function Header() {
 
               {!user ? (
                 <div className="flex items-center gap-2">
-                  <button onClick={openLoginModal} className="hidden sm:block px-5 py-2.5 text-sm font-bold text-slate-700 hover:text-teal-600 transition-colors">
+                  <button onClick={() => openLoginModal("/dashboard")} className="hidden sm:block px-5 py-2.5 text-sm font-bold text-slate-700 hover:text-teal-600 transition-colors">
                     {t("auth.logIn")}
                   </button>
-                  <button onClick={openLoginModal} className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-teal-600 shadow-lg transition-all active:scale-95">
+                  <button onClick={() => openLoginModal("/")} className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-teal-600 shadow-lg transition-all active:scale-95">
                     {t("auth.getStarted")}
                   </button>
                 </div>
