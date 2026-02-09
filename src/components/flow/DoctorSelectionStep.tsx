@@ -64,7 +64,9 @@ const DoctorSelectionStep = forwardRef(
             email: p.contact_email,
             qualification: p.qualification,
             profileImage: p.profile_picture_url || null,
-            fee: 950 + (p.fees || 0),
+            // fee: 950 + (p.fees || 0),
+            startingPrice: 950 + (p.starting_price || 0),
+            endingPrice: 950 + (p.ending_price || 0 ),
             currency: 'LKR',
             rating: { overall: 4.8 },
           }));
@@ -261,14 +263,12 @@ const DoctorSelectionStep = forwardRef(
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
                             {t('consultationFee')}
                           </p>
-                          <p
-                            className={`text-xl font-black ${isSelected
-                              ? 'text-teal-700'
-                              : 'text-slate-900'
-                              }`}
-                          >
+                          <p className={`text-xl font-black ${isSelected ? 'text-teal-700' : 'text-slate-900'}`}>
+                            {/* {doctor.currency} {doctor.fee.toLocaleString()} */}
                             {doctor.currency}{' '}
-                            {doctor.fee.toLocaleString()}
+                            {doctor.startingPrice === doctor.endingPrice
+                              ? doctor.startingPrice?.toLocaleString()
+                              : `${doctor.startingPrice?.toLocaleString()} – ${doctor.endingPrice?.toLocaleString()}`}
                           </p>
                         </div>
 

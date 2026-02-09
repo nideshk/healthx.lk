@@ -39,7 +39,7 @@ export default function MeetingPage() {
           return;
         }
 
-        const res = await authFetch("/api/telehealth/authorize", {
+        const res = await fetch("/api/telehealth/authorize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token: inviteToken, roomKey: roomKey }),
@@ -58,7 +58,7 @@ export default function MeetingPage() {
         localStorage.setItem("telehealth_token", authJson.token);
 
         /* -------- STEP 2: FETCH IVS TOKEN -------- */
-        const ivsRes = await authFetch("/api/ivs/token", {
+        const ivsRes = await fetch("/api/ivs/token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
