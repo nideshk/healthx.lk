@@ -163,7 +163,10 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
               ))}
               {viewMode === "daily" &&
                 Array.from({ length: 6 }).map((_, i) => (
-                  <div key={`empty-${i}`} className="border-l border-slate-200" />
+                  <div
+                    key={`empty-${i}`}
+                    className="border-l border-slate-200"
+                  />
                 ))}
             </div>
 
@@ -326,9 +329,10 @@ const isSameDay = (a: Date, b: Date) =>
   a.getDate() === b.getDate();
 
 const formatDate = (d: Date) =>
-  `${String(d.getDate()).padStart(2, "0")}/${String(
-    d.getMonth() + 1
-  ).padStart(2, "0")}/${d.getFullYear()}`;
+  `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}/${d.getFullYear()}`;
 
 const formatDayName = (d: Date) =>
   d.toLocaleDateString(undefined, { weekday: "short" });
@@ -352,6 +356,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
   onManage,
 }) => {
   const isCompleted = appointment.status === "completed";
+  const isPast = appointment.start ? appointment.start < new Date() : false;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
@@ -383,36 +388,29 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
 
         <div className="flex justify-end gap-2 px-5 py-4 border-t">
           {isCompleted ? (
+            <Button variant="outline" size="sm" className="text-xs" disabled>
+              Meeting completed
+            </Button>
+          ) : (
+            !isPast && (
+              <Link href={`/appointment/meeting?room=${appointment.room_key}`}>
+                <Button variant="outline" size="sm" className="text-xs">
+                  Join Meeting
+                </Button>
+              </Link>
+            )
+          )}
+
+          {!isPast && (
             <Button
               variant="outline"
               size="sm"
               className="text-xs"
-              disabled
+              onClick={onManage}
             >
-              Meeting completed
+              Manage Appointment
             </Button>
-          ) : (
-            <Link
-              href={`/appointment/meeting?room=${appointment.room_key}`}
-            >
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                Join Meeting
-              </Button>
-            </Link>
           )}
-         
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-           onClick={onManage}
-          >
-            Manage Appointment
-          </Button>
         </div>
       </div>
     </div>

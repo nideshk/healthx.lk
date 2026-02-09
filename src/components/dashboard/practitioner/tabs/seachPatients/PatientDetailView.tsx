@@ -79,7 +79,7 @@ const renderTab = (
   id: PatientDetailTab,
   label: string,
   activeTab: PatientDetailTab,
-  setActiveTab: (t: PatientDetailTab) => void
+  setActiveTab: (t: PatientDetailTab) => void,
 ) => {
   const active = id === activeTab;
   return (
@@ -87,10 +87,11 @@ const renderTab = (
       key={id}
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${active
-        ? "bg-white text-slate-900 shadow-sm"
-        : "text-slate-500 hover:text-slate-900"
-        }`}
+      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${
+        active
+          ? "bg-white text-slate-900 shadow-sm"
+          : "text-slate-500 hover:text-slate-900"
+      }`}
     >
       {label}
     </button>
@@ -319,6 +320,9 @@ const AppointmentRow: React.FC<{
   const [isNotifying, setIsNotifying] = useState(false);
   const [, forceUpdate] = useState(0);
 
+  // Requirement: Disable buttons if the appointment is in the 'previous' category
+  const isPrevious = appointment.category === "previous";
+
   const [appointmentForm, setAppointmentForm] = React.useState({
     clinicianNotes: appointment.clinicianNotes || "",
     followUpDate: appointment.followUpDate || "",
@@ -333,7 +337,7 @@ const AppointmentRow: React.FC<{
 
   const updateAppointmentField = (
     key: keyof typeof appointmentForm,
-    value: string | boolean
+    value: string | boolean,
   ) => {
     setAppointmentForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -404,7 +408,7 @@ const AppointmentRow: React.FC<{
 
       if (res.ok) {
         toast.success(
-          `${channels.join(" & ").toUpperCase()} sent successfully!`
+          `${channels.join(" & ").toUpperCase()} sent successfully!`,
         );
       } else {
         throw new Error("Failed to send");
@@ -439,7 +443,7 @@ const AppointmentRow: React.FC<{
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       appointment.clinicianNotes = payload.clinician_notes;
@@ -474,7 +478,7 @@ const AppointmentRow: React.FC<{
     setConsultationLoading(true);
     try {
       const res = await authFetch(
-        `/api/booking/appointment/${appointment.id}/consultation`
+        `/api/booking/appointment/${appointment.id}/consultation`,
       );
       if (!res.ok) return;
       const data = await res.json();
@@ -533,7 +537,7 @@ const AppointmentRow: React.FC<{
               size="sm"
               className="text-xs"
               onClick={() => handleNotify(["email"])}
-              disabled={isNotifying}
+              disabled={isNotifying || isPrevious}
             >
               Re-send appointment details
             </Button>
@@ -542,16 +546,22 @@ const AppointmentRow: React.FC<{
               variant="secondary"
               size="sm"
               onClick={() => handleNotify(["sms"])}
-              disabled={isNotifying}
+              disabled={isNotifying || isPrevious}
             >
               SMS patient
             </Button>
 
-            <Link href={`/appointment/meeting?room=${appointment.room_key}`}>
-              <Button variant="primary" size="sm" className="text-xs">
+            {isPrevious ? (
+              <Button variant="primary" size="sm" className="text-xs" disabled>
                 Join meeting
               </Button>
-            </Link>
+            ) : (
+              <Link href={`/appointment/meeting?room=${appointment.room_key}`}>
+                <Button variant="primary" size="sm" className="text-xs">
+                  Join meeting
+                </Button>
+              </Link>
+            )}
 
             <span
               className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${statusClasses}`}
@@ -584,6 +594,7 @@ const AppointmentRow: React.FC<{
                   size="sm"
                   className="text-xs px-3"
                   onClick={() => setIsEditingAppointment(true)}
+                  disabled={isPrevious}
                 >
                   Edit
                 </Button>
@@ -672,10 +683,11 @@ const AppointmentRow: React.FC<{
                   />
                 ) : (
                   <span
-                    className={`inline-flex h-3 w-3 rounded-full border-4 ${appointment.followUpNeeded
-                      ? "border-blue-500"
-                      : "border-slate-300"
-                      } bg-white`}
+                    className={`inline-flex h-3 w-3 rounded-full border-4 ${
+                      appointment.followUpNeeded
+                        ? "border-blue-500"
+                        : "border-slate-300"
+                    } bg-white`}
                   />
                 )}
                 <span>Follow-up appointment needed</span>

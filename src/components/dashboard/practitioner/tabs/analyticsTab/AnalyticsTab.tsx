@@ -7,7 +7,8 @@ import RevenueBreakdownModal from "./RevenueBreakdownModal";
 import Loader from "@/components/atom/Loader/Loader";
 import GenericTable, { Column } from "./GenericTable";
 import { X, Download } from "lucide-react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { authFetch } from "@/lib/authFetch";
 import { DateTime } from "luxon";
 
@@ -154,7 +155,15 @@ const AnalyticsTab: React.FC = () => {
       if (!analyticsRes.ok) throw new Error("Failed to fetch booking statistics");
       const data = await analyticsRes.json();
 
-      let tData = { analytics: { totalGrossAmount: 0, totalPlatformFees: 0, totalConsultationFees: 0, totalServiceFees: 0, totalTaxes: 0 } };
+      let tData = {
+        analytics: {
+          totalGrossAmount: 0,
+          totalPlatformFees: 0,
+          totalConsultationFees: 0,
+          totalServiceFees: 0,
+          totalTaxes: 0,
+        },
+      };
       if (transactionRes.ok) {
         tData = await transactionRes.json();
       }
@@ -175,7 +184,6 @@ const AnalyticsTab: React.FC = () => {
         serviceFees: tData.analytics.totalServiceFees,
         taxes: tData.analytics.totalTaxes,
       });
-
     } catch (e: any) {
       setError(e.message);
       setStats(EMPTY_BOOKING_STATS);
@@ -184,13 +192,12 @@ const AnalyticsTab: React.FC = () => {
     }
   }, [fromDate, toDate]);
 
-  /* --- Logic: Fetch Detail Table --- */
   const fetchDetailData = useCallback(async () => {
     if (!selectedDetail) return;
-    
+
     if (selectedDetail === "refunds" && !showRefunds) {
-        setSelectedDetail(null);
-        return;
+      setSelectedDetail(null);
+      return;
     }
 
     setDetailLoading(true);
@@ -198,7 +205,8 @@ const AnalyticsTab: React.FC = () => {
     try {
       if (selectedDetail === "refunds") {
         const response = await authFetch("/api/refunds");
-        if (!response.ok) throw new Error(`Failed to fetch refunds: ${response.status}`);
+        if (!response.ok)
+          throw new Error(`Failed to fetch refunds: ${response.status}`);
         const data = await response.json();
 
         if (data.status === "success") {
@@ -216,21 +224,19 @@ const AnalyticsTab: React.FC = () => {
           }));
 
           setDetailData(mappedData);
-          setPagination(prev => ({
+          setPagination((prev) => ({
             ...prev,
             totalPages: Math.ceil(mappedData.length / prev.perPage) || 1,
             totalResults: mappedData.length,
           }));
         }
-      } 
-      else {
-        // FIXED: Using template strings instead of new URL() to avoid "Invalid URL" error
+      } else {
         const queryParams = new URLSearchParams({
           from: fromDate,
           to: toDate,
           type: selectedDetail,
           page: pagination.currentPage.toString(),
-          per_page: pagination.perPage.toString()
+          per_page: pagination.perPage.toString(),
         }).toString();
 
         const response = await authFetch(`/api/booking?${queryParams}`);
@@ -238,7 +244,7 @@ const AnalyticsTab: React.FC = () => {
 
         if (result.success) {
           setDetailData(result.data);
-          setPagination(prev => ({
+          setPagination((prev) => ({
             ...prev,
             totalPages: result.meta.total_pages,
             totalResults: result.meta.total,
@@ -250,7 +256,14 @@ const AnalyticsTab: React.FC = () => {
     } finally {
       setDetailLoading(false);
     }
-  }, [selectedDetail, fromDate, toDate, pagination.currentPage, pagination.perPage, showRefunds]);
+  }, [
+    selectedDetail,
+    fromDate,
+    toDate,
+    pagination.currentPage,
+    pagination.perPage,
+    showRefunds,
+  ]);
 
   /* --- Logic: Fetch Timestamp Audits --- */
   const fetchTimestampAudits = useCallback(async () => {
@@ -261,10 +274,12 @@ const AnalyticsTab: React.FC = () => {
         from: fromDate,
         to: toDate,
         page: auditPagination.currentPage.toString(),
-        per_page: auditPagination.perPage.toString()
+        per_page: auditPagination.perPage.toString(),
       }).toString();
 
-      const response = await authFetch(`/api/consultation/audit-log?${queryParams}`);
+      const response = await authFetch(
+        `/api/consultation/audit-log?${queryParams}`,
+      );
       const result = await response.json();
 
       if (result.data) {
@@ -275,20 +290,28 @@ const AnalyticsTab: React.FC = () => {
           schedule_start: item.appointment?.starts_at ?? "",
           patient_activity: {
             joined: item.participant_summary?.patient?.started_at ?? null,
-            duration: formatDuration(item.participant_summary?.patient?.duration_seconds),
+            duration: formatDuration(
+              item.participant_summary?.patient?.duration_seconds,
+            ),
             events: item.participant_summary?.patient?.event_count ?? 0,
           },
           practitioner_activity: {
             joined: item.participant_summary?.practitioner?.started_at ?? null,
-            duration: formatDuration(item.participant_summary?.practitioner?.duration_seconds),
+            duration: formatDuration(
+              item.participant_summary?.practitioner?.duration_seconds,
+            ),
             events: item.participant_summary?.practitioner?.event_count ?? 0,
           },
-          no_show: item.appointment?.patient_no_show ? "Patient" : (item.appointment?.practitioner_no_show ? "Practitioner" : "-"),
+          no_show: item.appointment?.patient_no_show
+            ? "Patient"
+            : item.appointment?.practitioner_no_show
+              ? "Practitioner"
+              : "-",
           meeting_duration: formatDuration(item.meeting_duration_seconds),
         }));
 
         setAuditLogs(mappedData);
-        setAuditPagination(prev => ({
+        setAuditPagination((prev) => ({
           ...prev,
           totalPages: result.meta?.total_pages ?? 1,
           totalResults: result.meta?.total ?? mappedData.length,
@@ -299,17 +322,155 @@ const AnalyticsTab: React.FC = () => {
     } finally {
       setAuditLoading(false);
     }
-  }, [activeTab, fromDate, toDate, auditPagination.currentPage, auditPagination.perPage]);
+  }, [
+    activeTab,
+    fromDate,
+    toDate,
+    auditPagination.currentPage,
+    auditPagination.perPage,
+  ]);
 
-  /* --- Logic: Export to Excel --- */
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const dataToExport = activeTab === "bookings" ? detailData : auditLogs;
     if (dataToExport.length === 0) return;
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Analytics_Report");
-    XLSX.writeFile(workbook, `Report_${activeTab}_${new Date().getTime()}.xlsx`);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(
+      activeTab === "bookings" ? "Booking Report" : "Audit Log",
+    );
+
+    // 1. Setup Columns and Headers
+    let columns: any[] = [];
+    let rows: any[] = [];
+
+    if (activeTab === "bookings") {
+      if (selectedDetail === "refunds") {
+        columns = [
+          { header: "Requested On", key: "created_at", width: 25 },
+          { header: "Patient Name", key: "patient_name", width: 25 },
+          { header: "Email", key: "email", width: 30 },
+          { header: "Amount", key: "amount", width: 15 },
+          { header: "Reason", key: "reason", width: 25 },
+          { header: "Status", key: "status", width: 15 },
+        ];
+        rows = dataToExport.map((r) => ({
+          created_at: DateTime.fromISO(r.created_at).toFormat(
+            "yyyy-MM-dd HH:mm",
+          ),
+          patient_name: r.patient_name,
+          email: r.email,
+          amount: `${r.currency} ${r.refund_amount.toLocaleString()}`,
+          reason: r.reason,
+          status: r.status.toUpperCase(),
+        }));
+      } else {
+        columns = [
+          { header: "Patient", key: "patient", width: 25 },
+          { header: "Practitioner", key: "practitioner", width: 25 },
+          { header: "Date", key: "date", width: 15 },
+          { header: "Time Slot", key: "time", width: 25 },
+          { header: "Type", key: "type", width: 15 },
+          { header: "Status", key: "status", width: 15 },
+          { header: "Payment", key: "payment", width: 15 },
+        ];
+        rows = dataToExport.map((r) => ({
+          patient: r.patient?.name || "N/A",
+          practitioner: r.practitioner?.name || "N/A",
+          date: r.appointment_date,
+          time: `${r.start_time} - ${r.end_time}`,
+          type: r.appointment_type,
+          status: r.status,
+          payment: r.payment_status?.toUpperCase() || "N/A",
+        }));
+      }
+    } else {
+      // Formatting Audit Logs for Excel
+      columns = [
+        { header: "Appointment ID", key: "id", width: 25 },
+        { header: "Status", key: "status", width: 15 },
+        { header: "Scheduled Start", key: "start", width: 25 },
+        { header: "Patient Join Time", key: "p_join", width: 20 },
+        { header: "Patient Duration", key: "p_dur", width: 15 },
+        { header: "Practitioner Join Time", key: "dr_join", width: 20 },
+        { header: "Practitioner Duration", key: "dr_dur", width: 15 },
+        { header: "No Show", key: "no_show", width: 15 },
+        { header: "Meeting Length", key: "total_dur", width: 15 },
+      ];
+      rows = dataToExport.map((r: AuditLogRow) => ({
+        id: r.appointment_id,
+        status: r.status,
+        start: r.schedule_start.replace("T", " ").split(".")[0],
+        p_join: r.patient_activity.joined?.split("T")[1].split(".")[0] ?? "-",
+        p_dur: r.patient_activity.duration,
+        dr_join:
+          r.practitioner_activity.joined?.split("T")[1].split(".")[0] ?? "-",
+        dr_dur: r.practitioner_activity.duration,
+        no_show: r.no_show,
+        total_dur: r.meeting_duration,
+      }));
+    }
+
+    worksheet.mergeCells("A1:G1");
+    const titleCell = worksheet.getCell("A1");
+    titleCell.value = `${activeTab.toUpperCase()} REPORT - ${selectedDetail?.toUpperCase() || "SUMMARY"}`;
+    titleCell.font = {
+      name: "Arial",
+      size: 14,
+      bold: true,
+      color: { argb: "FFFFFF" },
+    };
+    titleCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "1E293B" },
+    };
+    titleCell.alignment = { horizontal: "center" };
+
+    worksheet.mergeCells("A2:G2");
+    worksheet.getCell("A2").value =
+      `Date Range: ${fromDate} to ${toDate} | Generated: ${new Date().toLocaleString()}`;
+    worksheet.getCell("A2").font = { italic: true, size: 10 };
+
+    worksheet.addRow([]); 
+
+    const headerRow = worksheet.addRow(columns.map((c) => c.header));
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "334155" },
+      };
+      cell.font = { bold: true, color: { argb: "FFFFFF" } };
+      cell.border = { bottom: { style: "thin" }, top: { style: "thin" } };
+    });
+
+    rows.forEach((rowData, index) => {
+      const row = worksheet.addRow(Object.values(rowData));
+      if (index % 2 === 0) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "F8FAFC" },
+          };
+        });
+      }
+      row.eachCell((cell) => {
+        cell.border = { bottom: { style: "hair" } };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+    });
+
+    worksheet.columns = columns;
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(
+      blob,
+      `Report_${activeTab}_${DateTime.now().toFormat("yyyyLLdd_HHmm")}.xlsx`,
+    );
   };
 
   /* --- Effects --- */
@@ -327,8 +488,8 @@ const AnalyticsTab: React.FC = () => {
 
   /* --- Handlers --- */
   const handleStatClick = (type: DetailType) => {
-    setSelectedDetail(prev => (prev === type ? null : type));
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setSelectedDetail((prev) => (prev === type ? null : type));
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
   /* --- Table Config --- */
@@ -337,14 +498,17 @@ const AnalyticsTab: React.FC = () => {
       return [
         {
           header: "Requested On",
-          render: (item: RefundItem) => DateTime.fromISO(item.created_at).toFormat("yyyy-MM-dd HH:mm"),
+          render: (item: RefundItem) =>
+            DateTime.fromISO(item.created_at).toFormat("yyyy-MM-dd HH:mm"),
           className: "whitespace-nowrap",
         },
         {
           header: "Patient Details",
           render: (item: RefundItem) => (
             <div className="flex flex-col">
-              <span className="font-bold text-slate-800">{item.patient_name}</span>
+              <span className="font-bold text-slate-800">
+                {item.patient_name}
+              </span>
               <span className="text-xs text-slate-500">{item.email}</span>
             </div>
           ),
@@ -359,7 +523,9 @@ const AnalyticsTab: React.FC = () => {
         {
           header: "TXN ID",
           render: (item: RefundItem) => (
-            <span className="font-mono text-blue-600 font-bold">{item.transaction_id}</span>
+            <span className="font-mono text-blue-600 font-bold">
+              {item.transaction_id}
+            </span>
           ),
         },
         {
@@ -387,9 +553,12 @@ const AnalyticsTab: React.FC = () => {
               refunded: "bg-green-100 text-green-700 border-green-200",
               rejected: "bg-red-100 text-red-700 border-red-200",
             };
-            const currentStyle = styles[s] || "bg-slate-100 text-slate-600 border-slate-200";
+            const currentStyle =
+              styles[s] || "bg-slate-100 text-slate-600 border-slate-200";
             return (
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${currentStyle}`}>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${currentStyle}`}
+              >
                 {item.status}
               </span>
             );
@@ -403,8 +572,12 @@ const AnalyticsTab: React.FC = () => {
         header: "Patient Details",
         render: (item) => (
           <div>
-            <div className="font-medium text-slate-900">{item.patient?.name ?? "Unknown Patient"}</div>
-            <div className="text-xs text-slate-500">{item.patient?.email ?? "No Email"}</div>
+            <div className="font-medium text-slate-900">
+              {item.patient?.name ?? "Unknown Patient"}
+            </div>
+            <div className="text-xs text-slate-500">
+              {item.patient?.email ?? "No Email"}
+            </div>
           </div>
         ),
       },
@@ -412,8 +585,12 @@ const AnalyticsTab: React.FC = () => {
         header: "Practitioner",
         render: (item) => (
           <div>
-            <div className="font-medium text-slate-900">{item.practitioner?.name ?? "Unknown Practitioner"}</div>
-            <div className="text-xs text-slate-500">{item.practitioner?.email ?? "No Email"}</div>
+            <div className="font-medium text-slate-900">
+              {item.practitioner?.name ?? "Unknown Practitioner"}
+            </div>
+            <div className="text-xs text-slate-500">
+              {item.practitioner?.email ?? "No Email"}
+            </div>
           </div>
         ),
       },
@@ -441,12 +618,14 @@ const AnalyticsTab: React.FC = () => {
           const config = {
             completed: "bg-green-50 text-green-700 border-green-100",
             cancelled: "bg-red-50 text-red-700 border-red-100",
-            default: "bg-blue-50 text-blue-700 border-blue-100"
+            default: "bg-blue-50 text-blue-700 border-blue-100",
           };
           const style = config[status as keyof typeof config] || config.default;
 
           return (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${style}`}>
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${style}`}
+            >
               {item.status}
             </span>
           );
@@ -455,21 +634,30 @@ const AnalyticsTab: React.FC = () => {
       {
         header: "Payment",
         render: (item) => (
-          <span className={`text-xs font-bold ${item.payment_status === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
+          <span
+            className={`text-xs font-bold ${item.payment_status === "paid" ? "text-green-600" : "text-amber-600"}`}
+          >
             {item.payment_status?.toUpperCase() ?? "N/A"}
           </span>
         ),
       },
       {
         header: "Cancellation reason",
-        render: (item) => <div className="text-slate-700 text-xs italic">{item.cancellation_reason ?? "N/A"}</div>,
+        render: (item) => (
+          <div className="text-slate-700 text-xs italic">
+            {item.cancellation_reason ?? "N/A"}
+          </div>
+        ),
       },
     ];
   }, [selectedDetail]);
 
   const detailTitle = useMemo(() => {
     if (!selectedDetail) return "";
-    return `${selectedDetail.charAt(0).toUpperCase() + selectedDetail.slice(1)} List`.replace("Total", "Total Bookings");
+    return `${selectedDetail.charAt(0).toUpperCase() + selectedDetail.slice(1)} List`.replace(
+      "Total",
+      "Total Bookings",
+    );
   }, [selectedDetail]);
 
   const paginatedData = useMemo(() => {
@@ -622,7 +810,7 @@ const BookingsView = ({
   onRevenueClick,
   onStatClick,
   activeDetail,
-  showRefunds, 
+  showRefunds,
 }: {
   stats: BookingStats;
   fromDate: string;

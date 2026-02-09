@@ -9,10 +9,10 @@ import { authFetch } from "@/lib/authFetch";
 interface PricingApiItem {
   fee: number;
   type: string;
-  platform_fee: number;
-  duration_mins: number;
-  max_attendee: number;
-  extra_fee_per_attendee: number;
+  // platform_fee: number;
+  // duration_mins: number;
+  // max_attendee: number;
+  // extra_fee_per_attendee: number;
 }
 
 /* -------------------- UI TYPES -------------------- */
@@ -20,11 +20,11 @@ interface PricingApiItem {
 interface PricingRow {
   id: string;
   type: string;
-  duration: string;
+  // duration: string;
   fee: number;
-  platformFee: number;
-  maxAttendees: number;
-  extraFeePerAttendee: number;
+  // platformFee: number;
+  // maxAttendees: number;
+  // extraFeePerAttendee: number;
 }
 
 interface PricingTabProps {
@@ -62,11 +62,11 @@ const PricingTab: React.FC<PricingTabProps> = ({ clinicianId }) => {
           ([id, item]) => ({
             id,
             type: item.type,
-            duration: `${item.duration_mins} mins`,
+            // duration: `${item.duration_mins} mins`,
             fee: item.fee,
-            platformFee: item.platform_fee,
-            maxAttendees: item.max_attendee,
-            extraFeePerAttendee: item.extra_fee_per_attendee,
+            // platformFee: item.platform_fee,
+            // maxAttendees: item.max_attendee,
+            // extraFeePerAttendee: item.extra_fee_per_attendee,
           })
         );
 
@@ -98,12 +98,11 @@ const PricingTab: React.FC<PricingTabProps> = ({ clinicianId }) => {
       </div>
 
       {/* ---------------- TABLE HEADER ---------------- */}
-      <div className="grid grid-cols-5 text-sm font-medium text-slate-600 border-b border-slate-200 pb-2">
+      <div className="grid grid-cols-2 text-sm font-medium text-slate-600 border-b border-slate-200 pb-2">
         <div>Appointment Type</div>
-        <div>Duration</div>
+       
         <div>Fee (LKR)</div>
-        <div>Platform Fee</div>
-        <div>Max Attendees</div>
+       
       </div>
 
       {/* ---------------- PRICING ROWS ---------------- */}
@@ -116,15 +115,13 @@ const PricingTab: React.FC<PricingTabProps> = ({ clinicianId }) => {
           {pricing.map((item) => (
             <div
               key={item.id}
-              className="grid grid-cols-5 items-center gap-4"
+              className="grid grid-cols-2 items-center gap-4"
             >
               <div className="text-sm text-slate-900">
                 {item.type}
               </div>
 
-              <div className="text-sm text-slate-700">
-                {item.duration}
-              </div>
+             
 
               <Input
                 value={String(item.fee)}
@@ -132,13 +129,7 @@ const PricingTab: React.FC<PricingTabProps> = ({ clinicianId }) => {
                 className="max-w-[100px]"
               />
 
-              <div className="text-sm text-slate-700">
-                LKR {item.platformFee}
-              </div>
 
-              <div className="text-sm text-slate-700">
-                {item.maxAttendees}
-              </div>
             </div>
           ))}
 
@@ -159,8 +150,8 @@ const PricingTab: React.FC<PricingTabProps> = ({ clinicianId }) => {
               Platform Fee Information
             </span>
             <div className="mt-1">
-              Platform fee of{" "}
-              <b>{pricing[0].platformFee} LKR</b> is applied per
+              Platform fee 
+               is applied per
               consultation.
             </div>
           </div>

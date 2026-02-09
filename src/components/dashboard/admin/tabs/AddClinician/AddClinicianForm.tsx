@@ -846,41 +846,9 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                     />
                   )}
                 />
-                <Controller
-                  name="bank_details.ifsc_code"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="IFSC Code"
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-                <Controller
-                  name="bank_details.swift_code"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="SWIFT Code (optional)"
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
+               
               </div>
-              <Controller
-                name="bank_details.branch_address"
-                control={control}
-                render={({ field }) => (
-                  <Textarea
-                    placeholder="Branch Address"
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                    className="h-20"
-                  />
-                )}
-              />
+             
             </div>
 
             {/* Availability */}
