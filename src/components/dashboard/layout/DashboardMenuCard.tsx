@@ -12,7 +12,8 @@ export type DashboardMenuItemId =
   | "manageAdmins"
   | "analytics"
   | "settings"
-  | "coupons";
+  | "coupons"
+  | "createAppointment";
 
 export interface DashboardMenuItem {
   id: DashboardMenuItemId;

@@ -305,24 +305,6 @@ export default function AdaptiveProfileUI() {
                                 </div>
                             </div>
                         </section>
-
-                        {/* Role-Based Insight Message */}
-                        <div className={`mt-8 p-6 rounded-2xl border-2 border-dashed border-${themeColor}-100 bg-${themeColor}-50/30 flex items-start gap-4`}>
-                            <div className={`bg-${themeColor}-100 p-2 rounded-lg text-${themeColor}-600`}>
-                                <Activity size={20} />
-                            </div>
-                            <div>
-                                <h5 className={`font-bold text-${themeColor}-900 text-sm`}>
-                                    {isPractitioner ? "Professional Practitioner Account" : "Secure Patient Record"}
-                                </h5>
-                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    {isPractitioner
-                                        ? "As a healthcare provider, your profile is used to verify your credentials with patients. Keep your city and contact info updated for local referrals."
-                                        : "Your personal data is encrypted and HIPAA compliant. You can manage which practitioners have access to this record from the Privacy tab."
-                                    }
-                                </p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

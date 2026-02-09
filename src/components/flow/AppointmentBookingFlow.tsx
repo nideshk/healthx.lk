@@ -9,6 +9,7 @@ import ConsentFormStep from "./ConsentFormStep";
 import PreConsultationStep from "./PreConsultationStep";
 import PaymentStep from "./PaymentStep";
 import ConfirmBookingModal from "./ConfirmBookingModal";
+import ProfileConfirmation from "./ProfileConfirmation";
 
 import { AppointmentFormInputs } from "@/types/FormType";
 import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
@@ -19,9 +20,10 @@ enum Step {
   SERVICE_SELECTION = 0,
   DOCTOR_SELECTION = 1,
   BOOK_APPOINTMENT = 2,
-  CONSENT_SIGNING = 3,
-  PRE_CONSULTATION = 4,
-  PAYMENT = 5,
+  PROFILE_CONFIRMATION = 3,
+  CONSENT_SIGNING = 4,
+  PRE_CONSULTATION = 5,
+  PAYMENT = 6,
 }
 
 export default function AppointmentBookingFlow() {
@@ -80,6 +82,7 @@ export default function AppointmentBookingFlow() {
 
   const stepComponents: Record<Step, React.FC<any>> = {
     [Step.SERVICE_SELECTION]: ServiceSelectionStep,
+    [Step.PROFILE_CONFIRMATION]: ProfileConfirmation,
     [Step.DOCTOR_SELECTION]: DoctorSelectionStep,
     [Step.BOOK_APPOINTMENT]: BookAppointmentStep,
     [Step.CONSENT_SIGNING]: ConsentFormStep,

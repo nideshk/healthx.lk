@@ -128,7 +128,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
         start_time: "09:00",
         end_time: "18:00",
         days_unavailable: ["Sunday"],
-        timezone: "Asia/Kolkata",
+        timezone: "Asia/Colombo",
       },
     },
   });
@@ -361,7 +361,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
       }
 
       setMessage("🎉 Practitioner application submitted successfully!");
-      
+
       // REFRESH & REDIRECT LOGIC
       router.refresh(); // Tells Next.js to re-fetch the data list
       setTimeout(() => {
@@ -640,27 +640,27 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
             <div className="space-y-4 pt-4 border-t">
               <h3 className="font-semibold text-gray-700">Consultation Fees</h3>
               <select
-                  value={selectedAppointmentId}
-                  onChange={(e) => {
-                    handleAppointmentSelect(e);
-                    setSelectedAppointmentId("");
-                  }}
-                  className={`w-full px-3 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-teal-500
+                value={selectedAppointmentId}
+                onChange={(e) => {
+                  handleAppointmentSelect(e);
+                  setSelectedAppointmentId("");
+                }}
+                className={`w-full px-3 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-teal-500
                     ${selectedAppointmentId === ""
-                      ? "text-[rgb(138,138,138)]"
-                      : "text-gray-900"
-                    }
+                    ? "text-[rgb(138,138,138)]"
+                    : "text-gray-900"
+                  }
                   `}
-                >
-                  <option value="" disabled>
-                    Choose appointment type
+              >
+                <option value="" disabled>
+                  Choose appointment type
+                </option>
+                {appointmentTypes.map((type) => (
+                  <option key={type.id} value={type.id} className="text-gray-900">
+                    {type.name}
                   </option>
-                  {appointmentTypes.map((type) => (
-                    <option key={type.id} value={type.id} className="text-gray-900">
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
+                ))}
+              </select>
 
               {selectedAppointments.length > 0 && (
                 <div className="border rounded-lg overflow-hidden">

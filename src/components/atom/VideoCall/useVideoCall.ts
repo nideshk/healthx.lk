@@ -1,501 +1,251 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams, useParams } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
-import { supabaseClient } from "@/lib/supabaseClient";
-import { logCallEvent } from "@/lib/logCallEvent";
 
-const supabase = supabaseClient;
+type IVSModule = typeof import("amazon-ivs-web-broadcast");
 
-export type UseVideoCallReturn = {
-  localVideoRef: React.RefObject<HTMLVideoElement | null>;
-  peers: { [id: string]: MediaStream };
-  peerCameras: { [id: string]: boolean };
-  joined: boolean;
-  roomId: string | null;
-  isMuted: boolean;
-  isCameraOff: boolean;
-  isScreenSharing: boolean;
-  joinRoom: () => Promise<void>;
-  leaveRoom: () => Promise<void>;
-  toggleMic: () => void;
-  toggleCamera: () => Promise<void>;
-  toggleScreenShare: () => Promise<void>;
-};
+export function useVideoCall({ token }: { token: string }) {
+  if (!token) throw new Error("IVS token required");
 
-export type UseVideoCallOptions = {
-  appointmentId?: string;
-  roomKey ?: string;
-  onUserJoin?: (id: string) => void;
-  onUserLeave?: (id: string) => void;
-  localAppUserId?: string;
-  roomkey?: string;
-  localUserId ?: string;
-  token ?: string;
-  role ?: string;
-    iceServers  ?: any[];
-};
+  /* ---------------- REFS ---------------- */
 
-export function useVideoCall(opts?: UseVideoCallOptions): UseVideoCallReturn {
-  const searchParams = useSearchParams();
-  const params = useParams();
-  console.log(opts?.roomKey)
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [joined, setJoined] = useState(false);
-  const [peers, setPeers] = useState<{ [id: string]: MediaStream }>({});
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isCameraOff, setIsCameraOff] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [peerCameras, setPeerCameras] = useState<{ [id: string]: boolean }>({});
+  const ivsRef = useRef<IVSModule | null>(null);
+  const stageRef = useRef<any>(null);
+  const joiningRef = useRef(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const peerConnections = useRef<{ [peerId: string]: RTCPeerConnection }>({});
-  const peerId = useRef(uuidv4());
-  const channelRef = useRef<any>(null);
 
-  // negotiation helpers
-  const makingOffer = useRef(false);
-  const isPolite = (remoteId: string) => peerId.current > remoteId;
-  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const audioTrackRef = useRef<MediaStreamTrack | null>(null);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
 
-  useEffect(() => {
-    const fromQuery = searchParams.get("room") || opts?.roomKey;
-    const fromPath = (params as any)?.roomId as string | undefined;
-    const id = fromQuery || fromPath;
-    if (id) {
-      setRoomId(id);
-    }
-  }, [searchParams, params]);
+  /* ---------------- STATE ---------------- */
 
-  // --- Setup Local Media ---
-  const setupLocalStream = async () => {
+  const [joined, setJoined] = useState(false);
+  const [peers, setPeers] = useState<Record<string, MediaStream>>({});
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
+
+  /* ---------------- LOGGER ---------------- */
+
+  const logEvent = (event: string, meta?: any) => {
+    console.log("[CALL LOG]", {
+      event,
+      meta,
+      at: new Date().toISOString(),
+    });
+  };
+
+  /* ---------------- JOIN ---------------- */
+
+  const joinRoom = async () => {
+    if (joiningRef.current || stageRef.current) return;
+    joiningRef.current = true;
+
     try {
+      if (!ivsRef.current) {
+        ivsRef.current = await import("amazon-ivs-web-broadcast");
+      }
+
+      const {
+        Stage,
+        StageEvents,
+        LocalStageStream,
+        SubscribeType,
+      } = ivsRef.current;
+
+      /* 1️⃣ Get local media */
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: false, // start with camera off by default (if desired)
         audio: true,
+        video: true,
       });
 
-      stream.getTracks().forEach((t) => (t.enabled = true));
+      localStreamRef.current = stream;
+      audioTrackRef.current = stream.getAudioTracks()[0];
+      videoTrackRef.current = stream.getVideoTracks()[0];
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
-        await localVideoRef.current.play().catch(() => {});
+        localVideoRef.current.muted = true;
+        await localVideoRef.current.play().catch(() => { });
       }
 
-      setLocalStream(stream);
-      // camera is off because we requested video: false
-      setIsCameraOff(true);
+      /* 2️⃣ Publish / Subscribe strategy */
+      const strategy = {
+        stageStreamsToPublish() {
+          const streams = [];
+          if (audioTrackRef.current) {
+            streams.push(new LocalStageStream(audioTrackRef.current));
+          }
+          if (videoTrackRef.current?.enabled) {
+            streams.push(new LocalStageStream(videoTrackRef.current));
+          }
+          return streams;
+        },
 
-      return stream;
-    } catch (err) {
-      console.error("Camera/mic error:", err);
-      alert("Please allow microphone access.");
-      return null;
-    }
-  };
+        shouldPublishParticipant() {
+          return true;
+        },
 
-  // --- ICE Server Config ---
-  const getIceServers = () => [
-    { urls: "stun:stun.l.google.com:19302" },
-    {
-      urls: "turn:relay.metered.ca:80",
-      username: "openai",
-      credential: "openai123",
-    },
-  ];
+        // 🚫 CRITICAL FIX: NEVER subscribe to yourself
+        shouldSubscribeToParticipant(participant: any) {
+          return participant.isLocal
+            ? SubscribeType.NONE
+            : SubscribeType.AUDIO_VIDEO;
+        },
+      };
 
-  // --- Create Peer Connection ---
-  const createPeerConnection = (targetId: string, stream: MediaStream) => {
-    const pc = new RTCPeerConnection({ iceServers: getIceServers() });
+      /* 3️⃣ Create stage */
+      const stage = new Stage(token, strategy);
 
-    // Add audio tracks (video may be absent initially)
-    stream.getTracks().forEach((t) => {
-      // only add if kind exists on the track
-      try {
-        pc.addTrack(t, stream);
-      } catch (e) {
-        // ignore if adding track fails for some reason
-      }
-    });
+      /* ---------------- REMOTE EVENTS ---------------- */
 
-    pc.ontrack = (event) => {
-      const [remoteStream] = event.streams;
-      if (remoteStream) setPeers((prev) => ({ ...prev, [targetId]: remoteStream }));
-    };
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        sendSignal({
-          type: "ice-candidate",
-          from: peerId.current,
-          to: targetId,
-          candidate: event.candidate,
-        });
-      }
-    };
-
-    pc.onnegotiationneeded = async () => {
-      if (makingOffer.current || pc.signalingState !== "stable") return;
-      await negotiate(pc, targetId);
-    };
-
-    peerConnections.current[targetId] = pc;
-    return pc;
-  };
-
-  // --- Negotiation Helper ---
-  const negotiate = async (pc: RTCPeerConnection, remoteId: string) => {
-    if (pc.signalingState !== "stable") return;
-    try {
-      makingOffer.current = true;
-      const offer = await pc.createOffer();
-      if (pc.signalingState !== "stable") return;
-      await pc.setLocalDescription(offer);
-      await sendSignal({
-        type: "offer",
-        from: peerId.current,
-        to: remoteId,
-        sdp: pc.localDescription,
+      stage.on(StageEvents.STAGE_PARTICIPANT_JOINED, (participant: any) => {
+        logEvent("PEER_JOINED", { participantId: participant.id });
       });
-    } catch (err) {
-      console.error("Negotiation error:", err);
-    } finally {
-      makingOffer.current = false;
-    }
-  };
 
-  // --- Send Signal ---
-  const sendSignal = async (data: any) => {
-    if (!channelRef.current) return;
-    const payload = { ...data, appUserId: opts?.localAppUserId || null };
-    await channelRef.current.send({
-      type: "broadcast",
-      event: "signal",
-      payload: JSON.stringify(payload),
-    });
-  };
+      stage.on(
+        StageEvents.STAGE_PARTICIPANT_STREAMS_ADDED,
+        (participant: any, streams: any[]) => {
+          if (participant.isLocal) return;
 
-  // Best-effort synchronous leave sender (used for beforeunload only)
-  const sendLeaveNow = () => {
-    try {
-      if (channelRef.current?.send) {
-        channelRef.current.send({
-          type: "broadcast",
-          event: "signal",
-          payload: JSON.stringify({ type: "leave", from: peerId.current }),
-        });
-      }
-    } catch (e) {
-      // ignore — best-effort
-    }
-  };
-
-  // --- Join Room ---
-  const joinRoom = async () => {
-    if (!roomId) return alert("No Room ID found in URL");
-    if (joined) return;
-
-    const stream = await setupLocalStream();
-    if (!stream) return;
-
-    await wait(200 + Math.random() * 200);
-
-    const channel = supabase.channel(roomId, {
-      config: { broadcast: { self: false } },
-    });
-    channelRef.current = channel;
-
-    channel.on("broadcast", { event: "signal" }, async ({ payload }: any) => {
-      const msg = JSON.parse(payload);
-      if (!msg || msg.from === peerId.current) return;
-      if (msg.to && msg.to !== peerId.current) return;
-      const appUserId = msg.appUserId || null;
-
-      switch (msg.type) {
-        case "join": {
-          const pc = createPeerConnection(msg.from, stream);
-          await negotiate(pc, msg.from);
-          try {
-            opts?.onUserJoin?.(appUserId || msg.from);
-          } catch (e) {
-            console.warn("onUserJoin handler error", e);
-          }
-          break;
-        }
-
-        case "offer": {
-          const remoteId = msg.from;
-          const polite = isPolite(remoteId);
-          const pc = peerConnections.current[remoteId] || createPeerConnection(remoteId, stream);
-
-          const offerCollision = makingOffer.current || pc.signalingState !== "stable";
-
-          if (offerCollision) {
-            if (polite) {
-              await Promise.all([
-                pc.setLocalDescription({ type: "rollback" }),
-                pc.setRemoteDescription(new RTCSessionDescription(msg.sdp)),
-              ]);
-            } else return;
-          } else {
-            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-          }
-
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          await sendSignal({
-            type: "answer",
-            from: peerId.current,
-            to: remoteId,
-            sdp: pc.localDescription,
-          });
-          break;
-        }
-
-        case "answer": {
-          const pc = peerConnections.current[msg.from];
-          if (!pc) return;
-          await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-          break;
-        }
-
-        case "ice-candidate": {
-          const pc = peerConnections.current[msg.from];
-          if (pc && msg.candidate) await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-          break;
-        }
-
-        case "leave": {
-          const pc = peerConnections.current[msg.from];
-          if (pc) pc.close();
-          delete peerConnections.current[msg.from];
           setPeers((prev) => {
-            const updated = { ...prev };
-            delete updated[msg.from];
-            return updated;
+            const mediaStream =
+              prev[participant.id] ?? new MediaStream();
+
+            streams.forEach((s) => {
+              if (!mediaStream.getTracks().includes(s.mediaStreamTrack)) {
+                mediaStream.addTrack(s.mediaStreamTrack);
+              }
+            });
+
+            return {
+              ...prev,
+              [participant.id]: mediaStream,
+            };
           });
-          try {
-            opts?.onUserLeave?.(appUserId || msg.from);
-          } catch (e) {
-            console.warn("onUserLeave handler error", e);
-          }
-          break;
         }
+      );
 
-        case "camera-state": {
-          setPeerCameras((prev) => ({ ...prev, [msg.from]: msg.cameraOn }));
-          break;
+      stage.on(
+        StageEvents.STAGE_PARTICIPANT_STREAMS_REMOVED,
+        (participant: any) => {
+          setPeers((prev) => {
+            const stream = prev[participant.id];
+            stream?.getTracks().forEach((t) => t.stop());
+
+            const copy = { ...prev };
+            delete copy[participant.id];
+            return copy;
+          });
         }
-      }
-    });
+      );
 
-    await channel.subscribe(async (status: string) => {
-      if (status === "SUBSCRIBED") {
-        setJoined(true);
-        await wait(100);
-        await sendSignal({ type: "join", from: peerId.current });
-        // announce initial camera state to others (false since we started with no video)
-        await sendSignal({ type: "camera-state", from: peerId.current, cameraOn: !isCameraOff });
-      }
-    });
-  };
+      stage.on(StageEvents.STAGE_PARTICIPANT_LEFT, (participant: any) => {
+        setPeers((prev) => {
+          const stream = prev[participant.id];
+          stream?.getTracks().forEach((t) => t.stop());
 
-  // Auto-join when roomId detected
-  useEffect(() => {
-    if (roomId && !joined) {
-      joinRoom();
-      logCallEvent({
-        appointmentId: opts?.appointmentId || "unknown",
-        eventType: "joined_call",
+          const copy = { ...prev };
+          delete copy[participant.id];
+          return copy;
+        });
+
+        logEvent("PEER_LEFT", { participantId: participant.id });
       });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId]);
 
-  // --- Leave Room ---
+      stage.on(StageEvents.ERROR, (error: any) => {
+        logEvent("STAGE_ERROR", error);
+      });
+
+      /* 4️⃣ Join */
+      await stage.join();
+      stageRef.current = stage;
+      setJoined(true);
+
+      logEvent("JOIN_CALL");
+    } finally {
+      joiningRef.current = false;
+    }
+  };
+
+  /* ---------------- LEAVE ---------------- */
+
   const leaveRoom = async () => {
-    localStream?.getTracks().forEach((t) => t.stop());
-    Object.values(peerConnections.current).forEach((pc) => pc.close());
-    peerConnections.current = {};
+    logEvent("LEAVE_CALL");
+
     try {
-      await sendSignal({ type: "leave", from: peerId.current });
-    } catch (e) {
-      // ignore send errors
+      if (stageRef.current) {
+        await stageRef.current.leave();
+      }
+    } catch {
+      // ignore leave errors
+    } finally {
+      stageRef.current = null;
     }
-    await channelRef.current?.unsubscribe();
-    setJoined(false);
+
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
+
     setPeers({});
-    setLocalStream(null);
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    setJoined(false);
   };
 
-  // --- Toggle Mic / Camera / Screen ---
+  /* ---------------- PAGE EXIT SAFETY ---------------- */
+
+  useEffect(() => {
+    const forceLeave = async () => {
+      if (!stageRef.current) return;
+      await stageRef.current.leave().catch(() => { });
+      stageRef.current = null;
+    };
+
+    window.addEventListener("beforeunload", forceLeave);
+    window.addEventListener("pagehide", forceLeave);
+
+    return () => {
+      forceLeave();
+      window.removeEventListener("beforeunload", forceLeave);
+      window.removeEventListener("pagehide", forceLeave);
+    };
+  }, []);
+
+  /* ---------------- CONTROLS ---------------- */
+
   const toggleMic = () => {
-    if (!localStream) return;
-    const track = localStream.getAudioTracks()[0];
-    if (track) {
-      track.enabled = !track.enabled;
-      setIsMuted(!track.enabled);
-    }
+    if (!audioTrackRef.current) return;
+
+    audioTrackRef.current.enabled = !audioTrackRef.current.enabled;
+    setIsMuted(!audioTrackRef.current.enabled);
+
+    logEvent("TOGGLE_MIC", {
+      enabled: audioTrackRef.current.enabled,
+    });
   };
 
-  const toggleCamera = async () => {
-    if (!localStream) return;
+  const toggleCamera = () => {
+    if (!videoTrackRef.current) return;
 
-    if (!isCameraOff) {
-      const videoTrack = localStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.stop();
-        localStream.removeTrack(videoTrack);
+    videoTrackRef.current.enabled = !videoTrackRef.current.enabled;
+    setIsCameraOff(!videoTrackRef.current.enabled);
 
-        for (const [id, pc] of Object.entries(peerConnections.current)) {
-          const sender = pc.getSenders().find((s) => s.track?.kind === "video");
-          if (sender) await sender.replaceTrack(null as any);
-        }
-
-        if (localVideoRef.current) localVideoRef.current.srcObject = null;
-
-        await sendSignal({ type: "camera-state", from: peerId.current, cameraOn: false });
-
-        setIsCameraOff(true);
-      }
-    } else {
-      try {
-        await new Promise((r) => setTimeout(r, 300));
-
-        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const newTrack = newStream.getVideoTracks()[0];
-
-        const combined = new MediaStream([...(localStream.getAudioTracks() || []), newTrack]);
-
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = combined;
-          await localVideoRef.current.play().catch(() => {});
-        }
-
-        setLocalStream(combined);
-
-        for (const [id, pc] of Object.entries(peerConnections.current)) {
-          const sender = pc.getSenders().find((s) => s.track?.kind === "video");
-          if (sender) {
-            await sender.replaceTrack(newTrack);
-          } else {
-            pc.addTrack(newTrack, combined);
-          }
-
-          await negotiate(pc, id);
-        }
-
-        await sendSignal({ type: "camera-state", from: peerId.current, cameraOn: true });
-
-        setIsCameraOff(false);
-      } catch (err) {
-        console.error("Error re-enabling camera:", err);
-        alert("Could not access camera again. Please allow permissions.");
-      }
-    }
+    logEvent("TOGGLE_CAMERA", {
+      enabled: videoTrackRef.current.enabled,
+    });
   };
 
-  const toggleScreenShare = async () => {
-    if (!peerConnections.current) return;
-    if (!isScreenSharing) {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const screenTrack = screenStream.getVideoTracks()[0];
-      screenTrack.onended = () => toggleScreenShare();
-
-      for (const pc of Object.values(peerConnections.current)) {
-        const sender = pc.getSenders().find((s) => s.track?.kind === "video");
-        sender?.replaceTrack(screenTrack);
-      }
-
-      if (localVideoRef.current) localVideoRef.current.srcObject = screenStream;
-      setIsScreenSharing(true);
-    } else {
-      if (!localStream) return;
-      const cameraTrack = localStream.getVideoTracks()[0];
-      for (const pc of Object.values(peerConnections.current)) {
-        const sender = pc.getSenders().find((s) => s.track?.kind === "video");
-        sender?.replaceTrack(cameraTrack);
-      }
-      if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
-      setIsScreenSharing(false);
-    }
-  };
-
-  // Ensure local video attached
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-      localVideoRef.current.play().catch(() => {});
-    }
-  }, [localStream]);
-
-  // Retry attachment
-  useEffect(() => {
-    let tries = 0;
-    const interval = setInterval(() => {
-      if (!localStream || !localVideoRef.current) return;
-      if (localVideoRef.current.srcObject !== localStream) {
-        localVideoRef.current.srcObject = localStream;
-        localVideoRef.current.play().catch(() => {});
-      }
-      tries++;
-      if (tries > 10) clearInterval(interval);
-    }, 500);
-    return () => clearInterval(interval);
-  }, [localStream]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      try {
-        localStream?.getTracks().forEach((t) => t.stop());
-      } catch (e) {
-        // ignore
-      }
-      try {
-        Object.values(peerConnections.current).forEach((pc) => pc.close());
-      } catch (e) {
-        // ignore
-      }
-      try {
-        channelRef.current?.unsubscribe?.();
-      } catch (e) {
-        // ignore
-      }
-    };
-  }, []);
-
-  // Only send a "best-effort" leave on real unload/close.
-  useEffect(() => {
-    const onBeforeUnload = (e?: BeforeUnloadEvent) => {
-      // best-effort synchronous send to notify peers of a leave
-      sendLeaveNow();
-      // no preventDefault; we don't block unload
-    };
-
-    window.addEventListener("beforeunload", onBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", onBeforeUnload);
-    };
-  }, []);
+  /* ---------------- EXPORT ---------------- */
 
   return {
     localVideoRef,
     peers,
-    peerCameras,
     joined,
-    roomId,
     isMuted,
     isCameraOff,
-    isScreenSharing,
     joinRoom,
     leaveRoom,
     toggleMic,
     toggleCamera,
-    toggleScreenShare,
+    localStream: localStreamRef.current, // 👈 ADD THIS
+
   };
 }

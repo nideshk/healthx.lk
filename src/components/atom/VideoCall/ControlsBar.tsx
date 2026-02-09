@@ -1,128 +1,93 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import {
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-  MonitorUp,
-  MonitorX,
-  PhoneOff,
-} from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
+import React from "react";
 
-type Props = {
+interface ControlsBarProps {
   isMuted: boolean;
   isCameraOff: boolean;
-  isScreenSharing: boolean;
-
   toggleMic: () => void;
-  toggleCamera: () => Promise<void>;
-  toggleScreenShare: () => Promise<void>;
-  leaveRoom: () => Promise<void>;
-onJoin: () => Promise<void>;
-  onLogEvent?: (eventType: string) => void; // optional callback hook
-};
+  toggleCamera: () => void;
+  leaveRoom: () => void;
+}
 
 export default function ControlsBar({
   isMuted,
   isCameraOff,
-  isScreenSharing,
   toggleMic,
   toggleCamera,
-  toggleScreenShare,
   leaveRoom,
-  onLogEvent,
-  onJoin,
-}: Props) {
-  const [visible, setVisible] = useState(true);
-  const idleTimer = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    const handleActivity = () => {
-      setVisible(true);
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-      idleTimer.current = setTimeout(() => setVisible(false), 3500);
-    };
-
-    window.addEventListener("mousemove", handleActivity);
-    window.addEventListener("click", handleActivity);
-    window.addEventListener("keydown", handleActivity);
-
-    // initial show
-    handleActivity();
-
-    return () => {
-      window.removeEventListener("mousemove", handleActivity);
-      window.removeEventListener("click", handleActivity);
-      window.removeEventListener("keydown", handleActivity);
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-    };
-  }, []);
-
-  const buttonBase =
-    "flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 text-white";
-
+}: ControlsBarProps) {
   return (
-    <div
-      className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center gap-3 sm:gap-5 
-      bg-white/10 backdrop-blur-xl border border-white/10 px-4 sm:px-6 py-3 rounded-full shadow-xl
-      transition-all duration-500 ease-in-out
-      ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
-    >
-      {/* Mic */}
-      <button
-        onClick={() => {
-          onLogEvent?.(isMuted ? "MIC_ON" : "MIC_OFF");
-          toggleMic();
-        }}
-        className={`${buttonBase} ${
-          isMuted ? "bg-gray-600 hover:bg-gray-500" : "bg-blue-600 hover:bg-blue-700"
-        }`}
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+
+      {/* MIC BUTTON */}
+      <ControlButton
+        onClick={toggleMic}
+        active={!isMuted}
+        variant={isMuted ? "danger" : "default"}
         title={isMuted ? "Unmute" : "Mute"}
       >
-        {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-      </button>
+        {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
+      </ControlButton>
 
-      {/* Camera */}
-      <button
-        onClick={async () => {
-          onLogEvent?.(isCameraOff ? "CAMERA_ON" : "CAMERA_OFF");
-          await toggleCamera();
-        }}
-        className={`${buttonBase} ${
-          isCameraOff ? "bg-gray-600 hover:bg-gray-500" : "bg-blue-600 hover:bg-blue-700"
-        }`}
-        title={isCameraOff ? "Turn On Camera" : "Turn Off Camera"}
+      {/* CAMERA BUTTON */}
+      <ControlButton
+        onClick={toggleCamera}
+        active={!isCameraOff}
+        variant={isCameraOff ? "danger" : "default"}
+        title={isCameraOff ? "Turn Camera On" : "Turn Camera Off"}
       >
-        {isCameraOff ? <VideoOff size={20} /> : <Video size={20} />}
-      </button>
+        {isCameraOff ? <VideoOff size={22} /> : <Video size={22} />}
+      </ControlButton>
 
-      {/* Screen Share */}
-      <button
-        onClick={async () => {
-          onLogEvent?.(isScreenSharing ? "SCREEN_SHARE_STOP" : "SCREEN_SHARE_START");
-          await toggleScreenShare();
-        }}
-        className={`${buttonBase} ${
-          isScreenSharing ? "bg-purple-500 hover:bg-purple-400" : "bg-purple-600 hover:bg-purple-700"
-        }`}
-        title={isScreenSharing ? "Stop Sharing" : "Share Screen"}
-      >
-        {isScreenSharing ? <MonitorX size={20} /> : <MonitorUp size={20} />}
-      </button>
+      {/* LEAVE BUTTON */}
+      <div className="w-px h-8 bg-white/10 mx-2" /> {/* Divider */}
 
-      {/* Leave Call */}
-      <button
-        onClick={() => {
-          onLogEvent?.("LOCAL_LEAVE");
-          leaveRoom();
-        }}
-        className={`${buttonBase} bg-red-600 hover:bg-red-700`}
-        title="End Call"
+      <ControlButton
+        onClick={leaveRoom}
+        active={false}
+        variant="hangup"
+        title="Leave Meeting"
       >
-        <PhoneOff size={20} />
-      </button>
+        <PhoneOff size={22} fill="currentColor" />
+      </ControlButton>
     </div>
+  );
+}
+
+/* ---------------- HELPER COMPONENT ---------------- */
+
+function ControlButton({
+  children,
+  onClick,
+  active,
+  variant,
+  title,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  active: boolean;
+  variant: "default" | "danger" | "hangup";
+  title: string;
+}) {
+  const baseStyles = "p-4 rounded-xl transition-all duration-200 flex items-center justify-center";
+
+  const variants = {
+    default: active
+      ? "bg-zinc-800 text-white hover:bg-zinc-700"
+      : "bg-zinc-800 text-white hover:bg-zinc-700",
+    danger: "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20",
+    hangup: "bg-red-600 text-white hover:bg-red-700 hover:scale-105 shadow-lg shadow-red-900/20",
+  };
+
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      className={`${baseStyles} ${variants[variant]}`}
+    >
+      {children}
+    </button>
   );
 }

@@ -23,11 +23,11 @@ export async function sendAppointmentInvites({
       room_key
     });
 
-    const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/appointment/meeting?token=${token}`;
+    const inviteLink = `https://www.clinecxa.com/meeting?token=${token}`;
 
     await notify({
-      
-      userId : "20d75bab-f17c-4173-a06f-01b4515711c7", // Using email as userId for guest invites
+
+      userId: "20d75bab-f17c-4173-a06f-01b4515711c7", // Using email as userId for guest invites
       role: "guest",
       eventType: "appointment_invite",
       channels: ["email"],

@@ -67,6 +67,8 @@ const APPOINTMENT_SELECT = `
    API HANDLER
 ------------------------------------------------ */
 export async function POST(req: Request) {
+  console.log("reaching here check here", req)
+
   try {
     const body = await req.json();
     const { token, roomKey } = body as {
@@ -83,6 +85,7 @@ export async function POST(req: Request) {
       try {
         decoded = jwt.verify(token, JWT_SECRET) as InviteTokenPayload;
       } catch {
+        console.log("invalid")
         return NextResponse.json(
           { authorized: false, error: "Invalid or expired invite link" },
           { status: 401 }
@@ -160,6 +163,7 @@ export async function POST(req: Request) {
 
     const { user, authorized } = await requireUser(req);
     if (!authorized) {
+      console.log("user", user, authorized)
       return NextResponse.json(
         { authorized: false, error: "Unauthorized" },
         { status: 401 }
