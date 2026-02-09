@@ -250,22 +250,22 @@ export default function UnifiedProfileUI() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-10">
-                                <FormInput label="First Name" value={editForm.first_name} isEditing={isEditing} onChange={(v) => setEditForm({ ...editForm, first_name: v })} icon={<User size={16} />} />
-                                <FormInput label="Last Name" value={editForm.last_name} isEditing={isEditing} onChange={(v) => setEditForm({ ...editForm, last_name: v })} icon={<User size={16} />} />
-                                <FormInput label="City" value={editForm.city} isEditing={isEditing} onChange={(v) => setEditForm({ ...editForm, city: v })} icon={<MapPin size={16} />} />
-                                <FormInput label="Country" value={editForm.country} isEditing={isEditing} onChange={(v) => setEditForm({ ...editForm, country: v })} icon={<Globe size={16} />} />
+                                <FormInput label="First Name" value={editForm.first_name} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, first_name: v })} icon={<User size={16} />} />
+                                <FormInput label="Last Name" value={editForm.last_name} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, last_name: v })} icon={<User size={16} />} />
+                                <FormInput label="City" value={editForm.city} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, city: v })} icon={<MapPin size={16} />} />
+                                <FormInput label="Country" value={editForm.country} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, country: v })} icon={<Globe size={16} />} />
 
                                 {isPractitioner ? (
                                     <>
-                                        <FormInput label="Specialty" value={editForm.specialty} isEditing={isEditing} onChange={(v) => setEditForm({ ...editForm, specialty: v })} icon={<Activity size={16} />} />
+                                        <FormInput label="Specialty" value={editForm.specialty} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, specialty: v })} icon={<Activity size={16} />} />
                                     </>
                                 ) : (
                                     <>
                                         <div className="md:col-span-2">
-                                            <FormInput label="Residential Address" value={editForm.address} isEditing={isEditing} onChange={(v) => setEditForm({ ...editForm, address: v })} icon={<Landmark size={16} />} />
+                                            <FormInput label="Residential Address" value={editForm.address} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, address: v })} icon={<Landmark size={16} />} />
                                         </div>
                                         <div className="md:col-span-2">
-                                            <AllergyTagInput label="Known Allergies" value={editForm.allergies} isEditing={isEditing} onChange={(v) => setEditForm({ ...editForm, allergies: v })} />
+                                            <AllergyTagInput label="Known Allergies" value={editForm.allergies} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, allergies: v })} />
                                         </div>
                                     </>
                                 )}
