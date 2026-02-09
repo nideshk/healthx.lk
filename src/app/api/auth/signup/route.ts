@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       city,
       state_province,
       country,
-      pin_code,
+      marketing_consent = false,
       government_id_type,
       government_id_number,
     } = await req.json();
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         contact_number: phone,
         emergency_contact,
         address,
-        notes: pin_code ? `PIN: ${pin_code}` : null,
+        marketing_consent,
       });
 
     if (patientError) {

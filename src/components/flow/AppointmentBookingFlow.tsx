@@ -15,6 +15,7 @@ import { AppointmentFormInputs } from "@/types/FormType";
 import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
 import { syncAppointmentDraft } from "@/lib/syncAppointmentDraft";
 import { useDraftSyncLifecycle } from "@/hooks/useDraftSyncLifecycle";
+import PaymentConfirmation from "./PaymentConfirmation";
 
 enum Step {
   SERVICE_SELECTION = 0,
@@ -24,6 +25,7 @@ enum Step {
   CONSENT_SIGNING = 4,
   PRE_CONSULTATION = 5,
   PAYMENT = 6,
+  PAYMENT_CONFIRMATION = 7
 }
 
 export default function AppointmentBookingFlow() {
@@ -88,6 +90,7 @@ export default function AppointmentBookingFlow() {
     [Step.CONSENT_SIGNING]: ConsentFormStep,
     [Step.PRE_CONSULTATION]: PreConsultationStep,
     [Step.PAYMENT]: PaymentStep,
+    [Step.PAYMENT_CONFIRMATION]: PaymentConfirmation
   };
 
   const CurrentStepComponent = stepComponents[currentStep];

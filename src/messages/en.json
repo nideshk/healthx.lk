@@ -127,7 +127,10 @@
     "noDoctors": "No doctors available for this service yet.",
     "tryAnotherService": "Try another service",
     "verifiedSpecialist": "Verified Specialist",
-    "consultationFee": "Avg. Consultation Fee"
+    "consultationFee": "Consultation starting at",
+    "sortBy": "Sort",
+    "priceLowHigh": "Price: Low to High",
+    "priceHighLow": "Price: High to Low"
   },
   "bookAppointment": {
     "loadDoctorError": "Unable to load doctor details",
@@ -149,7 +152,7 @@
     "chooseDate": "Choose a date",
     "availableSlots": "Available Time Slots",
     "pickDate": "Select a date to view available time slots",
-    "fullyBooked": "Fully booked",
+    "fullyBooked": "No Slots Available",
     "tryAnotherDate": "Try another date",
     "summary": "Appointment Summary",
     "confirming": "Confirming...",
@@ -178,6 +181,29 @@
     "finalize": "Finalize Appointment",
     "declineTerms": "I do not agree to these terms",
     "back": "Back"
+  },
+  "PaymentConfirmation": {
+    "title": "Payment Made, Appointment Confirmed!",
+    "subtitle": "Congratulations",
+    "prepareTitle": "How to Prepare for Your Telehealth Appointment",
+    "email": {
+      "title": "Email Confirmation",
+      "description": "You will receive an email to your registered email address with the appointment link. Please check your SPAM folder if you don’t see this email in your inbox."
+    },
+    "appointmentDay": {
+      "title": "On Appointment Day",
+      "description": "Click on the link provided in your email to join the appointment. Your doctor will join you on time. Make sure you have a stable internet connection and are in a quiet environment."
+    },
+    "members": {
+      "title": "Additional Members",
+      "description": "If you selected additional members for this appointment, please forward the appointment link to them so they can join the consultation as well."
+    },
+    "followup": {
+      "title": "Follow-up Call",
+      "description": "Once your appointment is completed, we will call you to see how we did and how we can improve our services. Your feedback is valuable to us."
+    },
+    "footer": "Thank you for choosing our telehealth services. We look forward to providing you with excellent care.",
+    "returnHome": "Return to Home"
   },
   "preConsultation": {
     "title": "Pre-Consultation",
@@ -226,33 +252,6 @@
       "timeLeft": "Time Left",
       "verifying": "Verifying Payment",
       "confirming": "Confirming your booking with the bank..."
-    }
-  },
-  "paymentUI": {
-    "title": "Review & Complete Payment",
-    "doctorDetails": "Doctor Details",
-    "appointmentDetails": "Appointment Details",
-    "service": "Service",
-    "type": "Type",
-    "duration": "Duration",
-    "minutes": "mins",
-    "date": "Date",
-    "time": "Time",
-    "pricingSummary": "Pricing Summary",
-    "haveCoupon": "Have a coupon?",
-    "enterCode": "ENTER CODE",
-    "apply": "Apply",
-    "applying": "Applying…",
-    "couponApplied": "Coupon applied successfully",
-    "consultation": "Consultation",
-    "additionalAttendees": "Additional Attendees",
-    "couponDiscount": "Coupon Discount",
-    "total": "Total",
-    "payNow": "Pay Now →",
-    "back": "← Back",
-    "errors": {
-      "invalidCoupon": "Invalid coupon",
-      "couponFailed": "Failed to validate coupon"
     }
   },
   "homepage": {
@@ -458,6 +457,7 @@
   },
   "signup": {
     "title": "Patient Signup",
+    "marketingConsent": "I agree to receive updates, offers, and health tips via email or SMS. You can unsubscribe anytime.",
     "countryDefault": "Sri Lanka",
     "buttonDefault": "Sign Up",
     "buttonLoading": "Signing up...",
@@ -575,6 +575,51 @@
       "para2": "I also saw the challenges clinicians face. By giving doctors better tools and a better work-life balance, we ensure they can provide even better care to their patients.",
       "para3": "Our mission is to put people first—patients, caregivers, and clinicians alike. We are building something safer and more compassionate for everyone.",
       "signoff": "Nidesh Kulatunga"
+    }
+  },
+  "paymentUI": {
+    "scheduleDetails": "Schedule Details",
+    "consultationDetails": "Consultation",
+    "preConsultationNotes": "Pre-Consultation Notes",
+    "primaryConcern": "Primary Concern",
+    "expectedOutcome": "Expected Outcome",
+    "referralSource": "Referral source",
+    "consultationFee": "Consultation Fee",
+    "serviceCharges": "Service Charges",
+    "discount": "Discount",
+    "totalToPay": "Total to pay",
+    "secure": "SECURE",
+    "completePayment": "Complete Payment",
+    "editBooking": "Edit Booking Details",
+    "status": {
+      "sessionExpired": "Session expired",
+      "timeLeft": "Time left",
+      "completePayment": "Complete payment to secure slot"
+    },
+    "title": "Review & Complete Payment",
+    "doctorDetails": "Doctor Details",
+    "appointmentDetails": "Appointment Details",
+    "service": "Service",
+    "type": "Type",
+    "duration": "Duration",
+    "minutes": "mins",
+    "date": "Date",
+    "time": "Time",
+    "pricingSummary": "Pricing Summary",
+    "haveCoupon": "Have a coupon?",
+    "enterCode": "ENTER CODE",
+    "apply": "Apply",
+    "applying": "Applying…",
+    "couponApplied": "Coupon applied successfully",
+    "consultation": "Consultation",
+    "additionalAttendees": "Additional Attendees",
+    "couponDiscount": "Coupon Discount",
+    "total": "Total",
+    "payNow": "Pay Now →",
+    "back": "← Back",
+    "errors": {
+      "invalidCoupon": "Invalid coupon",
+      "couponFailed": "Failed to validate coupon"
     }
   }
 }

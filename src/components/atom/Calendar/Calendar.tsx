@@ -7,7 +7,7 @@ type CalendarProps = {
   value?: Date;
   onChange?: (date: Date | undefined) => void;
   minDate?: Date;
-  highlightedDates?: string[]; // ["2026-02-04", "2026-02-05"]
+  highlightedDates?: string[];
   theme?: "light" | "dark";
 };
 
@@ -28,25 +28,16 @@ export default function Calendar({
   );
 
   const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
   ];
 
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  // Normalize minDate to start of day
+  const minDateStart = new Date(minDate);
+  minDateStart.setHours(0, 0, 0, 0);
 
   const handleSelect = (day: number) => {
     const newDate = new Date(currentYear, currentMonth, day);
@@ -117,7 +108,6 @@ export default function Calendar({
 
       {/* Days */}
       <div className="grid grid-cols-7 gap-1">
-        {/* Empty cells before first day */}
         {Array.from({ length: firstDay }).map((_, i) => (
           <div key={`empty-${i}`} />
         ))}
@@ -135,7 +125,10 @@ export default function Calendar({
           const isToday =
             date.toDateString() === today.toDateString();
 
-          const isDisabled = date < todayStart;
+          const isPast = date < minDateStart;
+
+          // Past days are treated as unavailable
+          const isDisabled = isPast || !isAvailable;
 
           return (
             <button
@@ -146,13 +139,11 @@ export default function Calendar({
                 "h-10 w-full flex items-center justify-center rounded-xl text-xs font-bold transition-all",
                 isSelected
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
-                  : isAvailable
+                  : !isPast && isAvailable
                     ? "bg-teal-500 text-white hover:bg-teal-600"
                     : isToday
                       ? "border-2 border-blue-100 text-blue-600"
-                      : isDisabled
-                        ? "text-slate-200 cursor-not-allowed"
-                        : "text-slate-600 hover:bg-blue-50 hover:text-blue-600"
+                      : "text-slate-300 cursor-not-allowed"
               )}
             >
               {day}

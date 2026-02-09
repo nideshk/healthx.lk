@@ -31,8 +31,11 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
   bookingData,
   consultationFee,
   attendeeCount,
+  timeLeft,
+  formatTime,
   isPaymentProcessing,
   isVerifying,
+  isExpired,
   handlePayment,
   prevStep,
   setCoupon,
@@ -51,9 +54,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
 
   const platformFee = attendeeCount * 100;
   const baseTotal = consultationFee + platformFee;
-
   const discountAmount = appliedCoupon?.discount?.discount_total || 0;
-
   const finalTotal = Math.max(baseTotal - discountAmount, 0);
 
   const applyCoupon = async () => {
@@ -98,6 +99,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
     setCouponCode("");
     setAppliedCoupon(null);
     setCouponError(null);
+    setCoupon(null);
   };
 
   return (
@@ -127,7 +129,9 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                   <div>
                     <p className="text-lg font-semibold">
                       {doctor?.name}{" "}
-                      <span className="text-sm">{doctor?.qualification}</span>
+                      <span className="text-sm">
+                        {doctor?.qualification}
+                      </span>
                     </p>
                     <p className="text-sm text-gray-600">
                       {doctor?.specialization}
@@ -160,16 +164,20 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
               <p>
                 <strong>{t("date")}:</strong>{" "}
                 {bookingData.starts_at
-                  ? new Date(bookingData.starts_at).toLocaleDateString()
+                  ? new Date(
+                    bookingData.starts_at
+                  ).toLocaleDateString()
                   : "—"}
               </p>
               <p>
                 <strong>{t("time")}:</strong>{" "}
                 {bookingData.starts_at
-                  ? new Date(bookingData.starts_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                  ? new Date(
+                    bookingData.starts_at
+                  ).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                   : "—"}
               </p>
             </div>
@@ -187,7 +195,30 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
           {/* RIGHT COLUMN */}
           <div className="lg:col-span-1">
             <div className="p-6 rounded-2xl bg-white shadow sticky top-24">
-              <h3 className="text-xl font-bold mb-5">{t("pricingSummary")}</h3>
+              <h3 className="text-xl font-bold mb-5">
+                {t("pricingSummary")}
+              </h3>
+
+              {/* Countdown */}
+              {isExpired ? (
+                <div className="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-center">
+                  <p className="text-sm font-semibold text-red-600">
+                    {t("status.sessionExpired")}
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-5 p-3 rounded-lg bg-blue-50 border border-blue-200 text-center">
+                  <p className="text-xs text-blue-600 font-semibold uppercase">
+                    {t("status.timeLeft")}
+                  </p>
+                  <p className="text-2xl font-bold text-blue-700">
+                    {formatTime(timeLeft)}
+                  </p>
+                  <p className="text-xs text-blue-500 mt-1">
+                    {t("status.completePayment")}
+                  </p>
+                </div>
+              )}
 
               {/* Coupon */}
               <div className="mb-4 space-y-2">
@@ -206,19 +237,30 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                     disabled={couponLoading || !!appliedCoupon}
                   />
 
-                  {!appliedCoupon && (
+                  {!appliedCoupon ? (
                     <button
                       onClick={applyCoupon}
                       disabled={couponLoading || !couponCode}
                       className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold disabled:bg-gray-400"
                     >
-                      {couponLoading ? t("applying") : t("apply")}
+                      {couponLoading
+                        ? t("applying")
+                        : t("apply")}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={removeCoupon}
+                      className="px-3 text-sm text-red-600 underline"
+                    >
+                      Remove
                     </button>
                   )}
                 </div>
 
                 {couponError && (
-                  <p className="text-sm text-red-600">{couponError}</p>
+                  <p className="text-sm text-red-600">
+                    {couponError}
+                  </p>
                 )}
 
                 {appliedCoupon && (
@@ -252,23 +294,34 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
 
                 <div className="flex justify-between text-lg font-bold">
                   <span>{t("total")}</span>
-                  <span className="text-blue-700">LKR {finalTotal}</span>
+                  <span className="text-blue-700">
+                    LKR {finalTotal}
+                  </span>
                 </div>
               </div>
 
               <button
                 onClick={() =>
                   handlePayment({
-                    coupon_code: appliedCoupon ? couponCode : null,
+                    coupon_code: appliedCoupon
+                      ? couponCode
+                      : null,
                     discount: appliedCoupon?.discount || null,
                     final_amount: finalTotal,
                   })
                 }
-                disabled={isPaymentProcessing || isVerifying}
+                disabled={
+                  isPaymentProcessing ||
+                  isVerifying ||
+                  isExpired
+                }
                 className="w-full mt-6 py-3 rounded-lg text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 flex items-center justify-center gap-2"
               >
                 {isPaymentProcessing ? (
-                  <Loader2 size={20} className="animate-spin" />
+                  <Loader2
+                    size={20}
+                    className="animate-spin"
+                  />
                 ) : (
                   t("payNow")
                 )}

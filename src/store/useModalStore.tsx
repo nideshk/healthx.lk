@@ -3,8 +3,9 @@ import { create } from "zustand";
 interface ModalStore {
   isLoginModalOpen: boolean;
   isSignupModalOpen: boolean;
+  redirectTo: string | null;
 
-  openLoginModal: () => void;
+  openLoginModal: (redirectTo?: string) => void;
   closeLoginModal: () => void;
 
   openSignupModal: () => void;
@@ -14,9 +15,13 @@ interface ModalStore {
 export const useModalStore = create<ModalStore>((set) => ({
   isLoginModalOpen: false,
   isSignupModalOpen: false,
+  redirectTo: null,
 
-  openLoginModal: () => set({ isLoginModalOpen: true }),
-  closeLoginModal: () => set({ isLoginModalOpen: false }),
+  openLoginModal: (redirectTo) =>
+    set({ isLoginModalOpen: true, redirectTo: redirectTo || null }),
+
+  closeLoginModal: () =>
+    set({ isLoginModalOpen: false, redirectTo: null }),
 
   openSignupModal: () => set({ isSignupModalOpen: true }),
   closeSignupModal: () => set({ isSignupModalOpen: false }),

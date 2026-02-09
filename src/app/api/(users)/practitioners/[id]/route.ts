@@ -145,6 +145,16 @@ export async function GET(
       );
     }
 
+    const { data: available, error: availableError } = await supabaseClient
+      .from("practitioner_availability")
+      .select("*")
+      .eq("practitioner_id", id);
+
+    if (availableError) {
+      console.error("Available fetch error:", availableError);
+    }
+
+
     // ---------------------------
     // 6️⃣ Admin / Self View
     // ---------------------------
@@ -166,6 +176,7 @@ export async function GET(
         profile_image: practitioner.profile_picture_url,
         available_services: practitioner.available_services,
         appointment_types: appointmentTypes,
+        available_days: available,
       },
       bank_details: bankDetails,
       requested_by: user?.auth_user_id,
