@@ -160,13 +160,16 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         }
       }
 
-      const { reset } = useBookingDraftStore.getState();
-      await reset();
+
 
       updateData({
         payment_status: "completed",
         appointment_id: appointmentId,
       });
+
+      const { reset } = useBookingDraftStore.getState();
+      await reset();
+
       nextStep();
     };
 
