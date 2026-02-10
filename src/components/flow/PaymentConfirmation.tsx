@@ -1,13 +1,19 @@
 'use client';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CheckCircle, Calendar, Mail, Users, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useBookingDraftStore } from '@/stores/useBookingDraftStore';
 
 function PaymentConfirmation() {
     const router = useRouter();
     const t = useTranslations('PaymentConfirmation');
+    const resetBookingDraft = useBookingDraftStore((s) => s.reset);
 
+    useEffect(() => {
+        // Clear booking data when confirmation loads
+        resetBookingDraft();
+    }, [resetBookingDraft]);
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-10">
             <div className="w-full max-w-3xl bg-white rounded-xl shadow-md overflow-hidden">
