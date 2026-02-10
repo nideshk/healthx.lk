@@ -66,6 +66,7 @@ function CheckoutContent() {
   return (
     <div className="container mx-auto">
       <PaymentStep
+        nextStep={() => router.push('/dashboard/appointment')}
         bookingData={bookingData}
         isManualCheckout={true}
         preExistingId={appointmentId}

@@ -21,7 +21,7 @@ const SRI_LANKA_LOCATIONS: Record<string, string[]> = {
 };
 
 export default function SignupForm() {
-  const t = useTranslations("signup"); // Initialize translations
+  const t = useTranslations("signup");
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -39,7 +39,8 @@ export default function SignupForm() {
     country: "",
     state_province: "",
     city: "",
-    pin_code: "",
+    marketing_consent: false, // ← add this
+
   });
 
   const [loading, setLoading] = useState(false);
@@ -49,12 +50,15 @@ export default function SignupForm() {
      Handlers
   ───────────────────────────── */
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: any
   ) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+    const { name, value, type, checked } = e.target;
 
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
   const handleSignup = async () => {
     if (loading) return;
 
@@ -270,15 +274,17 @@ export default function SignupForm() {
           ))}
         </datalist>
 
-        {/* PIN */}
-        <input
-          name="pin_code"
-          placeholder={t("placeholders.pinCode")}
-          value={form.pin_code}
-          onChange={handleChange}
-          required
-          className="input"
-        />
+        {/* Marketing Consent */}
+        <label className="flex items-start gap-3 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            name="marketing_consent"
+            checked={form.marketing_consent}
+            onChange={handleChange}
+            className="mt-1"
+          />
+          <span>{t("marketingConsent")}</span>
+        </label>
 
         {/* Submit */}
         <button

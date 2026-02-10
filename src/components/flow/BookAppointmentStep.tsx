@@ -89,6 +89,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
     setLoadingAvailability(true);
     try {
       const res = await axios.get(`/api/booking/${practitionerId}/availability?date=${dateStr}`);
+      console.log(res.data);
       setAvailability(res.data);
     } catch {
       toast.error(t("loadSlotsError"));
@@ -154,7 +155,6 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
 
         <div className="grid lg:grid-cols-12 gap-10 items-start">
 
-          {/* LEFT SIDE */}
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-10">
             <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 relative overflow-hidden">
               <div className="absolute top-0 right-0 bg-teal-50 text-teal-600 px-5 py-2 rounded-bl-2xl text-[10px] font-black uppercase tracking-widest">
@@ -163,43 +163,51 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
 
               <div className="flex flex-col items-center text-center">
                 <div className="relative mb-5">
-                  {bookingData.selectedDoctor.profileImage ? (
+                  {/* Profile Image with Initials Fallback */}
+                  {practitioner.profile_image ? (
                     <img
-                      src={bookingData.selectedDoctor.profileImage}
+                      src={practitioner.profile_image}
                       className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-slate-50 shadow-md"
                       alt={practitioner.full_name}
                     />
                   ) : (
-                    <div
-                      className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-slate-100 to-slate-200 ring-8 ring-slate-50 shadow-md flex items-center justify-center text-3xl font-black text-slate-400"
-                    >
+                    <div className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-slate-100 to-slate-200 ring-8 ring-slate-50 shadow-md flex items-center justify-center text-3xl font-black text-slate-400">
                       {practitioner.full_name
-                        .split(' ')
+                        ?.split(' ')
                         .map((n: any) => n[0])
                         .join('')
                         .toUpperCase()
-                        .slice(0, 2)}
+                        .slice(0, 2) || "DR"}
                     </div>
                   )}
                 </div>
+
                 <h2 className="text-2xl font-black text-slate-900 leading-tight">
                   Dr. {practitioner.full_name}
                 </h2>
+                <p className="text-sm font-bold text-slate-700">
+                  {practitioner.profile_bios || " is specialised in " + practitioner.specialization.join(' • ') + " with over " + practitioner.experience_years + " years of experience"}
+                </p>
+
+                {/* Specialization Mapping */}
                 <div className="flex items-center gap-1.5 mt-2 text-teal-600">
                   <Stethoscope className="w-3.5 h-3.5" />
                   <p className="font-bold text-xs uppercase tracking-tighter">
-                    {practitioner.specialization || t("clinicalPractice")}
+                    {practitioner.specialization?.length > 0
+                      ? practitioner.specialization.join(' • ')
+                      : t("clinicalPractice")}
                   </p>
                 </div>
               </div>
 
+              {/* Experience and Rating Stats */}
               <div className="mt-8 grid grid-cols-2 gap-3">
                 <div className="bg-slate-50 p-4 rounded-2xl text-center">
                   <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">
                     {t("experience")}
                   </p>
                   <p className="text-sm font-black text-slate-700">
-                    {practitioner.experience_years || '10'}+ {t("years")}
+                    {practitioner.experience_years || '0'}+ {t("years")}
                   </p>
                 </div>
 
@@ -214,6 +222,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                 </div>
               </div>
 
+              {/* Languages Section */}
               <div className="mt-6 space-y-4 pt-6 border-t border-slate-50">
                 <div className="flex items-start gap-3">
                   <Languages className="w-4 h-4 text-slate-300 mt-1" />

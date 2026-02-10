@@ -9,8 +9,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchMe = async () => {
-        setLoading(true);
+    const fetchMe = async (showLoader = false) => {
+        if (showLoader) setLoading(true);
 
         const { data } = await supabaseBrowser.auth.getSession();
         const token = data.session?.access_token;
@@ -39,12 +39,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        fetchMe();
+        // initial load only
+        fetchMe(true);
 
         const {
             data: { subscription },
-        } = supabaseBrowser.auth.onAuthStateChange(() => {
-            fetchMe();
+        } = supabaseBrowser.auth.onAuthStateChange((event) => {
+            // do NOT trigger loading state on refresh
+            if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+                fetchMe(false);
+            }
+
+            if (event === "SIGNED_OUT") {
+                setUser(null);
+            }
         });
 
         return () => subscription.unsubscribe();

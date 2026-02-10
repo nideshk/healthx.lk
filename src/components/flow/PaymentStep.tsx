@@ -12,9 +12,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import localforage from "localforage";
 import { useTranslations } from "next-intl";
-
 import { uploadAttachmentAfterBooking } from "@/lib/s3/uploadAttachmentAfterBooking";
 import { authFetch } from "@/lib/authFetch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +28,7 @@ interface Props {
   updateData: (data: Partial<AppointmentFormInputs>) => void;
   bookingData: AppointmentFormInputs;
   goToStep: (step: number) => void;
+  nextStep: () => void;
   bookingControllerRef: React.MutableRefObject<{
     validateStep?: () => boolean;
     getAttachment?: () => File | null;
@@ -63,6 +62,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
       prevStep,
       updateData,
       bookingData,
+      nextStep,
       goToStep,
       bookingControllerRef,
       isManualCheckout = false,
@@ -71,7 +71,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     stepRef,
   ) => {
     const t = useTranslations("paymentStep");
-
+    console.log(bookingData)
     const [paymentDone, setPaymentDone] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
@@ -167,7 +167,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         payment_status: "completed",
         appointment_id: appointmentId,
       });
-      router.push("/dashboard/appointment");
+      nextStep();
     };
 
     const [coupon, setCoupon] = useState();

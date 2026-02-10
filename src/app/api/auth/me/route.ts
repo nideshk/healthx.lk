@@ -41,6 +41,7 @@ export async function PATCH(req: Request) {
     patient_id,
     practitioner_id,
     admin: adminUser,
+    goveId,
   } = auth.user;
 
   const { } = auth.user
@@ -52,6 +53,13 @@ export async function PATCH(req: Request) {
       .from("profiles")
       .update(profile)
       .eq("id", auth_user_id);
+  }
+
+  if (goveId) {
+    await supabaseAdmin
+      .from("user_government_ids")
+      .update(goveId)
+      .eq("user_id", auth_user_id);
   }
 
   /* -------------------------------

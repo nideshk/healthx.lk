@@ -15,6 +15,7 @@ type AuthorizedUser = {
   patient_id: string | null;
   practitioner_id: string | null;
   patient: any;
+  goveId?: any;
 };
 
 type RequireUserResult =
@@ -111,6 +112,15 @@ export async function requireUser(req: Request): Promise<RequireUserResult> {
     };
   }
 
+  const { data: goveId } = await supabaseAdmin.from("user_government_ids").select("*").eq("user_id", auth_user_id).maybeSingle();
+  function maskId(id: string) {
+    if (!id) return null;
+    const last4 = id.slice(-4);
+    return `******${last4}`;
+  }
+
+  console.log(maskId(goveId?.id_number_encrypted))
+
   return {
     authorized: true,
     role: profile.role,
@@ -125,6 +135,10 @@ export async function requireUser(req: Request): Promise<RequireUserResult> {
       patient_id: patient?.id ?? null,
       patient: patient,
       practitioner_id: practitioner?.id ?? null,
+      goveId: {
+        id_number_encrypted: maskId(goveId?.id_number_encrypted),
+        ...goveId
+      },
     },
   };
 }

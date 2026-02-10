@@ -3,9 +3,10 @@
 import { authFetch } from "@/lib/authFetch";
 import { useEffect, useState } from "react";
 import {
-    User, MapPin, Phone, Mail, Calendar,
-    ShieldCheck, Edit3, CheckCircle, Stethoscope,
-    Fingerprint, Activity
+    User, MapPin, Phone, Mail, ShieldCheck,
+    CheckCircle, Stethoscope, Camera, Save,
+    X, Globe, Landmark, AlertCircle, Fingerprint,
+    Briefcase, Award, Activity, HeartPulse, Lock
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -21,25 +22,16 @@ async function uploadAvatarToS3(file: File) {
         body: JSON.stringify({ contentType: file.type }),
     });
 
-    if (!presignRes.ok) {
-        throw new Error("Failed to get upload URL");
-    }
-
+    if (!presignRes.ok) throw new Error("Failed to get upload URL");
     const { uploadUrl, publicUrl } = await presignRes.json();
 
-    const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-    });
-
-    if (!uploadRes.ok) {
-        throw new Error("Image upload failed");
-    }
+    const uploadRes = await fetch(uploadUrl, { method: "PUT", body: file });
+    if (!uploadRes.ok) throw new Error("Image upload failed");
 
     return publicUrl;
 }
 
-export default function AdaptiveProfileUI() {
+export default function UnifiedProfileUI() {
     const router = useRouter();
     const { user } = useAuth();
 
@@ -47,262 +39,236 @@ export default function AdaptiveProfileUI() {
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState<any>({});
     const [loading, setLoading] = useState(true);
-
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-    const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-    /* -----------------------------
-       Load Profile
-    ----------------------------- */
     useEffect(() => {
-        const load = async () => {
-            try {
-                const res = await authFetch("/api/auth/me");
-                const json = await res.json();
-                const userInfo = json.user;
+        if (!user) return;
 
-                setUserData(userInfo);
-                setEditForm({
-                    first_name: userInfo.profile.first_name,
-                    last_name: userInfo.profile.last_name,
-                    city: userInfo.profile.city,
-                    state: userInfo.profile.state?.trim() ?? "",
-                    country: userInfo.profile.country,
-                });
-            } catch {
-                toast.error("User not authenticated");
-                router.replace("/");
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
-    }, [router]);
+        setUserData(user);
+        setEditForm({
+            first_name: user.profile?.first_name || "",
+            last_name: user.profile?.last_name || "",
+            city: user.profile?.city || "",
+            state: user.profile?.state || "",
+            country: user.profile?.country || "",
+            phone: user.phone || user.patient?.contact_number || "",
+            address: user.patient?.address || "",
+            allergies: user.patient?.allergies?.join(", ") || "",
+            specialty: user.practitioner?.specialty || "",
+            license: user.practitioner?.license_number || "",
+            // Mapping the Govt ID field
+            govtId: user.goveId?.id_number_encrypted || "",
+        });
+        setLoading(false);
+    }, [user]);
 
-    /* -----------------------------
-       Avatar Select
-    ----------------------------- */
-    const handleAvatarSelect = (file: File) => {
-        if (!file.type.startsWith("image/")) {
-            toast.error("Only image files allowed");
-            return;
-        }
-        if (file.size > 2 * 1024 * 1024) {
-            toast.error("Image must be under 2MB");
-            return;
-        }
-
-        setAvatarFile(file);
-        setAvatarPreview(URL.createObjectURL(file));
-    };
-
-    /* -----------------------------
-       Save Profile
-    ----------------------------- */
     const handleSave = async () => {
         try {
+            setUploadingAvatar(true);
             let avatarUrl = userData.profile.avatar_url;
+            if (avatarFile) avatarUrl = await uploadAvatarToS3(avatarFile);
 
-            if (avatarFile) {
-                setUploadingAvatar(true);
-                avatarUrl = await uploadAvatarToS3(avatarFile);
-            }
+            const isPatient = userData.role === "patient";
+
+            const payload = {
+                phone: editForm.phone,
+                profile: {
+                    first_name: editForm.first_name,
+                    last_name: editForm.last_name,
+                    city: editForm.city,
+                    state: editForm.state,
+                    country: editForm.country,
+                    avatar_url: avatarUrl,
+                },
+                ...(isPatient ? {
+                    patient: {
+                        contact_number: editForm.phone,
+                        address: editForm.address,
+                        allergies: editForm.allergies ? editForm.allergies.split(",").map((a: string) => a.trim()) : [],
+                    },
+                    // Update Gov ID logic
+                    goveId: {
+                        id_number_encrypted: editForm.govtId
+                    }
+                } : {
+                    practitioner: {
+                        contact_number: editForm.phone,
+                    }
+                })
+            };
 
             const res = await authFetch("/api/auth/me", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    profile: {
-                        first_name: editForm.first_name,
-                        last_name: editForm.last_name,
-                        city: editForm.city,
-                        state: editForm.state,
-                        country: editForm.country,
-                        avatar_url: avatarUrl,
-                    },
-                }),
+                body: JSON.stringify(payload),
             });
 
-            const data = await res.json();
-            if (!res.ok || !data.success) {
-                throw new Error(data.error || "Update failed");
-            }
+            if (!res.ok) throw new Error("Sync failed");
 
-            setUserData((prev: any) => ({
-                ...prev,
-                profile: {
-                    ...prev.profile,
-                    ...editForm,
-                    avatar_url: avatarUrl,
-                },
-            }));
-
-            toast.success("Profile updated");
+            toast.success("Identity & Profile synchronized");
             setIsEditing(false);
-            setAvatarFile(null);
-            setAvatarPreview(null);
         } catch (err: any) {
-            toast.error(err.message || "Failed to update profile");
+            toast.error(err.message);
         } finally {
             setUploadingAvatar(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-screen text-slate-500 animate-pulse">
-                Initializing Secure Session...
-            </div>
-        );
-    }
+    if (loading || !userData) return <LoadingSpinner />;
 
-    if (!userData) {
-        return <div className="text-center p-10">Profile not found.</div>;
-    }
-
-    const { profile, user: auth, phone, patient_id, practitioner_id } = userData;
-    const isPractitioner = profile.role === "practitioner";
-    const themeColor = isPractitioner ? "indigo" : "blue";
-    const roleIcon = isPractitioner ? <Stethoscope size={48} /> : <User size={48} />;
+    const isPractitioner = userData.role === "practitioner";
+    const theme = isPractitioner
+        ? { primary: "bg-indigo-600", light: "bg-indigo-50", text: "text-indigo-600", ring: "ring-indigo-100", gradient: "from-indigo-600 to-indigo-900", icon: <Stethoscope size={48} /> }
+        : { primary: "bg-blue-600", light: "bg-blue-50", text: "text-blue-600", ring: "ring-blue-100", gradient: "from-blue-600 to-blue-800", icon: <User size={48} /> };
 
     return (
-        <div className="min-h-screen bg-[#FBFBFE] pb-12 font-sans">
-            {/* Top Branding Strip */}
-            <div className={`h-1.5 w-full bg-${themeColor}-600`} />
+        <div className="min-h-screen bg-[#F8FAFC] pb-20 font-sans">
+            <div className={`h-2 w-full ${theme.primary} sticky top-0 z-50`} />
 
-            <div className="max-w-5xl mx-auto px-4 mt-8">
-                {/* Header Profile Card */}
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="p-6 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-                        <div className="flex flex-col sm:flex-row items-center gap-8">
-                            {/* Avatar */}
-                            <div className="relative">
-                                <label className="cursor-pointer group">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        disabled={!isEditing}
-                                        onChange={(e) => {
-                                            if (!isEditing) return;
-                                            if (e.target.files?.[0]) {
-                                                handleAvatarSelect(e.target.files[0]);
-                                            }
-                                        }}
-                                    />
+            <div className="max-w-6xl mx-auto px-4 mt-8">
 
-
-                                    {(avatarPreview || profile.avatar_url) ? (
-                                        <img
-                                            src={avatarPreview || profile.avatar_url}
-                                            className={`w-28 h-28 rounded-3xl object-cover ring-4 ring-${themeColor}-50 group-hover:opacity-80 transition`}
-                                        />
+                {/* --- HEADER --- */}
+                <header className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200/60 p-8 md:p-10 mb-8">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div className="flex flex-col md:flex-row items-center gap-8">
+                            <div className="relative group">
+                                <div className={`w-36 h-36 rounded-[2.5rem] overflow-hidden ring-8 ${theme.ring} flex items-center justify-center bg-slate-50 transition-all`}>
+                                    {avatarPreview || userData.profile.avatar_url ? (
+                                        <img src={avatarPreview || userData.profile.avatar_url} className="w-full h-full object-cover" alt="Profile" />
                                     ) : (
-                                        <div className={`w-28 h-28 bg-${themeColor}-50 rounded-3xl flex items-center justify-center text-${themeColor}-600`}>
-                                            {roleIcon}
-                                        </div>
+                                        <div className={`${theme.text}`}>{theme.icon}</div>
                                     )}
+                                    {isEditing && (
+                                        <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                                            <Camera className="text-white" size={32} />
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) { setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)); }
+                                            }} />
+                                        </label>
+                                    )}
+                                </div>
+                                <div className="absolute -bottom-1 -right-1 bg-emerald-500 border-4 border-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg">
+                                    <CheckCircle size={20} className="text-white" />
+                                </div>
+                            </div>
 
-                                    {isEditing && <div className="absolute inset-0 rounded-3xl bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-bold text-white transition">
-                                        Change
-                                    </div>}
-                                </label>
+                            <div className="text-center md:text-left">
+                                <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase">
+                                    {userData.profile.first_name} {userData.profile.last_name}
+                                </h1>
+                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3">
+                                    <p className="text-slate-500 flex items-center gap-1.5 text-sm font-semibold">
+                                        <MapPin size={16} className="text-slate-400" /> {userData.profile.city || "Pending"}, {userData.profile.country}
+                                    </p>
+                                    <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${theme.light} ${theme.text}`}>
+                                        {userData.role} ACCOUNT
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
 
-                                {profile.is_active && (
-                                    <div className="absolute -bottom-2 -right-2 bg-emerald-500 border-4 border-white w-7 h-7 rounded-full flex items-center justify-center">
-                                        <CheckCircle size={14} className="text-black" />
+                        <div className="flex items-center gap-3">
+                            {isEditing ? (
+                                <>
+                                    <button onClick={() => setIsEditing(false)} className="px-6 py-3 rounded-2xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2"><X size={18} /> Cancel</button>
+                                    <button onClick={handleSave} className="px-8 py-3 rounded-2xl font-bold bg-emerald-600 text-white flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"><Save size={18} /> {uploadingAvatar ? "Saving..." : "Save Changes"}</button>
+                                </>
+                            ) : (
+                                <button onClick={() => setIsEditing(true)} className="px-8 py-3 rounded-2xl font-bold border-2 border-slate-200 text-slate-700 hover:border-slate-900 hover:bg-slate-50 transition-all">Edit Profile</button>
+                            )}
+                        </div>
+                    </div>
+                </header>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                    {/* --- SIDEBAR --- */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className={`bg-gradient-to-br ${theme.gradient} p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden group`}>
+                            <Fingerprint size={120} className="absolute -right-4 -bottom-4 opacity-10" />
+                            <h4 className="font-bold text-xs uppercase tracking-widest opacity-70 mb-6">Internal Audit ID</h4>
+                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl font-mono text-[10px] border border-white/20 break-all select-all">
+                                {userData.practitioner_id || userData.patient_id || "UNASSIGNED"}
+                            </div>
+                        </div>
+
+                        <section className="bg-white p-8 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+                            <h3 className="text-sm font-black text-slate-900 mb-8 flex items-center gap-2 tracking-tighter">
+                                <ShieldCheck size={18} className={theme.text} /> SECURITY & IDENTITY
+                            </h3>
+                            <div className="space-y-8">
+                                <SidebarItem label="Network Email" value={userData.user.email} icon={<Mail size={16} />} />
+
+                                {/* GOVT ID DISPLAY (Patient Context) */}
+                                {!isPractitioner && (
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                            <Lock size={14} className="text-emerald-500" /> Government ID
+                                        </p>
+                                        {isEditing ? (
+                                            <input
+                                                className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-semibold focus:border-blue-500 outline-none transition-all"
+                                                value={editForm.govtId}
+                                                placeholder="National ID / Passport #"
+                                                onChange={(e) => setEditForm({ ...editForm, govtId: e.target.value })}
+                                            />
+                                        ) : (
+                                            <div className="bg-slate-50 border border-slate-100 px-3 py-2 rounded-xl flex items-center gap-3">
+                                                <p className="text-slate-900 font-mono text-xs font-bold tracking-widest">
+                                                    {editForm.govtId ? `•••• •••• ${editForm.govtId.slice(-4)}` : "NOT VERIFIED"}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><Phone size={14} /> Recovery Phone</p>
+                                    {isEditing ? (
+                                        <input type="tel" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-semibold focus:border-blue-500 outline-none" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+                                    ) : (
+                                        <p className="text-slate-900 font-bold">{editForm.phone || "No phone linked"}</p>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    {/* --- MAIN CONTENT --- */}
+                    <div className="lg:col-span-8">
+                        <section className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+                            <div className="flex items-center justify-between mb-12">
+                                <h3 className="text-2xl font-black text-slate-900">{isPractitioner ? "Medical Credentials" : "Health Profile"}</h3>
+                                {!isPractitioner && userData.patient?.blood_type && (
+                                    <div className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black border border-red-100 flex items-center gap-2">
+                                        <HeartPulse size={14} /> TYPE {userData.patient.blood_type}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Name */}
-                            <div className="text-center sm:text-left">
-                                <h1 className="text-3xl font-extrabold">
-                                    {profile.first_name} {profile.last_name}
-                                </h1>
-                                <p className="text-slate-400 flex items-center gap-1 mt-2">
-                                    <MapPin size={16} /> {profile.city}, {profile.country}
-                                </p>
-                            </div>
-                        </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-10">
+                                <FormInput label="First Name" value={editForm.first_name} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, first_name: v })} icon={<User size={16} />} />
+                                <FormInput label="Last Name" value={editForm.last_name} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, last_name: v })} icon={<User size={16} />} />
+                                <FormInput label="City" value={editForm.city} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, city: v })} icon={<MapPin size={16} />} />
+                                <FormInput label="Country" value={editForm.country} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, country: v })} icon={<Globe size={16} />} />
 
-                        <button
-                            disabled={uploadingAvatar}
-                            onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-                            className={`flex items-center gap-2 px-8 py-3 rounded-2xl font-bold ${isEditing
-                                ? "bg-emerald-600 text-white"
-                                : "bg-white border"
-                                }`}
-                        >
-                            {uploadingAvatar
-                                ? "Uploading..."
-                                : isEditing
-                                    ? "Save Changes"
-                                    : "Edit Profile"}
-                        </button>
-                    </div>
-                </div>
-
-                {/* ===== REST OF YOUR UI (UNCHANGED) ===== */}
-                {/* ID Card, Security Section, Personal Records, Role Insight */}
-                {/* This part stays exactly as you already had it */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
-                    {/* Left Column: Role-Specific ID and MFA */}
-                    <div className="lg:col-span-4 space-y-6">
-                        {/* ID Card */}
-                        <div className={`bg-gradient-to-br from-${themeColor}-600 to-${themeColor}-800 p-8 rounded-[2rem] text-black shadow-2xl shadow-${themeColor}-200 relative overflow-hidden`}>
-                            <Fingerprint className="absolute -right-4 -bottom-4 opacity-10 w-32 h-32" />
-                            <h4 className="font-black text-sm uppercase tracking-widest opacity-80 mb-6">System Identity</h4>
-                            <p className="text-xs mb-1 font-bold uppercase opacity-60">Registered {isPractitioner ? "Practitioner" : "Patient"} ID</p>
-                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl font-mono text-xs break-all border border-white/20 mb-6">
-                                {practitioner_id || patient_id}
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
-                                <Activity size={14} /> Account Status: <span className="text-emerald-300">Active</span>
-                            </div>
-                        </div>
-
-                        {/* Security Section */}
-                        <section className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                                <ShieldCheck size={18} className={`text-${themeColor}-500`} /> Security Settings
-                            </h3>
-                            <div className="space-y-6">
-                                <InfoBlock icon={<Mail size={18} />} label="Email Address" value={auth.email} />
-                                <InfoBlock icon={<Phone size={18} />} label="Phone Contact" value={phone || "None Listed"} />
-                                <div className="pt-2">
-                                    <div className={`flex items-center justify-between p-3 rounded-xl ${profile.multi_factor ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                                        <span className="text-xs font-bold">2FA Status</span>
-                                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-white font-bold uppercase">
-                                            {profile.multi_factor ? "Enabled" : "Disabled"}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-
-                    {/* Right Column: Personal Data */}
-                    <div className="lg:col-span-8">
-                        <section className="bg-white p-8 sm:p-10 rounded-[2rem] border border-slate-200 shadow-sm">
-                            <h3 className="text-xl font-black text-slate-800 mb-8 border-b border-slate-50 pb-4">
-                                Personal Records
-                            </h3>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                                <EditInput label="First Name" name="first_name" value={editForm.first_name} isEditing={isEditing} onChange={setEditForm} theme={themeColor} />
-                                <EditInput label="Last Name" name="last_name" value={editForm.last_name} isEditing={isEditing} onChange={setEditForm} theme={themeColor} />
-                                <EditInput label="City" name="city" value={editForm.city} isEditing={isEditing} onChange={setEditForm} theme={themeColor} />
-                                <EditInput label="State / Province" name="state" value={editForm.state} isEditing={isEditing} onChange={setEditForm} theme={themeColor} />
-                                <EditInput label="Country" name="country" value={editForm.country} isEditing={isEditing} onChange={setEditForm} theme={themeColor} />
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase">Registration Date</label>
-                                    <div className="text-sm font-bold text-slate-700 py-2 flex items-center gap-2">
-                                        <Calendar size={16} className="text-slate-300" />
-                                        {new Date(profile.created_at).toLocaleDateString(undefined, { dateStyle: 'long' })}
-                                    </div>
-                                </div>
+                                {isPractitioner ? (
+                                    <>
+                                        <FormInput label="Specialty" value={editForm.specialty} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, specialty: v })} icon={<Activity size={16} />} />
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="md:col-span-2">
+                                            <FormInput label="Residential Address" value={editForm.address} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, address: v })} icon={<Landmark size={16} />} />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <AllergyTagInput label="Known Allergies" value={editForm.allergies} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, allergies: v })} />
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </section>
                     </div>
@@ -312,33 +278,41 @@ export default function AdaptiveProfileUI() {
     );
 }
 
-/* Helper Components */
-function InfoBlock({ icon, label, value }: any) {
-    return (
-        <div className="flex items-start gap-4">
-            <div className="text-slate-300">{icon}</div>
-            <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{label}</p>
-                <p className="text-sm font-bold text-slate-700">{value}</p>
-            </div>
-        </div>
-    );
+/* --- ATOMIC UI COMPONENTS --- */
+
+function LoadingSpinner() {
+    return <div className="flex flex-col justify-center items-center h-screen bg-slate-50"><div className="w-14 h-14 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4" /><p className="text-slate-400 font-black tracking-[0.2em] text-[10px] uppercase">Securing Connection</p></div>;
 }
 
-function EditInput({ label, name, value, isEditing, onChange, theme }: any) {
+function SidebarItem({ label, value, icon }: any) {
+    return (<div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1.5">{icon} {label}</p><p className="text-sm font-bold text-slate-900 break-all">{value || "—"}</p></div>);
+}
+
+function FormInput({ label, value, isEditing, onChange, icon }: any) {
     return (
-        <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</label>
+        <div className="space-y-2 group">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-600 transition-colors">{icon} {label}</label>
             {isEditing ? (
-                <input
-                    type="text"
-                    className={`bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-${theme}-100 focus:border-${theme}-400 outline-none transition-all font-bold text-slate-800`}
-                    value={value}
-                    onChange={(e) => onChange((prev: any) => ({ ...prev, [name]: e.target.value }))}
-                />
+                <input className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-3.5 focus:border-blue-500 focus:bg-white transition-all outline-none font-bold text-slate-800" value={value} onChange={(e) => onChange(e.target.value)} />
             ) : (
-                <div className="text-sm font-bold text-slate-700 py-1">
-                    {value || "Not Provided"}
+                <p className="text-lg font-black text-slate-800 px-1 truncate">{value || "—"}</p>
+            )}
+        </div>
+    );
+}
+
+function AllergyTagInput({ label, value, isEditing, onChange }: any) {
+    const list = value ? value.split(",").filter((i: string) => i.trim() !== "") : [];
+    return (
+        <div className="space-y-3">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</label>
+            {isEditing ? (
+                <textarea className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-3.5 focus:border-blue-500 focus:bg-white transition-all outline-none font-bold text-slate-800 min-h-[100px]" value={value} placeholder="Peanuts, Aspirin..." onChange={(e) => onChange(e.target.value)} />
+            ) : (
+                <div className="flex flex-wrap gap-2">
+                    {list.length > 0 ? list.map((a: string, i: number) => (
+                        <span key={i} className="bg-red-50 text-red-700 px-4 py-2 rounded-xl text-[10px] font-black border border-red-100 uppercase tracking-tight">{a.trim()}</span>
+                    )) : <p className="text-slate-400 italic text-sm">None reported</p>}
                 </div>
             )}
         </div>

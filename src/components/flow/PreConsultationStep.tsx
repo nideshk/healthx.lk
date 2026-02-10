@@ -8,12 +8,12 @@ import {
   UserPlus,
   CheckCircle2,
   ChevronDown,
-  Users,
   MessageSquare,
   Target,
   ChevronRight,
   ShieldCheck,
   AlertCircle,
+  CreditCard,
 } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,6 +61,12 @@ export default function PreConsultationStep({
     pre.referral && !REFERRAL_SOURCES.includes(pre.referral);
 
   const { user } = useAuth();
+
+  // --- PRICING CALCULATION ---
+  const typeFee = bookingData?.appointmentType?.fee || 0;
+  const platformFee = bookingData?.appointmentType?.platform_fee || 0;
+  const currency = bookingData?.selectedDoctor?.currency || "LKR";
+  const totalPayable = typeFee + platformFee + (selectedAttendees.length) * 100;
 
   // Validation Logic
   const validateFields = () => {
@@ -125,7 +131,7 @@ export default function PreConsultationStep({
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFDFF] py-12 px-4 md:px-8 pb-32">
+    <div className="min-h-screen bg-[#FBFDFF] py-12 px-4 md:px-8 pb-40">
       <div className="max-w-4xl mx-auto">
         {/* Step Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
@@ -228,19 +234,19 @@ export default function PreConsultationStep({
 
               {(isCustomReferral ||
                 (pre.referral === "" && pre.referral !== undefined)) && (
-                <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                  <input
-                    placeholder={t("customReferral")}
-                    value={pre.referral || ""}
-                    onChange={(e) =>
-                      updateData({
-                        pre_consultation: { ...pre, referral: e.target.value },
-                      })
-                    }
-                    className="w-full border-2 border-teal-100 rounded-2xl p-4 text-sm focus:border-teal-500 bg-white shadow-inner outline-none font-medium"
-                  />
-                </div>
-              )}
+                  <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                    <input
+                      placeholder={t("customReferral")}
+                      value={pre.referral || ""}
+                      onChange={(e) =>
+                        updateData({
+                          pre_consultation: { ...pre, referral: e.target.value },
+                        })
+                      }
+                      className="w-full border-2 border-teal-100 rounded-2xl p-4 text-sm focus:border-teal-500 bg-white shadow-inner outline-none font-medium"
+                    />
+                  </div>
+                )}
             </div>
           </div>
 
@@ -295,7 +301,7 @@ export default function PreConsultationStep({
                   </label>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 mt-4">
                   <input
                     type="email"
                     placeholder={t("invitePlaceholder")}
@@ -336,23 +342,44 @@ export default function PreConsultationStep({
         </div>
       </div>
 
-      {/* Footer */}
+      {/* FIXED FOOTER WITH PRICE */}
       <div className="fixed bottom-0 inset-x-0 bg-white/80 backdrop-blur-lg border-t border-slate-100 p-4 md:p-6 z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <button
             onClick={() => prevStep()}
-            className="px-8 py-3 rounded-2xl text-sm font-bold text-slate-400 hover:bg-slate-50 transition-all"
+            className="hidden md:block px-8 py-3 rounded-2xl text-sm font-bold text-slate-400 hover:bg-slate-50 transition-all"
           >
             {t("back")}
           </button>
 
-          <button
-            onClick={handleNext}
-            className="flex-1 md:flex-none px-12 py-3 bg-slate-900 hover:bg-teal-600 text-white rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-200"
-          >
-            {t("continue")}
-            <ChevronRight size={16} />
-          </button>
+          <div className="flex-1 flex items-center justify-end gap-6">
+            {/* Price Info */}
+            <div className="text-right hidden sm:block">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">
+                Total Amount
+              </p>
+              <p className="text-xl font-black text-slate-900">
+                <span className="text-xs font-bold text-teal-600 mr-1">{currency}</span>
+                {totalPayable.toLocaleString()}
+              </p>
+            </div>
+
+            <button
+              onClick={handleNext}
+              className="w-full md:w-auto px-10 py-4 bg-slate-900 hover:bg-teal-600 text-white rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-200 group"
+            >
+              <div className="flex flex-col items-start md:items-center">
+                <span className="flex items-center gap-2">
+                  {t("continue")}
+                  <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                </span>
+                {/* Mobile Price Label */}
+                <span className="md:hidden text-[10px] opacity-70 font-medium uppercase tracking-tighter">
+                  Proceed to Pay {currency} {totalPayable.toLocaleString()}
+                </span>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </div>
