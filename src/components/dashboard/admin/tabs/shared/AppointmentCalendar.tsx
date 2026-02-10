@@ -163,7 +163,10 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
               ))}
               {viewMode === "daily" &&
                 Array.from({ length: 6 }).map((_, i) => (
-                  <div key={`empty-${i}`} className="border-l border-slate-200" />
+                  <div
+                    key={`empty-${i}`}
+                    className="border-l border-slate-200"
+                  />
                 ))}
             </div>
 
@@ -246,13 +249,13 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
         />
       )}
 
-      {/* {showManage && selectedAppt && (
+      {showManage && selectedAppt && (
       <ManageAppointmentModal
         open={showManage}
         appointment={selectedAppt}
         onClose={() => setShowManage(false)}
       />
-    )} */}
+    )}
     </>
   );
 };
@@ -326,9 +329,10 @@ const isSameDay = (a: Date, b: Date) =>
   a.getDate() === b.getDate();
 
 const formatDate = (d: Date) =>
-  `${String(d.getDate()).padStart(2, "0")}/${String(
-    d.getMonth() + 1
-  ).padStart(2, "0")}/${d.getFullYear()}`;
+  `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}/${d.getFullYear()}`;
 
 const formatDayName = (d: Date) =>
   d.toLocaleDateString(undefined, { weekday: "short" });
@@ -348,9 +352,17 @@ interface DetailsModalProps {
 const DetailsModal: React.FC<DetailsModalProps> = ({
   appointment,
   onClose,
+  onMarkCompleted,
+  onManage,
 }) => {
   const isCompleted = appointment.status === "completed";
-  {console.log("appointment:", appointment);}
+// Check if appointment is in the past
+  const isPastAppointment = () => {
+    if (!appointment.start) return false;
+    const today = startOfDay(new Date());
+    return appointment.start < today;
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md text-xs">
@@ -366,19 +378,32 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
             ×
           </button>
         </div>
-        
+
         <div className="px-5 py-4 space-y-3">
           <DetailRow label="Patient" value={`${appointment.patient}`} />
           <DetailRow label="Time" value={`${appointment.time}`} />
-          <DetailRow label="Appointment Type" value={`${appointment.appointmentType}`}  />
+          <DetailRow label="Appointment Type" value={`${appointment.appointmentType}`} />
           <DetailRow label="Participants" value="1" />
-          <DetailRow label="Reason" value={appointment.reason || "Not specified"} />
+          <DetailRow label="Reason" value={appointment.reason || "-"} />
           <DetailRow
             label="Status"
             value={appointment.status ? capitalize(appointment.status) : "-"}
           />
         </div>
 
+         {!isPastAppointment() && (
+          <div className="flex justify-end gap-2 px-5 py-4 border-t">
+          
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={onManage}
+            >
+              Manage Appointment
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

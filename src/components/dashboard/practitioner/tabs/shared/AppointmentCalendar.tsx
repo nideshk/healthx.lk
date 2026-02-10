@@ -356,7 +356,12 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
   onManage,
 }) => {
   const isCompleted = appointment.status === "completed";
-  const isPast = appointment.start ? appointment.start < new Date() : false;
+// Check if appointment is in the past
+  const isPastAppointment = () => {
+    if (!appointment.start) return false;
+    const today = startOfDay(new Date());
+    return appointment.start < today;
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
@@ -386,22 +391,14 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
           />
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-4 border-t">
-          {isCompleted ? (
-            <Button variant="outline" size="sm" className="text-xs" disabled>
-              Meeting completed
-            </Button>
-          ) : (
-            !isPast && (
-              <Link href={`/appointment/meeting?room=${appointment.room_key}`}>
-                <Button variant="outline" size="sm" className="text-xs">
-                  Join Meeting
-                </Button>
-              </Link>
-            )
-          )}
-
-          {!isPast && (
+         {!isPastAppointment() && (
+          <div className="flex justify-end gap-2 px-5 py-4 border-t">
+            <Link href={`/appointment/meeting?room=${appointment.room_key}`}>
+              <Button variant="outline" size="sm" className="text-xs">
+                Join Meeting
+              </Button>
+            </Link>
+            
             <Button
               variant="outline"
               size="sm"
@@ -410,8 +407,8 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
             >
               Manage Appointment
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
