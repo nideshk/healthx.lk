@@ -94,9 +94,9 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
         });
 
         const mapped: Appointment[] = json.data.map((item: any) => {
-          const start = DateTime.fromISO(item.starts_at, { zone: "utc" }).setZone(
-            "Asia/Colombo"
-          );
+          const start = DateTime.fromISO(item.starts_at, {
+            zone: "utc",
+          }).setZone("Asia/Colombo");
 
           const status =
             item.status === "completed"
@@ -111,6 +111,7 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
             date: start.toFormat("dd/MM/yyyy"),
             time: start.toFormat("hh:mm a"),
             patient: item.patient || "—",
+            patientId: item.id,
             doctorName: fullName,
             reason: item.reason || "—",
             status,

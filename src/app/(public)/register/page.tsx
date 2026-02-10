@@ -887,29 +887,7 @@ export default function PractitionerRegisterPage() {
                   )}
                 />
 
-                <Controller
-                  name="bank_details.ifsc_code"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="IFSC Code"
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-
-                <Controller
-                  name="bank_details.swift_code"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="SWIFT Code (optional)"
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
+               
               </div>
               <Controller
                 name="bank_details.branch_address"
@@ -924,43 +902,6 @@ export default function PractitionerRegisterPage() {
                 )}
               />
             </div>
-
-            {/* SECTION: AVAILABILITY */}
-            <div>
-              <h2 className="section-title">Availability</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-                <Input
-                  type="time"
-                  label="Start Time"
-                  {...register("availability.start_time")}
-                />
-                <Input
-                  type="time"
-                  label="End Time"
-                  {...register("availability.end_time")}
-                />
-              </div>
-
-              <p className="font-medium text-gray-700 mt-4 mb-2">
-                Days Unavailable
-              </p>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {weekdays.map((day) => (
-                  <label key={day} className="flex gap-2 items-center">
-                    <input
-                      type="checkbox"
-                      className="rounded accent-teal-600"
-                      checked={daysUnavailable.includes(day)}
-                      onChange={() => toggleDayUnavailable(day)}
-                    />
-                    <span className="text-gray-700">{day}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
             <button
               type="submit"
               disabled={loading || uploadingDocs}

@@ -17,6 +17,7 @@ export interface AdminAppointment {
   time: string;
   info: string;
   doctorName: string;
+  appointmentType: string;
   category: "upcoming" | "previous";
 }
 
@@ -200,12 +201,22 @@ useEffect(() => {
             info: a.appointment_date + " at " + a.start_time,
             doctorName: a.doctor?.name || "Unknown",
             category: "upcoming",
+            appointmentType: a.appointment_type?.name|| "Unknown",
+          })),
+            ...(data.ongoing ?? []).map((a: any) => ({
+            id: a.id,
+            date: a.appointment_date,
+            time: a.start_time,
+            doctorName: a.doctor?.name || "Unknown",
+            appointmentType: a.appointment_type?.name|| "Unknown",
+            category: "ongoing",
           })),
           ...(data.completed ?? []).map((a: any) => ({
             id: a.id,
             date: a.appointment_date,
             time: a.start_time,
             doctorName: a.doctor?.name || "Unknown",
+            appointmentType: a.appointment_type?.name|| "Unknown",
             category: "previous",
           })),
         ];

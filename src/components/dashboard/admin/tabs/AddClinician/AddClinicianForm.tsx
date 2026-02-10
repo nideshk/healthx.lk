@@ -851,41 +851,6 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
              
             </div>
 
-            {/* Availability */}
-            <div className="space-y-4 pt-4 border-t">
-              <h3 className="font-semibold text-gray-700">Availability</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  type="time"
-                  label="Start Time"
-                  {...register("availability.start_time")}
-                />
-                <Input
-                  type="time"
-                  label="End Time"
-                  {...register("availability.end_time")}
-                />
-              </div>
-
-              <p className="font-medium text-gray-700 mt-4 mb-2">
-                Days Unavailable
-              </p>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {weekdays.map((day) => (
-                  <label key={day} className="flex gap-2 items-center">
-                    <input
-                      type="checkbox"
-                      className="rounded accent-teal-600"
-                      checked={daysUnavailable.includes(day)}
-                      onChange={() => toggleDayUnavailable(day)}
-                    />
-                    <span className="text-gray-700">{day}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
             <button
               type="submit"
               disabled={loading || uploadingDocs}

@@ -669,6 +669,25 @@ const AppointmentRow: React.FC<{
                 value={appointment.clinicianNotes || "-"}
               />
             )}
+            {isEditingAppointment ? (
+              <div className="space-y-1">
+                <div className="text-[11px] text-slate-500">
+                  Clinician Notes
+                </div>
+                <textarea
+                  value={appointmentForm.clinicianNotes}
+                  onChange={(e) =>
+                    updateAppointmentField("clinicianNotes", e.target.value)
+                  }
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                />
+              </div>
+            ) : (
+              <InfoRow
+                label="Clinician Notes"
+                value={appointment.clinicianNotes || "-"}
+              />
+            )}
 
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-[11px] text-slate-600">
