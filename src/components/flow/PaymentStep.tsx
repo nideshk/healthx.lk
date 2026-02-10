@@ -200,6 +200,8 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
                 appointment_type_id,
                 attendeeList: bookingData.selectedAttendees,
                 coupon_code: coupon,
+                pre_consultation: bookingData.pre_consultation,
+                consent: bookingData.consent,
               }),
             },
           );
