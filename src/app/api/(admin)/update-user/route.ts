@@ -38,7 +38,7 @@ type PractitionerPayload = {
   contact_email?: string;
   contact_number?: string;
   profile_bio?: string;
-
+  languages?: string[];
   available_services?: string[];
   fees?: Record<string, any>;
 
@@ -187,6 +187,7 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         profile_bio: practitioner?.profile_bio,
         available_services: practitioner?.available_services,
         fees: practitioner?.fees,
+        languages: practitioner?.languages,
         updated_at: new Date().toISOString(),
       });
 

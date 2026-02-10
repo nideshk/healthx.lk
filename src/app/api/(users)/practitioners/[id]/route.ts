@@ -131,6 +131,7 @@ export async function GET(
           experience_years: practitioner.experience_years,
           profile_image: practitioner.profile_picture_url,
           appointment_types: appointmentTypes,
+          languages: practitioner.languages ?? []
         },
       });
     }
@@ -172,6 +173,7 @@ export async function GET(
         profile_bio: practitioner.profile_bio,
         specialization: practitioner.specialization,
         qualifications: practitioner.qualification,
+        languages: practitioner.languages ?? [],
         experience_years: practitioner.experience_years,
         profile_image: practitioner.profile_picture_url,
         available_services: practitioner.available_services,

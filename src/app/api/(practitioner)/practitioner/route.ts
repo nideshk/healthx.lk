@@ -101,7 +101,8 @@ export async function GET(req: NextRequest) {
             profile_picture_url,
             experience_years,
             is_active,
-            fees
+            fees,
+            languages
             `,
             { count: "exact" }
           )
@@ -131,7 +132,7 @@ export async function GET(req: NextRequest) {
         profile_picture_url: p.profile_picture_url,
         experience_years: p.experience_years,
         is_active: p.is_active,
-
+        languages: p.languages ?? [],
         // ✅ OPTION 1 FEES STRUCTURE
         fees: normalizeFeesToArray(p.fees),
       }));
