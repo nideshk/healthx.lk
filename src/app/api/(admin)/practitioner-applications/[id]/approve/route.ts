@@ -167,9 +167,10 @@ export async function POST(
     profile_bio: app.profile_bio,
     available_services: app.available_services,
     fees: app.fees,
-    availability: app.availability,
+    // availability: app.availability,
     bank_details: app.bank_details,
-    documents: Array.isArray(app.documents) ? app.documents : []
+    documents: Array.isArray(app.documents) ? app.documents : [],
+    languages: Array.isArray(app.languages) ? app.languages : [],
   });
 
   if (!result.success) {

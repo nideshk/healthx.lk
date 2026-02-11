@@ -78,7 +78,7 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
       const apptDate = appointment.date || "N/A";
       const apptTime = appointment.time || "N/A";
       const roomKey = appointment.room_key || "";
-      const meetingUrl = `${window.location.origin}/appointment/meeting?room=${roomKey}`;
+      const meetingUrl = `https://www.clinecxa.com/appointment/meeting?room=${roomKey}`;
 
       const messageContent = `
 Hello ${patientName},
@@ -109,8 +109,8 @@ Clinecxa Team
           message: messageContent,
           channels: ["email", "sms"],
           payload: {
-            email: appointment.patient_email || "",
-            phone: appointment.patient_phone || "",
+            email: appointment.email || "",
+            phone: appointment.contact_number || "",
             appointment_id: appointment.id,
             room_key: roomKey,
             meeting_url: meetingUrl,

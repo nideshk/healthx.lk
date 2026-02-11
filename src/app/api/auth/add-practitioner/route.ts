@@ -44,8 +44,9 @@ export async function POST(req: Request) {
       profile_bio,
       fees,
       available_services,
-      availability,
+      // availability,
       bank_details,
+      languages
     } = body;
 
     if (!email || !first_name) {
@@ -93,8 +94,9 @@ export async function POST(req: Request) {
       profile_bio,
       fees,
       available_services,
-      availability,
+      // availability,
       bank_details,
+      languages
     });
 
     /* --------------------------------------------------
