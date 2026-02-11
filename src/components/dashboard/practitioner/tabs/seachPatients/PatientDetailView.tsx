@@ -10,6 +10,7 @@ import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import Link from "next/link";
 import { toast } from "react-toastify";
+import { ExternalLink, FileText } from "lucide-react";
 
 interface PatientDetailViewProps {
   patient: Patient;
@@ -315,6 +316,12 @@ const AppointmentRow: React.FC<{
 }> = ({ appointment, patient }) => {
   const [open, setOpen] = React.useState(false);
   const [isEditingAppointment, setIsEditingAppointment] = React.useState(false);
+  const [consultationMeta, setConsultationMeta] = useState({
+    telehealthConsent: false,
+    termsAccepted: false,
+    mainConcern: "",
+    goal: "",
+  });
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
   const [isNotifying, setIsNotifying] = useState(false);
@@ -323,13 +330,18 @@ const AppointmentRow: React.FC<{
   // Requirement: Disable buttons if the appointment is in the 'previous' category
   const isPrevious = appointment.category === "previous";
 
-  const [appointmentForm, setAppointmentForm] = React.useState({
+  const [appointmentForm, setAppointmentForm] = React.useState(() => ({
     clinicianNotes: appointment.clinicianNotes || "",
     followUpDate: appointment.followUpDate || "",
     followUpTime: "",
     prescriptions: appointment.prescriptions || "",
     followUpNeeded: appointment.followUpNeeded || false,
-  });
+    signedAttachments: [] as Array<{
+      url: string;
+      name?: string;
+      document_type?: string;
+    }>,
+  }));
 
   const baseUrl = (
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
@@ -353,7 +365,7 @@ const AppointmentRow: React.FC<{
   const handleNotify = async (channels: Array<"email" | "sms" | "in_app">) => {
     setIsNotifying(true);
     try {
-      const meetingUrl = `${baseUrl}/appointment/meeting?room=${appointment.room_key}`;
+      const meetingUrl = `https://www.clinecxa.com/appointment/meeting?room=${appointment.room_key}`;
 
       // Constructing the styled HTML template
       const htmlMessage = `
@@ -399,7 +411,7 @@ const AppointmentRow: React.FC<{
           channels: channels,
           payload: {
             email: patient.email,
-            phone: patient.full_name,
+            phone: patient.contact_number,
             appointment_id: appointment.id,
             meeting_url: meetingUrl,
           },
@@ -446,10 +458,10 @@ const AppointmentRow: React.FC<{
         },
       );
 
-      appointment.clinicianNotes = payload.clinician_notes;
-      appointment.prescriptions = payload.prescriptions;
-      appointment.followUpNeeded = payload.follow_up_needed;
-      appointment.followUpDate = payload.follow_up_date || "";
+      // appointment.clinicianNotes = payload.clinician_notes;
+      // appointment.prescriptions = payload.prescriptions;
+      // appointment.followUpNeeded = payload.follow_up_needed;
+      // appointment.followUpDate = payload.follow_up_date || "";
 
       setIsEditingAppointment(false);
       toast.success("Consultation notes saved.");
@@ -473,6 +485,53 @@ const AppointmentRow: React.FC<{
         ? "Completed"
         : "Cancelled";
 
+  // const fetchConsultationDetails = async () => {
+  //   if (consultationFetched) return;
+  //   setConsultationLoading(true);
+  //   try {
+  //     const res = await authFetch(
+  //       `/api/booking/appointment/${appointment.id}/consultation`
+  //     );
+  //     if (!res.ok) return;
+  //     const data = await res.json();
+
+  //     appointment.telehealthConsent = !!data.consent?.telehealth;
+  //     appointment.termsAccepted = !!data.consent?.terms;
+  //     appointment.mainConcern =
+  //       data.preconsult?.raw_payload?.note?.concern || "";
+  //     appointment.goal = data.preconsult?.raw_payload?.note?.outcome || "";
+  //     appointment.clinicianNotes = data.encounter?.clinician_notes || "";
+  //     appointment.prescriptions = data.encounter?.prescriptions || "";
+  //     appointment.followUpNeeded = !!data.encounter?.follow_up_needed;
+
+  //     const rawDate = data.encounter?.follow_up_date;
+  //     if (rawDate) {
+  //       appointment.followUpDate = rawDate.slice(0, 10);
+  //       if (rawDate.includes("T")) {
+  //         setAppointmentForm((prev) => ({
+  //           ...prev,
+  //           followUpTime: rawDate.split("T")[1].slice(0, 5),
+  //         }));
+  //       }
+  //     }
+
+  //     setConsultationFetched(true);
+  //     setAppointmentForm((prev) => ({
+  //       ...prev,
+  //       clinicianNotes: data.encounter?.clinician_notes || "",
+  //       prescriptions: data.encounter?.prescriptions || "",
+  //       followUpNeeded: !!data.encounter?.follow_up_needed,
+  //       followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || "",
+  //     }));
+
+  //     forceUpdate((v) => v + 1);
+  //   } catch (err) {
+  //     console.error("Failed to load consultation", err);
+  //   } finally {
+  //     setConsultationLoading(false);
+  //   }
+  // };
+
   const fetchConsultationDetails = async () => {
     if (consultationFetched) return;
     setConsultationLoading(true);
@@ -483,27 +542,15 @@ const AppointmentRow: React.FC<{
       if (!res.ok) return;
       const data = await res.json();
 
-      appointment.telehealthConsent = !!data.consent?.telehealth;
-      appointment.termsAccepted = !!data.consent?.terms;
-      appointment.mainConcern =
-        data.preconsult?.raw_payload?.note?.concern || "";
-      appointment.goal = data.preconsult?.raw_payload?.note?.outcome || "";
-      appointment.clinicianNotes = data.encounter?.clinician_notes || "";
-      appointment.prescriptions = data.encounter?.prescriptions || "";
-      appointment.followUpNeeded = !!data.encounter?.follow_up_needed;
+      // ✅ STORE META DATA
+      setConsultationMeta({
+        telehealthConsent: !!data.consent?.telehealth,
+        termsAccepted: !!data.consent?.terms,
+        mainConcern: data.preconsult?.raw_payload?.note?.concern || "",
+        goal: data.preconsult?.raw_payload?.note?.outcome || "",
+      });
 
-      const rawDate = data.encounter?.follow_up_date;
-      if (rawDate) {
-        appointment.followUpDate = rawDate.slice(0, 10);
-        if (rawDate.includes("T")) {
-          setAppointmentForm((prev) => ({
-            ...prev,
-            followUpTime: rawDate.split("T")[1].slice(0, 5),
-          }));
-        }
-      }
-
-      setConsultationFetched(true);
+      // ✅ STORE FORM DATA
       setAppointmentForm((prev) => ({
         ...prev,
         clinicianNotes: data.encounter?.clinician_notes || "",
@@ -512,9 +559,14 @@ const AppointmentRow: React.FC<{
         followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || "",
       }));
 
-      forceUpdate((v) => v + 1);
-    } catch (err) {
-      console.error("Failed to load consultation", err);
+      if (data.encounter?.follow_up_date?.includes("T")) {
+        setAppointmentForm((prev) => ({
+          ...prev,
+          followUpTime: data.encounter.follow_up_date.split("T")[1].slice(0, 5),
+        }));
+      }
+
+      setConsultationFetched(true);
     } finally {
       setConsultationLoading(false);
     }
@@ -626,7 +678,7 @@ const AppointmentRow: React.FC<{
                   Telehealth Consent
                 </div>
                 <div className="text-slate-700">
-                  {appointment.telehealthConsent
+                  {consultationMeta.telehealthConsent
                     ? "✓ Accepted"
                     : "Not accepted"}
                 </div>
@@ -636,19 +688,67 @@ const AppointmentRow: React.FC<{
                   Terms &amp; Conditions
                 </div>
                 <div className="text-slate-700">
-                  {appointment.termsAccepted ? "✓ Accepted" : "Not accepted"}
+                  {consultationMeta.termsAccepted ? "✓ Accepted" : "Not accepted"}
                 </div>
               </div>
             </div>
 
             <InfoRow
               label="What is your main concern today?"
-              value={appointment.mainConcern || "-"}
+              value={consultationMeta.mainConcern || "-"}
             />
             <InfoRow
               label="What are you hoping to achieve from this consultation?"
-              value={appointment.goal || "-"}
+              value={consultationMeta.goal || "-"}
             />
+
+            <section>
+              <h3 className="font-semibold text-slate-900 pb-2">
+                Supporting Documents
+              </h3>
+
+              {appointmentForm.signedAttachments.length === 0 ? (
+                <div className="text-xs text-slate-400 italic">
+                  No supporting documents uploaded.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {appointmentForm.signedAttachments.map(
+                    (
+                      doc: { name?: string; document_type?: string; url: string },
+                      idx: number
+                    ) => (
+                      <a
+                        key={idx}
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <FileText
+                            size={18}
+                            className="text-slate-400 group-hover:text-blue-600"
+                          />
+                          <span className="text-xs font-medium uppercase">
+                            {(doc.name || doc.document_type || "Document").replace(
+                              /_/g,
+                              " "
+                            )}
+                          </span>
+                        </div>
+
+                        <ExternalLink
+                          size={14}
+                          className="text-slate-300 group-hover:text-blue-600"
+                        />
+                      </a>
+                    )
+                  )}
+                </div>
+              )}
+            </section>
+
 
             {isEditingAppointment ? (
               <div className="space-y-1">
@@ -685,9 +785,31 @@ const AppointmentRow: React.FC<{
             ) : (
               <InfoRow
                 label="Clinician Notes"
-                value={appointment.clinicianNotes || "-"}
+                value={appointmentForm.clinicianNotes || "-"}
               />
             )}
+
+            {isEditingAppointment ? (
+              <div className="space-y-1">
+                <div className="text-[11px] text-slate-500">
+                  Prescriptions
+                </div>
+                <textarea
+                  value={appointmentForm.prescriptions}
+                  onChange={(e) =>
+                    updateAppointmentField("prescriptions", e.target.value)
+                  }
+                  placeholder="e.g. Paracetamol 500mg twice daily for 5 days"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                />
+              </div>
+            ) : (
+              <InfoRow
+                label="Prescriptions"
+                value={appointmentForm.prescriptions || "-"}
+              />
+            )}
+
 
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-[11px] text-slate-600">

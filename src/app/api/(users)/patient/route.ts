@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
           contact_number,
           email,
           address,
-          emergency_contact
+          emergency_contact,
+          allergies
         `,
         { count: "exact" }
       )

@@ -13,7 +13,7 @@ export async function POST(
 ) {
   try {
     const { practitionerId } = await context.params;
-    const { date, time, appointment_type_id, attendeeList = [], coupon_code, starts_at, ends_at } =
+    const { appointment_type_id, attendeeList = [], coupon_code, starts_at, ends_at, pre_consultation, consent } =
       await req.json();
     console.log("coupon_code", coupon_code)
     // ---------------------------
@@ -173,6 +173,57 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    // ---------------------------
+    // 7️⃣ Insert Consent
+    // ---------------------------
+    if (consent) {
+      const { data: consentData, error: consentError } =
+        await supabaseClient
+          .from("consents")
+          .insert({
+            appointment_id: appointment.id,
+            telehealth: consent.telehealth ?? false,
+            terms: consent.terms ?? false,
+            accepted_at: new Date(),
+            version: "v1",
+          })
+          .select()
+          .single();
+
+      if (consentError || !consentData) {
+        console.error("Consent error:", consentError);
+        return NextResponse.json(
+          { error: "Failed to create consent" },
+          { status: 500 }
+        );
+      }
+    }
+
+    // ---------------------------
+    // 8️⃣ Insert Pre-consultation
+    // ---------------------------
+    if (pre_consultation) {
+      const { data: preConsultationData, error: preConsultationError } =
+        await supabaseClient
+          .from("preconsult_responses")
+          .insert({
+            appointment_id: appointment.id,
+            raw_payload: pre_consultation,
+            patient_id: patient_id,
+          })
+          .select()
+          .single();
+
+      if (preConsultationError || !preConsultationData) {
+        console.error("Preconsult error:", preConsultationError);
+        return NextResponse.json(
+          { error: "Failed to create pre consultation" },
+          { status: 500 }
+        );
+      }
+    }
+
 
     await supabaseAdmin.from("appointment_draft").delete().eq("patient_id", patient_id)
     // ---------------------------

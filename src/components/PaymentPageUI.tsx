@@ -7,6 +7,13 @@ import {
   ClipboardList,
   Loader2,
   CheckCircle2,
+  Megaphone,
+  Target,
+  MessageSquare,
+  ClipboardCheck,
+  Mail,
+  UserPlus,
+  Users,
 } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
 import { useAuth } from "@/contexts/AuthContext";
@@ -189,6 +196,145 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                 {t("service")}
               </h3>
               <p>{service?.name}</p>
+            </div>
+            {/* CONSENT & POLICY STATUS */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 tracking-wider">
+                Consents & Agreements
+              </h3>
+
+              <div className="space-y-3">
+                {/* Telehealth Consent */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-1.5 rounded-full ${bookingData.consent.telehealth ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">Telehealth Consultation Consent</span>
+                  </div>
+                  <span className={`text-xs font-bold px-2 py-1 rounded ${bookingData.consent.telehealth ? 'text-green-700' : 'text-red-700'}`}>
+                    {bookingData.consent.telehealth ? "ACCEPTED" : "DECLINED"}
+                  </span>
+                </div>
+
+                {/* Terms & Conditions */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-1.5 rounded-full ${bookingData.consent.terms ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">Terms of Service & Privacy Policy</span>
+                  </div>
+                  <span className={`text-xs font-bold px-2 py-1 rounded ${bookingData.consent.terms ? 'text-green-700' : 'text-red-700'}`}>
+                    {bookingData.consent.terms ? "ACCEPTED" : "DECLINED"}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              {/* Header */}
+              <div className="bg-slate-50 px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+                <ClipboardCheck className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-800 uppercase tracking-wider text-sm">
+                  Pre-Consultation Summary
+                </h3>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Primary Concern */}
+                <div className="flex gap-4">
+                  <div className="mt-1">
+                    <div className="p-2 bg-red-50 rounded-lg">
+                      <MessageSquare className="w-5 h-5 text-red-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase">Primary Concern / Symptoms</p>
+                    <p className="text-gray-900 mt-1 font-medium leading-relaxed">
+                      {bookingData?.pre_consultation?.note?.concern || "No specific concern provided."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Expected Outcome */}
+                <div className="flex gap-4">
+                  <div className="mt-1">
+                    <div className="p-2 bg-green-50 rounded-lg">
+                      <Target className="w-5 h-5 text-green-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase">Desired Outcome</p>
+                    <p className="text-gray-900 mt-1 font-medium leading-relaxed">
+                      {bookingData?.pre_consultation?.note?.outcome || "No specific outcome mentioned."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Referral Source */}
+                <div className="pt-4 border-t border-dashed border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Megaphone className="w-4 h-4" />
+                      <span className="text-sm font-medium">How did you hear about us?</span>
+                    </div>
+                    <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
+                      {bookingData?.pre_consultation?.referral}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              {/* Header */}
+              <div className="bg-slate-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-bold text-gray-800 uppercase tracking-wider text-sm">
+                    Participant Roster
+                  </h3>
+                </div>
+                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                  {attendeeCount} Total
+                </span>
+              </div>
+
+              <div className="p-6">
+                {bookingData.selectedAttendees.length > 0 ? (
+                  <div className="space-y-3">
+                    {bookingData.selectedAttendees.map((email, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 rounded-xl border border-gray-50 bg-gray-50/50 hover:bg-white hover:border-blue-100 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-blue-600 shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            <Mail className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{email}</p>
+                            <p className="text-xs text-gray-500 italic">Confirmed Participant</p>
+                          </div>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <UserPlus className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm">No additional attendees selected.</p>
+                  </div>
+                )}
+
+                {/* Info Tip */}
+                <div className="mt-6 flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="h-2 w-2 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    All listed attendees will receive a secure meeting link and calendar invitation via their registered email addresses.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

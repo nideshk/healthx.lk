@@ -44,8 +44,8 @@ export async function POST(req: Request) {
       profile_bio,
       available_services,
       fees,
-      availability,
       bank_details,
+      languages
     } = body;
 
     // 🔴 Required fields
@@ -85,6 +85,24 @@ export async function POST(req: Request) {
     // 🔐 Encrypt password
     const encrypted_password = encrypt(password);
 
+    let normalizedLanguages: string[] | null = null;
+
+    if (languages !== undefined) {
+      if (!Array.isArray(languages)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "languages must be an array of strings",
+          },
+          { status: 400 }
+        );
+      }
+
+      normalizedLanguages = languages
+        .map((l: string) => l.trim())
+        .filter(Boolean);
+    }
+
     // ✅ Insert application
     const { data, error } = await supabaseAdmin
       .from("practitioner_applications")
@@ -105,11 +123,11 @@ export async function POST(req: Request) {
 
         available_services,
         fees,
-        availability,
         bank_details,
 
         status: "pending",
         user_created: false,
+        languages: normalizedLanguages
       })
       .select("id")
       .single();;

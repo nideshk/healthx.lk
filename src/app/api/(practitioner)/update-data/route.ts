@@ -126,6 +126,7 @@ Your clinician has updated the following field:
       profile_bio: body.profile_bio,
       available_services: body.available_services,
       fees: body.fees,
+      languages: body.languages,
       updated_at: new Date().toISOString(),
     });
 

@@ -34,7 +34,6 @@ import { notify } from "@/lib/notify";
  * @param input.profile_bio - Short professional bio
  * @param input.available_services - List of appointment/service IDs
  * @param input.fees - Fee configuration per service
- * @param input.availability - Optional availability configuration
  * @param input.bank_details - Optional bank account details
  *
  * @returns A result object indicating success or failure
@@ -65,9 +64,10 @@ type CreatePractitionerInput = {
   profile_bio?: string;
   fees?: any;
   available_services?: string[];
-  availability?: any;
+  // availability?: any;
   bank_details?: any;
   documents?: any[]; // 👈 optional, safe
+  languages?: string[]; 
 };
 
 export async function createPractitioner(
@@ -90,9 +90,10 @@ export async function createPractitioner(
     profile_bio,
     fees,
     available_services,
-    availability,
+    // availability,
     bank_details,
     documents,
+    languages
   } = input;
 
   const full_name = [first_name, last_name].filter(Boolean).join(" ");
@@ -158,6 +159,7 @@ export async function createPractitioner(
       fees,
       is_active: true,
       documents: documents ?? [],
+      languages
     })
     .select("id")
     .single();
@@ -178,27 +180,27 @@ export async function createPractitioner(
   const finalPractitionerId = practitioner.id;
 
   /* 4️⃣ Availability */
-  if (availability) {
-    const toISO = (t: string) =>
-      new Date(`2000-01-01T${t}:00`).toISOString();
+  // if (availability) {
+  //   const toISO = (t: string) =>
+  //     new Date(`2000-01-01T${t}:00`).toISOString();
 
-    const { error: availabilityErr } = await supabaseAdmin
-      .from("practitioner_availability")
-      .insert({
-        practitioner_id: finalPractitionerId,
-        starts_at: toISO(availability.start_time),
-        ends_at: toISO(availability.end_time),
-        days_unavailable: availability.days_unavailable || [],
-        timezone: availability.timezone || "Asia/Colombo",
-      });
+  //   const { error: availabilityErr } = await supabaseAdmin
+  //     .from("practitioner_availability")
+  //     .insert({
+  //       practitioner_id: finalPractitionerId,
+  //       starts_at: toISO(availability.start_time),
+  //       ends_at: toISO(availability.end_time),
+  //       days_unavailable: availability.days_unavailable || [],
+  //       timezone: availability.timezone || "Asia/Colombo",
+  //     });
 
-    if (availabilityErr) {
-      return {
-        success: false,
-        message: "Failed to save practitioner availability",
-      };
-    }
-  }
+  //   if (availabilityErr) {
+  //     return {
+  //       success: false,
+  //       message: "Failed to save practitioner availability",
+  //     };
+  //   }
+  // }
 
   /* 5️⃣ Bank details */
   if (bank_details) {

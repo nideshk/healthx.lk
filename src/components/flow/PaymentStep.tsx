@@ -160,13 +160,16 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         }
       }
 
-      const { reset } = useBookingDraftStore.getState();
-      await reset();
+
 
       updateData({
         payment_status: "completed",
         appointment_id: appointmentId,
       });
+
+      const { reset } = useBookingDraftStore.getState();
+      await reset();
+
       nextStep();
     };
 
@@ -200,6 +203,8 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
                 appointment_type_id,
                 attendeeList: bookingData.selectedAttendees,
                 coupon_code: coupon,
+                pre_consultation: bookingData.pre_consultation,
+                consent: bookingData.consent,
               }),
             },
           );

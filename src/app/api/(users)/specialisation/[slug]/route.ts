@@ -69,6 +69,7 @@ export async function GET(
         license_number,
         contact_email,
         fees,
+        languages,
         profiles!practitioners_profiles_fkey (
           avatar_url
         )
@@ -103,6 +104,7 @@ export async function GET(
         profile_picture_url: getAvatarUrl(p.profiles),
         starting_price,
         ending_price,
+        languages: p.languages ?? [],
       };
     });
 

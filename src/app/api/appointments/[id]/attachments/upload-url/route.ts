@@ -137,7 +137,6 @@ export async function POST(
       Bucket: BUCKET_NAME,
       Key: s3Key,
       ContentType: fileType,
-      ContentLength: fileSize,
     });
 
     let uploadUrl: string;

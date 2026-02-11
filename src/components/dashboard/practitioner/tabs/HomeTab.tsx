@@ -10,6 +10,7 @@ import Loader from "@/components/atom/Loader/Loader";
 import { Appointment } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import { useAuth } from "@/contexts/AuthContext";
+import { email } from "zod";
 
 /* ---------- Date helpers ---------- */
 
@@ -111,6 +112,8 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
             date: start.toFormat("dd/MM/yyyy"),
             time: start.toFormat("hh:mm a"),
             patient: item.patient || "—",
+            email: item.email || "-",
+            contact_number: item.contact_number || "-",
             patientId: item.id,
             doctorName: fullName,
             reason: item.reason || "—",
