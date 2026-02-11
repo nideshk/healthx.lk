@@ -61,6 +61,8 @@ export type Appointment = {
   followUpDate?: string;
   patient?: string;
   room_key?: string;
+  email? :string;
+  contact_number? : string
 };
 
 // ---------------- Analytics ---------------- //

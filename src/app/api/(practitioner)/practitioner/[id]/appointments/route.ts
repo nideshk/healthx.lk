@@ -3,6 +3,7 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
+import { email } from "zod";
 
 function getDurationInMinutes(
   startsAt: string,
@@ -80,7 +81,9 @@ export async function GET(
         room_key,
 
         patient:patients (
-            full_name
+            full_name,
+            email,
+            contact_number
         ),
 
         type:appointment_type (
@@ -194,6 +197,8 @@ export async function GET(
     data: data.map((a) => ({
       id: a.id,
       patient: (a.patient as unknown as { full_name: string } | null)?.full_name ?? null,
+      email: (a.patient as unknown as { email: string } | null)?.email ?? null,
+      contact_number : (a.patient as unknown as { contact_number: string } | null)?.contact_number ?? null,
       appointment_type: (a.type as unknown as { name: string } | null)?.name ?? null,
       starts_at: a.starts_at,
       ends_at: a.ends_at,

@@ -78,7 +78,7 @@ export async function GET(
         profile_bio,
         available_services,
         fees,
-        availability,
+        languages,
         bank_details,
         status,
         user_created,

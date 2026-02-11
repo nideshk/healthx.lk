@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
         specialization,
         experience_years,
         status,
+        languages,
         user_created,
         user_id,
         created_at
