@@ -6,6 +6,8 @@ import Button from "@/components/atom/Button/Button";
 import { Patient, PatientDetailTab } from "@/types/Dashboard";
 import { toast } from "react-toastify";
 import { authFetch } from "@/lib/authFetch";
+import Link from "next/link";
+import Loader from "@/components/atom/Loader/Loader";
 
 /* ----------------------------------
    Admin-only lean appointment type
@@ -65,7 +67,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Local state for form fields
+  // Local state for all fields required by the API
   const [formData, setFormData] = useState({
     full_name: patient.full_name || "",
     dob: patient.dob || "",
@@ -75,9 +77,11 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
       : patient.allergies || "",
     email: patient.email || "",
     contact_number: patient.contact_number || "",
-    addressLine1: patient.addressLine1 || "",
+    address: patient.addressLine1 || "",
     city: patient.city || "",
+    state: (patient as any).state || "",
     country: patient.country || "",
+    emergency_contact: (patient as any).emergency_contact || "",
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -86,25 +90,33 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
 
   const handleSave = async () => {
     setIsSaving(true);
+    
+    // Logic to split full_name into first and last name for the API
+    const nameParts = formData.full_name.trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
     try {
       const payload = {
-        user_id: patient.id, // Using patient.id as supabase_id per instructions
+        user_id: patient.id,
         target_role: "patient",
         patient: {
-          first_name: formData.full_name, // Mapping full_name to first_name as requested
-          last_name: "", 
+          first_name: firstName,
+          last_name: lastName,
           city: formData.city,
+          state: formData.state,
           country: formData.country,
           dob: formData.dob,
           gender: formData.gender,
           contact_number: formData.contact_number,
-          address: formData.addressLine1,
+          emergency_contact: formData.emergency_contact,
+          address: formData.address,
           allergies: formData.allergies.split(",").map((s) => s.trim()).filter(Boolean),
         },
       };
 
-      const response = await authFetch("http://localhost:3000/api/update-user", {
-        method: "POST",
+      const response = await authFetch("/api/update-user", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -287,25 +299,28 @@ const PatientOverviewTab: React.FC<{
           type="date"
           onChange={(val) => onChange("dob", val)}
         />
-        <InfoRow
-          label="Gender"
-          value={formData.gender}
-          isEditing={isEditing}
-          onChange={(val) => onChange("gender", val)}
-        />
+       
+          <InfoRow
+            label="Gender"
+            value={formData.gender}
+            isEditing={isEditing}
+            onChange={(val) => onChange("gender", val)}
+          />
+          
         <div className="flex flex-col gap-1">
           <span className="text-[11px] text-slate-500">Age</span>
           <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-100 text-slate-500 cursor-not-allowed">
-            {calculateAge(formData.dob)} years (Auto-calculated)
+            {calculateAge(formData.dob)} years
           </div>
         </div>
         <InfoRow
           label="Allergies"
           value={formData.allergies}
           isEditing={isEditing}
-          placeholder=" Dust, Peanuts"
+          placeholder="e.g. Peanuts, Dust"
           onChange={(val) => onChange("allergies", val)}
         />
+      
       </CardBody>
     </Card>
 
@@ -322,24 +337,40 @@ const PatientOverviewTab: React.FC<{
           isEditing={isEditing}
           onChange={(val) => onChange("email", val)}
         />
-        <InfoRow
-          label="Phone"
-          value={formData.contact_number}
-          isEditing={isEditing}
-          onChange={(val) => onChange("contact_number", val)}
-        />
+        <div className="grid grid-cols-2 gap-2">
+          <InfoRow
+            label="Phone"
+            value={formData.contact_number}
+            isEditing={isEditing}
+            onChange={(val) => onChange("contact_number", val)}
+          />
+          <InfoRow
+            label="Emergency Contact"
+            value={formData.emergency_contact}
+            isEditing={isEditing}
+            onChange={(val) => onChange("emergency_contact", val)}
+          />
+        </div>
         <InfoRow
           label="Address"
-          value={formData.addressLine1}
+          value={formData.address}
           isEditing={isEditing}
-          onChange={(val) => onChange("addressLine1", val)}
+          onChange={(val) => onChange("address", val)}
         />
-        <InfoRow
-          label="City"
-          value={formData.city}
-          isEditing={isEditing}
-          onChange={(val) => onChange("city", val)}
-        />
+        <div className="grid grid-cols-2 gap-2">
+          <InfoRow
+            label="City"
+            value={formData.city}
+            isEditing={isEditing}
+            onChange={(val) => onChange("city", val)}
+          />
+          <InfoRow
+            label="State"
+            value={formData.state}
+            isEditing={isEditing}
+            onChange={(val) => onChange("state", val)}
+          />
+        </div>
         <InfoRow
           label="Country"
           value={formData.country}
@@ -418,20 +449,232 @@ const AppointmentList: React.FC<{
 }> = ({ appointments }) => (
   <div className="space-y-3">
     {appointments.map((a) => (
-      <Card key={a.id}>
-        <CardBody className="text-xs">
-          <div className="font-bold text-md text-slate-900">
-            Dr. {a.doctorName}
-          </div>
-          <div className="text-slate-600">
-            {a.date} at {a.time}
-          </div>
-          <div className="text-slate-700 mt-1">{a.appointmentType}</div>
-        </CardBody>
-      </Card>
+      <AppointmentRow key={a.id} appointment={a} />
     ))}
   </div>
 );
+
+const AppointmentRow: React.FC<{
+  appointment: AdminAppointment;
+}> = ({ appointment }) => {
+  const [open, setOpen] = useState(false);
+  const [consultationLoading, setConsultationLoading] = useState(false);
+  const [consultationFetched, setConsultationFetched] = useState(false);
+  const [consultationMeta, setConsultationMeta] = useState({
+    telehealthConsent: false,
+    termsAccepted: false,
+    mainConcern: "",
+    goal: "",
+  });
+  const [attachments, setAttachments] = useState<
+    Array<{ id: string; file_name: string; view_url: string }>
+  >([]);
+  const [appointmentForm, setAppointmentForm] = useState({
+    clinicianNotes: "",
+    prescriptions: "",
+    followUpNeeded: false,
+    followUpDate: "",
+    followUpTime: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const fetchConsultationDetails = async () => {
+    if (consultationFetched) return;
+    setConsultationLoading(true);
+    try {
+      const res = await authFetch(
+        `/api/booking/appointment/${appointment.id}/consultation`,
+      );
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to fetch consultation");
+      }
+      const data = await res.json();
+
+      // Store metadata
+      setConsultationMeta({
+        telehealthConsent: !!data.consent?.telehealth,
+        termsAccepted: !!data.consent?.terms,
+        mainConcern: data.preconsult?.raw_payload?.note?.concern || "",
+        goal: data.preconsult?.raw_payload?.note?.outcome || "",
+      });
+
+      // Store attachments
+      setAttachments(data.attachments || []);
+
+      // Store form data
+      setAppointmentForm((prev) => ({
+        ...prev,
+        clinicianNotes: data.encounter?.clinician_notes || "",
+        prescriptions: data.encounter?.prescriptions || "",
+        followUpNeeded: !!data.encounter?.follow_up_needed,
+        followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || "",
+        followUpTime: data.encounter?.follow_up_date?.includes("T")
+          ? data.encounter.follow_up_date.split("T")[1].slice(0, 5)
+          : "",
+      }));
+
+      setConsultationFetched(true);
+    } catch (err) {
+      console.error("Failed to load consultation", err);
+      toast.error("Failed to load consultation details");
+    } finally {
+      setConsultationLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      let formattedFollowUp = null;
+      if (appointmentForm.followUpNeeded && appointmentForm.followUpDate) {
+        const time = appointmentForm.followUpTime || "00:00";
+        formattedFollowUp = `${appointmentForm.followUpDate}T${time}:00+00:00`;
+      }
+
+      const payload = {
+        clinician_notes: appointmentForm.clinicianNotes,
+        prescriptions: appointmentForm.prescriptions,
+        follow_up_needed: appointmentForm.followUpNeeded,
+        follow_up_date: formattedFollowUp,
+      };
+
+      const res = await authFetch(
+        `/api/booking/appointment/${appointment.id}/consultation`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!res.ok) throw new Error("Failed to save");
+
+      toast.success("Consultation notes saved successfully");
+    } catch (err) {
+      console.error("Failed to save consultation", err);
+      toast.error("Error saving consultation");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateAppointmentField = (key: string, value: string | boolean) => {
+    setAppointmentForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  return (
+    <Card>
+      <CardBody className="text-xs space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="font-bold text-md text-blue-600 text-slate-900">
+              Dr. {appointment.doctorName}
+            </div>
+            <div className="text-slate-600">
+              {appointment.date} at {appointment.time}
+            </div>
+            <div className="text-slate-700 mt-1">{appointment.appointmentType}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!open) fetchConsultationDetails();
+              setOpen((o) => !o);
+            }}
+            className="text-xs border rounded-full px-2 py-1 hover:bg-slate-50"
+          >
+            {open ? "▴" : "▾"}
+          </button>
+        </div>
+
+        {open && (
+          <div className="pt-3 border-t border-slate-200 space-y-4">
+            {consultationLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader size="sm" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold text-slate-900">
+                    Consultation Details
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="text-[11px] text-slate-500">
+                      Appointment Type
+                    </div>
+                    <div className="text-slate-700">
+                      {appointment.appointmentType || "-"}
+                    </div>
+                    <div className="text-[11px] text-slate-500 pt-3">
+                      Telehealth Consent
+                    </div>
+                    <div className="text-slate-700">
+                      {consultationMeta.telehealthConsent
+                        ? "✓ Accepted"
+                        : "Not accepted"}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-[11px] text-slate-500">
+                      Terms & Conditions
+                    </div>
+                    <div className="text-slate-700">
+                      {consultationMeta.termsAccepted
+                        ? "✓ Accepted"
+                        : "Not accepted"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Supporting Documents Section */}
+                <section>
+                  <h3 className="font-semibold text-slate-900 pb-2">
+                    Supporting Documents
+                  </h3>
+
+                  {attachments.length === 0 ? (
+                    <div className="text-xs text-slate-400 italic">
+                      No supporting documents uploaded.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {attachments.map((doc) => (
+                        <a
+                          key={doc.id}
+                          href={doc.view_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm">📄</span>
+                            <span className="text-xs font-medium text-slate-700 group-hover:text-blue-600">
+                              {doc.file_name}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-400 group-hover:text-blue-600">
+                            ↗
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+               
+              </>
+            )}
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+};
 
 const LoadingText = () => (
   <p className="text-xs text-slate-500">Loading appointments...</p>
@@ -439,4 +682,16 @@ const LoadingText = () => (
 
 const EmptyText = () => (
   <p className="text-xs text-slate-500">No appointments in this section.</p>
+);
+
+const ConsultationInfoRow: React.FC<{ label: string; value: string }> = ({
+  label,
+  value,
+}) => (
+  <div className="flex flex-col gap-1">
+    <span className="text-[11px] text-slate-500">{label}</span>
+    <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 text-slate-800 whitespace-pre-wrap">
+      {value}
+    </div>
+  </div>
 );

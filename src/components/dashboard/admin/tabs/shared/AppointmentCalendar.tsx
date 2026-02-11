@@ -15,8 +15,6 @@ interface AppointmentCalendarProps {
   onCompleteAppointment?: (id: string) => void;
   onRangeChange?: (from: string, to: string) => void;
   userRole?: "admin" | "superadmin" | "practitioner";
-  onRangeChange?: (from: string, to: string) => void;
-  userRole?: "admin" | "superadmin" | "practitioner";
 }
 
 const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
