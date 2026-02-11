@@ -46,7 +46,6 @@ export function CouponTable({
                 toast.error("Failed to update status");
             }
         } catch (err) {
-            console.log(err);
             toast.error("An error occurred");
         } finally {
             setProcessingId(null);

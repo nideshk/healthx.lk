@@ -7,14 +7,14 @@ import { toast } from "react-toastify";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
 import GenericTable, { Column } from "../subtabs/GenericTable";
-import { 
-  ShieldCheck, 
-  Download, 
-  Globe, 
-  Eye, 
-  X, 
-  FileJson, 
-  LayoutList 
+import {
+  ShieldCheck,
+  Download,
+  Globe,
+  Eye,
+  X,
+  FileJson,
+  LayoutList
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
@@ -70,7 +70,7 @@ const AuditTrackingTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // Dynamic Pagination States
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
@@ -79,23 +79,20 @@ const AuditTrackingTab: React.FC = () => {
   const fetchAuditLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams({ 
-        fromDate, 
-        toDate, 
-        page: page.toString(), 
-        limit: perPage.toString() 
+      const queryParams = new URLSearchParams({
+        fromDate,
+        toDate,
+        page: page.toString(),
+        limit: perPage.toString()
       });
       const response = await authFetch(`/api/hipaa-audit-logs?${queryParams}`);
       if (!response.ok) {
-          throw new Error(`Failed to fetch logs: ${response.status}`);
-        }
+        throw new Error(`Failed to fetch logs: ${response.status}`);
+      }
       const result = await response.json();
       if (result?.success) {
         setLogs(result.data || []);
         setTotalLogs(result.total || 0);
-
-        console.log("logs -----------")
-        console.log(result.data)
       }
     } catch (error) {
       toast.error("Failed to fetch logs");
@@ -104,8 +101,8 @@ const AuditTrackingTab: React.FC = () => {
     }
   }, [fromDate, toDate, page, perPage]);
 
-  useEffect(() => { 
-    fetchAuditLogs(); 
+  useEffect(() => {
+    fetchAuditLogs();
   }, [fetchAuditLogs]);
 
   const totalPages = useMemo(() => Math.ceil(totalLogs / perPage) || 1, [totalLogs, perPage]);
@@ -176,7 +173,7 @@ const AuditTrackingTab: React.FC = () => {
     {
       header: "Metadata",
       render: (log) => (
-        <button 
+        <button
           onClick={() => { setSelectedLog(log); setIsModalOpen(true); }}
           className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all text-xs font-semibold"
         >
@@ -200,9 +197,9 @@ const AuditTrackingTab: React.FC = () => {
         </div>
       </div>
 
-      <GenericTable 
-        columns={columns} 
-        data={logs} 
+      <GenericTable
+        columns={columns}
+        data={logs}
         loading={loading}
         pagination={{
           currentPage: page,
@@ -236,7 +233,7 @@ const MetadataModal = ({ log, onClose }: { log: AuditLogItem; onClose: () => voi
   const renderPrettyContent = (data: any): React.ReactNode => {
     if (!data || typeof data !== "object") return <span className="font-medium text-slate-800">{String(data)}</span>;
 
-    const entries = Object.entries(data).filter(([key]) => 
+    const entries = Object.entries(data).filter(([key]) =>
       viewMode === "raw" ? true : ALLOWED_METADATA_FIELDS.includes(key)
     );
 

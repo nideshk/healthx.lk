@@ -15,6 +15,8 @@ interface AppointmentCalendarProps {
   onCompleteAppointment?: (id: string) => void;
   onRangeChange?: (from: string, to: string) => void;
   userRole?: "admin" | "superadmin" | "practitioner";
+  onRangeChange?: (from: string, to: string) => void;
+  userRole?: "admin" | "superadmin" | "practitioner";
 }
 
 const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
@@ -95,22 +97,20 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             <button
               type="button"
               onClick={() => setViewMode("weekly")}
-              className={`rounded-full px-3 py-1 border text-xs ${
-                viewMode === "weekly"
+              className={`rounded-full px-3 py-1 border text-xs ${viewMode === "weekly"
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white text-slate-600 border-slate-200"
-              }`}
+                }`}
             >
               Weekly
             </button>
             <button
               type="button"
               onClick={() => setViewMode("daily")}
-              className={`rounded-full px-3 py-1 border text-xs ${
-                viewMode === "daily"
+              className={`rounded-full px-3 py-1 border text-xs ${viewMode === "daily"
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white text-slate-600 border-slate-200"
-              }`}
+                }`}
             >
               Daily
             </button>
@@ -208,6 +208,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                               className={`w-full h-[22px] rounded-md text-[11px] px-2 truncate ${colorClasses}`}
                               onClick={() => setSelectedAppt(appt)}
                             >
+                              {appt.patient || "Patient"} • {appt.time}
                               {appt.patient || "Patient"} • {appt.time}
                             </button>
                           );
@@ -394,6 +395,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
             ×
           </button>
         </div>
+
 
         <div className="px-5 py-4 space-y-3">
           {/* Made Patient Name Clickable */}

@@ -312,7 +312,6 @@ const Availability: React.FC = () => {
       const res = await authFetch(`/api/practitioner/availability`);
       const data = await res.json();
       setAvailability(data.availability);
-      console.log(data.availability)
     };
     fetchAvailability();
   }, [])

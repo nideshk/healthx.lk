@@ -30,7 +30,6 @@ function CheckoutContent() {
         }
 
         const data = await res.json();
-        console.log("Data from booking-details : ", data);
 
         const mappedData = {
           ...data,
@@ -40,7 +39,6 @@ function CheckoutContent() {
           selectedDoctor: data.selectedDoctor,
           appointmentType: data.appointmentType
         };
-        // console.log("Mapped Data | Booking data : ", mappedData);
 
         setBookingData(mappedData);
       } catch (error) {

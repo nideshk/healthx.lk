@@ -89,7 +89,6 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
     setLoadingAvailability(true);
     try {
       const res = await axios.get(`/api/booking/${practitionerId}/availability?date=${dateStr}`);
-      console.log(res.data);
       setAvailability(res.data);
     } catch {
       toast.error(t("loadSlotsError"));

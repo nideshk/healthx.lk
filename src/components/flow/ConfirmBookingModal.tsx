@@ -50,10 +50,8 @@ export default function ConfirmBookingModal({
       const res = await axios.post("/api/appointment/draft", { data: draftData });
       const draft = res.data;
 
-      console.log(draft)
       if (!draft?.data.id) throw new Error("No draft ID returned");
 
-      console.log("✅ Draft saved to Supabase:", draft);
 
       // ➡️ Redirect to confirmation page
       router.push(`/appointment/confirmation`);
@@ -86,8 +84,8 @@ export default function ConfirmBookingModal({
               onClick={handleConfirm}
               disabled={disabled}
               className={`px-4 py-2 rounded-md text-white font-semibold flex items-center gap-2 ${disabled
-                  ? 'bg-gray-400'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-gray-400'
+                : 'bg-blue-600 hover:bg-blue-700'
                 }`}
             >
               {loading ? (

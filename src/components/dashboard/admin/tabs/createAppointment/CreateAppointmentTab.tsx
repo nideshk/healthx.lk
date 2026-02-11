@@ -90,7 +90,6 @@ export default function CreateAppointmentTab() {
                     `/api/practitioners?q=${encodeURIComponent(practitionerSearch)}`
                 );
                 const json = await res.json();
-                console.log(json)
                 if (!res.ok) throw new Error(json.error);
                 if (active) setPractitioners(json.data || []);
             } catch {
@@ -122,7 +121,6 @@ export default function CreateAppointmentTab() {
                 const res = await authFetch(`/api/practitioners/${form.practitioner_id}`);
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
-                console.log("data", data)
                 if (active) {
                     setAppointmentTypes(data.practitioner.appointment_types || []);
                 }

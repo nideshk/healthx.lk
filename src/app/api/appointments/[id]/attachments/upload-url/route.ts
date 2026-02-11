@@ -15,19 +15,11 @@ export async function POST(
   const requestId = crypto.randomUUID();
 
   try {
-    console.log("🔹 [UPLOAD_URL] Request start", { requestId });
 
     /* ------------------------------------------------
      * AUTH
      * ------------------------------------------------ */
     const auth = await requireUser(req);
-    console.log("🔹 [UPLOAD_URL] Auth result", {
-      requestId,
-      authorized: auth.authorized,
-      role: auth.user?.role,
-      patient_id: auth.user?.patient_id,
-      practitioner_id: auth.user?.practitioner_id,
-    });
 
     if (!auth.authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,11 +29,6 @@ export async function POST(
      * PARAMS (ASYNC)
      * ------------------------------------------------ */
     const { id } = await context.params;
-
-    console.log("🔹 [UPLOAD_URL] Params resolved", {
-      requestId,
-      id,
-    });
 
     if (!id) {
       return NextResponse.json(
@@ -55,13 +42,6 @@ export async function POST(
      * ------------------------------------------------ */
     const body = await req.json();
     const { fileName, fileType, fileSize } = body;
-
-    console.log("🔹 [UPLOAD_URL] Body received", {
-      requestId,
-      fileName,
-      fileType,
-      fileSize,
-    });
 
     if (!fileName || !fileType || !fileSize) {
       return NextResponse.json(
@@ -78,13 +58,6 @@ export async function POST(
       .select("id, patient_id, practitioner_id")
       .eq("id", id)
       .single();
-
-    console.log("🔹 [UPLOAD_URL] Appointment lookup", {
-      requestId,
-      found: !!appointment,
-      error: apptErr?.message,
-      appointment,
-    });
 
     if (apptErr || !appointment) {
       return NextResponse.json(
@@ -149,11 +122,6 @@ export async function POST(
       });
       throw s3Err;
     }
-
-    console.log("✅ [UPLOAD_URL] Presigned URL generated", {
-      requestId,
-      bucket: BUCKET_NAME,
-    });
 
     return NextResponse.json({
       uploadUrl,
