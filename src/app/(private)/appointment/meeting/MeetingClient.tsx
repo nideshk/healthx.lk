@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import VideoCallContainer from "@/components/atom/VideoCall/VideoCall";
 import { authFetch } from "@/lib/authFetch";
+import { ArrowLeft } from "lucide-react";
 
 type AuthorizeResponse = {
   authorized: boolean;
@@ -18,7 +19,7 @@ export default function MeetingPage() {
   const params = useSearchParams();
   const roomKey = params.get("room");
   const inviteToken = params.get("token");
-
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ivsToken, setIvsToken] = useState<string | null>(null);
@@ -94,11 +95,21 @@ export default function MeetingPage() {
       </div>
     );
   }
-
+  /* ---------------- ERROR STATE ---------------- */
   if (!ivsToken || !authData) {
     return (
-      <div className="h-screen flex items-center justify-center bg-black text-white">
-        {error ?? "You are not allowed to join this consultation"}
+      <div className="h-screen flex flex-col items-center justify-center bg-black text-white gap-6">
+        <p className="text-lg font-semibold">
+          {error ?? "You are not allowed to join this consultation"}
+        </p>
+
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition"
+        >
+          <ArrowLeft size={18} />
+          Back to Dashboard
+        </button>
       </div>
     );
   }
