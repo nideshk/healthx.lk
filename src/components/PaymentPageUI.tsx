@@ -251,7 +251,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                   <div>
                     <p className="text-xs font-bold text-gray-400 uppercase">Primary Concern / Symptoms</p>
                     <p className="text-gray-900 mt-1 font-medium leading-relaxed">
-                      {bookingData.pre_consultation.note.concern || "No specific concern provided."}
+                      {bookingData?.pre_consultation?.note?.concern || "No specific concern provided."}
                     </p>
                   </div>
                 </div>
@@ -266,7 +266,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                   <div>
                     <p className="text-xs font-bold text-gray-400 uppercase">Desired Outcome</p>
                     <p className="text-gray-900 mt-1 font-medium leading-relaxed">
-                      {bookingData.pre_consultation.note.outcome || "No specific outcome mentioned."}
+                      {bookingData?.pre_consultation?.note?.outcome || "No specific outcome mentioned."}
                     </p>
                   </div>
                 </div>
@@ -279,7 +279,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                       <span className="text-sm font-medium">How did you hear about us?</span>
                     </div>
                     <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
-                      {bookingData.pre_consultation.referral}
+                      {bookingData?.pre_consultation?.referral}
                     </span>
                   </div>
                 </div>
