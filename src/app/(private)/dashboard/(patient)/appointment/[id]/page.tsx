@@ -20,11 +20,15 @@ import {
   Video,
   X,
   AlertCircle,
-  ChevronRight
+  ChevronRight,
+  ExternalLink,
+  Trash2,
+  UploadCloud
 } from "lucide-react";
 import { toast } from "sonner";
 import Loader from "@/components/atom/Loader/Loader";
 import { authFetch } from "@/lib/authFetch";
+import { uploadAttachmentAfterBooking } from "@/lib/s3/uploadAttachmentAfterBooking";
 
 const CANCEL_REASONS = [
   "Schedule conflict",
@@ -40,6 +44,8 @@ export default function AppointmentDetailsPage() {
   const router = useRouter();
   const [appointment, setAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cancellation States
@@ -63,6 +69,25 @@ export default function AppointmentDetailsPage() {
   useEffect(() => {
     if (params.id) fetchAppointment();
   }, [params.id, fetchAppointment]);
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file || !appointment?.id) return;
+
+    try {
+      setUploading(true);
+
+      await uploadAttachmentAfterBooking(file, appointment.id);
+
+      toast.success("File uploaded");
+      fetchAppointment(); // refresh list
+    } catch (err) {
+      toast.error("Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleShare = useCallback(async () => {
     const date = DateTime.fromISO(appointment.starts_at).toFormat("EEEE, dd MMMM yyyy");
@@ -289,6 +314,71 @@ export default function AppointmentDetailsPage() {
           </div>
         </div>
       )}
+      <div className="p-5 m-5">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-3">
+          Patient Attachments
+        </label>
+
+        {/* Upload Dropzone */}
+        <label className="group relative flex flex-col items-center justify-center gap-2 px-6 py-8 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200 hover:border-teal-500 hover:bg-teal-50/30 transition-all cursor-pointer overflow-hidden">
+          {uploading ? (
+            <div className="flex flex-col items-center gap-2 animate-pulse">
+              <RefreshCcw className="w-5 h-5 text-teal-500 animate-spin" />
+              <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Processing File...</span>
+            </div>
+          ) : (
+            <>
+              <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+                <UploadCloud className="w-5 h-5 text-slate-400 group-hover:text-teal-500" />
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-black text-slate-600 uppercase tracking-widest">Upload Document</p>
+                <p className="text-[9px] text-slate-400 font-medium mt-1">PDF, JPG or PNG (Max 10MB)</p>
+              </div>
+            </>
+          )}
+          <input
+            type="file"
+            className="hidden"
+            onChange={handleFileUpload}
+            disabled={uploading}
+          />
+        </label>
+
+        {/* Attachment List */}
+        {appointment.attachments?.length > 0 ? (
+          <div className="mt-6 space-y-3">
+            {appointment.attachments.map((file: any) => (
+              <div
+                key={file.id}
+                className="group flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 hover:border-teal-200 hover:shadow-md hover:shadow-teal-500/5 transition-all"
+              >
+                {/* File Icon based on extension */}
+                <div className="w-10 h-10 flex-shrink-0 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors">
+                  <FileText size={18} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-700 truncate tracking-tight">
+                    {file.file_name}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                    Clinical Record • Added {DateTime.fromISO(file.created_at || new Date().toISOString()).toFormat('dd LLL')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          !uploading && (
+            <div className="mt-4 flex items-center gap-3 px-6 py-4 bg-slate-50/50 rounded-2xl border border-slate-100 text-slate-400">
+              <ShieldCheck size={14} className="opacity-50" />
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">No files shared yet</span>
+            </div>
+          )
+        )}
+      </div>
+
     </div>
   );
 }
