@@ -222,7 +222,6 @@ export async function GET(req: NextRequest) {
 
       // Cancelled
       if (a.status === "cancelled" || a.cancellation_reason) {
-        console.log("⛔ → CANCELLED\n");
         cancelled.push(a);
         continue;
       }

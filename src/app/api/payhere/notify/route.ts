@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
     // Convert FormData to a standard object for easy access
     const paymentData: { [key: string]: string } = Object.fromEntries(formData.entries()) as { [key: string]: string };
 
-    console.log("--- IPN RECEIVED ---", paymentData);
 
     const {
         merchant_id, order_id, payhere_amount, payhere_currency, status_code, md5sig, payment_id
@@ -52,7 +51,6 @@ export async function POST(request: NextRequest) {
 
             // Case where transaction was already PAID so return from here ealry
             if (!updatedTransaction || updatedTransaction.length === 0) {
-                console.log(`Transaction ${order_id} already marked as PAID. Skipping.`);
                 return NextResponse.json({ message: "Transaction already marked as PAID" }, { status: 200 });
             }
 
@@ -64,7 +62,6 @@ export async function POST(request: NextRequest) {
                 .single();
 
             if (currentApp?.status === 'confirmed' && currentApp?.payment_status == 'paid') {
-                console.log(`Appointment ${order_id} already confirmed. Skipping notify.`);
                 return NextResponse.json({ message: "Appointment already confirmed" }, { status: 200 });
             }
 
@@ -96,7 +93,6 @@ export async function POST(request: NextRequest) {
                 throw new Error("Could not find appointment data");
             }
 
-            console.log("\n-------------Data fetched for notification purpose related to appointment-------------\n", appointment);
 
             // Fetch the patient data using the patient_id from the appointment
             const { data: patientData, error: patientError } = await supabaseAdmin
@@ -110,7 +106,6 @@ export async function POST(request: NextRequest) {
                 throw new Error("Could not find patient data for notification");
             }
 
-            console.log("\n-------------Data fetched for notification purpose related to patient-------------\n", patientData);
 
             // Trigger the Notification (Email/SMS/In-App)
             await notify({
@@ -147,8 +142,6 @@ export async function POST(request: NextRequest) {
                     console.log("Attendee invites failed : ", attendeeInviteError);
                 }
             }
-
-            console.log(`✅ Webhook Processed: Appointment ${order_id} confirmed and user notified.`);
 
         } catch (error) {
             console.error("🚨 Critical Webhook Error:", error);

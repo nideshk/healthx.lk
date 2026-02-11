@@ -35,7 +35,6 @@ export default function FileUpload() {
       }
 
       setMessage("✅ File uploaded successfully!");
-      console.log("Attachment Created:", data);
     } catch (err: any) {
       console.error("File upload failed:", err);
       setMessage("❌ Error: " + err.message);

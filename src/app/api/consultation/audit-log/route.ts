@@ -65,7 +65,6 @@ export async function POST(req: NextRequest) {
     // 4️⃣ WRITE TO AUDIT LOG
     // ---------------------------------------------------------
 
-    console.log(`Logging telehealth event: appointmentId=${appointmentId}, eventType=${eventType}, actorUserId=${actorUserId}, actorRole=${actorRole}`);
     await supabaseAdmin.from("consultation_audit_log").insert({
       appointment_id: appointmentId,
       user_id: actorUserId,
@@ -84,7 +83,6 @@ export async function GET(req: NextRequest) {
      1️⃣ Authenticate
   ---------------------------------------- */
   const { user, authorized } = await requireUser(req);
-  console.log("user", user)
 
   if (!authorized) {
     return NextResponse.json(

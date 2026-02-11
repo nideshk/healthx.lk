@@ -49,7 +49,6 @@ export default function PatientDetailsPage({ prevStep, nextStep }: { prevStep: (
             toast.success('Medical record updated')
             setEditing(false)
         } catch (err) {
-            console.log(err)
             toast.error('Update failed')
         } finally {
             setIsSaving(false)
