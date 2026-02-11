@@ -25,7 +25,6 @@ export async function processNotifications() {
   for (const n of data || []) {
     try {
       if (n.channel === "email") {
-        console.log("email", n)
         if (!n.payload?.email) {
           throw new Error("Email missing in payload");
         }
@@ -126,7 +125,6 @@ export async function processNotifications() {
               actionUrl: n.payload?.actionUrl,
               actionText: n.payload?.actionText,
             });
-            console.log("selected")
             break;
         }
 

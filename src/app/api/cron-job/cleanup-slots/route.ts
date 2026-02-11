@@ -5,7 +5,6 @@ export async function GET(reques: NextRequest) {
 
     try {
         const expiryTime = new Date(Date.now() - 15 * 60 * 1000).toISOString(); // 15 minutes older
-        console.log("Expiry Time: ", expiryTime);
 
         // Update stale appointments
         const { data: updatedAppoitments, error: apptUpdateError } = await supabaseAdmin
@@ -16,7 +15,6 @@ export async function GET(reques: NextRequest) {
             .neq('source', 'admin') // donot delete appointments created by admin
             .select();
 
-        console.log("Expired appointments : ", updatedAppoitments);
 
         if (apptUpdateError) {
             throw apptUpdateError;

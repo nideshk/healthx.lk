@@ -48,7 +48,6 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
   onBack,
 }) => {
   const [activeTab, setActiveTab] = useState<PatientDetailTab>("overview");
-  console.log("patient details  -----------", patient)
   return (
     <div className="space-y-4">
       {/* Back */}

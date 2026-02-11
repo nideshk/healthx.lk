@@ -51,8 +51,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 3️⃣ Authorization
-  console.log(user)
   // Adding SUPER ADMIN
   if (role === "superadmin") {
     if (user.admin.role !== "superadmin") {

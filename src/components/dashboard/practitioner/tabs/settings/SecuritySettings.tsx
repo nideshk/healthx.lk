@@ -34,11 +34,6 @@ const SecuritySettings: React.FC = () => {
   // const [loading, setLoading] = useState(false);
   // const [error, setError] = useState<string | null>(null);
 
-  // console.log("🧩 [RENDER] SecuritySettings", {
-  //   twoFactorEnabled,
-  //   factorId,
-  //   challengeId,
-  // });
 
   /* --------------------------------
      CP-1: LOAD MFA STATUS

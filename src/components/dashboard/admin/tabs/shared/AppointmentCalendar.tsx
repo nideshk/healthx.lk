@@ -13,8 +13,8 @@ type ViewMode = "weekly" | "daily";
 interface AppointmentCalendarProps {
   appointments: Appointment[];
   onCompleteAppointment?: (id: string) => void;
-  onRangeChange?: (from: string, to: string) => void; 
-   userRole?: "admin" | "superadmin" | "practitioner";
+  onRangeChange?: (from: string, to: string) => void;
+  userRole?: "admin" | "superadmin" | "practitioner";
 }
 
 
@@ -85,29 +85,27 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             <div className="text-sm font-semibold text-slate-900">
               Appointment Calendar
             </div>
-            
+
           </div>
 
           <div className="flex gap-2 text-xs">
             <button
               type="button"
               onClick={() => setViewMode("weekly")}
-              className={`rounded-full px-3 py-1 border text-xs ${
-                viewMode === "weekly"
+              className={`rounded-full px-3 py-1 border text-xs ${viewMode === "weekly"
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white text-slate-600 border-slate-200"
-              }`}
+                }`}
             >
               Weekly
             </button>
             <button
               type="button"
               onClick={() => setViewMode("daily")}
-              className={`rounded-full px-3 py-1 border text-xs ${
-                viewMode === "daily"
+              className={`rounded-full px-3 py-1 border text-xs ${viewMode === "daily"
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white text-slate-600 border-slate-200"
-              }`}
+                }`}
             >
               Daily
             </button>
@@ -202,7 +200,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                               className={`w-full h-[22px] rounded-md text-[11px] px-2 truncate ${colorClasses}`}
                               onClick={() => setSelectedAppt(appt)}
                             >
-                            {appt.patient || "Patient"} • {appt.time}                            
+                              {appt.patient || "Patient"} • {appt.time}
                             </button>
                           );
                         })}
@@ -350,7 +348,6 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
   onClose,
 }) => {
   const isCompleted = appointment.status === "completed";
-  {console.log("appointment:", appointment);}
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md text-xs">
@@ -366,11 +363,11 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
             ×
           </button>
         </div>
-        
+
         <div className="px-5 py-4 space-y-3">
           <DetailRow label="Patient" value={`${appointment.patient}`} />
           <DetailRow label="Time" value={`${appointment.time}`} />
-          <DetailRow label="Appointment Type" value={`${appointment.appointmentType}`}  />
+          <DetailRow label="Appointment Type" value={`${appointment.appointmentType}`} />
           <DetailRow label="Participants" value="1" />
           <DetailRow label="Reason" value={appointment.reason || "Not specified"} />
           <DetailRow

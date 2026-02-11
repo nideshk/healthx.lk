@@ -23,14 +23,6 @@ export const useMfaEnrollment = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* --------------------------------
-     DEBUG
-  --------------------------------- */
-  console.log("🧩 [RENDER] useMfaEnrollment", {
-    twoFactorEnabled,
-    factorId,
-    challengeId,
-  });
 
   /* --------------------------------
      RESTORE VERIFIED MFA (UI PERSISTENCE)
@@ -198,7 +190,6 @@ export const useMfaEnrollment = () => {
       });
 
     if (error) {
-      console.log(error)
       toast.error("Unable to disable two-factor authentication");
       return;
     }

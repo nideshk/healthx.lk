@@ -23,8 +23,6 @@ export function getTimeUntil(startISO: string) {
 
   // If appointment is today
   if (apptDay.getTime() === today.getTime()) {
-    console.log("Appointment is today");
-    console.log({ now, start });
     const diffMs = start.getTime() - now.getTime();
     const diffMin = Math.round(diffMs / 60000);
     if (diffMin > 0) {
@@ -36,7 +34,6 @@ export function getTimeUntil(startISO: string) {
     }
 
     if (diffMin === 0) return "Starting now";
-    console.log("diffMin:", diffMin);
     if (diffMin < 0) return "Started";
   }
 

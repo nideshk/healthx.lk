@@ -24,7 +24,6 @@ export async function uploadAttachmentAfterBooking(
   }
 
   const { uploadUrl, fileKey } = await res.json();
-  console.log("uploading url", uploadUrl)
   // 2️⃣ Upload to S3
   await fetch(uploadUrl, {
     method: "PUT",

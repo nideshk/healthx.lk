@@ -69,7 +69,6 @@ const ManageAdminsTab: React.FC = () => {
         setRemoveTarget(null);
       }
       else if (!res.ok) {
-        console.log(json)
         throw new Error(json?.message || `Failed to delete admin: ${res.status}`);
       }
     } catch (err) {
@@ -135,11 +134,10 @@ const ManageAdminsTab: React.FC = () => {
                       {admin.full_name}
                     </span>
                     <span
-                      className={`text-[11px] px-2 py-0.5 rounded-full ${
-                        admin.role === "superadmin"
-                          ? "bg-purple-100 text-purple-700"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
+                      className={`text-[11px] px-2 py-0.5 rounded-full ${admin.role === "superadmin"
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-blue-100 text-blue-700"
+                        }`}
                     >
                       {admin.role === "superadmin" ? "Super Admin" : "Admin"}
                     </span>
@@ -194,14 +192,13 @@ const ManageAdminsTab: React.FC = () => {
           admin={editingAdmin}
           onClose={() => setEditingAdmin(null)}
           onRefresh={fetchAdmins}
-          // Note: Available policies normally come from /api/auth/me but here we'll use your static list or mock
+        // Note: Available policies normally come from /api/auth/me but here we'll use your static list or mock
         />
       )}
 
       {showDeleteReqsModal && (
         <DeleteRequestsModal onClose={() => setShowDeleteReqsModal(false)} onSuccess={fetchAdmins} />
       )}
-      {console.log(currentUser)}
       {/* Delete Confirmation Modal */}
       {removeTarget && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
