@@ -211,7 +211,7 @@ Status: Confirmed via Secure Portal`;
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-3">Pre-Consultation Notes</label>
                   <div className="p-6 bg-slate-50/50 rounded-3xl border border-slate-100 relative">
                     <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
-                      "{appointment.notes || "No additional clinical notes were provided for this specific consultation."}"
+                      "{appointment.notes?.concern || "No additional clinical notes were provided for this specific consultation."}"
                     </p>
                   </div>
                 </div>
