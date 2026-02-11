@@ -375,6 +375,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
           <DetailRow label="Appointment Type" value={`${appointment.appointmentType}`} />
           <DetailRow label="Participants" value="1" />
           <DetailRow label="Reason" value={appointment.reason || "-"} />
+          <DetailRow label="email" value={appointment.email || "-"}/>
+          <DetailRow label="contact_number" value={appointment.contact_number || "-"}/>
+
           <DetailRow
             label="Status"
             value={appointment.status ? capitalize(appointment.status) : "-"}
