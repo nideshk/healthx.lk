@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   try {
     const { authorized, role, user } = await requireUser(request);
-
     const cnx = getAuditContext(request, user);
 
     if (!authorized) {
@@ -25,19 +24,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    /** Query params */
+    /* -------------------------------------------------------
+       Query Params
+    ------------------------------------------------------- */
     const { searchParams } = new URL(request.url);
 
     const page = Math.max(Number(searchParams.get("page") ?? 1), 1);
     const limit = Math.min(Number(searchParams.get("limit") ?? 20), 100);
 
     const rawQ = searchParams.get("q")?.trim();
-    const q = rawQ && rawQ.length >= 4 ? rawQ : null;
+    const q = rawQ && rawQ.length >= 1 ? rawQ : null;
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    /** Base query (explicit column selection) */
+    /* -------------------------------------------------------
+       Base Query
+    ------------------------------------------------------- */
     let query = supabaseAdmin
       .from("patients")
       .select(
@@ -51,27 +54,55 @@ export async function GET(request: NextRequest) {
           email,
           address,
           emergency_contact,
-          allergies
+          allergies,
+          created_at
         `,
         { count: "exact" }
       )
       .eq("is_active", true)
       .is("deleted_at", null);
 
-    /** Search ONLY if q >= 4 */
+    /* -------------------------------------------------------
+       SEARCH LOGIC
+       (name/email/phone + government ID)
+    ------------------------------------------------------- */
+    let matchedUserIds: string[] = [];
+
     if (q) {
-      query = query.or(
-        `full_name.ilike.%${q}%,email.ilike.%${q}%,contact_number.ilike.%${q}%`
-      );
+      // 🔎 Search government ID table first
+      const { data: govMatches, error: govErr } = await supabaseAdmin
+        .from("user_government_ids")
+        .select("user_id")
+        .ilike("id_number_encrypted", `%${q}%`);
+
+      if (govErr) throw govErr;
+
+      matchedUserIds = govMatches?.map((g) => g.user_id) ?? [];
+
+      // 🔎 Apply search filter
+      if (matchedUserIds.length > 0) {
+        query = query.or(
+          `full_name.ilike.%${q}%,email.ilike.%${q}%,contact_number.ilike.%${q}%,supabase_user_id.in.(${matchedUserIds.join(",")})`
+        );
+      } else {
+        query = query.or(
+          `full_name.ilike.%${q}%,email.ilike.%${q}%,contact_number.ilike.%${q}%`
+        );
+      }
     }
 
-    /** Pagination + ordering */
+    /* -------------------------------------------------------
+       Pagination
+    ------------------------------------------------------- */
     const { data: patients, count, error } = await query
       .order("created_at", { ascending: false })
       .range(from, to);
 
     if (error) throw error;
 
+    /* -------------------------------------------------------
+       Fetch Profiles (city/state/country)
+    ------------------------------------------------------- */
     const patientUserIds = [
       ...new Set(
         (patients ?? [])
@@ -81,37 +112,60 @@ export async function GET(request: NextRequest) {
     ];
 
     let profileMap: Record<string, any> = {};
-
     if (patientUserIds.length > 0) {
       const { data: profiles, error: profileErr } = await supabaseAdmin
         .from("profiles")
         .select("id, city, state, country")
         .in("id", patientUserIds);
 
-      if (profileErr) {
-        return NextResponse.json(
-          { error: "Failed to fetch patient profiles" },
-          { status: 500 }
-        );
-      }
+      if (profileErr) throw profileErr;
 
       profileMap = Object.fromEntries(
         profiles.map((p: any) => [p.id, p])
       );
     }
 
+    /* -------------------------------------------------------
+       Fetch Government IDs for Display
+    ------------------------------------------------------- */
+    let govMap: Record<string, any> = {};
+    if (patientUserIds.length > 0) {
+      const { data: govIds, error: govFetchErr } = await supabaseAdmin
+        .from("user_government_ids")
+        .select("user_id, id_type, id_number_encrypted")
+        .in("user_id", patientUserIds);
+
+      if (govFetchErr) throw govFetchErr;
+
+      govMap = Object.fromEntries(
+        govIds.map((g: any) => [g.user_id, g])
+      );
+    }
+
+    /* -------------------------------------------------------
+       Final Enriched Response
+    ------------------------------------------------------- */
     const enrichedPatients = (patients ?? []).map((p: any) => {
       const profile = profileMap[p.supabase_user_id] ?? {};
+      const gov = govMap[p.supabase_user_id] ?? null;
 
       return {
         ...p,
         city: profile.city ?? null,
         state: profile.state ?? null,
         country: profile.country ?? null,
+        government_id: gov
+          ? {
+              type: gov.id_type,
+              number: gov.id_number_encrypted,
+            }
+          : null,
       };
     });
 
-
+    /* -------------------------------------------------------
+       Audit Log
+    ------------------------------------------------------- */
     await auditLog({
       ...cnx,
       action: "VIEWED",
@@ -119,7 +173,7 @@ export async function GET(request: NextRequest) {
       purpose: "operations",
       source: "dashboard",
       metadata: {
-        data: enrichedPatients ?? [],
+        data_count: enrichedPatients.length,
         meta: {
           page,
           limit,
@@ -127,12 +181,11 @@ export async function GET(request: NextRequest) {
           totalPages: count ? Math.ceil(count / limit) : 0,
           searchApplied: Boolean(q),
         },
-      }
-    })
-
+      },
+    });
 
     return NextResponse.json({
-      data: enrichedPatients ?? [],
+      data: enrichedPatients,
       meta: {
         page,
         limit,
