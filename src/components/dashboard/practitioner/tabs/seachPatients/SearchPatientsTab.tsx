@@ -166,12 +166,29 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
           minute: "2-digit",
         });
 
-        const category =
-          a.status === "cancelled"
-            ? "previous"
-            : start < new Date()
-              ? "previous"
-              : "upcoming";
+        // const category =
+        //   a.status === "cancelled"
+        //     ? "previous"
+        //     : start < new Date()
+        //       ? "previous"
+        //       : "upcoming";
+
+        const now = new Date();
+        const startTime = new Date(a.starts_at);
+        const endTime = new Date(a.ends_at);
+
+        let category: "upcoming" | "ongoing" | "previous";
+
+        if (a.status === "cancelled") {
+          category = "previous";
+        } else if (startTime <= now && endTime >= now) {
+          category = "ongoing";
+        } else if (startTime > now) {
+          category = "upcoming";
+        } else {
+          category = "previous";
+        }
+
 
         return {
           id: a.id,
