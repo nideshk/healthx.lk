@@ -158,9 +158,31 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
     }
 
     /* ---------------- PRACTITIONER ---------------- */
-    let bankUpdate: Record<string, any> | null = null;
-
     if (target_role === "practitioner") {
+      if (!user_id) {
+        return NextResponse.json(
+          { error: "user_id (practitioner id) is required" },
+          { status: 400 }
+        );
+      }
+
+      // 🔹 Fetch practitioner using practitioner.id (NOT supabase_user_id)
+      const { data: practitionerRow, error: pErr } =
+        await supabaseAdmin
+          .from("practitioners")
+          .select("id, supabase_user_id")
+          .eq("id", user_id) // 🔥 IMPORTANT CHANGE
+          .single();
+
+      if (pErr || !practitionerRow) {
+        return NextResponse.json(
+          { error: "Practitioner not found" },
+          { status: 404 }
+        );
+      }
+
+      const supabaseUserId = practitionerRow.supabase_user_id;
+
       const profileUpdate = clean({
         first_name: practitioner?.first_name,
         last_name: practitioner?.last_name,
@@ -191,36 +213,28 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         updated_at: new Date().toISOString(),
       });
 
+      // 🔹 Update profile (needs supabase_user_id)
       if (Object.keys(profileUpdate).length)
-        await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", user_id);
+        await supabaseAdmin
+          .from("profiles")
+          .update(profileUpdate)
+          .eq("id", supabaseUserId);
 
+      // 🔹 Update practitioner using practitioner.id
       if (Object.keys(practitionerUpdate).length)
         await supabaseAdmin
           .from("practitioners")
           .update(practitionerUpdate)
-          .eq("supabase_user_id", user_id);
+          .eq("id", user_id);
 
-       const editedFields = [
+      const editedFields = [
         ...Object.keys(profileUpdate),
         ...Object.keys(practitionerUpdate),
       ];
 
-      let bankUpdate: Record<string, any> | null = null;
-      
+      /* -------- BANK DETAILS -------- */
       if (practitioner?.bank_details) {
-        // 1. Get practitioner_id
-        const { data: practitionerRow, error: pErr } =
-          await supabaseAdmin
-            .from("practitioners")
-            .select("id")
-            .eq("supabase_user_id", user_id)
-            .single();
-
-        if (pErr || !practitionerRow) {
-          throw new Error("Practitioner not found");
-        }
-
-         bankUpdate = clean({
+        const bankUpdate = clean({
           account_holder_name: practitioner.bank_details.account_holder_name,
           bank_name: practitioner.bank_details.bank_name,
           account_number: practitioner.bank_details.account_number,
@@ -231,29 +245,27 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         });
 
         if (Object.keys(bankUpdate).length > 0) {
-          // 2. Check if row exists
           const { data: existingBank } =
             await supabaseAdmin
               .from("practitioner_bank_details")
               .select("id")
-              .eq("practitioner_id", practitionerRow.id)
+              .eq("practitioner_id", user_id)
               .single();
 
           if (existingBank) {
-            // UPDATE
             await supabaseAdmin
               .from("practitioner_bank_details")
               .update(bankUpdate)
-              .eq("practitioner_id", practitionerRow.id);
+              .eq("practitioner_id", user_id);
           } else {
-            // INSERT
             await supabaseAdmin
               .from("practitioner_bank_details")
               .insert({
-                practitioner_id: practitionerRow.id,
+                practitioner_id: user_id,
                 ...bankUpdate,
               });
-            }
+          }
+
           Object.keys(bankUpdate)
             .filter(k => k !== "updated_at")
             .forEach(k => {
@@ -266,27 +278,29 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         ...cnx,
         action: "UPDATED",
         entityType: "PRACTITIONER",
-        entityId: user_id,
+        entityId: user_id, // practitioner id
         source: "admin_panel",
         metadata: { edited_fields: editedFields },
       });
 
       await notify({
-        userId: user_id,
+        userId: supabaseUserId, // 🔹 notify auth user
         role: "practitioner",
         eventType: "profile_updated_by_admin",
         title: "Profile Updated",
         message: `
-Your profile has been updated by an administrator.
+    Your profile has been updated by an administrator.
 
-Updated fields:
-${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
+    Updated fields:
+    ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         `.trim(),
         channels: ["email"],
       });
 
       return NextResponse.json({ success: true });
     }
+
+
 
     return NextResponse.json({ error: "Invalid target_role" }, { status: 400 });
   } catch (err: any) {
