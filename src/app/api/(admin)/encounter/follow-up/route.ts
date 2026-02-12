@@ -11,76 +11,132 @@ export const dynamic = "force-dynamic";
 
 
 export async function GET(req: NextRequest) {
-  // 🔐 Auth check (admin / staff recommended)
   const { authorized, user } = await requireUser(req);
-  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!authorized)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-
-  const role = user?.profile?.role;
-
-  if (role !== "admin" && role !== "superadmin") {
-    return NextResponse.json(
-      { success: false, message: "Access denied" },
-      { status: 403 }
-    );
+  if (!["admin", "superadmin"].includes(user?.profile?.role)) {
+    return NextResponse.json({ message: "Access denied" }, { status: 403 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const { searchParams } = new URL(req.url);
+  const page = Number(searchParams.get("page") ?? 1);
+  const limit = Number(searchParams.get("limit") ?? 10);
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+
+  const offset = (page - 1) * limit;
+
+  /* -------------------------------------------------- */
+  /* 1️⃣ Fetch encounters                               */
+  /* -------------------------------------------------- */
+
+  let query = supabaseAdmin
     .from("encounters")
-    .select(`
-      id,
-      follow_up_date,
-      follow_up_comments,
-      clinician_notes,
-      follow_up_notified,
-      created_at,
-
-      appointments (
-        id,
-        ends_at,
-        status,
-
-        patients (
-          id,
-          full_name,
-          email,
-          contact_number
-        ),
-
-        practitioners (
-          id,
-          full_name
-        )
-      )
-    `)
+    .select("*", { count: "exact" })
     .eq("follow_up_needed", true)
     .eq("follow_up_notified", false)
-    .eq("appointments.status", "completed")
-    .not("appointments.patient_id", "is", null)
     .order("follow_up_date", { ascending: true });
 
+  if (from) query = query.gte("follow_up_date", `${from}T00:00:00`);
+  if (to) query = query.lte("follow_up_date", `${to}T23:59:59`);
+
+  const { data: encounters, count, error } = await query.range(
+    offset,
+    offset + limit - 1
+  );
+
   if (error) {
-    console.error("Pending follow-up fetch error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    console.error("Follow-up fetch error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  const items = (data || []).map((row: any) => ({
-    encounter_id: row.id,
-    completed_date: row.appointments?.ends_at,
-    follow_up_date: row.follow_up_date,
-    follow_up_comments: row.follow_up_comments,
-    clinician_notes: row.clinician_notes,
 
-    patient: {
-      name: row.appointments?.patients?.full_name,
-      email: row.appointments?.patients?.email,
-      phone: row.appointments?.patients?.phone,
-    },
+  if (!encounters?.length) {
+    return NextResponse.json({
+      success: true,
+      meta: {
+        page,
+        limit,
+        total: 0,
+        totalPages: 0,
+        from,
+        to,
+      },
+      items: [],
+    });
+  }
 
-    doctor: row.appointments?.practitioners?.full_name,
-  }));
+  /* -------------------------------------------------- */
+  /* 2️⃣ Fetch related appointments                     */
+  /* -------------------------------------------------- */
+
+  const appointmentIds = encounters.map((e) => e.appointment_id);
+
+  const { data: appointments } = await supabaseAdmin
+    .from("appointments")
+    .select("id, ends_at, status, patient_id, practitioner_id")
+    .in("id", appointmentIds)
+
+  const appointmentMap = Object.fromEntries(
+    (appointments ?? []).map((a) => [a.id, a])
+  );
+
+  /* -------------------------------------------------- */
+  /* 3️⃣ Fetch patients + practitioners                 */
+  /* -------------------------------------------------- */
+
+  const patientIds = appointments?.map((a) => a.patient_id) ?? [];
+  const practitionerIds = appointments?.map((a) => a.practitioner_id) ?? [];
+
+  const { data: patients } = await supabaseAdmin
+    .from("patients")
+    .select("id, full_name, email")
+    .in("id", patientIds);
+
+  const { data: practitioners } = await supabaseAdmin
+    .from("practitioners")
+    .select("id, full_name")
+    .in("id", practitionerIds);
+
+  const patientMap = Object.fromEntries(
+    (patients ?? []).map((p) => [p.id, p])
+  );
+
+  const practitionerMap = Object.fromEntries(
+    (practitioners ?? []).map((p) => [p.id, p])
+  );
+
+  /* -------------------------------------------------- */
+  /* 4️⃣ Merge final response                           */
+  /* -------------------------------------------------- */
+
+  const items = encounters
+    .map((enc) => {
+      const appt = appointmentMap[enc.appointment_id];
+      if (!appt) return null;
+
+      const patient = patientMap[appt.patient_id];
+      const practitioner = practitionerMap[appt.practitioner_id];
+
+      return {
+        encounter_id: enc.id,
+        completed_date: appt.ends_at,
+        follow_up_date: enc.follow_up_date,
+        follow_up_comments: enc.follow_up_comments,
+        clinician_notes: enc.clinician_notes,
+        patient: {
+          id: patient?.id ?? null,
+          name: patient?.full_name ?? "-",
+          email: patient?.email ?? "-",
+        },
+        doctor: practitioner?.full_name ?? "-",
+      };
+    })
+    .filter(Boolean);
+
+  /* -------------------------------------------------- */
+  /* 5️⃣ AUDIT LOG (RESTORED)                           */
+  /* -------------------------------------------------- */
 
   const cnx = getAuditContext(req, user);
 
@@ -91,17 +147,36 @@ export async function GET(req: NextRequest) {
     purpose: "operations",
     source: "dashboard",
     metadata: {
-      data: items,
-      count: items.length
+      filters: {
+        from,
+        to,
+        page,
+        limit,
+      },
+      result_count: items.length,
+      total_records: count ?? 0,
     },
-  })
+  });
+
+  /* -------------------------------------------------- */
+  /* 6️⃣ Response                                       */
+  /* -------------------------------------------------- */
 
   return NextResponse.json({
     success: true,
-    count: items.length,
+    meta: {
+      page,
+      limit,
+      total: count ?? 0,
+      totalPages: count ? Math.ceil(count / limit) : 0,
+      from,
+      to,
+    },
     items,
   });
 }
+
+
 
 /* -----------------------------------------
    PATCH: Notify follow-up & mark as notified
