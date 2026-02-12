@@ -13,10 +13,6 @@ export async function GET(req: NextRequest) {
        1️⃣ Auth + role check
     ----------------------------------------------------- */
     const { authorized, user, role } = await requireUser(req);
-    console.log("User fetching HIPAA audit logs:", user?.auth_user_id);
-    console.log("User role:", role);
-    console.log("Authorized:", authorized);
-
     if (!authorized) {
       return NextResponse.json(
         { error: "Not authenticated" },

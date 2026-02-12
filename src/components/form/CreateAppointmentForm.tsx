@@ -47,7 +47,6 @@ export default function CreateAppointmentForm() {
         },
       };
 
-      console.log("📤 Submitting appointment payload:", payload);
 
       const res = await fetch("/api/appointment", {
         method: "POST",
@@ -62,7 +61,6 @@ export default function CreateAppointmentForm() {
         console.error("❌ API Error:", data);
       } else {
         setSuccess("✅ Appointment created successfully!");
-        console.log("✅ Cliniko Appointment Response:", data);
       }
     } catch (err: any) {
       console.error("❌ Unexpected error:", err);

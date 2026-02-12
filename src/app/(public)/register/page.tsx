@@ -274,7 +274,6 @@ export default function PractitionerRegisterPage() {
           body: item.file,
         });
 
-        console.log("S3 UPLOAD STATUS:", uploadRes.status);
 
         if (!uploadRes.ok) {
           throw new Error("Failed to upload file to S3");

@@ -119,7 +119,6 @@ export async function requireUser(req: Request): Promise<RequireUserResult> {
     return `******${last4}`;
   }
 
-  console.log(maskId(goveId?.id_number_encrypted))
 
   return {
     authorized: true,

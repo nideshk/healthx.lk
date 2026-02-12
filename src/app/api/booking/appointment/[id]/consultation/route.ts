@@ -74,8 +74,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       )
       .eq("appointment_id", appointmentId)
       .eq("practitioner_id", user?.practitioner_id);
-    console.log("Fetched attachments (practitioner):", data);
-    console.log("error of attachments", error)
     attachments = data ?? [];
 
 

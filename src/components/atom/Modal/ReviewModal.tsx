@@ -20,7 +20,6 @@ export function ReviewModal({ appointment, onClose }: any) {
         if (!rating) return alert("Please select a rating");
 
         setLoading(true);
-        console.log(appointment)
 
         const res = await authFetch(
             `http://localhost:3000/api/appointments/${appointment.appointment_id}/review`,

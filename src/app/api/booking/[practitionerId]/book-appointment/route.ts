@@ -15,7 +15,6 @@ export async function POST(
     const { practitionerId } = await context.params;
     const { appointment_type_id, attendeeList = [], coupon_code, starts_at, ends_at, pre_consultation, consent } =
       await req.json();
-    console.log("coupon_code", coupon_code)
     // ---------------------------
     // 1️⃣ Auth
     // ---------------------------
@@ -95,8 +94,6 @@ export async function POST(
     }
 
     const consultation_fee_by_practitioner = practitioner.fees[appointmentType.id];
-    console.log("consultation_fee_by_practitioner", consultation_fee_by_practitioner)
-
 
     const consultation_fee = consultation_fee_by_practitioner.fee || appointmentType.base_fee + appointmentType.platform_fee;
     const platform_fee = appointmentType.platform_fee;
@@ -137,8 +134,6 @@ export async function POST(
 
     const fees_charged = (consultation_fee_by_practitioner.fee || appointmentType.base_fee) + (appointmentType.platform_fee) + (100 * attendeeList.length) - (discount_total || 0);
     const tax_amount = fees_charged * 0.08;
-    console.log("appointmentType", appointmentType)
-    console.log(fees_charged)
 
     const { data: appointment, error: insertError } =
       await supabaseClient
@@ -165,9 +160,7 @@ export async function POST(
         .select()
         .single();
 
-    console.log("fees chargedd", appointment)
     if (insertError || !appointment) {
-      console.log(insertError)
       return NextResponse.json(
         { error: "Failed to create appointment" },
         { status: 500 }
@@ -192,7 +185,6 @@ export async function POST(
           .single();
 
       if (consentError || !consentData) {
-        console.error("Consent error:", consentError);
         return NextResponse.json(
           { error: "Failed to create consent" },
           { status: 500 }
@@ -216,7 +208,6 @@ export async function POST(
           .single();
 
       if (preConsultationError || !preConsultationData) {
-        console.error("Preconsult error:", preConsultationError);
         return NextResponse.json(
           { error: "Failed to create pre consultation" },
           { status: 500 }
@@ -241,7 +232,6 @@ export async function POST(
       },
     });
   } catch (err: any) {
-    console.error("❌ book-appointment error:", err);
     return NextResponse.json(
       { error: err.message || "Internal server error" },
       { status: 500 }

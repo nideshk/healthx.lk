@@ -2,7 +2,6 @@ import { computeRefund } from "@/lib/refunds/refundRules";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function runRefundEligibilityCron() {
-  console.log("[RefundCron] 🚀 Started refund eligibility cron");
 
   const { data: appointments, error } = await supabaseAdmin
     .from("appointments")
@@ -27,21 +26,8 @@ export async function runRefundEligibilityCron() {
     return;
   }
 
-  console.log(
-    `[RefundCron] 📦 Fetched ${appointments?.length ?? 0} candidate appointment(s)`
-  );
 
   for (const appt of appointments ?? []) {
-    console.log(
-      `[RefundCron] 🔍 Processing appointment`,
-      {
-        appointment_id: appt.id,
-        practitioner_no_show: appt.practitioner_no_show,
-        patient_no_show: appt.patient_no_show,
-        refund_requested: appt.refund_requested,
-      }
-    );
-
     const txn = appt.transactions?.[0];
 
     if (!txn) {
@@ -52,48 +38,16 @@ export async function runRefundEligibilityCron() {
       continue;
     }
 
-    console.log(
-      `[RefundCron] 💳 Transaction found`,
-      {
-        transaction_id: txn.id,
-        amount: txn.amount,
-        currency: txn.currency,
-        status: txn.status,
-      }
-    );
-
-    const decision : any = computeRefund({
+    const decision: any = computeRefund({
       appointment: appt,
       transaction: txn,
     });
 
-    console.log(
-      `[RefundCron] 🧮 Refund decision`,
-      {
-        appointment_id: appt.id,
-        eligible: decision.eligible,
-        reason: decision.reason,
-        amount: decision.amount,
-        type: decision.type,
-      }
-    );
-
     if (!decision.eligible) {
-      console.log(
-        `[RefundCron] ⛔ Not eligible — skipping`,
-        { appointment_id: appt.id }
-      );
+
       continue;
     }
 
-    console.log(
-      `[RefundCron] ✅ Eligible — creating refund request`,
-      {
-        appointment_id: appt.id,
-        transaction_id: txn.id,
-        refund_amount: decision.amount,
-      }
-    );
 
     const { error: refundError } = await supabaseAdmin
       .from("refunds")
@@ -135,11 +89,6 @@ export async function runRefundEligibilityCron() {
       continue;
     }
 
-    console.log(
-      `[RefundCron] 🏁 Refund flow completed`,
-      { appointment_id: appt.id }
-    );
   }
 
-  console.log("[RefundCron] 🎉 Cron execution finished");
 }

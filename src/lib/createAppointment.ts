@@ -40,11 +40,9 @@ export async function createAppointment(bookingData: any) {
       repeat_rule: null,
     };
 
-    console.log("📦 Booking Payload:", payload);
 
     // ✅ 3. Create appointment
     const response = await axios.post("/api/appointments", payload);
-    console.log("✅ Appointment created:", response.data);
 
     return response.data;
   } catch (error: any) {

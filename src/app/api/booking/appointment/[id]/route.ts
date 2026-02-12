@@ -208,7 +208,6 @@ export async function GET(
         .eq("patient_id", user.patient_id);
 
       attachments = data ?? [];
-      console.log("error", error)
     }
 
     // PRACTITIONER → only attachments assigned to them

@@ -136,8 +136,6 @@ export async function GET(
         reason: "No availability published",
       });
     }
-
-    console.log("Avaialblity", availabilityWindows)
     /* ---------------------------
        STEP 4: Appointment Types
     --------------------------- */
@@ -189,7 +187,6 @@ export async function GET(
       .lte("start_date", date)
       .gte("end_date", date);
 
-    console.log("leaves", leaves)
 
     const leaveIntervals: Array<{ start: string; end: string }> = [];
 
@@ -297,7 +294,6 @@ export async function GET(
     /* ---------------------------
        RESPONSE
     --------------------------- */
-    console.log("slots_by_type", slots_by_type)
     return NextResponse.json({
       practitioner_id: practitionerId,
       date,

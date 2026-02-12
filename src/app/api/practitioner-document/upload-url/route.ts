@@ -62,10 +62,6 @@ export async function POST(req: NextRequest) {
       `practitioner-supporting-document-upload/` +
       `${application_id}/${fileId}.${ext}`;
 
-    /* ---------------- PRESIGN ---------------- */
-    console.log("S3key", s3Key)
-    console.log("BUCKET:", BUCKET_NAME);
-
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: s3Key,

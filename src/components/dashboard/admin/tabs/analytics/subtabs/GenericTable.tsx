@@ -31,8 +31,7 @@ const GenericTable = <T extends { id: string | number }>({
   minWidth = "1200px",
   pagination,
 }: GenericTableProps<T>) => {
-  console.log("data ---------")
-  console.log(data)
+
   return (
     <div className="bg-white border border-slate-200 rounded-2xl relative overflow-hidden shadow-sm">
       {loading && (
