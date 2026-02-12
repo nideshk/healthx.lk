@@ -8,7 +8,10 @@ export interface AppointmentFormInputs {
   selectedDoctor: Doctor | null;
   starts_at: string | null;
   ends_at: string | null;
-  selectedAttendees: string[]; // ✅ array of related patient IDs
+  selectedAttendees: {
+    email: string;
+    relationship: string;
+  }[]; // ✅ array of related patient IDs
   appointmentType: AppointmentType | null;
   consent: any;
   pre_consultation: any;

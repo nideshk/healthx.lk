@@ -1,4 +1,3 @@
-// lib/inviteToken.ts
 import jwt from "jsonwebtoken";
 
 const INVITE_SECRET = process.env.TELEHEALTH_JWT_SECRET!;
