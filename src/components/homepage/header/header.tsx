@@ -228,9 +228,6 @@ export default function Header() {
               ) : (
                 <div className="flex items-center gap-4">
                   {/* Notification Bell (Simplified for full code) */}
-                  <button className="p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl transition-all relative">
-                    <Bell size={22} />
-                  </button>
 
                   {/* USER DROPDOWN */}
                   <div className="relative" ref={userMenuRef}>
