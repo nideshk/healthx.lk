@@ -35,11 +35,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     if (!appointment) return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
 
     // Authorization: patient, assigned practitioner, or admin/support
-    debugger;
     const isPatient = user?.patient_id === appointment.patient_id;
     const isPractitioner = user?.practitioner_id === appointment.practitioner_id;
-    const isAdmin = role === "admin";
-
+    const isAdmin = role === "admin" || role === "superadmin";
     if (!isPatient && !isPractitioner && !isAdmin) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
@@ -67,7 +65,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     let attachments: any[] = [];
 
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("attachments")
       .select(
         `
