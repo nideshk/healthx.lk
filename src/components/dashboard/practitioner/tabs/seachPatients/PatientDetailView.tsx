@@ -557,6 +557,11 @@ const AppointmentRow: React.FC<{
         prescriptions: data.encounter?.prescriptions || "",
         followUpNeeded: !!data.encounter?.follow_up_needed,
         followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || "",
+        signedAttachments: (data.attachments || []).map((a: any) => ({
+          url: a.view_url,
+          name: a.file_name,
+          document_type: a.file_type,
+        })),
       }));
 
       if (data.encounter?.follow_up_date?.includes("T")) {

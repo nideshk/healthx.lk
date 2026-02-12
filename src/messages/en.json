@@ -224,6 +224,8 @@
     "invitePlaceholder": "Invite via email",
     "back": "Back",
     "continue": "Continue to Payment",
+    "duration": "How long have you had this concern?",
+    "durationPlaceholder": "How long have you had this concern?",
     "errors": {
       "concern": "Main concern is required",
       "outcome": "Desired outcome is required",
