@@ -41,7 +41,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
 
         // First, try to use patientId if available, otherwise fetch by name
         if (patientId && patientId !== "") {
-          // If we have a valid patientId, try to fetch patient data directly using the appointments endpoint
           const appointmentRes = await authFetch("/api/booking/appointment", {
             credentials: "include",
           });
@@ -51,7 +50,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
 
           const appointmentResult = await appointmentRes.json();
 
-          // Merge all appointment categories
           const allAppointments = Array.isArray(appointmentResult)
             ? appointmentResult
             : [
@@ -61,7 +59,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                 ...(appointmentResult.cancelled || []),
               ];
 
-          // Find the patient by ID from their appointments
           const patientAppointment = allAppointments.find(
             (appt: any) => appt.patient?.id === patientId,
           );
@@ -91,7 +88,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
           }
         }
 
-        // Fallback: Fetch all appointments to extract patient data by name
         const appointmentRes = await authFetch("/api/booking/appointment", {
           credentials: "include",
         });
@@ -100,7 +96,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
 
         const appointmentResult = await appointmentRes.json();
 
-        // Merge all appointment categories
         const allAppointments = Array.isArray(appointmentResult)
           ? appointmentResult
           : [
@@ -110,7 +105,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
               ...(appointmentResult.cancelled || []),
             ];
 
-        // Find the patient by name from their appointments
         const patientAppointment = allAppointments.find(
           (appt: any) => appt.patient?.full_name === patientName,
         );
@@ -151,14 +145,12 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     }
   }, [patientName, patientId]);
 
-  // Step 2: Fetch Appointments for the patient
   useEffect(() => {
     if (!patientData?.id) return;
 
     const fetchAppointments = async () => {
       try {
         setLoadingAppointments(true);
-        // Fetch all appointments using the main endpoint
         const res = await authFetch("/api/booking/appointment", {
           credentials: "include",
         });
@@ -170,7 +162,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
 
         const data = await res.json();
 
-        // Merge all appointment categories
         const allAppointments = Array.isArray(data)
           ? data
           : [
@@ -180,12 +171,10 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
               ...(data.cancelled || []),
             ];
 
-        // Filter appointments for this specific patient
         const patientAppointments = allAppointments.filter(
           (appt: any) => appt.patient?.id === patientData.id,
         );
 
-        // Helper function to convert ISO date to DD/MM/YYYY format
         const formatDateFromISO = (isoString: string): string => {
           try {
             const date = new Date(isoString);
@@ -198,7 +187,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
           }
         };
 
-        // Helper function to convert ISO date to HH:MM AM/PM format
         const formatTimeFromISO = (isoString: string): string => {
           try {
             const date = new Date(isoString);
@@ -214,11 +202,9 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
           }
         };
 
-        // Map appointments to Appointment type with proper categories
         const mapped: any[] = patientAppointments.map((a: any) => {
           let category: "upcoming" | "ongoing" | "previous" = "previous";
 
-          // Determine category based on the response structure
           if (data.ongoing?.some((appt: any) => appt.id === a.id)) {
             category = "ongoing";
           } else if (data.upcoming?.some((appt: any) => appt.id === a.id)) {
@@ -236,9 +222,10 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
             time: formattedTime,
             info: `${formattedDate} at ${formattedTime}`,
             doctorName: "Dr. " + (a.practitioner?.name || "Unknown"),
-            appointmentType: a.appointment_type?.name || "Unknown",
+            // FIX: Ensure appointmentType and reason are correctly mapped from API fields
+            appointmentType: a.appointment_type?.name || "Standard Consultation",
             category,
-            reason: a.notes || "-",
+            reason: a.appointment_type?.name || a.notes || "No reason provided",
             status: a.status || "confirmed",
             clinicianNotes: a.notes || "",
             prescriptions: "",

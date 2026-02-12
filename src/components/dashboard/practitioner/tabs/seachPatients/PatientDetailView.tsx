@@ -134,20 +134,19 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
   const handleUpdateAllergies = async () => {
     setIsUpdating(true);
     try {
+      // Split the comma-separated string into an array as required by the payload
       const allergyArray = formData.allergies
         .split(",")
         .map((item) => item.trim())
         .filter((item) => item !== "");
 
+      // Payload specifically structured for /api/update-data
       const payload = {
-        user_id: patient.id,
-        target_role: "patient",
-        patient: {
-          allergies: allergyArray,
-        },
+        patient_id: patient.id,
+        allergies: allergyArray,
       };
 
-      const res = await authFetch("/api/update-user", {
+      const res = await authFetch("/api/update-data", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -327,10 +326,18 @@ const AppointmentsTab: React.FC<{
   appointments: Appointment[];
   patient: Patient;
 }> = ({ appointments, patient }) => {
+  // Accordion Logic: Keep track of only one open appointment ID
+  const [openAppointmentId, setOpenAppointmentId] = useState<string | null>(null);
+
   const upcoming = appointments.filter((a) => a.category === "upcoming");
   const ongoing = appointments.filter((a) => a.category === "ongoing");
   const previous = appointments.filter((a) => a.category === "previous");
   const [showCreateModal, setShowCreateModal] = React.useState(false);
+
+  // Toggle function to ensure only one card stays open
+  const handleToggle = (id: string) => {
+    setOpenAppointmentId(prevId => prevId === id ? null : id);
+  };
 
   return (
     <div className="space-y-6">
@@ -340,7 +347,12 @@ const AppointmentsTab: React.FC<{
         </h3>
       </div>
 
-      <AppointmentSection appointments={upcoming} patient={patient} />
+      <AppointmentSection 
+        appointments={upcoming} 
+        patient={patient} 
+        openId={openAppointmentId} 
+        onToggle={handleToggle} 
+      />
 
       <div className="pt-4 border-t border-slate-200">
         <h3 className="text-sm font-semibold text-slate-900">
@@ -348,7 +360,12 @@ const AppointmentsTab: React.FC<{
         </h3>
       </div>
 
-      <AppointmentSection appointments={ongoing} patient={patient} />
+      <AppointmentSection 
+        appointments={ongoing} 
+        patient={patient} 
+        openId={openAppointmentId} 
+        onToggle={handleToggle} 
+      />
 
       <div className="pt-4 border-t border-slate-200">
         <h3 className="text-sm font-semibold text-slate-900">
@@ -356,7 +373,12 @@ const AppointmentsTab: React.FC<{
         </h3>
       </div>
 
-      <AppointmentSection appointments={previous} patient={patient} />
+      <AppointmentSection 
+        appointments={previous} 
+        patient={patient} 
+        openId={openAppointmentId} 
+        onToggle={handleToggle} 
+      />
 
       <CreateAppointmentModal
         open={showCreateModal}
@@ -370,7 +392,9 @@ const AppointmentsTab: React.FC<{
 const AppointmentSection: React.FC<{
   appointments: Appointment[];
   patient: Patient;
-}> = ({ appointments, patient }) => {
+  openId: string | null;
+  onToggle: (id: string) => void;
+}> = ({ appointments, patient, openId, onToggle }) => {
   if (!appointments.length) {
     return (
       <p className="text-xs text-slate-500">No appointments in this section.</p>
@@ -380,7 +404,13 @@ const AppointmentSection: React.FC<{
   return (
     <div className="space-y-3">
       {appointments.map((appt) => (
-        <AppointmentRow key={appt.id} appointment={appt} patient={patient} />
+        <AppointmentRow 
+          key={appt.id} 
+          appointment={appt} 
+          patient={patient} 
+          isOpen={openId === appt.id}
+          onToggle={() => onToggle(appt.id)}
+        />
       ))}
     </div>
   );
@@ -389,8 +419,9 @@ const AppointmentSection: React.FC<{
 const AppointmentRow: React.FC<{
   appointment: Appointment;
   patient: Patient;
-}> = ({ appointment, patient }) => {
-  const [open, setOpen] = React.useState(false);
+  isOpen: boolean;
+  onToggle: () => void;
+}> = ({ appointment, patient, isOpen, onToggle }) => {
   const [isEditingAppointment, setIsEditingAppointment] = React.useState(false);
   const [consultationMeta, setConsultationMeta] = useState({
     telehealthConsent: false,
@@ -416,6 +447,13 @@ const AppointmentRow: React.FC<{
       document_type?: string;
     }>,
   }));
+
+  // Fetch data whenever the row is opened and not yet fetched
+  useEffect(() => {
+    if (isOpen && !consultationFetched) {
+      fetchConsultationDetails();
+    }
+  }, [isOpen]);
 
   const updateAppointmentField = (
     key: keyof typeof appointmentForm,
@@ -536,7 +574,6 @@ const AppointmentRow: React.FC<{
         : "Cancelled";
 
   const fetchConsultationDetails = async () => {
-    if (consultationFetched) return;
     setConsultationLoading(true);
     try {
       const res = await authFetch(
@@ -545,7 +582,6 @@ const AppointmentRow: React.FC<{
       if (!res.ok) return;
       const data = await res.json();
 
-      // Mapping Pre-consultation Meta
       setConsultationMeta({
         telehealthConsent: !!data.consent?.telehealth,
         termsAccepted: !!data.consent?.terms,
@@ -553,7 +589,6 @@ const AppointmentRow: React.FC<{
         goal: data.preconsult?.raw_payload?.note?.outcome || "",
       });
 
-      // Mapping Encounter Object Correctly (Clinician Notes, etc.)
       setAppointmentForm((prev) => ({
         ...prev,
         clinicianNotes: data.encounter?.clinician_notes || "",
@@ -588,7 +623,8 @@ const AppointmentRow: React.FC<{
             <div className="font-medium text-slate-900">
               {appointment.date} at {appointment.time}
             </div>
-            <div className="text-slate-400">{appointment.reason}</div>
+            {/* FIX: Ensure specific appointment type name is displayed here */}
+            <div className="text-slate-400">{appointment.appointmentType || appointment.reason}</div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -630,18 +666,15 @@ const AppointmentRow: React.FC<{
             </span>
             <button
               type="button"
-              onClick={() => {
-                if (!open) fetchConsultationDetails();
-                setOpen((o) => !o);
-              }}
+              onClick={onToggle}
               className="text-xs border rounded-full px-2 py-1"
             >
-              {open ? "▴" : "▾"}
+              {isOpen ? "▴" : "▾"}
             </button>
           </div>
         </div>
 
-        {open && (
+        {isOpen && (
           <div className="pt-3 border-t border-slate-200 space-y-4 text-xs">
             <div className="flex items-center justify-between">
               {consultationLoading && <Loader size="sm" />}
