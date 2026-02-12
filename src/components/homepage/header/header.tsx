@@ -58,6 +58,20 @@ export default function Header() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
 
+
+  const checkUserStatus = async (session: any) => {
+    console.log(session)
+    const { data } = await supabaseBrowser.from("profiles").select("*").eq("id", session.user.id).single();
+    if (!data.is_active) {
+      supabaseBrowser.auth.signOut();
+      router.push("/");
+      toast.error("Your account has been deactivated");
+    }
+    else {
+      router.push(redirectTo || "/dashboard")
+    }
+  }
+
   // --- Navigation Arrays ---
 
   // Visible on both Desktop Header and Mobile Sidebar
@@ -95,10 +109,11 @@ export default function Header() {
   // --- Auth Logic ---
 
   async function finalizeLogin(session: any) {
+    console.log(session)
     setMfa(null);
     setOtp("");
+    checkUserStatus(session)
     closeLoginModal();
-    router.push(redirectTo || "/dashboard");
   }
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
