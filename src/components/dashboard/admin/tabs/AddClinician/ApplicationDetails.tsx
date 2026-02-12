@@ -11,8 +11,16 @@ import {
   ExternalLink,
   FileText,
   X,
+  ChevronDown,
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+
+type Specialization = {
+  id: string;
+  name: string;
+  active: boolean;
+  slug: string;
+};
 
 const ApplicationDetails = ({
   applicationId,
@@ -25,6 +33,8 @@ const ApplicationDetails = ({
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [isSpecOpen, setIsSpecOpen] = useState(false);
 
   type FormData = {
     first_name: string;
@@ -41,8 +51,6 @@ const ApplicationDetails = ({
     bank_name: string;
     account_name: string;
     account_number: string;
-    ifsc_code: string;
-    swift_code: string;
   };
 
   const [formData, setFormData] = useState<FormData>({
@@ -60,8 +68,6 @@ const ApplicationDetails = ({
     bank_name: "",
     account_name: "",
     account_number: "",
-    ifsc_code: "",
-    swift_code: "",
   });
 
   // Modal States
@@ -99,8 +105,6 @@ const ApplicationDetails = ({
             bank_name: json.data.bank_details?.bank_name || "",
             account_name: json.data.bank_details?.account_name || "",
             account_number: json.data.bank_details?.account_number || "",
-            ifsc_code: json.data.bank_details?.ifsc_code || "",
-            swift_code: json.data.bank_details?.swift_code || "",
           });
         }
       } catch (err) {
@@ -112,8 +116,37 @@ const ApplicationDetails = ({
     fetchDetail();
   }, [applicationId]);
 
+  // Fetch specializations
+  useEffect(() => {
+    const fetchSpecializations = async () => {
+      try {
+        const res = await fetch("/api/form-data/appointment-config");
+        if (!res.ok) {
+          throw new Error("Failed to fetch appointment config");
+        }
+        const data = await res.json();
+        setSpecializations(data.services || []);
+      } catch (err) {
+        console.error("Error loading specializations", err);
+      }
+    };
+    fetchSpecializations();
+  }, []);
+
   const handleChange = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const toggleSpecialization = (slug: string) => {
+    const currentSpecializations = Array.isArray(formData.specialization)
+      ? formData.specialization
+      : [];
+    handleChange(
+      "specialization",
+      currentSpecializations.includes(slug)
+        ? currentSpecializations.filter((s) => s !== slug)
+        : [...currentSpecializations, slug],
+    );
   };
 
   const handleCancel = () => {
@@ -133,11 +166,10 @@ const ApplicationDetails = ({
         bank_name: data.bank_details?.bank_name || "",
         account_name: data.bank_details?.account_name || "",
         account_number: data.bank_details?.account_number || "",
-        ifsc_code: data.bank_details?.ifsc_code || "",
-        swift_code: data.bank_details?.swift_code || "",
       });
     }
     setIsEditing(false);
+    setIsSpecOpen(false);
   };
 
   const handleSave = async () => {
@@ -275,21 +307,80 @@ const ApplicationDetails = ({
                 onChange={(e) => handleChange("email", e.target.value)}
                 disabled={!isEditing}
               />
-              <Input
-                label="Specialization (Comma separated)"
-                value={
-                  Array.isArray(formData.specialization)
-                    ? formData.specialization.join(", ")
-                    : formData.specialization
-                }
-                onChange={(e) =>
-                  handleChange(
-                    "specialization",
-                    e.target.value.split(",").map((s) => s.trim()),
-                  )
-                }
-                disabled={!isEditing}
-              />
+              {!isEditing ? (
+                <Input
+                  label="Specialization"
+                  value={
+                    Array.isArray(formData.specialization)
+                      ? formData.specialization.join(", ")
+                      : formData.specialization
+                  }
+                  disabled={true}
+                />
+              ) : (
+                <div className="relative">
+                  <label className="text-xs text-slate-600 mb-1 block font-medium">
+                    Specialization
+                  </label>
+                  <div className="w-full min-h-[40px] px-3 py-2 rounded-lg border border-slate-200 bg-white flex items-center justify-between focus-within:ring-2 focus-within:ring-teal-500">
+                    <div className="flex flex-wrap gap-2">
+                      {Array.isArray(formData.specialization) &&
+                      formData.specialization.length === 0 ? (
+                        <span className="text-slate-400 text-sm">
+                          Select specializations
+                        </span>
+                      ) : (
+                        (Array.isArray(formData.specialization)
+                          ? formData.specialization
+                          : []
+                        ).map((slug) => {
+                          const spec = specializations.find(
+                            (s) => s.slug === slug,
+                          );
+                          return (
+                            <span
+                              key={slug}
+                              className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm"
+                            >
+                              {spec?.name || slug}
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsSpecOpen((prev) => !prev)}
+                      className="ml-2 text-slate-500 hover:text-slate-700"
+                    >
+                      {isSpecOpen ? <X size={18} /> : <ChevronDown size={18} />}
+                    </button>
+                  </div>
+                  {isSpecOpen && (
+                    <div className="absolute z-20 mt-2 w-full max-h-60 overflow-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                      {specializations
+                        .filter((spec) => spec.active)
+                        .map((spec) => (
+                          <label
+                            key={spec.id}
+                            className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              className="rounded accent-teal-600"
+                              checked={
+                                Array.isArray(formData.specialization) &&
+                                formData.specialization.includes(spec.slug)
+                              }
+                              onChange={() => toggleSpecialization(spec.slug)}
+                            />
+                            <span className="text-slate-700">{spec.name}</span>
+                          </label>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <Input
                 label="Experience Years"
                 value={formData.experience_years}
@@ -340,7 +431,7 @@ const ApplicationDetails = ({
           </section>
 
           {/* Section: Fees & Availability (Read-only) */}
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-8">
             <section>
               <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">
                 Fees
@@ -350,28 +441,9 @@ const ApplicationDetails = ({
                   key={i}
                   className="text-xs p-2 bg-slate-50 rounded mb-2 border border-slate-100"
                 >
-                  <strong>{f.type}</strong>: LKR {f.fee} (+ LKR {f.platform_fee}{" "}
-                  platform)
+                  <strong>{f.type}</strong>: LKR {f.fee} (+ Platform fee)
                 </div>
               ))}
-            </section>
-            <section>
-              <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">
-                Availability
-              </h3>
-              <div className="text-xs text-slate-600 space-y-1">
-                <p>
-                  <strong>Time:</strong> {data?.availability?.start_time} -{" "}
-                  {data?.availability?.end_time}
-                </p>
-                <p>
-                  <strong>Timezone:</strong> {data?.availability?.timezone}
-                </p>
-                <p>
-                  <strong>Unavailable:</strong>{" "}
-                  {data?.availability?.days_unavailable?.join(", ") || "None"}
-                </p>
-              </div>
             </section>
           </div>
 
@@ -410,18 +482,6 @@ const ApplicationDetails = ({
                 label="Account Number"
                 value={formData.account_number}
                 onChange={(e) => handleChange("account_number", e.target.value)}
-                disabled={!isEditing}
-              />
-              <Input
-                label="IFSC Code"
-                value={formData.ifsc_code}
-                onChange={(e) => handleChange("ifsc_code", e.target.value)}
-                disabled={!isEditing}
-              />
-              <Input
-                label="Swift Code"
-                value={formData.swift_code}
-                onChange={(e) => handleChange("swift_code", e.target.value)}
                 disabled={!isEditing}
               />
             </div>

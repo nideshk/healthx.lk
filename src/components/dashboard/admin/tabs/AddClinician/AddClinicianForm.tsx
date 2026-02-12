@@ -360,7 +360,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
         );
       }
 
-      setMessage("🎉 Practitioner application submitted successfully!");
+      setMessage("🎉 Practitioner application submitted successfully!  The team will be in touch with you within 48 hours to grant access to your telehealth account");
 
       // REFRESH & REDIRECT LOGIC
       router.refresh(); // Tells Next.js to re-fetch the data list

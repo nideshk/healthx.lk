@@ -38,7 +38,60 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     const fetchFullPatientData = async () => {
       try {
         setLoading(true);
-        // Fetch all appointments to extract patient data (same approach as SearchPatientsTab)
+
+        // First, try to use patientId if available, otherwise fetch by name
+        if (patientId && patientId !== "") {
+          // If we have a valid patientId, try to fetch patient data directly using the appointments endpoint
+          const appointmentRes = await authFetch("/api/booking/appointment", {
+            credentials: "include",
+          });
+
+          if (!appointmentRes.ok)
+            throw new Error("Failed to fetch appointments");
+
+          const appointmentResult = await appointmentRes.json();
+
+          // Merge all appointment categories
+          const allAppointments = Array.isArray(appointmentResult)
+            ? appointmentResult
+            : [
+                ...(appointmentResult.ongoing || []),
+                ...(appointmentResult.upcoming || []),
+                ...(appointmentResult.past || []),
+                ...(appointmentResult.cancelled || []),
+              ];
+
+          // Find the patient by ID from their appointments
+          const patientAppointment = allAppointments.find(
+            (appt: any) => appt.patient?.id === patientId,
+          );
+
+          if (patientAppointment?.patient) {
+            const p = patientAppointment.patient;
+            const foundPatient: Patient = {
+              id: p.id,
+              patientId: p.id,
+              full_name: p.full_name || `${p.first_name} ${p.last_name}`,
+              email: p.email,
+              contact_number: p.contact_number || p.phone,
+              age: p.age ?? 0,
+              gender: p.gender ?? "",
+              dob: p.dob ?? "",
+              allergies: Array.isArray(p.allergies)
+                ? p.allergies.join(", ")
+                : p.allergies || "",
+              lastConsultation: "",
+              consentGiven: false,
+              addressLine1: p.address,
+              city: p.city,
+              country: p.country,
+            };
+            setPatientData(foundPatient);
+            return;
+          }
+        }
+
+        // Fallback: Fetch all appointments to extract patient data by name
         const appointmentRes = await authFetch("/api/booking/appointment", {
           credentials: "include",
         });
@@ -46,7 +99,7 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
         if (!appointmentRes.ok) throw new Error("Failed to fetch appointments");
 
         const appointmentResult = await appointmentRes.json();
-        
+
         // Merge all appointment categories
         const allAppointments = Array.isArray(appointmentResult)
           ? appointmentResult
@@ -59,7 +112,7 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
 
         // Find the patient by name from their appointments
         const patientAppointment = allAppointments.find(
-          (appt: any) => appt.patient?.full_name === patientName
+          (appt: any) => appt.patient?.full_name === patientName,
         );
 
         if (patientAppointment?.patient) {
@@ -93,22 +146,22 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
       }
     };
 
-    if (patientName) {
+    if (patientName || patientId) {
       fetchFullPatientData();
     }
-  }, [patientName]);
+  }, [patientName, patientId]);
 
-  // Step 2: Fetch Appointments ONLY after we have confirmed patientData and a valid ID
+  // Step 2: Fetch Appointments for the patient
   useEffect(() => {
     if (!patientData?.id) return;
 
     const fetchAppointments = async () => {
       try {
         setLoadingAppointments(true);
-        const res = await authFetch(
-          `/api/patient/${patientData.id}/appointments`,
-          { credentials: "include" },
-        );
+        // Fetch all appointments using the main endpoint
+        const res = await authFetch("/api/booking/appointment", {
+          credentials: "include",
+        });
 
         if (!res.ok) {
           const errorData = await res.json();
@@ -117,42 +170,83 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
 
         const data = await res.json();
 
-        // Robust Mapping including Ongoing and Appointment Types
-        const mapped: any[] = [
-          ...(data.scheduled ?? []).map((a: any) => ({
+        // Merge all appointment categories
+        const allAppointments = Array.isArray(data)
+          ? data
+          : [
+              ...(data.ongoing || []),
+              ...(data.upcoming || []),
+              ...(data.past || []),
+              ...(data.cancelled || []),
+            ];
+
+        // Filter appointments for this specific patient
+        const patientAppointments = allAppointments.filter(
+          (appt: any) => appt.patient?.id === patientData.id,
+        );
+
+        // Helper function to convert ISO date to DD/MM/YYYY format
+        const formatDateFromISO = (isoString: string): string => {
+          try {
+            const date = new Date(isoString);
+            const day = String(date.getDate()).padStart(2, "0");
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+          } catch {
+            return "-";
+          }
+        };
+
+        // Helper function to convert ISO date to HH:MM AM/PM format
+        const formatTimeFromISO = (isoString: string): string => {
+          try {
+            const date = new Date(isoString);
+            let hours = date.getHours();
+            const minutes = String(date.getMinutes()).padStart(2, "0");
+            const ampm = hours >= 12 ? "PM" : "AM";
+            hours = hours % 12;
+            if (hours === 0) hours = 12;
+            const hoursStr = String(hours).padStart(2, "0");
+            return `${hoursStr}:${minutes} ${ampm}`;
+          } catch {
+            return "-";
+          }
+        };
+
+        // Map appointments to Appointment type with proper categories
+        const mapped: any[] = patientAppointments.map((a: any) => {
+          let category: "upcoming" | "ongoing" | "previous" = "previous";
+
+          // Determine category based on the response structure
+          if (data.ongoing?.some((appt: any) => appt.id === a.id)) {
+            category = "ongoing";
+          } else if (data.upcoming?.some((appt: any) => appt.id === a.id)) {
+            category = "upcoming";
+          } else {
+            category = "previous";
+          }
+
+          const formattedDate = formatDateFromISO(a.starts_at);
+          const formattedTime = formatTimeFromISO(a.starts_at);
+
+          return {
             id: a.id,
-            date: a.appointment_date,
-            time: a.start_time,
-            info: `${a.appointment_date} at ${a.start_time}`,
-            doctorName: a.doctor?.name || "Unknown",
+            date: formattedDate,
+            time: formattedTime,
+            info: `${formattedDate} at ${formattedTime}`,
+            doctorName: "Dr. " + (a.practitioner?.name || "Unknown"),
             appointmentType: a.appointment_type?.name || "Unknown",
-            category: "upcoming" as const,
-            reason: a.reason || "-",
-            status: "confirmed" as const,
-          })),
-          ...(data.ongoing ?? []).map((a: any) => ({
-            id: a.id,
-            date: a.appointment_date,
-            time: a.start_time,
-            info: `${a.appointment_date} at ${a.start_time}`,
-            doctorName: a.doctor?.name || "Unknown",
-            appointmentType: a.appointment_type?.name || "Unknown",
-            category: "ongoing" as const,
-            reason: a.reason || "-",
-            status: "confirmed" as const,
-          })),
-          ...(data.completed ?? []).map((a: any) => ({
-            id: a.id,
-            date: a.appointment_date,
-            time: a.start_time,
-            info: `${a.appointment_date} at ${a.start_time}`,
-            doctorName: a.doctor?.name || "Unknown",
-            appointmentType: a.appointment_type?.name || "Unknown",
-            category: "previous" as const,
-            reason: a.reason || "-",
-            status: "completed" as const,
-          })),
-        ];
+            category,
+            reason: a.notes || "-",
+            status: a.status || "confirmed",
+            clinicianNotes: a.notes || "",
+            prescriptions: "",
+            room_key: a.room_key || "",
+            email: a.patient?.email || "",
+            contact_number: a.patient?.contact_number || "",
+          };
+        });
 
         setAppointments(mapped);
       } catch (err) {

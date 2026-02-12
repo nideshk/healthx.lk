@@ -10,7 +10,7 @@ import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import Link from "next/link";
 import { toast } from "react-toastify";
-import { ExternalLink, FileText } from "lucide-react";
+import { ExternalLink, FileText, Edit2, Save, X, Loader2 } from "lucide-react";
 
 interface PatientDetailViewProps {
   patient: Patient;
@@ -111,7 +111,8 @@ const DetailLine: React.FC<{ label: string; value: string }> = ({
 
 /* ---------- Overview tab ---------- */
 const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
-  const [isEditing] = React.useState(false);
+  const [isEditingAllergies, setIsEditingAllergies] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const [formData, setFormData] = React.useState({
     name: patient.full_name,
@@ -130,6 +131,42 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleUpdateAllergies = async () => {
+    setIsUpdating(true);
+    try {
+      const allergyArray = formData.allergies
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item !== "");
+
+      const payload = {
+        user_id: patient.id,
+        target_role: "patient",
+        patient: {
+          allergies: allergyArray,
+        },
+      };
+
+      const res = await authFetch("/api/update-user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast.success("Allergies updated successfully");
+        setIsEditingAllergies(false);
+      } else {
+        const errData = await res.json();
+        toast.error(errData.message || "Failed to update allergies");
+      }
+    } catch (error) {
+      toast.error("An error occurred while updating");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card>
@@ -142,33 +179,72 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           <EditableField
             label="Full Name"
             value={formData.name}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("name", v)}
           />
           <EditableField
             label="Date of Birth"
             value={formData.dob}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("dob", v)}
           />
           <EditableField
             label="Gender"
             value={formData.gender}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("gender", v)}
           />
           <EditableField
             label="Age"
             value={formData.age}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("age", v)}
           />
-          <EditableField
-            label="Allergies"
-            value={formData.allergies}
-            isEditing={isEditing}
-            onChange={(v) => handleChange("allergies", v)}
-          />
+          
+          <div className="flex flex-col gap-1 relative group">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-500">Allergies (Comma separated)</span>
+              {!isEditingAllergies ? (
+                <button 
+                  onClick={() => setIsEditingAllergies(true)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <Edit2 size={12} />
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                   <button 
+                    onClick={handleUpdateAllergies}
+                    disabled={isUpdating}
+                    className="text-green-600 hover:text-green-800"
+                  >
+                    {isUpdating ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsEditingAllergies(false);
+                      setFormData(prev => ({ ...prev, allergies: patient.allergies || "" }));
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+            {isEditingAllergies ? (
+              <Input 
+                value={formData.allergies} 
+                onChange={(e) => handleChange("allergies", e.target.value)} 
+                placeholder="e.g. Peanuts, Penicillin"
+                disabled={isUpdating}
+              />
+            ) : (
+              <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 text-slate-800">
+                {formData.allergies || "-"}
+              </div>
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -182,31 +258,31 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           <EditableField
             label="Email"
             value={formData.email}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("email", v)}
           />
           <EditableField
             label="Phone"
             value={formData.phone}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("phone", v)}
           />
           <EditableField
             label="Address"
             value={formData.address}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("address", v)}
           />
           <EditableField
             label="City"
             value={formData.city}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("city", v)}
           />
           <EditableField
             label="Country"
             value={formData.country}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("country", v)}
           />
         </CardBody>
@@ -325,9 +401,7 @@ const AppointmentRow: React.FC<{
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
   const [isNotifying, setIsNotifying] = useState(false);
-  const [, forceUpdate] = useState(0);
 
-  // Requirement: Disable buttons if the appointment is in the 'previous' category
   const isPrevious = appointment.category === "previous";
 
   const [appointmentForm, setAppointmentForm] = React.useState(() => ({
@@ -343,10 +417,6 @@ const AppointmentRow: React.FC<{
     }>,
   }));
 
-  const baseUrl = (
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  ).replace(/\/$/, "");
-
   const updateAppointmentField = (
     key: keyof typeof appointmentForm,
     value: string | boolean,
@@ -354,41 +424,27 @@ const AppointmentRow: React.FC<{
     setAppointmentForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  /**
-   * DRY Notification logic using the /api/notify-send endpoint
-   * Includes formatting for line separation and a clickable link for email
-   */
-  /**
-   * Refactored handleNotify logic with enhanced HTML email template
-   * featuring line separation and a styled action button.
-   */
   const handleNotify = async (channels: Array<"email" | "sms" | "in_app">) => {
     setIsNotifying(true);
     try {
       const meetingUrl = `https://www.clinecxa.com/appointment/meeting?room=${appointment.room_key}`;
 
-      // Constructing the styled HTML template
       const htmlMessage = `
         <div style="font-family: Arial, sans-serif; color: #334155; line-height: 1.6; max-width: 600px;">
           <p ${patient.full_name},</p>
-          
           <p>Here are your appointment details:</p>
-          
           <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #2563eb; background-color: #f8fafc;">
             <strong>Appointment Type:</strong> ${appointment.appointmentType || appointment.reason || "Standard Consultation"}<br />
             <strong>Date:</strong> ${appointment.date}<br />
             <strong>Time:</strong> ${appointment.time}
           </div>
-
           <p>Click the button below to join the meeting:</p>
-          
           <div style="margin: 25px 0;">
             <a href="${meetingUrl}" 
                style="background-color: #2563eb; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
                Join Meeting
             </a>
           </div>
-
           <p style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
             Regards,<br />
             <strong>Clinecxa Team</strong>
@@ -396,7 +452,6 @@ const AppointmentRow: React.FC<{
         </div>
       `.trim();
 
-      // Plain text fallback for SMS/In-app
       const textMessage = `Hello ${patient.full_name},\n\nAppointment: ${appointment.date} at ${appointment.time}\nJoin here: ${meetingUrl}\n\nRegards, Clinecxa Team`;
 
       const res = await authFetch("/api/notify-send", {
@@ -458,11 +513,6 @@ const AppointmentRow: React.FC<{
         },
       );
 
-      // appointment.clinicianNotes = payload.clinician_notes;
-      // appointment.prescriptions = payload.prescriptions;
-      // appointment.followUpNeeded = payload.follow_up_needed;
-      // appointment.followUpDate = payload.follow_up_date || "";
-
       setIsEditingAppointment(false);
       toast.success("Consultation notes saved.");
     } catch (err) {
@@ -485,53 +535,6 @@ const AppointmentRow: React.FC<{
         ? "Completed"
         : "Cancelled";
 
-  // const fetchConsultationDetails = async () => {
-  //   if (consultationFetched) return;
-  //   setConsultationLoading(true);
-  //   try {
-  //     const res = await authFetch(
-  //       `/api/booking/appointment/${appointment.id}/consultation`
-  //     );
-  //     if (!res.ok) return;
-  //     const data = await res.json();
-
-  //     appointment.telehealthConsent = !!data.consent?.telehealth;
-  //     appointment.termsAccepted = !!data.consent?.terms;
-  //     appointment.mainConcern =
-  //       data.preconsult?.raw_payload?.note?.concern || "";
-  //     appointment.goal = data.preconsult?.raw_payload?.note?.outcome || "";
-  //     appointment.clinicianNotes = data.encounter?.clinician_notes || "";
-  //     appointment.prescriptions = data.encounter?.prescriptions || "";
-  //     appointment.followUpNeeded = !!data.encounter?.follow_up_needed;
-
-  //     const rawDate = data.encounter?.follow_up_date;
-  //     if (rawDate) {
-  //       appointment.followUpDate = rawDate.slice(0, 10);
-  //       if (rawDate.includes("T")) {
-  //         setAppointmentForm((prev) => ({
-  //           ...prev,
-  //           followUpTime: rawDate.split("T")[1].slice(0, 5),
-  //         }));
-  //       }
-  //     }
-
-  //     setConsultationFetched(true);
-  //     setAppointmentForm((prev) => ({
-  //       ...prev,
-  //       clinicianNotes: data.encounter?.clinician_notes || "",
-  //       prescriptions: data.encounter?.prescriptions || "",
-  //       followUpNeeded: !!data.encounter?.follow_up_needed,
-  //       followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || "",
-  //     }));
-
-  //     forceUpdate((v) => v + 1);
-  //   } catch (err) {
-  //     console.error("Failed to load consultation", err);
-  //   } finally {
-  //     setConsultationLoading(false);
-  //   }
-  // };
-
   const fetchConsultationDetails = async () => {
     if (consultationFetched) return;
     setConsultationLoading(true);
@@ -542,7 +545,7 @@ const AppointmentRow: React.FC<{
       if (!res.ok) return;
       const data = await res.json();
 
-      // ✅ STORE META DATA
+      // Mapping Pre-consultation Meta
       setConsultationMeta({
         telehealthConsent: !!data.consent?.telehealth,
         termsAccepted: !!data.consent?.terms,
@@ -550,7 +553,7 @@ const AppointmentRow: React.FC<{
         goal: data.preconsult?.raw_payload?.note?.outcome || "",
       });
 
-      // ✅ STORE FORM DATA
+      // Mapping Encounter Object Correctly (Clinician Notes, etc.)
       setAppointmentForm((prev) => ({
         ...prev,
         clinicianNotes: data.encounter?.clinician_notes || "",
@@ -711,13 +714,12 @@ const AppointmentRow: React.FC<{
               <h3 className="font-semibold text-slate-900 pb-2">
                 Supporting Documents
               </h3>
-
               {appointmentForm.signedAttachments.length === 0 ? (
                 <div className="text-xs text-slate-400 italic">
                   No supporting documents uploaded.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {appointmentForm.signedAttachments.map(
                     (
                       doc: { name?: string; document_type?: string; url: string },
@@ -735,14 +737,13 @@ const AppointmentRow: React.FC<{
                             size={18}
                             className="text-slate-400 group-hover:text-blue-600"
                           />
-                          <span className="text-xs font-medium uppercase">
+                          <span className="text-xs font-medium uppercase truncate max-w-[150px]">
                             {(doc.name || doc.document_type || "Document").replace(
                               /_/g,
                               " "
                             )}
                           </span>
                         </div>
-
                         <ExternalLink
                           size={14}
                           className="text-slate-300 group-hover:text-blue-600"
@@ -753,27 +754,7 @@ const AppointmentRow: React.FC<{
                 </div>
               )}
             </section>
-
-
-            {isEditingAppointment ? (
-              <div className="space-y-1">
-                <div className="text-[11px] text-slate-500">
-                  Clinician Notes
-                </div>
-                <textarea
-                  value={appointmentForm.clinicianNotes}
-                  onChange={(e) =>
-                    updateAppointmentField("clinicianNotes", e.target.value)
-                  }
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
-                />
-              </div>
-            ) : (
-              <InfoRow
-                label="Clinician Notes"
-                value={appointment.clinicianNotes || "-"}
-              />
-            )}
+            
             {isEditingAppointment ? (
               <div className="space-y-1">
                 <div className="text-[11px] text-slate-500">
@@ -815,7 +796,6 @@ const AppointmentRow: React.FC<{
               />
             )}
 
-
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-[11px] text-slate-600">
                 {isEditingAppointment ? (
@@ -830,7 +810,7 @@ const AppointmentRow: React.FC<{
                 ) : (
                   <span
                     className={`inline-flex h-3 w-3 rounded-full border-4 ${
-                      appointment.followUpNeeded
+                      appointmentForm.followUpNeeded
                         ? "border-blue-500"
                         : "border-slate-300"
                     } bg-white`}
@@ -871,10 +851,10 @@ const AppointmentRow: React.FC<{
               )}
 
               {!isEditingAppointment &&
-                appointment.followUpNeeded &&
-                appointment.followUpDate && (
+                appointmentForm.followUpNeeded &&
+                appointmentForm.followUpDate && (
                   <div className="text-[11px] text-blue-600 font-medium">
-                    Scheduled for: {appointment.followUpDate}
+                    Scheduled for: {appointmentForm.followUpDate}
                   </div>
                 )}
             </div>
