@@ -236,6 +236,59 @@ export default function PreConsultationStep({
             </div>
           </div>
         </div>
+        {/* Referral */}
+        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50 mt-6">
+          <label className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-4">
+            {t("referral")} *
+          </label>
+
+          <div className="relative group">
+            <select
+              value={isCustomReferral ? "Other" : pre.referral || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateData({
+                  pre_consultation: {
+                    ...pre,
+                    referral: val === "Other" ? "" : val,
+                  },
+                });
+              }}
+              className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-teal-500 bg-slate-50/50 appearance-none cursor-pointer outline-none transition-all font-bold text-slate-700"
+            >
+              <option value="" disabled>
+                {t("selectOption")}
+              </option>
+              {REFERRAL_SOURCES.map((source) => (
+                <option key={source} value={source}>
+                  {source}
+                </option>
+              ))}
+            </select>
+
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-hover:text-teal-500 pointer-events-none transition-colors" />
+          </div>
+
+          {(isCustomReferral ||
+            (pre.referral === "" && pre.referral !== undefined)) && (
+              <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                <input
+                  placeholder={t("customReferral")}
+                  value={pre.referral || ""}
+                  onChange={(e) =>
+                    updateData({
+                      pre_consultation: {
+                        ...pre,
+                        referral: e.target.value,
+                      },
+                    })
+                  }
+                  className="w-full border-2 border-teal-100 rounded-2xl p-4 text-sm focus:border-teal-500 bg-white shadow-inner outline-none font-medium"
+                />
+              </div>
+            )}
+        </div>
+
         <div className="grid md:grid-cols-2 gap-6">
           {/* Attachment */}
           <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
