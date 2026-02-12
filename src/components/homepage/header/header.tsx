@@ -60,7 +60,6 @@ export default function Header() {
 
 
   const checkUserStatus = async (session: any) => {
-    console.log(session)
     const { data } = await supabaseBrowser.from("profiles").select("*").eq("id", session.user.id).single();
     if (!data.is_active) {
       supabaseBrowser.auth.signOut();
@@ -109,7 +108,6 @@ export default function Header() {
   // --- Auth Logic ---
 
   async function finalizeLogin(session: any) {
-    console.log(session)
     setMfa(null);
     setOtp("");
     checkUserStatus(session)
