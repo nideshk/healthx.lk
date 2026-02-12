@@ -312,7 +312,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                             <Mail className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-900">{email}</p>
+                            <p className="text-sm font-semibold text-gray-900">{email.email} - {email.relationship}</p>
                             <p className="text-xs text-gray-500 italic">Confirmed Participant</p>
                           </div>
                         </div>
