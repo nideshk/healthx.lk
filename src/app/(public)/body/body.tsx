@@ -116,7 +116,6 @@ const Feature = ({ title, text }: { title: string; text: string }) => (
 );
 
 /* ================= DISCLAIMER MODAL ================= */
-
 const DisclaimerModal = () => {
   const t = useTranslations("footer");
   const [isOpen, setIsOpen] = useState(false);
@@ -126,7 +125,8 @@ const DisclaimerModal = () => {
       "disclaimerModalDismissed",
     );
 
-    if (!disclaimerDismissed) {
+    // Only prevent modal if value is explicitly "true"
+    if (disclaimerDismissed !== "true") {
       const timer = setTimeout(() => {
         setIsOpen(true);
       }, 3000);
@@ -143,37 +143,55 @@ const DisclaimerModal = () => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-start justify-between">
+    <div className="fixed inset-0 z-50 bg-amber-50 flex items-center justify-center p-4 
+                    bg-white/10 backdrop-blur-md">
+      <div className="bg-white/90 bg-amber-50 backdrop-blur-lg 
+                      rounded-2xl shadow-2xl 
+                      max-w-2xl w-full max-h-[90vh] overflow-y-auto
+                      border border-white/40">
+
+        <div className="sticky top-0 bg-amber-50 backdrop-blur-md
+                        border-b border-gray-200 
+                        p-6 flex items-start justify-between
+                        rounded-t-2xl">
           <div className="flex items-start gap-3">
-            <AlertTriangle
-              className="text-amber-600 flex-shrink-0 mt-1"
-              size={24}
-            />
-            <h2 className="text-xl font-bold text-gray-900">
+            <div className="bg-amber-100 p-2 rounded-xl">
+              <AlertTriangle
+                className="text-amber-600 bg-amber-50 flex-shrink-0"
+                size={22}
+              />
+            </div>
+            <h2 className="text-xl font-semibold bg-amber-50 text-gray-900">
               {t("disclaimerTitle")}
             </h2>
           </div>
+
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition"
+            className="text-gray-400 hover:text-gray-700 
+                       hover:bg-gray-100 rounded-lg p-2 transition"
             aria-label="Close"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
-        <div className="p-6">
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+        <div className="p-6 bg-amber-50">
+          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">
             {t("disclaimerText")}
           </p>
         </div>
 
-        <div className="border-t border-gray-200 p-6 bg-gray-50 flex justify-end">
+        <div className="border-t border-gray-200 p-6 
+                        bg-amber-50 backdrop-blur-md
+                        flex justify-end rounded-b-2xl">
           <Button
             onClick={handleClose}
-            className="bg-cyan-600 hover:bg-cyan-700 text-white"
+            className="bg-cyan-600 hover:bg-cyan-700 
+                       text-white px-6 py-2.5 
+                       rounded-xl font-medium
+                       shadow-md hover:shadow-lg
+                       transition-all"
           >
             I Understand
           </Button>
@@ -182,6 +200,7 @@ const DisclaimerModal = () => {
     </div>
   );
 };
+
 
 /* ================= DISCLAIMER SECTION ================= */
 

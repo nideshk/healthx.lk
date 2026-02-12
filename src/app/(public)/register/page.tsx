@@ -30,6 +30,7 @@ type FormValues = {
   last_name: string;
   city: string;
   state: string;
+  languages: string;
   qualification: string;
   specialization: string[];
   license_number: string;
@@ -45,9 +46,6 @@ type FormValues = {
     account_name: string;
     branch_location: string;
     account_number: string;
-    ifsc_code?: string;
-    swift_code?: string;
-    branch_address?: string;
   };
   availability: {
     start_time: string;
@@ -78,7 +76,6 @@ export default function PractitionerRegisterPage() {
 
   const {
     control,
-    register,
     handleSubmit,
     watch,
     setValue,
@@ -92,6 +89,7 @@ export default function PractitionerRegisterPage() {
       last_name: "",
       city: "",
       state: "",
+      languages: "",
       qualification: "",
       specialization: [],
       license_number: "",
@@ -107,9 +105,6 @@ export default function PractitionerRegisterPage() {
         account_name: "",
         branch_location: "",
         account_number: "",
-        ifsc_code: "",
-        swift_code: "",
-        branch_address: "",
       },
       availability: {
         start_time: "09:00",
@@ -226,7 +221,6 @@ export default function PractitionerRegisterPage() {
   };
 
   const uploadDocumentsAfterApplication = async (applicationId: string) => {
-    // 🔐 Safety validation (never trust UI alone)
     const governmentIdCount = pendingFiles.filter(
       f => f.document_type === "government_id"
     ).length;
@@ -249,7 +243,6 @@ export default function PractitionerRegisterPage() {
 
     try {
       for (const item of pendingFiles) {
-        // 1️⃣ get upload URL
         const res = await fetch("/api/practitioner-document/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -267,13 +260,11 @@ export default function PractitionerRegisterPage() {
           throw new Error(data.error || "Failed to get upload URL");
         }
 
-        // 2️⃣ upload to S3
         const uploadRes = await fetch(data.uploadUrl, {
           method: "PUT",
           headers: { "Content-Type": item.file.type },
           body: item.file,
         });
-
 
         if (!uploadRes.ok) {
           throw new Error("Failed to upload file to S3");
@@ -282,7 +273,6 @@ export default function PractitionerRegisterPage() {
         uploadedDocs.push(data.document);
       }
 
-      // 3️⃣ attach documents to application (ONLY if all uploads succeeded)
       const attachRes = await fetch(
         `/api/auth/practitioner-application/${applicationId}/document_added`,
         {
@@ -296,7 +286,6 @@ export default function PractitionerRegisterPage() {
         throw new Error("Failed to attach documents to application");
       }
 
-      // 4️⃣ clear local state (upload is done)
       setPendingFiles([]);
     } finally {
       setUploadingDocs(false);
@@ -317,6 +306,7 @@ export default function PractitionerRegisterPage() {
     try {
       const payload = {
         ...form,
+        languages: form.languages.split(",").map(l => l.trim()).filter(l => l !== ""),
         experience_years: Number(form.experience_years),
         available_services: selectedAppointments.map(a => a.id),
         fees: selectedAppointments.reduce((acc: any, appt) => {
@@ -357,8 +347,6 @@ export default function PractitionerRegisterPage() {
   const weekdays = [
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
   ];
-
-  /* ---------------- JSX (UNCHANGED) ---------------- */
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-5 flex justify-center">
@@ -430,7 +418,6 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-
                 <Controller
                   name="state"
                   control={control}
@@ -446,8 +433,8 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                 <Controller
                   name="email"
@@ -464,7 +451,6 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-
                 <Controller
                   name="password"
                   control={control}
@@ -472,7 +458,6 @@ export default function PractitionerRegisterPage() {
                   render={({ field, fieldState }) => (
                     <Input
                       type="password"
-                      className=""
                       placeholder="Password"
                       required
                       value={field.value || ""}
@@ -484,12 +469,28 @@ export default function PractitionerRegisterPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-5 mt-4">
+                <Controller
+                  name="languages"
+                  control={control}
+                  rules={{ required: "Languages is required" }}
+                  render={({ field, fieldState }) => (
+                    <Input
+                      placeholder="Languages (comma separated, e.g. English, French)"
+                      required
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
+                    />
+                  )}
+                />
+              </div>
             </div>
 
             {/* PROFESSIONAL */}
             <div>
               <h2 className="section-title">Professional Information</h2>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                 <Controller
                   name="qualification"
@@ -513,23 +514,21 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-
               </div>
 
-              {/* SPECIALIZATION — MARKUP UNCHANGED */}
               <div className="mt-4 relative">
                 <label className="text-gray-700 font-medium mb-1 block">
                   Specializations
                 </label>
-
-                <div className="w-full min-h-[44px] px-3 py-2 rounded-lg border border-gray-300 bg-white flex items-center justify-between focus-within:ring-2 focus-within:ring-teal-500">
+                <div
+                  className="w-full min-h-[44px] px-3 py-2 rounded-lg border border-gray-300 bg-white flex items-center justify-between focus-within:ring-2 focus-within:ring-teal-500"
+                >
                   <div className="flex flex-wrap gap-2">
                     {specialization.length === 0 ? (
                       <span className="text-gray-400">Select specializations</span>
                     ) : (
                       specialization.map((slug) => {
                         const spec = specializations.find(s => s.slug === slug);
-
                         return (
                           <span
                             key={slug}
@@ -539,10 +538,8 @@ export default function PractitionerRegisterPage() {
                           </span>
                         );
                       })
-
                     )}
                   </div>
-
                   <button
                     type="button"
                     onClick={() => setIsSpecOpen(prev => !prev)}
@@ -566,7 +563,6 @@ export default function PractitionerRegisterPage() {
                             className="rounded accent-teal-600"
                             checked={specialization.includes(spec.slug)}
                             onChange={() => toggleSpecialization(spec.slug)}
-
                           />
                           <span className="text-gray-700">{spec.name}</span>
                         </label>
@@ -575,44 +571,14 @@ export default function PractitionerRegisterPage() {
                 )}
               </div>
 
-              <Controller
-                name="experience_years"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    className="mt-4"
-                    type="number"
-                    placeholder="Experience (years)"
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-
-              <Controller
-                name="profile_bio"
-                control={control}
-                render={({ field }) => (
-                  <Textarea
-                    className="mt-4 h-28"
-                    placeholder="Short professional bio"
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
-
-            {/* CONTACT */}
-            <div>
-              <h2 className="section-title">Contact Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                 <Controller
-                  name="contact_email"
+                  name="experience_years"
                   control={control}
                   render={({ field }) => (
                     <Input
-                      placeholder="Professional Email"
+                      type="number"
+                      placeholder="Years of Experience"
                       value={field.value || ""}
                       onChange={field.onChange}
                     />
@@ -623,207 +589,185 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field }) => (
                     <Input
-                      placeholder="Phone Number"
+                      placeholder="Contact Number"
                       value={field.value || ""}
                       onChange={field.onChange}
                     />
                   )}
                 />
+              </div>
 
+              <div className="mt-4">
+                <Controller
+                  name="profile_bio"
+                  control={control}
+                  render={({ field }) => (
+                    <Textarea
+                      placeholder="Profile Bio (brief description of your expertise)"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
               </div>
             </div>
 
-            {/* SECTION: FEES – REPLACED WITH DROPDOWN + TABLE */}
+            {/* SERVICES & FEES */}
             <div>
-              <h2 className="section-title">Consultation Fees</h2>
-
-              {/* Dropdown to select appointment type */}
+              <h2 className="section-title">Services & Fees</h2>
               <div className="mt-4">
+                <label className="text-gray-700 font-medium mb-1 block">
+                  Add Appointment Types
+                </label>
                 <select
                   value={selectedAppointmentId}
-                  onChange={(e) => {
-                    handleAppointmentSelect(e);
-                    setSelectedAppointmentId("");
-                  }}
-                  className={`w-full px-3 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-teal-500
-                    ${selectedAppointmentId === ""
-                      ? "text-[rgb(138,138,138)]"
-                      : "text-gray-900"
-                    }
-                  `}
+                  onChange={handleAppointmentSelect}
+                  className="w-full h-[44px] px-3 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-teal-500 outline-none"
                 >
-                  <option value="" disabled>
-                    Choose appointment type
-                  </option>
-                  {appointmentTypes.map((type) => (
-                    <option key={type.id} value={type.id} className="text-gray-900">
-                      {type.name}
+                  <option value="">-- Choose a type --</option>
+                  {appointmentTypes.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
                     </option>
                   ))}
                 </select>
-              </div>
 
-              {/* Table of selected appointment types */}
-              {selectedAppointments.length > 0 && (
-                <div className="mt-6 overflow-x-auto">
-                  <table className="min-w-full border border-gray-200 text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 border-b text-left border-gray-200">
-                          Appointment Type
-                        </th>
-                        <th className="px-4 py-2 border-b text-left border-gray-200">
-                          Duration
-                        </th>
-                        <th className="px-4 py-2 border-b text-left border-gray-200">
-                          Fee
-                        </th>
-                        <th className="px-4 py-2 border-b text-left border-gray-200">
-                          Max attendees
-                        </th>
-                        <th className="px-4 py-2 border-b text-left border-gray-200"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedAppointments.map((appt) => (
-                        <tr key={appt.id}>
-                          <td className="px-4 py-2 border-b border-gray-200">
-                            {appt.name}
-                          </td>
-                          <td className="px-4 py-2 border-b border-gray-200">
-                            {appt.duration_mins} min
-                          </td>
-                          <td className="px-4 py-2 border-b border-gray-200">
-                            <input
-                              type="number"
-                              className="w-24 px-2 py-1 rounded border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none"
-                              value={appt.base_fee}
-                              onChange={(e) =>
-                                handleAppointmentFeeChange(appt.id, e.target.value)
-                              }
-                            />
-                          </td>
-                          <td className="px-4 py-2 border-b border-gray-200">
-                            {appt.max_attendee}
-                          </td>
-                          <td className="px-4 py-2 border-b border-gray-200">
-                            <button
-                              type="button"
-                              className="text-red-500 hover:text-red-700"
-                              onClick={() =>
-                                setSelectedAppointments((prev) =>
-                                  prev.filter((item) => item.id !== appt.id)
-                                )
-                              }
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="mt-4 space-y-3">
+                  {selectedAppointments.map(appt => (
+                    <div
+                      key={appt.id}
+                      className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-teal-50 border border-teal-100 rounded-xl gap-4"
+                    >
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-800">{appt.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {appt.duration_mins} mins • Max {appt.max_attendee} attendees
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-600 font-medium">Fee:</span>
+                        <input
+                          type="number"
+                          value={appt.base_fee}
+                          onChange={e => handleAppointmentFeeChange(appt.id, e.target.value)}
+                          className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-teal-500 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedAppointments(prev => prev.filter(a => a.id !== appt.id))
+                          }
+                          className="text-red-500 hover:text-red-700 p-1"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
 
             {/* DOCUMENTS */}
             <div>
-              <h2 className="section-title">Documents</h2>
-              {/* Government ID */}
-              <div className="flex items-center justify-between mt-4">
-                <span className="font-medium text-gray-700">
-                  Passport / Government ID <span className="text-red-500">*</span>
-                </span>
+              <h2 className="section-title">Documents & Verification</h2>
+              <div className="space-y-6 mt-4">
+                {/* Government ID */}
+                <div className="p-5 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
+                  <p className="font-semibold text-gray-700 mb-1">
+                    Government Issued ID (Required)
+                  </p>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Passport, National ID, or Driver's License.
+                  </p>
+                  <input
+                    type="file"
+                    className="hidden"
+                    id="gov-id-upload"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={e => {
+                      if (e.target.files?.[0]) {
+                        handleFileSelect(e.target.files[0], "government_id");
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="gov-id-upload"
+                    className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${
+                      governmentIdCount >= 1 ? "opacity-50 pointer-events-none" : ""
+                    }`}
+                  >
+                    Select File
+                  </label>
+                </div>
 
-                <input
-                  type="file"
-                  accept=".pdf,image/*"
-                  className="hidden"
-                  id="government-id-input"
-                  onChange={(e) =>
-                    e.target.files &&
-                    handleFileSelect(e.target.files[0], "government_id")
-                  }
-                />
-                <button
-                  type="button"
-                  disabled={governmentIdCount >= 1 || uploadingDocs}
-                  onClick={() =>
-                    document.getElementById("government-id-input")?.click()
-                  }
-                  className="px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Upload
-                </button>
-              </div>
+                {/* Supporting Documents */}
+                <div className="p-5 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
+                  <p className="font-semibold text-gray-700 mb-1">
+                    Supporting Documents (Max 2)
+                  </p>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Medical licenses, certificates, or letters of recommendation.
+                  </p>
+                  <input
+                    type="file"
+                    className="hidden"
+                    id="support-upload"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={e => {
+                      if (e.target.files?.[0]) {
+                        handleFileSelect(e.target.files[0], "supporting_document");
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="support-upload"
+                    className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${
+                      supportingDocCount >= 2 ? "opacity-50 pointer-events-none" : ""
+                    }`}
+                  >
+                    Select File
+                  </label>
+                </div>
 
-              {/* Supporting Document */}
-              <div className="flex items-center justify-between mt-4">
-                <span className="font-medium text-gray-700">
-                  Supporting Document (Max 2)
-                </span>
-
-                <input
-                  type="file"
-                  accept=".pdf,image/*"
-                  className="hidden"
-                  id="supporting-doc-input"
-                  onChange={(e) =>
-                    e.target.files &&
-                    handleFileSelect(e.target.files[0], "supporting_document")
-                  }
-                />
-
-                <button
-                  type="button"
-                  disabled={supportingDocCount >= 2 || uploadingDocs}
-                  onClick={() =>
-                    document.getElementById("supporting-doc-input")?.click()
-                  }
-                  className="px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Upload
-                </button>
-              </div>
-
-              {/* Uploaded files list */}
-              {pendingFiles.length > 0 && (
-                <ul className="mt-4 space-y-2 text-sm text-gray-700">
-                  {pendingFiles.map((item, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded"
-                    >
-                      <span>
-                        {item.file.name}
-                        <span className="ml-2 text-gray-500">
-                          ({item.document_type})
-                        </span>
-                      </span>
-
-                      {/* ❌ REMOVE */}
-                      <button
-                        type="button"
-                        onClick={() => removePendingFile(idx)}
-                        className="text-red-500 hover:text-red-700"
-                        title="Remove"
+                {/* File List */}
+                {pendingFiles.length > 0 && (
+                  <div className="space-y-2">
+                    {pendingFiles.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl shadow-sm"
                       >
-                        ✕
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-teal-100 text-teal-600 rounded flex items-center justify-center text-[10px] font-bold">
+                            FILE
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">
+                              {item.file.name}
+                            </p>
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+                              {item.document_type.replace("_", " ")}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removePendingFile(idx)}
+                          className="text-gray-400 hover:text-red-500 transition"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* SECTION: BANK DETAILS */}
-            <div>
-              <h2 className="section-title">Bank Details</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Payment information for consultation fees
-              </p>
-
+            {/* BANK DETAILS */}
+            <div className="pt-6 border-t border-gray-100">
+              <h2 className="section-title">Payout Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                 <Controller
                   name="bank_details.bank_name"
@@ -840,14 +784,13 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-
                 <Controller
                   name="bank_details.account_name"
                   control={control}
                   rules={{ required: "Account Name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
-                      placeholder="Account Name"
+                      placeholder="Account Holder Name"
                       required
                       value={field.value || ""}
                       onChange={field.onChange}
@@ -856,7 +799,6 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-
                 <Controller
                   name="bank_details.branch_location"
                   control={control}
@@ -868,7 +810,6 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-
 
                 <Controller
                   name="bank_details.account_number"
@@ -885,22 +826,9 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-
-               
               </div>
-              <Controller
-                name="bank_details.branch_address"
-                control={control}
-                render={({ field }) => (
-                  <Textarea
-                    className="mt-4 h-20"
-                    placeholder="Branch Address"
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
             </div>
+
             <button
               type="submit"
               disabled={loading || uploadingDocs}
@@ -915,4 +843,3 @@ export default function PractitionerRegisterPage() {
     </div>
   );
 }
-

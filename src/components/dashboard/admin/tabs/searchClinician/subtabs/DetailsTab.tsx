@@ -120,7 +120,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
           last_name: lastName,
           license_number: formData.registration,
           qualification: formData.qualifications,
-          specialization: formData.specialty, // Sending as array
+          specialization: formData.specialty, 
           profile_bio: formData.intro,
           bank_details: {
             account_holder_name: formData.accountName,
@@ -139,20 +139,13 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
 
       if (!res.ok) throw new Error("Failed to update profile");
 
+      // SUCCESS TOAST
+      toast.success("Profile details updated successfully!");
+
       const text = `Appointment for Dr. ${formData.name} updated successfully. Registration: ${formData.registration}`;
 
-      try {
-        if (navigator.share) {
-          await navigator.share({ title: "Appointment", text });
-        } else {
-          await navigator.clipboard.writeText(text);
-          toast.success("Appointment details copied");
-        }
-      } catch {
-        toast.success("Profile updated successfully");
-      }
-
       setIsEditing(false);
+      setIsSpecOpen(false);
     } catch (err: any) {
       toast.error(err.message || "An error occurred while saving");
     } finally {
