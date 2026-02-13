@@ -16,7 +16,20 @@ const STATUS_MAP: Record<string, string[]> = {
 export async function GET(req: NextRequest) {
   try {
     const { authorized, user } = await requireUser(req);
-    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const cnx = getAuditContext(req, user);
+    if (!authorized) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "analytics",
+        source: "dashboard",
+        metadata: {
+          reason: "Unauthorized access attempt"
+        }
+      });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     /** RBAC */
     const isAdmin =
@@ -26,6 +39,17 @@ export async function GET(req: NextRequest) {
       user?.role === "practitioner" && user?.practitioner_id;
 
     if (!isAdmin && !isPractitioner) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "analytics",
+        source: "dashboard",
+        metadata: {
+          reason: "Forbidden - insufficient role"
+        }
+      });
+
       return NextResponse.json(
         { success: false, message: "Forbidden" },
         { status: 403 }
@@ -39,6 +63,17 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get("type");
 
     if (!fromDate || !toDate || !type) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "analytics",
+        source: "dashboard",
+        metadata: {
+          reason: "Missing required filters",
+          provided_filters: { fromDate, toDate, type }
+        }
+      });
       return NextResponse.json(
         {
           success: false,
@@ -50,6 +85,17 @@ export async function GET(req: NextRequest) {
 
     const statuses = STATUS_MAP[type];
     if (!statuses) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "analytics",
+        source: "dashboard",
+        metadata: {
+          reason: "Invalid type filter",
+          type
+        }
+      });
       return NextResponse.json(
         { success: false, message: "Invalid type filter" },
         { status: 400 }
@@ -92,7 +138,6 @@ export async function GET(req: NextRequest) {
 
     query = query.range(from, to);
 
-    const cnx = getAuditContext(req, user);
     await auditLog({
       ...cnx,
       action: "VIEWED",
@@ -117,6 +162,16 @@ export async function GET(req: NextRequest) {
     }
 
     if (error) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Database fetch failed",
+        }
+      });
       console.error("DB Error:", error);
       return NextResponse.json(
         {
@@ -200,6 +255,17 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("❌ Appointments Fetch Error:", error);
+    const cnx = getAuditContext(req);
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "APPOINTMENT",
+      purpose: "analytics",
+      source: "dashboard",
+      metadata: {
+        reason: error?.message || "Unknown error"
+      }
+    });
     return NextResponse.json(
       {
         success: false, message:
@@ -216,6 +282,7 @@ export async function POST(req: NextRequest) {
   try {
     // 1️⃣ Auth check
     const { user } = await requireUser(req);
+    const cnx = getAuditContext(req, user);
     // const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
     // if (!isAdmin) {
@@ -243,6 +310,24 @@ export async function POST(req: NextRequest) {
       !starts_at ||
       !ends_at
     ) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Missing required fields",
+          provided_fields: {
+            patient_id: !!patient_id,
+            practitioner_id: !!practitioner_id,
+            appointment_type_id: !!appointment_type_id,
+            starts_at: !!starts_at,
+            ends_at: !!ends_at,
+          }
+        }
+      });
+
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -274,11 +359,38 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error(error);
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Appointment creation failed"
+        }
+      });
+
       return NextResponse.json(
         { error: "Failed to create appointment" },
         { status: 500 }
       );
     }
+
+    await auditLog({
+      ...cnx,
+      action: "CREATED",
+      entityType: "APPOINTMENT",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        appointment_id: data.id,
+        patient_id,
+        practitioner_id,
+        appointment_type_id,
+        starts_at,
+        ends_at,
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -287,6 +399,17 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error(err);
+    const cnx = getAuditContext(req);
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "APPOINTMENT",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "Unexpected server error"
+      }
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

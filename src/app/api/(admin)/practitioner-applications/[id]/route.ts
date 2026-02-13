@@ -32,12 +32,37 @@ export async function GET(
   try {
     // 🔐 Authentication check
     const { authorized, user } = await requireUser(_req);
-    if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const cnx = getAuditContext(_req, user);
+    if (!authorized) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED_ACCESS",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "unauthorized_view_practitioner_application",
+        },
+      });
+
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
 
     const role = user?.profile?.role;
 
     // 🔒 Authorization check
     if (role !== "admin" && role !== "superadmin") {
+      await auditLog({
+        ...cnx,
+        action: "FAILED_ACCESS",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "insufficient_role_view_practitioner_application",
+          role,
+        },
+      });
       return NextResponse.json(
         {
           success: false,
@@ -50,6 +75,16 @@ export async function GET(
     const { id: applicationId } = await context.params;
 
     if (!applicationId) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "missing_application_id",
+        },
+      });
       return NextResponse.json(
         {
           success: false,
@@ -92,6 +127,17 @@ export async function GET(
 
     if (error) {
       if (error.code === "PGRST116") {
+        await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        entityId: applicationId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "application_not_found",
+        },
+      });
         return NextResponse.json(
           {
             success: false,
@@ -122,7 +168,6 @@ export async function GET(
       );
     }
 
-    const cnx = getAuditContext(_req, user);
     await auditLog({
       ...cnx,
       action: "EXPORTED",

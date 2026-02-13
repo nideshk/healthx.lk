@@ -12,7 +12,20 @@ export async function DELETE(
   const { id: targetAdminId } = await context.params;
   const { authorized, user } = await requireUser(_req);
   if (!authorized)
+  {
+    await auditLog({
+    ...getAuditContext(_req as any),
+    action: "FAILED_ACCESS",
+    entityType: "ADMIN_USER",
+    entityId: targetAdminId,
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      reason: "unauthorized_request",
+    },
+  });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   if (!user?.admin) {
     auditLog({
       ...getAuditContext(_req as any, user),
@@ -33,6 +46,17 @@ export async function DELETE(
 
   // 2️⃣ Self-delete protection
   if (user.admin.id === targetAdminId) {
+    await auditLog({
+      ...getAuditContext(_req as any, user),
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "self_delete_attempt",
+      },
+    });
     return NextResponse.json(
       { success: false, message: "You cannot delete yourself" },
       { status: 403 }
@@ -47,6 +71,17 @@ export async function DELETE(
     .single();
 
   if (error || !target) {
+    await auditLog({
+      ...getAuditContext(_req as any, user),
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "admin_not_found",
+      },
+    });
     return NextResponse.json(
       { success: false, message: "Admin not found" },
       { status: 404 }
@@ -55,6 +90,17 @@ export async function DELETE(
 
   // 4️⃣ Already deleted
   if (target.delete_status === "deleted") {
+    await auditLog({
+      ...getAuditContext(_req as any, user),
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "already_deleted",
+      },
+    });
     return NextResponse.json(
       { success: false, message: "Admin already deleted" },
       { status: 400 }
@@ -170,6 +216,17 @@ export async function DELETE(
    * ----------------------------------------------------
    */
   if (!user.admin.policies.includes("admin:delete")) {
+    await auditLog({
+      ...getAuditContext(_req as any, user),
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "missing_admin_delete_policy",
+      },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -180,7 +237,7 @@ export async function DELETE(
   }
 
   // 8️⃣ Create delete request (soft state)
-  await supabaseAdmin
+  const { error: adminUpdateErr } = await supabaseAdmin
     .from("admin_users")
     .update({
       delete_status: "requested",
@@ -188,6 +245,38 @@ export async function DELETE(
       delete_requested_at: new Date().toISOString(),
     })
     .eq("id", targetAdminId);
+
+  if (adminUpdateErr) {
+    await auditLog({
+      ...getAuditContext(_req as any, user),
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "admin_soft_delete_failed",
+      },
+    });
+
+    return NextResponse.json(
+      { success: false, message: "Failed to delete admin" },
+      { status: 500 }
+    );
+  }
+
+  await auditLog({
+    ...getAuditContext(_req as any, user),
+    action: "UPDATED",
+    entityType: "ADMIN_USER",
+    entityId: targetAdminId,
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      event: "delete_requested",
+    },
+  });
+
 
   return NextResponse.json(
     {

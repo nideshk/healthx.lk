@@ -13,9 +13,39 @@ export async function GET(
   try {
     const { id } = await context.params;
 
-    const { user } = await requireUser(req);
+    const { authorized, user } = await requireUser(req);
+    const cnx = getAuditContext(req, user);
+    if (!authorized) {
+
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "PRACTITIONER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Unauthorized access attempt - practitioner fetch"
+        }
+      });
+
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
     if (!id) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "PRACTITIONER",
+        entityId: id,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Database fetch failed"
+        }
+      });
       return NextResponse.json(
         { error: "Missing practitioner ID" },
         { status: 400 }
@@ -46,13 +76,22 @@ export async function GET(
     }
 
     if (!data || data.length === 0) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "PRACTITIONER",
+        entityId: id,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Practitioner not found"
+        }
+      });
       return NextResponse.json(
         { message: "Practitioner not found", data: [] },
         { status: 404 }
       );
     }
-
-    const cnx = getAuditContext(req, user);
 
     await auditLog(
       {
@@ -76,6 +115,18 @@ export async function GET(
       { status: 200 }
     );
   } catch (err: any) {
+    const cnx = getAuditContext(req);
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "PRACTITIONER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: err?.message ?? "Unexpected server error"
+      }
+    });
+
     return NextResponse.json(
       { error: "Internal Server Error", details: err.message },
       { status: 500 }

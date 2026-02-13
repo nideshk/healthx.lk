@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -40,13 +42,35 @@ export async function POST(req: NextRequest) {
         /* ---------------- AUTH ---------------- */
 
         const { authorized, user } = await requireUser(req);
+        const cnx = getAuditContext(req, user);
 
         if (!authorized || !user) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                entityType: "APPOINTMENT",
+                purpose: "operations",
+                source: "dashboard",
+                metadata: {
+                    reason: "Unauthorized appointment creation attempt"
+                }
+            });
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const role = user.profile?.role;
         if (!["admin", "superadmin"].includes(role)) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                entityType: "APPOINTMENT",
+                purpose: "operations",
+                source: "dashboard",
+                metadata: {
+                    reason: "Access denied - insufficient role",
+                    role
+                }
+            });
             return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
 
@@ -69,6 +93,23 @@ export async function POST(req: NextRequest) {
             !date ||
             !start_time
         ) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                entityType: "APPOINTMENT",
+                purpose: "operations",
+                source: "dashboard",
+                metadata: {
+                    reason: "Missing required fields",
+                    provided: {
+                        practitioner_id: !!practitioner_id,
+                        patient_id: !!patient_id,
+                        appointment_type_id: !!appointment_type_id,
+                        date: !!date,
+                        start_time: !!start_time
+                    }
+                }
+            });
             return NextResponse.json(
                 { error: "Missing required fields" },
                 { status: 400 }
@@ -85,6 +126,17 @@ export async function POST(req: NextRequest) {
                 .single();
 
         if (typeErr || !appointmentType) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                entityType: "APPOINTMENT",
+                purpose: "operations",
+                source: "dashboard",
+                metadata: {
+                    reason: "Invalid appointment type",
+                    appointment_type_id
+                }
+            });
             return NextResponse.json(
                 { error: "Invalid appointment type" },
                 { status: 400 }
@@ -101,6 +153,18 @@ export async function POST(req: NextRequest) {
                 .single();
 
         if (practitionerErr || !practitioner) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                entityType: "APPOINTMENT",
+                purpose: "operations",
+                source: "dashboard",
+                metadata: {
+                    reason: "Invalid practitioner",
+                    practitioner_id
+                }
+            });
+
             return NextResponse.json(
                 { error: "Invalid practitioner" },
                 { status: 400 }
@@ -176,6 +240,17 @@ export async function POST(req: NextRequest) {
                 .in("status", ["pending", "scheduled", "confirmed"]);
 
         if (conflictErr) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                entityType: "APPOINTMENT",
+                purpose: "operations",
+                source: "dashboard",
+                metadata: {
+                    reason: "Conflict validation failed"
+                }
+            });
+
             console.error(conflictErr);
             return NextResponse.json(
                 { error: "Failed to validate availability" },
@@ -184,6 +259,19 @@ export async function POST(req: NextRequest) {
         }
 
         if (conflicts && conflicts.length > 0) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                entityType: "APPOINTMENT",
+                purpose: "operations",
+                source: "dashboard",
+                metadata: {
+                    reason: "Time slot conflict",
+                    practitioner_id,
+                    starts_at: startsAt.toISOString()
+                }
+            });
+
             return NextResponse.json(
                 { error: "Selected time slot is already booked" },
                 { status: 409 }
@@ -224,11 +312,38 @@ export async function POST(req: NextRequest) {
 
         if (insertErr) {
             console.error(insertErr);
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                entityType: "APPOINTMENT",
+                purpose: "operations",
+                source: "dashboard",
+                metadata: {
+                    reason: "Appointment insert failed"
+                }
+            });
             return NextResponse.json(
                 { error: "Failed to create appointment" },
                 { status: 500 }
             );
         }
+
+        await auditLog({
+            ...cnx,
+            action: "CREATED",
+            entityType: "APPOINTMENT",
+            entityId: appointment.id,
+            purpose: "operations",
+            source: "dashboard",
+            metadata: {
+                practitioner_id,
+                appointment_type_id,
+                starts_at: startsAt.toISOString(),
+                expires_at: expiresAt.toISOString(),
+                total_fee: totalFee,
+                currency: "LKR"
+            }
+        });
 
         return NextResponse.json({
             success: true,
