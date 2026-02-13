@@ -46,12 +46,17 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
             </div>
             <div className="flex flex-wrap gap-6 text-xs text-slate-700">
               <DetailLine label="Patient ID" value={patient.patientId} />
-              <DetailLine label="Date of Birth" value={patient.dob} />
-              <DetailLine label="Age" value={`${patient.age} years`} />
-              <DetailLine label="Gender" value={patient.gender} />
-              {patient.allergies && (
-                <DetailLine label="Allergies" value={patient.allergies} />
-              )}
+              <DetailLine label="Date of Birth" value={patient.dob || "-"} />
+              <DetailLine label="Age" value={`${patient.age || "-"} years`} />
+              <DetailLine label="Gender" value={patient.gender || "-"} />
+              <DetailLine
+                label="Allergies"
+                value={
+                  Array.isArray(patient.allergies)
+                    ? patient.allergies.join(", ")
+                    : patient.allergies || "-"
+                }
+              />
             </div>
           </div>
         </CardBody>
@@ -183,13 +188,13 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           />
           <EditableField
             label="Date of Birth"
-            value={formData.dob}
+            value={formData.dob || ""}
             isEditing={false}
             onChange={(v) => handleChange("dob", v)}
           />
           <EditableField
             label="Gender"
-            value={formData.gender}
+            value={formData.gender || ""}
             isEditing={false}
             onChange={(v) => handleChange("gender", v)}
           />
@@ -256,13 +261,13 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
         <CardBody className="space-y-3 text-xs">
           <EditableField
             label="Email"
-            value={formData.email}
+            value={formData.email || ""}
             isEditing={false}
             onChange={(v) => handleChange("email", v)}
           />
           <EditableField
             label="Phone"
-            value={formData.phone}
+            value={formData.phone || ""}
             isEditing={false}
             onChange={(v) => handleChange("phone", v)}
           />
