@@ -497,42 +497,56 @@
       "backLogin": "Back to Login"
     }
   },
-  "signup": {
-    "title": "Patient Signup",
-    "marketingConsent": "I agree to receive updates, offers, and health tips via email or SMS. You can unsubscribe anytime.",
-    "countryDefault": "Sri Lanka",
-    "buttonDefault": "Sign Up",
-    "buttonLoading": "Signing up...",
-    "placeholders": {
-      "firstName": "First Name",
-      "lastName": "Last Name",
-      "email": "Email",
-      "password": "Password",
-      "emergencyContact": "Emergency Contact (optional)",
-      "idNumber": "ID Number",
-      "address": "Address",
-      "province": "State / Province",
-      "city": "City",
-      "pinCode": "Postal Code (e.g. 00100)"
-    },
-    "gender": {
-      "male": "Male",
-      "female": "Female",
-      "nonBinary": "Non-binary",
-      "unspecified": "Prefer not to say"
-    },
-    "idType": {
-      "passport": "Passport",
-      "nic": "National Identity Card",
-      "license": "Driving License"
-    },
-    "messages": {
-      "verifyEmail": "Check your email to verify your account",
-      "signupFailed": "Signup failed",
-      "signupSuccess": "Account created successfully 🎉",
-      "unexpectedError": "Unexpected error occurred"
-    }
+ "signup": {
+  "title": "Create an Account",
+  "marketingConsent": "I agree to receive updates, offers, and health tips via email or SMS. You can unsubscribe anytime.",
+  "countryDefault": "Sri Lanka",
+  "buttonDefault": "Sign Up",
+  "buttonLoading": "Signing up...",
+  "placeholders": {
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "password": "Password",
+    "emergencyContact": "Emergency Contact (optional)",
+    "idNumber": "ID Number",
+    "address": "Address",
+    "province": "State / Province",
+    "city": "City",
+    "pinCode": "Postal Code (e.g. 00100)"
   },
+  "labels": {
+    "subtitle": "Please enter your details to create an account",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email Address",
+    "password": "Password",
+    "dateOfBirth": "Date of Birth",
+    "gender": "Gender",
+    "phoneNumber": "Phone Number",
+    "idType": "ID Type",
+    "idNumber": "ID Number",
+    "streetAddress": "Street Address",
+    "country": "Country",
+    "stateProvince": "State / Province",
+    "city": "City"
+  },
+  "gender": {
+    "male": "Male",
+    "female": "Female",
+    "others": "Others"
+  },
+  "idType": {
+    "passport": "Passport",
+    "nic": "National Identity Card",
+    "license": "Driving License"
+  },
+  "messages": {
+    "verifyEmail": "Check your email to verify your account",
+    "signupFailed": "Signup failed",
+    "signupSuccess": "Account created successfully 🎉",
+    "unexpectedError": "Unexpected error occurred"
+  }},
   "bookingFlow": {
     "back": "Back",
     "loadingText": "Loading available options...",
