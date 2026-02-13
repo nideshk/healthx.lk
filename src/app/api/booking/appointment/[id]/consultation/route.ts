@@ -76,7 +76,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       .eq("practitioner_id", user?.practitioner_id);
     attachments = data ?? [];
 
-
     const signedAttachments = await Promise.all(
       attachments.map(async (atc) => ({
         id: atc.id,
@@ -129,8 +128,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   }
 
 
-
   const { authorized, user, role } = await requireUser(request);
+  const cnx = getAuditContext(request, user);
+
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: PostBody;
@@ -208,6 +208,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         .select()
         .single();
       if (updErr) throw updErr;
+
+      await auditLog({
+        ...cnx,
+        action: "UPDATED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
+
       return NextResponse.json({ encounter: updated }, { status: 200 });
     }
   } catch (err: any) {

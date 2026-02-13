@@ -1,5 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 
 type Body = { enabled: boolean };
@@ -9,7 +12,11 @@ function validateBody(b: any): string | null {
   return null;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+
+  const { user } = await requireUser(req);
+  const cnx = getAuditContext(req, user);
+
   // parse body
   let body: Body;
   try {
@@ -30,12 +37,22 @@ export async function POST(req: Request) {
     console.error("getUser error:", userErr);
     return NextResponse.json({ error: "Unable to verify session" }, { status: 401 });
   }
-  const user = userData?.user;
-  console.log(user.id)
-  if (!user?.id) {
+  const users = userData?.user;
+  if (!users?.id) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      source: "dashboard",
+      entityType: "PROFILE",
+      entityId: "",
+      metadata: {
+        "error": "Unauthorized"
+      },
+      purpose: "operations",
+    })
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = user.id;
+  const userId = users.id;
 
   try {
     // Ensure profile exists
@@ -61,12 +78,27 @@ export async function POST(req: Request) {
       .update({ multi_factor: body.enabled })
       .eq("id", userId)
       .select()
-      .maybeSingle(); 
+      .maybeSingle();
 
     if (updErr) {
       console.error("update profile error:", updErr);
       return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
     }
+
+    await auditLog({
+      ...cnx,
+      action: "UPDATED",
+      source: "dashboard",
+      entityType: "PROFILE",
+      entityId: userId,
+      metadata: {
+        "profile_id": userId,
+        "profile_name": updated?.full_name,
+        "profile_email": updated?.email,
+        "profile_phone": updated?.phone,
+      },
+      purpose: "operations",
+    })
 
     return NextResponse.json({ success: true, profile: updated }, { status: 200 });
   } catch (err: any) {

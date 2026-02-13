@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
 import { requireUser } from "@/lib/authGuard";
 import { createPractitioner } from "@/lib/createPractitioner";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 function validateEmail(email: string) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -10,14 +12,27 @@ function validateEmail(email: string) {
 }
 
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     /* --------------------------------------------------
      * 1️⃣ Authentication & Authorization
      * -------------------------------------------------- */
-    const { authorized, role } = await requireUser(req);
+    const { authorized, role, user } = await requireUser(req);
+
+    const cnx = getAuditContext(req, user);
 
     if (!authorized || !["admin", "superadmin"].includes(role)) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "PRACTITIONER",
+        entityId: "",
+        metadata: {
+          "error": "Unauthorized"
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { success: false, message: "Only admin can add practitioners" },
         { status: 403 }
@@ -50,6 +65,17 @@ export async function POST(req: Request) {
     } = body;
 
     if (!email || !first_name) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "PRACTITIONER",
+        entityId: "",
+        metadata: {
+          "error": "Missing required fields: email, first_name"
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         {
           success: false,
@@ -61,6 +87,17 @@ export async function POST(req: Request) {
 
     /* Email format validation */
     if (!validateEmail(email)) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "PRACTITIONER",
+        entityId: "",
+        metadata: {
+          "error": "Invalid email format"
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         {
           success: false,
@@ -99,9 +136,18 @@ export async function POST(req: Request) {
       languages
     });
 
-    /* --------------------------------------------------
-     * 5️⃣ Final response (NO password)
-     * -------------------------------------------------- */
+    await auditLog({
+      ...cnx,
+      action: "CREATED",
+      source: "dashboard",
+      entityType: "PRACTITIONER",
+      entityId: result.finalPractitionerId,
+      metadata: {
+        "practitioner_id": result.finalPractitionerId,
+      },
+      purpose: "operations",
+    })
+
     return NextResponse.json({
       success: true,
       practitioner_id: result.finalPractitionerId,

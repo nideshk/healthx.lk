@@ -318,6 +318,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     if (insertErr) throw insertErr;
 
+    const cnx = getAuditContext(request, user);
+
+    await auditLog({
+      ...cnx,
+      action: "UPDATED",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        leave: inserted,
+        cancelled_appointments: cancelledAppointments
+      }
+    })
+
     return NextResponse.json({
       success: true,
       leave: inserted,
@@ -346,6 +361,8 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     if (!authorized || user?.practitioner_id !== practitionerId) {
       return NextResponse.json({ error: "You are not authorized to delete this leave entry." }, { status: 403 });
     }
+
+    const cnx = getAuditContext(request, user);
 
     /* ----------------------------------------------------
       1️⃣ Load leave record
@@ -381,6 +398,18 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     }
 
     if (!earliestStart) {
+      await auditLog({
+        ...cnx,
+        action: "DELETED",
+        entityType: "PRACTITIONER",
+        entityId: practitionerId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          leave: leave,
+          leave_id: leaveId
+        }
+      })
       return NextResponse.json(
         { error: "Invalid leave timing data." },
         { status: 400 }
@@ -391,6 +420,18 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
        3️⃣ Block deletion if leave has started
     ---------------------------------------------------- */
     if (now >= earliestStart) {
+      await auditLog({
+        ...cnx,
+        action: "DELETED",
+        entityType: "PRACTITIONER",
+        entityId: practitionerId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          leave: leave,
+          leave_id: leaveId
+        }
+      })
       return NextResponse.json(
         {
           error:
@@ -411,6 +452,18 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       .eq("practitioner_id", practitionerId);
 
     if (error) throw error;
+    await auditLog({
+      ...cnx,
+      action: "DELETED",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        leave: leave,
+        leave_id: leaveId
+      }
+    })
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("DELETE /leaves error:", err);

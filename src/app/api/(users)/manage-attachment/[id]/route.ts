@@ -9,9 +9,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { s3 } from "@/lib/s3/s3";
-import { get } from "http";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
-import { logAuditEvent } from "@/lib/logAuditEvent";
 import { auditLog } from "@/lib/audit/auditLog";
 
 /* ─────────────────────────────────────────────

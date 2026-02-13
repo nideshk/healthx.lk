@@ -40,13 +40,6 @@ export async function POST(
       );
     }
 
-    // logAuditEvent({
-    //   userId: user.auth_user_id,
-    //   eventType: "UPDATED",
-    //   entityType: "PRACTITIONER_APPLICATION_DOCUMENTS",
-    //   metadata: { applicationId },
-    // }).catch(console.error);
-
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error("document_added error:", err);
