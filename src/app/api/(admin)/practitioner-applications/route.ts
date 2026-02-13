@@ -8,12 +8,36 @@ export async function GET(req: NextRequest) {
   try {
     // 🔐 Authentication check
     const { authorized, user } = await requireUser(req);
-    if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const cnx = getAuditContext(req, user);
+    if (!authorized) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED_ACCESS",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "unauthorized_fetch_practitioner_applications",
+        },
+      });
 
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
     const role = user?.profile?.role;
 
     // 🔒 Authorization check
     if (role !== "admin" && role !== "superadmin") {
+        await auditLog({
+          ...cnx,
+          action: "FAILED_ACCESS",
+          entityType: "ADMIN_USER",
+          purpose: "operations",
+          source: "dashboard",
+          metadata: {
+            reason: "insufficient_role_fetch_practitioner_applications",
+            role,
+          },
+        });
       return NextResponse.json(
         { success: false, message: "Access denied" },
         { status: 403 }
@@ -44,13 +68,22 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "failed_to_fetch_practitioner_applications",
+        },
+      });
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }
       );
     }
 
-    const cnx = getAuditContext(req, user);
     await auditLog({
       ...cnx,
       action: "EXPORTED",

@@ -7,10 +7,35 @@ import { auditLog } from "@/lib/audit/auditLog";
 export async function GET(req: NextRequest) {
   // 1️⃣ Auth
   const { authorized, user } = await requireUser(req);
-  if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const cnx = getAuditContext(req, user);
+
+  if (!authorized) {
+    await auditLog({
+      ...getAuditContext(req),
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "unauthorized_view_delete_requests",
+      },
+    });
+
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
 
   // 2️⃣ Must be admin
   if (!user?.admin) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "non_admin_attempted_view_delete_requests",
+      },
+    });
     return NextResponse.json(
       { success: false, message: "Not an admin" },
       { status: 403 }
@@ -19,6 +44,19 @@ export async function GET(req: NextRequest) {
 
   // 3️⃣ Only SUPER ADMIN can view delete requests
   if (user.admin.role !== "superadmin") {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "non_superadmin_attempted_view_delete_requests",
+        role: user.admin.role,
+      },
+    });
+
+
     return NextResponse.json(
       {
         success: false,
@@ -48,6 +86,17 @@ export async function GET(req: NextRequest) {
     .order("delete_requested_at", { ascending: false });
 
   if (error) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "failed_to_fetch_delete_requests",
+      },
+    });
+
     return NextResponse.json(
       {
         success: false,
@@ -58,7 +107,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const cnx = getAuditContext(req, user);
   await auditLog({
     ...cnx,
     action: "VIEWED",

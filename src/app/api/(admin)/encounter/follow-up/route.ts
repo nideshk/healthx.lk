@@ -12,10 +12,33 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const { authorized, user } = await requireUser(req);
-  if (!authorized)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const cnx = getAuditContext(req, user);
+  if (!authorized){
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "FOLLOW_UP_ENCOUNTERS",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Unauthorized access attempt"
+        }
+      });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   if (!["admin", "superadmin"].includes(user?.profile?.role)) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "FOLLOW_UP_ENCOUNTERS",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "Access denied - insufficient role",
+        role: user?.profile?.role
+      }
+    });
     return NextResponse.json({ message: "Access denied" }, { status: 403 });
   }
 
@@ -48,6 +71,16 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     console.error("Follow-up fetch error:", error);
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "FOLLOW_UP_ENCOUNTERS",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "Database fetch failed"
+      }
+    });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -138,8 +171,6 @@ export async function GET(req: NextRequest) {
   /* 5️⃣ AUDIT LOG (RESTORED)                           */
   /* -------------------------------------------------- */
 
-  const cnx = getAuditContext(req, user);
-
   await auditLog({
     ...cnx,
     action: "VIEWED",
@@ -184,10 +215,35 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   // 1️⃣ Auth
   const { authorized, user } = await requireUser(req);
-  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const cnx = getAuditContext(req, user);
+
+  if (!authorized) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ENCOUNTER",
+      purpose: "treatment",
+      source: "dashboard",
+      metadata: {
+        reason: "Unauthorized follow-up notify attempt"
+      }
+    });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   // 2️⃣ Role check
   if (!["admin", "superadmin"].includes(user?.role)) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ENCOUNTER",
+      purpose: "treatment",
+      source: "dashboard",
+      metadata: {
+        reason: "Access denied - insufficient role",
+        role: user?.role
+      }
+    });
     return NextResponse.json(
       { message: "Access denied" },
       { status: 403 }
@@ -198,6 +254,17 @@ export async function PATCH(req: NextRequest) {
   const { encounter_id } = await req.json();
 
   if (!encounter_id) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ENCOUNTER",
+      purpose: "treatment",
+      source: "dashboard",
+      metadata: {
+        reason: "Missing encounter_id"
+      }
+    });
+
     return NextResponse.json(
       { message: "encounter_id is required" },
       { status: 400 }
@@ -239,6 +306,18 @@ export async function PATCH(req: NextRequest) {
 
   if (error) {
     console.error("notifying error:", error);
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ENCOUNTER",
+      entityId: encounter_id,
+      purpose: "treatment",
+      source: "dashboard",
+      metadata: {
+        reason: "Failed to fetch encounter"
+      }
+    });
+
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
@@ -247,6 +326,18 @@ export async function PATCH(req: NextRequest) {
 
   if (!data) {
     console.error("Encounter not found", error);
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ENCOUNTER",
+      entityId: encounter_id,
+      purpose: "treatment",
+      source: "dashboard",
+      metadata: {
+        reason: "Encounter not found"
+      }
+    });
+
     return NextResponse.json(
       { success: false, error: "Encounter not found" },
       { status: 500 }
@@ -284,6 +375,18 @@ export async function PATCH(req: NextRequest) {
 
   // 5️⃣ Prevent duplicate notify
   if (data.follow_up_notified) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ENCOUNTER",
+      entityId: encounter_id,
+      purpose: "treatment",
+      source: "dashboard",
+      metadata: {
+        reason: "Follow-up already notified"
+      }
+    });
+
     return NextResponse.json(
       { message: "Already notified" },
       { status: 409 }
@@ -325,8 +428,6 @@ Clinecxa Team
     .eq("id", encounter_id);
 
   // 8️⃣ Audit: follow-up notification sent
-  const cnx = getAuditContext(req as any, user);
-
   auditLog({
     ...cnx,
     action: "UPDATED",
@@ -342,6 +443,18 @@ Clinecxa Team
 
 
   if (updateError) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ENCOUNTER",
+      entityId: encounter_id,
+      purpose: "treatment",
+      source: "dashboard",
+      metadata: {
+        reason: "Failed to update encounter state"
+      }
+    });
+
     return NextResponse.json(
       { message: "Failed to update encounter" },
       { status: 500 }

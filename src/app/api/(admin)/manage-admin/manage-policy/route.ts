@@ -35,10 +35,37 @@ function getAvailablePoliciesForRole(
 export async function GET(req: NextRequest) {
   // 1️⃣ Auth
   const { authorized, user } = await requireUser(req);
-  if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const cnx = getAuditContext(req, user);
+
+  if (!authorized) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "unauthorized_fetch_admins_policies",
+      },
+    });
+
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
 
   // 2️⃣ Must be superadmin
   if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
+    await auditLog({
+    ...cnx,
+    action: "FAILED_ACCESS",
+    entityType: "ADMIN_USER",
+    purpose: "operations",
+    source: "dashboard",
+    metadata: {
+      reason: "insufficient_role_fetch_admins",
+      role: user?.admin?.role,
+    },
+  });
+
     return NextResponse.json(
       { success: false, message: "Forbidden" },
       { status: 403 }
@@ -60,6 +87,17 @@ export async function GET(req: NextRequest) {
     .select("code, description");
 
   if (policyError) {
+    await auditLog({
+      ...getAuditContext(req, user),
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "failed_to_fetch_policies",
+      },
+    });
+
     return NextResponse.json(
       { success: false, message: "Failed to fetch policies" },
       { status: 500 }
@@ -97,6 +135,17 @@ export async function GET(req: NextRequest) {
   const { data: admins, error } = await adminQuery;
 
   if (error) {
+    await auditLog({
+      ...getAuditContext(req, user),
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "failed_to_fetch_admins",
+      },
+    });
+
     return NextResponse.json(
       { success: false, message: "Failed to fetch admins and policies" },
       { status: 500 }
@@ -139,7 +188,6 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  const cnx = getAuditContext(req, user);
 
   await auditLog({
     ...cnx,
@@ -166,10 +214,37 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   // 1️⃣ Auth
   const { authorized, user } = await requireUser(req);
-  if (!authorized) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const cnx = getAuditContext(req, user);
+
+  if (!authorized) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "unauthorized_update_admin_policy",
+      },
+    });
+
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
 
   // 2️⃣ Must be superadmin
   if (!user?.admin || user.admin.role !== "superadmin") {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "non_superadmin_attempted_policy_update",
+        role: user?.admin?.role,
+      },
+    });
+
     return NextResponse.json(
       { success: false, message: "Forbidden" },
       { status: 403 }
@@ -214,6 +289,17 @@ export async function PUT(req: NextRequest) {
     .single();
 
   if (adminError || !targetAdmin) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "target_admin_not_found",
+      },
+    });
     return NextResponse.json(
       { success: false, message: "Admin not found" },
       { status: 404 }
@@ -249,6 +335,18 @@ export async function PUT(req: NextRequest) {
   );
 
   if (invalid.length > 0) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      entityId: targetAdminId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "invalid_policies_for_role",
+        invalid,
+      },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -273,9 +371,6 @@ export async function PUT(req: NextRequest) {
       }))
     );
   }
-
-
-  const cnx = getAuditContext(req, user);
 
   await auditLog({
     ...cnx,

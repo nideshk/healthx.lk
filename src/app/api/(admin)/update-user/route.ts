@@ -70,8 +70,20 @@ function clean<T extends Record<string, any>>(obj?: T) {
 export async function PATCH(req: NextRequest) {
   try {
     const { authorized, role, user } = await requireUser(req);
+    const cnx = getAuditContext(req, user);
 
     if (!authorized || !["admin", "superadmin"].includes(role)) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED_ACCESS",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "admin_panel",
+        metadata: {
+          reason: "unauthorized_profile_update_attempt",
+          role,
+        },
+      });
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -79,13 +91,22 @@ export async function PATCH(req: NextRequest) {
     const { user_id, target_role, patient, practitioner } = body;
 
     if (!user_id || !target_role) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "USER_ACCOUNT",
+        purpose: "operations",
+        source: "admin_panel",
+        metadata: {
+          reason: "missing_user_id_or_target_role",
+        },
+      });
+
       return NextResponse.json(
         { error: "user_id and target_role are required" },
         { status: 400 }
       );
     }
-
-    const cnx = getAuditContext(req, user);
 
     /* ---------------- PATIENT ---------------- */
     if (target_role === "patient") {
@@ -175,6 +196,17 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
           .single();
 
       if (pErr || !practitionerRow) {
+        await auditLog({
+          ...cnx,
+          action: "FAILED",
+          entityType: "PRACTITIONER",
+          entityId: user_id,
+          purpose: "operations",
+          source: "admin_panel",
+          metadata: {
+            reason: "practitioner_not_found",
+          },
+        });
         return NextResponse.json(
           { error: "Practitioner not found" },
           { status: 404 }
@@ -301,7 +333,18 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
     }
 
 
-
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "USER_ACCOUNT",
+      entityId: user_id,
+      purpose: "operations",
+      source: "admin_panel",
+      metadata: {
+        reason: "invalid_target_role",
+        provided_role: target_role,
+      },
+    });
     return NextResponse.json({ error: "Invalid target_role" }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json(
