@@ -6,6 +6,7 @@ import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import { Appointment } from "@/types/Dashboard";
 import ManageAppointmentModal from "./ManageAppointmentModal";
+import PatientDetailsModal from "./PatientDetailsModal";
 import Link from "next/link";
 
 type ViewMode = "weekly" | "daily";
@@ -13,10 +14,9 @@ type ViewMode = "weekly" | "daily";
 interface AppointmentCalendarProps {
   appointments: Appointment[];
   onCompleteAppointment?: (id: string) => void;
-  onRangeChange?: (from: string, to: string) => void; 
-   userRole?: "admin" | "superadmin" | "practitioner";
+  onRangeChange?: (from: string, to: string) => void;
+  userRole?: "admin" | "superadmin" | "practitioner";
 }
-
 
 const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   appointments,
@@ -27,13 +27,18 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [anchorDate, setAnchorDate] = useState<Date>(new Date());
   const [selectedAppt, setSelectedAppt] = useState<CalendarAppointment | null>(
-    null
+    null,
   );
   const [confirmAppt, setConfirmAppt] = useState<CalendarAppointment | null>(
-    null
+    null,
   );
   const [showManage, setShowManage] = useState(false);
 
+  // State for Patient Detail Modal
+  const [viewPatientId, setViewPatientId] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const parsedAppointments = useMemo<CalendarAppointment[]>(() => {
     return appointments.map((a) => ({
@@ -85,7 +90,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             <div className="text-sm font-semibold text-slate-900">
               Appointment Calendar
             </div>
-            
           </div>
 
           <div className="flex gap-2 text-xs">
@@ -163,7 +167,10 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
               ))}
               {viewMode === "daily" &&
                 Array.from({ length: 6 }).map((_, i) => (
-                  <div key={`empty-${i}`} className="border-l border-slate-200" />
+                  <div
+                    key={`empty-${i}`}
+                    className="border-l border-slate-200"
+                  />
                 ))}
             </div>
 
@@ -202,7 +209,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                               className={`w-full h-[22px] rounded-md text-[11px] px-2 truncate ${colorClasses}`}
                               onClick={() => setSelectedAppt(appt)}
                             >
-                            {appt.patient || "Patient"} • {appt.time}                            
+                              {appt.patient || "Patient"} • {appt.time}
                             </button>
                           );
                         })}
@@ -230,6 +237,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
           onClose={() => setSelectedAppt(null)}
           onMarkCompleted={() => setConfirmAppt(selectedAppt)}
           onManage={() => setShowManage(true)}
+          onViewPatient={(id, name) => setViewPatientId({ id, name })}
         />
       )}
 
@@ -247,12 +255,21 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
       )}
 
       {showManage && selectedAppt && (
-      <ManageAppointmentModal
-        open={showManage}
-        appointment={selectedAppt}
-        onClose={() => setShowManage(false)}
-      />
-    )}
+        <ManageAppointmentModal
+          open={showManage}
+          appointment={selectedAppt}
+          onClose={() => setShowManage(false)}
+        />
+      )}
+
+      {/* Patient Details Modal */}
+      {viewPatientId && (
+        <PatientDetailsModal
+          patientId={viewPatientId.id}
+          patientName={viewPatientId.name}
+          onClose={() => setViewPatientId(null)}
+        />
+      )}
     </>
   );
 };
@@ -326,9 +343,10 @@ const isSameDay = (a: Date, b: Date) =>
   a.getDate() === b.getDate();
 
 const formatDate = (d: Date) =>
-  `${String(d.getDate()).padStart(2, "0")}/${String(
-    d.getMonth() + 1
-  ).padStart(2, "0")}/${d.getFullYear()}`;
+  `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}/${d.getFullYear()}`;
 
 const formatDayName = (d: Date) =>
   d.toLocaleDateString(undefined, { weekday: "short" });
@@ -343,6 +361,7 @@ interface DetailsModalProps {
   onClose: () => void;
   onMarkCompleted: () => void;
   onManage: () => void;
+  onViewPatient: (id: string, name: string) => void;
 }
 
 const DetailsModal: React.FC<DetailsModalProps> = ({
@@ -350,8 +369,15 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
   onClose,
   onMarkCompleted,
   onManage,
+  onViewPatient,
 }) => {
   const isCompleted = appointment.status === "completed";
+  // Check if appointment is in the past
+  const isPastAppointment = () => {
+    if (!appointment.start) return false;
+    const today = startOfDay(new Date());
+    return appointment.start < today;
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
@@ -370,9 +396,30 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
         </div>
 
         <div className="px-5 py-4 space-y-3">
-          <DetailRow label="Patient" value={`${appointment.patient}`} />
+          <div className="flex gap-4 text-xs">
+            <div className="w-24 text-[11px] font-medium text-slate-600">
+              Patient
+            </div>
+            <div className="flex-1">
+              <button
+                type="button"
+                onClick={() =>
+                  onViewPatient(
+                    appointment.id || "",
+                    appointment.patient || "",
+                  )
+                }
+                className="text-blue-600 font-semibold hover:underline cursor-pointer text-left"
+              >
+                {appointment.patient}
+              </button>
+            </div>
+          </div>
           <DetailRow label="Time" value={`${appointment.time}`} />
-          <DetailRow label="Appointment Type" value={`${appointment.appointmentType}`} />
+          <DetailRow
+            label="Appointment Type"
+            value={`${appointment.appointmentType}`}
+          />
           <DetailRow label="Participants" value="1" />
           <DetailRow label="Reason" value={appointment.reason || "-"} />
           <DetailRow label="email" value={appointment.email || "-"}/>
@@ -384,39 +431,24 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
           />
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-4 border-t">
-          {isCompleted ? (
+        {!isPastAppointment() && (
+          <div className="flex justify-end gap-2 px-5 py-4 border-t">
+            <Link href={`/appointment/meeting?room=${appointment.room_key}`}>
+              <Button variant="outline" size="sm" className="text-xs">
+                Join Meeting
+              </Button>
+            </Link>
+
             <Button
               variant="outline"
               size="sm"
               className="text-xs"
-              disabled
+              onClick={onManage}
             >
-              Meeting completed
+              Manage Appointment
             </Button>
-          ) : (
-            <Link
-              href={`/appointment/meeting?room=${appointment.room_key}`}
-            >
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                Join Meeting
-              </Button>
-            </Link>
-          )}
-         
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-           onClick={onManage}
-          >
-            Manage Appointment
-          </Button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -427,9 +459,7 @@ const DetailRow: React.FC<{ label: string; value: string }> = ({
   value,
 }) => (
   <div className="flex gap-4 text-xs">
-    <div className="w-24 text-[11px] font-medium text-slate-600">
-      {label}
-    </div>
+    <div className="w-24 text-[11px] font-medium text-slate-600">{label}</div>
     <div className="flex-1 text-slate-800">{value}</div>
   </div>
 );

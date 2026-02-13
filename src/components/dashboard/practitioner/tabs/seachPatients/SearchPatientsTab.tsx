@@ -57,14 +57,33 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
       const json = await res.json();
 
       // Handle cases where response might be an array or object with buckets
+      const appointmentsByCategory = {
+        ongoing: (json.ongoing || []).map((a: any) => ({
+          ...a,
+          _apiCategory: "ongoing",
+        })),
+        upcoming: (json.upcoming || []).map((a: any) => ({
+          ...a,
+          _apiCategory: "upcoming",
+        })),
+        past: (json.past || []).map((a: any) => ({
+          ...a,
+          _apiCategory: "previous",
+        })),
+        cancelled: (json.cancelled || []).map((a: any) => ({
+          ...a,
+          _apiCategory: "previous",
+        })),
+      };
+
       const mergedAppointments = Array.isArray(json)
         ? json
         : [
-          ...(json.ongoing || []),
-          ...(json.upcoming || []),
-          ...(json.past || []),
-          ...(json.cancelled || []),
-        ];
+            ...appointmentsByCategory.ongoing,
+            ...appointmentsByCategory.upcoming,
+            ...appointmentsByCategory.past,
+            ...appointmentsByCategory.cancelled,
+          ];
 
       setAllAppointments(mergedAppointments);
 
@@ -90,7 +109,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
           consentGiven: false,
           addressLine1: p.address,
           city: p.city,
-          country: p.country
+          country: p.country,
         });
       });
 
@@ -119,7 +138,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
       (p) =>
         (p.full_name?.toLowerCase() || "").includes(q) ||
         (p.email?.toLowerCase() || "").includes(q) ||
-        (p.contact_number?.toLowerCase() || "").includes(q)
+        (p.contact_number?.toLowerCase() || "").includes(q),
     );
   }, [patients, search]);
 
@@ -166,36 +185,35 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
           minute: "2-digit",
         });
 
-        // const category =
-        //   a.status === "cancelled"
-        //     ? "previous"
-        //     : start < new Date()
-        //       ? "previous"
-        //       : "upcoming";
-
+        // Calculate appointment end time (assume 1 hour duration if not provided)
+        const end = a.ends_at
+          ? new Date(a.ends_at)
+          : new Date(start.getTime() + 60 * 60 * 1000);
         const now = new Date();
-        const startTime = new Date(a.starts_at);
-        const endTime = new Date(a.ends_at);
 
-        let category: "upcoming" | "ongoing" | "previous";
+        // Use API's categorization if available, otherwise calculate
+        let category: "upcoming" | "ongoing" | "previous" =
+          a._apiCategory || "upcoming";
 
-        if (a.status === "cancelled") {
-          category = "previous";
-        } else if (startTime <= now && endTime >= now) {
-          category = "ongoing";
-        } else if (startTime > now) {
-          category = "upcoming";
-        } else {
-          category = "previous";
+        if (!a._apiCategory) {
+          category =
+            a.status === "cancelled"
+              ? "previous"
+              : start <= now && now < end
+                ? "ongoing"
+                : start > now
+                  ? "upcoming"
+                  : "previous";
         }
-
 
         return {
           id: a.id,
           category,
           date,
           time,
-          doctorName: a.practitioner ? `${a.practitioner.first_name} ${a.practitioner.last_name}` : "",
+          doctorName: a.practitioner
+            ? `${a.practitioner.first_name} ${a.practitioner.last_name}`
+            : "",
           reason: a.appointment_type?.name || "",
           status: a.status,
           appointmentType: a.appointment_type?.name || "",
@@ -231,7 +249,8 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
               Search Patients
             </div>
             <div className="text-xs text-slate-500">
-              Find patient records and manage data. Use delete permanent with caution.
+              Find patient records and manage data. Use delete permanent with
+              caution.
             </div>
           </div>
 
@@ -252,36 +271,40 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
           )}
 
           {error && (
-            <div className="text-xs text-red-600 bg-red-50 p-2 rounded">{error}</div>
+            <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+              {error}
+            </div>
           )}
 
-          {!loading && !error && filteredPatients.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50"
-            >
-              <div className="flex flex-col text-sm">
-                <button
-                  type="button"
-                  className="text-blue-600 font-semibold text-left hover:underline"
-                  onClick={() => onSelectPatient(p)}
-                >
-                  {p.full_name}
-                </button>
-                <span className="text-xs text-slate-500">{p.email}</span>
-                <span className="text-xs text-slate-500">{p.full_name}</span>
-              </div>
-
-              <Button
-                variant="danger"
-                size="sm"
-                className="text-xs px-4"
-                onClick={() => setPatientToDelete(p)}
+          {!loading &&
+            !error &&
+            filteredPatients.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50"
               >
-                🗑 Delete
-              </Button>
-            </div>
-          ))}
+                <div className="flex flex-col text-sm">
+                  <button
+                    type="button"
+                    className="text-blue-600 font-semibold text-left hover:underline"
+                    onClick={() => onSelectPatient(p)}
+                  >
+                    {p.full_name}
+                  </button>
+                  <span className="text-xs text-slate-500">{p.email}</span>
+                  <span className="text-xs text-slate-500">{p.full_name}</span>
+                </div>
+
+                <Button
+                  variant="danger"
+                  size="sm"
+                  className="text-xs px-4"
+                  onClick={() => setPatientToDelete(p)}
+                >
+                  🗑 Delete
+                </Button>
+              </div>
+            ))}
 
           {!loading && !error && filteredPatients.length === 0 && (
             <p className="text-xs text-slate-500 py-4 text-center">
@@ -295,10 +318,14 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
       {patientToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-slate-900">Confirm Deletion</h3>
+            <h3 className="text-lg font-bold text-slate-900">
+              Confirm Deletion
+            </h3>
             <p className="text-sm text-slate-500 mt-2">
-              Are you sure you want to delete <span className="font-bold">{patientToDelete.full_name}</span>?
-              This action will remove them from your appointments and cannot be undone.
+              Are you sure you want to delete{" "}
+              <span className="font-bold">{patientToDelete.full_name}</span>?
+              This action will remove them from your appointments and cannot be
+              undone.
             </p>
             <div className="flex gap-3 mt-6">
               <Button

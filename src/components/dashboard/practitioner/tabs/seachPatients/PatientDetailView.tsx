@@ -10,7 +10,7 @@ import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import Link from "next/link";
 import { toast } from "react-toastify";
-import { ExternalLink, FileText } from "lucide-react";
+import { ExternalLink, FileText, Edit2, Save, X, Loader2 } from "lucide-react";
 
 interface PatientDetailViewProps {
   patient: Patient;
@@ -80,7 +80,7 @@ const renderTab = (
   id: PatientDetailTab,
   label: string,
   activeTab: PatientDetailTab,
-  setActiveTab: (t: PatientDetailTab) => void
+  setActiveTab: (t: PatientDetailTab) => void,
 ) => {
   const active = id === activeTab;
   return (
@@ -88,10 +88,11 @@ const renderTab = (
       key={id}
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${active
-        ? "bg-white text-slate-900 shadow-sm"
-        : "text-slate-500 hover:text-slate-900"
-        }`}
+      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${
+        active
+          ? "bg-white text-slate-900 shadow-sm"
+          : "text-slate-500 hover:text-slate-900"
+      }`}
     >
       {label}
     </button>
@@ -110,7 +111,8 @@ const DetailLine: React.FC<{ label: string; value: string }> = ({
 
 /* ---------- Overview tab ---------- */
 const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
-  const [isEditing] = React.useState(false);
+  const [isEditingAllergies, setIsEditingAllergies] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const [formData, setFormData] = React.useState({
     name: patient.full_name,
@@ -129,6 +131,41 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleUpdateAllergies = async () => {
+    setIsUpdating(true);
+    try {
+      // Split the comma-separated string into an array as required by the payload
+      const allergyArray = formData.allergies
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item !== "");
+
+      // Payload specifically structured for /api/update-data
+      const payload = {
+        patient_id: patient.id,
+        allergies: allergyArray,
+      };
+
+      const res = await authFetch("/api/update-data", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast.success("Allergies updated successfully");
+        setIsEditingAllergies(false);
+      } else {
+        const errData = await res.json();
+        toast.error(errData.message || "Failed to update allergies");
+      }
+    } catch (error) {
+      toast.error("An error occurred while updating");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card>
@@ -141,33 +178,72 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           <EditableField
             label="Full Name"
             value={formData.name}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("name", v)}
           />
           <EditableField
             label="Date of Birth"
             value={formData.dob}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("dob", v)}
           />
           <EditableField
             label="Gender"
             value={formData.gender}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("gender", v)}
           />
           <EditableField
             label="Age"
             value={formData.age}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("age", v)}
           />
-          <EditableField
-            label="Allergies"
-            value={formData.allergies}
-            isEditing={isEditing}
-            onChange={(v) => handleChange("allergies", v)}
-          />
+          
+          <div className="flex flex-col gap-1 relative group">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-500">Allergies (Comma separated)</span>
+              {!isEditingAllergies ? (
+                <button 
+                  onClick={() => setIsEditingAllergies(true)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <Edit2 size={12} />
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                   <button 
+                    onClick={handleUpdateAllergies}
+                    disabled={isUpdating}
+                    className="text-green-600 hover:text-green-800"
+                  >
+                    {isUpdating ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsEditingAllergies(false);
+                      setFormData(prev => ({ ...prev, allergies: patient.allergies || "" }));
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+            {isEditingAllergies ? (
+              <Input 
+                value={formData.allergies} 
+                onChange={(e) => handleChange("allergies", e.target.value)} 
+                placeholder="e.g. Peanuts, Penicillin"
+                disabled={isUpdating}
+              />
+            ) : (
+              <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 text-slate-800">
+                {formData.allergies || "-"}
+              </div>
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -181,31 +257,31 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           <EditableField
             label="Email"
             value={formData.email}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("email", v)}
           />
           <EditableField
             label="Phone"
             value={formData.phone}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("phone", v)}
           />
           <EditableField
             label="Address"
             value={formData.address}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("address", v)}
           />
           <EditableField
             label="City"
             value={formData.city}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("city", v)}
           />
           <EditableField
             label="Country"
             value={formData.country}
-            isEditing={isEditing}
+            isEditing={false}
             onChange={(v) => handleChange("country", v)}
           />
         </CardBody>
@@ -250,10 +326,18 @@ const AppointmentsTab: React.FC<{
   appointments: Appointment[];
   patient: Patient;
 }> = ({ appointments, patient }) => {
+  // Accordion Logic: Keep track of only one open appointment ID
+  const [openAppointmentId, setOpenAppointmentId] = useState<string | null>(null);
+
   const upcoming = appointments.filter((a) => a.category === "upcoming");
   const ongoing = appointments.filter((a) => a.category === "ongoing");
   const previous = appointments.filter((a) => a.category === "previous");
   const [showCreateModal, setShowCreateModal] = React.useState(false);
+
+  // Toggle function to ensure only one card stays open
+  const handleToggle = (id: string) => {
+    setOpenAppointmentId(prevId => prevId === id ? null : id);
+  };
 
   return (
     <div className="space-y-6">
@@ -263,7 +347,12 @@ const AppointmentsTab: React.FC<{
         </h3>
       </div>
 
-      <AppointmentSection appointments={upcoming} patient={patient} />
+      <AppointmentSection 
+        appointments={upcoming} 
+        patient={patient} 
+        openId={openAppointmentId} 
+        onToggle={handleToggle} 
+      />
 
       <div className="pt-4 border-t border-slate-200">
         <h3 className="text-sm font-semibold text-slate-900">
@@ -271,7 +360,12 @@ const AppointmentsTab: React.FC<{
         </h3>
       </div>
 
-      <AppointmentSection appointments={ongoing} patient={patient} />
+      <AppointmentSection 
+        appointments={ongoing} 
+        patient={patient} 
+        openId={openAppointmentId} 
+        onToggle={handleToggle} 
+      />
 
       <div className="pt-4 border-t border-slate-200">
         <h3 className="text-sm font-semibold text-slate-900">
@@ -279,7 +373,12 @@ const AppointmentsTab: React.FC<{
         </h3>
       </div>
 
-      <AppointmentSection appointments={previous} patient={patient} />
+      <AppointmentSection 
+        appointments={previous} 
+        patient={patient} 
+        openId={openAppointmentId} 
+        onToggle={handleToggle} 
+      />
 
       <CreateAppointmentModal
         open={showCreateModal}
@@ -293,7 +392,9 @@ const AppointmentsTab: React.FC<{
 const AppointmentSection: React.FC<{
   appointments: Appointment[];
   patient: Patient;
-}> = ({ appointments, patient }) => {
+  openId: string | null;
+  onToggle: (id: string) => void;
+}> = ({ appointments, patient, openId, onToggle }) => {
   if (!appointments.length) {
     return (
       <p className="text-xs text-slate-500">No appointments in this section.</p>
@@ -303,7 +404,13 @@ const AppointmentSection: React.FC<{
   return (
     <div className="space-y-3">
       {appointments.map((appt) => (
-        <AppointmentRow key={appt.id} appointment={appt} patient={patient} />
+        <AppointmentRow 
+          key={appt.id} 
+          appointment={appt} 
+          patient={patient} 
+          isOpen={openId === appt.id}
+          onToggle={() => onToggle(appt.id)}
+        />
       ))}
     </div>
   );
@@ -312,8 +419,9 @@ const AppointmentSection: React.FC<{
 const AppointmentRow: React.FC<{
   appointment: Appointment;
   patient: Patient;
-}> = ({ appointment, patient }) => {
-  const [open, setOpen] = React.useState(false);
+  isOpen: boolean;
+  onToggle: () => void;
+}> = ({ appointment, patient, isOpen, onToggle }) => {
   const [isEditingAppointment, setIsEditingAppointment] = React.useState(false);
   const [consultationMeta, setConsultationMeta] = useState({
     telehealthConsent: false,
@@ -324,7 +432,8 @@ const AppointmentRow: React.FC<{
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
   const [isNotifying, setIsNotifying] = useState(false);
-  const [, forceUpdate] = useState(0);
+
+  const isPrevious = appointment.category === "previous";
 
   const [appointmentForm, setAppointmentForm] = React.useState(() => ({
     clinicianNotes: appointment.clinicianNotes || "",
@@ -339,52 +448,41 @@ const AppointmentRow: React.FC<{
     }>,
   }));
 
-  const baseUrl = (
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  ).replace(/\/$/, "");
+  // Fetch data whenever the row is opened and not yet fetched
+  useEffect(() => {
+    if (isOpen && !consultationFetched) {
+      fetchConsultationDetails();
+    }
+  }, [isOpen]);
 
   const updateAppointmentField = (
     key: keyof typeof appointmentForm,
-    value: string | boolean
+    value: string | boolean,
   ) => {
     setAppointmentForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  /**
-   * DRY Notification logic using the /api/notify-send endpoint
-   * Includes formatting for line separation and a clickable link for email
-   */
-  /**
-   * Refactored handleNotify logic with enhanced HTML email template
-   * featuring line separation and a styled action button.
-   */
   const handleNotify = async (channels: Array<"email" | "sms" | "in_app">) => {
     setIsNotifying(true);
     try {
       const meetingUrl = `https://www.clinecxa.com/appointment/meeting?room=${appointment.room_key}`;
 
-      // Constructing the styled HTML template
       const htmlMessage = `
         <div style="font-family: Arial, sans-serif; color: #334155; line-height: 1.6; max-width: 600px;">
           <p ${patient.full_name},</p>
-          
           <p>Here are your appointment details:</p>
-          
           <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #2563eb; background-color: #f8fafc;">
             <strong>Appointment Type:</strong> ${appointment.appointmentType || appointment.reason || "Standard Consultation"}<br />
             <strong>Date:</strong> ${appointment.date}<br />
             <strong>Time:</strong> ${appointment.time}
           </div>
-
           <p>Click the button below to join the meeting:</p>
-          
           <div style="margin: 25px 0;">
             <a href="${meetingUrl}" 
                style="background-color: #2563eb; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
                Join Meeting
             </a>
           </div>
-
           <p style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
             Regards,<br />
             <strong>Clinecxa Team</strong>
@@ -392,7 +490,6 @@ const AppointmentRow: React.FC<{
         </div>
       `.trim();
 
-      // Plain text fallback for SMS/In-app
       const textMessage = `Hello ${patient.full_name},\n\nAppointment: ${appointment.date} at ${appointment.time}\nJoin here: ${meetingUrl}\n\nRegards, Clinecxa Team`;
 
       const res = await authFetch("/api/notify-send", {
@@ -416,7 +513,7 @@ const AppointmentRow: React.FC<{
 
       if (res.ok) {
         toast.success(
-          `${channels.join(" & ").toUpperCase()} sent successfully!`
+          `${channels.join(" & ").toUpperCase()} sent successfully!`,
         );
       } else {
         throw new Error("Failed to send");
@@ -451,13 +548,8 @@ const AppointmentRow: React.FC<{
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify(payload),
-        }
+        },
       );
-
-      // appointment.clinicianNotes = payload.clinician_notes;
-      // appointment.prescriptions = payload.prescriptions;
-      // appointment.followUpNeeded = payload.follow_up_needed;
-      // appointment.followUpDate = payload.follow_up_date || "";
 
       setIsEditingAppointment(false);
       toast.success("Consultation notes saved.");
@@ -481,64 +573,15 @@ const AppointmentRow: React.FC<{
         ? "Completed"
         : "Cancelled";
 
-  // const fetchConsultationDetails = async () => {
-  //   if (consultationFetched) return;
-  //   setConsultationLoading(true);
-  //   try {
-  //     const res = await authFetch(
-  //       `/api/booking/appointment/${appointment.id}/consultation`
-  //     );
-  //     if (!res.ok) return;
-  //     const data = await res.json();
-
-  //     appointment.telehealthConsent = !!data.consent?.telehealth;
-  //     appointment.termsAccepted = !!data.consent?.terms;
-  //     appointment.mainConcern =
-  //       data.preconsult?.raw_payload?.note?.concern || "";
-  //     appointment.goal = data.preconsult?.raw_payload?.note?.outcome || "";
-  //     appointment.clinicianNotes = data.encounter?.clinician_notes || "";
-  //     appointment.prescriptions = data.encounter?.prescriptions || "";
-  //     appointment.followUpNeeded = !!data.encounter?.follow_up_needed;
-
-  //     const rawDate = data.encounter?.follow_up_date;
-  //     if (rawDate) {
-  //       appointment.followUpDate = rawDate.slice(0, 10);
-  //       if (rawDate.includes("T")) {
-  //         setAppointmentForm((prev) => ({
-  //           ...prev,
-  //           followUpTime: rawDate.split("T")[1].slice(0, 5),
-  //         }));
-  //       }
-  //     }
-
-  //     setConsultationFetched(true);
-  //     setAppointmentForm((prev) => ({
-  //       ...prev,
-  //       clinicianNotes: data.encounter?.clinician_notes || "",
-  //       prescriptions: data.encounter?.prescriptions || "",
-  //       followUpNeeded: !!data.encounter?.follow_up_needed,
-  //       followUpDate: data.encounter?.follow_up_date?.slice(0, 10) || "",
-  //     }));
-
-  //     forceUpdate((v) => v + 1);
-  //   } catch (err) {
-  //     console.error("Failed to load consultation", err);
-  //   } finally {
-  //     setConsultationLoading(false);
-  //   }
-  // };
-
   const fetchConsultationDetails = async () => {
-    if (consultationFetched) return;
     setConsultationLoading(true);
     try {
       const res = await authFetch(
-        `/api/booking/appointment/${appointment.id}/consultation`
+        `/api/booking/appointment/${appointment.id}/consultation`,
       );
       if (!res.ok) return;
       const data = await res.json();
 
-      // ✅ STORE META DATA
       setConsultationMeta({
         telehealthConsent: !!data.consent?.telehealth,
         termsAccepted: !!data.consent?.terms,
@@ -546,7 +589,6 @@ const AppointmentRow: React.FC<{
         goal: data.preconsult?.raw_payload?.note?.outcome || "",
       });
 
-      // ✅ STORE FORM DATA
       setAppointmentForm((prev) => ({
         ...prev,
         clinicianNotes: data.encounter?.clinician_notes || "",
@@ -581,7 +623,8 @@ const AppointmentRow: React.FC<{
             <div className="font-medium text-slate-900">
               {appointment.date} at {appointment.time}
             </div>
-            <div className="text-slate-400">{appointment.reason}</div>
+            {/* FIX: Ensure specific appointment type name is displayed here */}
+            <div className="text-slate-400">{appointment.appointmentType || appointment.reason}</div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -590,7 +633,7 @@ const AppointmentRow: React.FC<{
               size="sm"
               className="text-xs"
               onClick={() => handleNotify(["email"])}
-              disabled={isNotifying}
+              disabled={isNotifying || isPrevious}
             >
               Re-send appointment details
             </Button>
@@ -599,16 +642,22 @@ const AppointmentRow: React.FC<{
               variant="secondary"
               size="sm"
               onClick={() => handleNotify(["sms"])}
-              disabled={isNotifying}
+              disabled={isNotifying || isPrevious}
             >
               SMS patient
             </Button>
 
-            <Link href={`/appointment/meeting?room=${appointment.room_key}`}>
-              <Button variant="primary" size="sm" className="text-xs">
+            {isPrevious ? (
+              <Button variant="primary" size="sm" className="text-xs" disabled>
                 Join meeting
               </Button>
-            </Link>
+            ) : (
+              <Link href={`/appointment/meeting?room=${appointment.room_key}`}>
+                <Button variant="primary" size="sm" className="text-xs">
+                  Join meeting
+                </Button>
+              </Link>
+            )}
 
             <span
               className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${statusClasses}`}
@@ -617,18 +666,15 @@ const AppointmentRow: React.FC<{
             </span>
             <button
               type="button"
-              onClick={() => {
-                if (!open) fetchConsultationDetails();
-                setOpen((o) => !o);
-              }}
+              onClick={onToggle}
               className="text-xs border rounded-full px-2 py-1"
             >
-              {open ? "▴" : "▾"}
+              {isOpen ? "▴" : "▾"}
             </button>
           </div>
         </div>
 
-        {open && (
+        {isOpen && (
           <div className="pt-3 border-t border-slate-200 space-y-4 text-xs">
             <div className="flex items-center justify-between">
               {consultationLoading && <Loader size="sm" />}
@@ -641,6 +687,7 @@ const AppointmentRow: React.FC<{
                   size="sm"
                   className="text-xs px-3"
                   onClick={() => setIsEditingAppointment(true)}
+                  disabled={isPrevious}
                 >
                   Edit
                 </Button>
@@ -700,13 +747,12 @@ const AppointmentRow: React.FC<{
               <h3 className="font-semibold text-slate-900 pb-2">
                 Supporting Documents
               </h3>
-
               {appointmentForm.signedAttachments.length === 0 ? (
                 <div className="text-xs text-slate-400 italic">
                   No supporting documents uploaded.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {appointmentForm.signedAttachments.map(
                     (
                       doc: { name?: string; document_type?: string; url: string },
@@ -724,14 +770,13 @@ const AppointmentRow: React.FC<{
                             size={18}
                             className="text-slate-400 group-hover:text-blue-600"
                           />
-                          <span className="text-xs font-medium uppercase">
+                          <span className="text-xs font-medium uppercase truncate max-w-[150px]">
                             {(doc.name || doc.document_type || "Document").replace(
                               /_/g,
                               " "
                             )}
                           </span>
                         </div>
-
                         <ExternalLink
                           size={14}
                           className="text-slate-300 group-hover:text-blue-600"
@@ -742,8 +787,7 @@ const AppointmentRow: React.FC<{
                 </div>
               )}
             </section>
-
-
+            
             {isEditingAppointment ? (
               <div className="space-y-1">
                 <div className="text-[11px] text-slate-500">
@@ -785,7 +829,6 @@ const AppointmentRow: React.FC<{
               />
             )}
 
-
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-[11px] text-slate-600">
                 {isEditingAppointment ? (
@@ -799,10 +842,11 @@ const AppointmentRow: React.FC<{
                   />
                 ) : (
                   <span
-                    className={`inline-flex h-3 w-3 rounded-full border-4 ${appointment.followUpNeeded
-                      ? "border-blue-500"
-                      : "border-slate-300"
-                      } bg-white`}
+                    className={`inline-flex h-3 w-3 rounded-full border-4 ${
+                      appointmentForm.followUpNeeded
+                        ? "border-blue-500"
+                        : "border-slate-300"
+                    } bg-white`}
                   />
                 )}
                 <span>Follow-up appointment needed</span>
@@ -840,10 +884,10 @@ const AppointmentRow: React.FC<{
               )}
 
               {!isEditingAppointment &&
-                appointment.followUpNeeded &&
-                appointment.followUpDate && (
+                appointmentForm.followUpNeeded &&
+                appointmentForm.followUpDate && (
                   <div className="text-[11px] text-blue-600 font-medium">
-                    Scheduled for: {appointment.followUpDate}
+                    Scheduled for: {appointmentForm.followUpDate}
                   </div>
                 )}
             </div>

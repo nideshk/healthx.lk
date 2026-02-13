@@ -2,17 +2,24 @@ import React, { useEffect, useState } from "react";
 import { Card, CardBody } from "@/components/atom/Card/Card";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
-import { toast } from "react-toastify"; // Added toast import
+import { toast } from "react-toastify";
 import {
   Loader2,
   ArrowLeft,
   Edit2,
   Save,
-  ExternalLink,
   FileText,
   X,
+  ChevronDown,
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+
+type Specialization = {
+  id: string;
+  name: string;
+  active: boolean;
+  slug: string;
+};
 
 const ApplicationDetails = ({
   applicationId,
@@ -24,10 +31,46 @@ const ApplicationDetails = ({
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [isEditingLicense, setIsEditingLicense] = useState(false);
-  const [license, setLicense] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [isSpecOpen, setIsSpecOpen] = useState(false);
 
-  // Modal States
+  type FormData = {
+    first_name: string;
+    last_name: string;
+    email: string;
+    specialization: string | string[];
+    experience_years: string;
+    city: string;
+    state: string;
+    contact_number: string;
+    qualification: string;
+    profile_bio: string;
+    license_number: string;
+    bank_name: string;
+    account_name: string;
+    account_number: string;
+    languages: string;
+  };
+
+  const [formData, setFormData] = useState<FormData>({
+    first_name: "",
+    last_name: "",
+    email: "",
+    specialization: [] as string[],
+    experience_years: "",
+    city: "",
+    state: "",
+    contact_number: "",
+    qualification: "",
+    profile_bio: "",
+    license_number: "",
+    bank_name: "",
+    account_name: "",
+    account_number: "",
+    languages: "",
+  });
+
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -35,19 +78,31 @@ const ApplicationDetails = ({
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const res = await authFetch(
-          `/api/practitioner-applications/${applicationId}`
-        );
-        if (!res.ok) {
-          throw new Error(`Failed to fetch practitioner application: ${res.status}`);
-        }
+        const res = await authFetch(`/api/practitioner-applications/${applicationId}`);
+        if (!res.ok) throw new Error(`Failed: ${res.status}`);
         const json = await res.json();
         if (json.success) {
           setData(json.data);
-          setLicense(json.data.license_number);
+          setFormData({
+            first_name: json.data.first_name || "",
+            last_name: json.data.last_name || "",
+            email: json.data.email || "",
+            specialization: json.data.specialization || [],
+            experience_years: json.data.experience_years || "",
+            city: json.data.city || "",
+            state: json.data.state || "",
+            contact_number: json.data.contact_number || "",
+            qualification: json.data.qualification || "",
+            profile_bio: json.data.profile_bio || "",
+            license_number: json.data.license_number || "",
+            bank_name: json.data.bank_details?.bank_name || "",
+            account_name: json.data.bank_details?.account_name || "",
+            account_number: json.data.bank_details?.account_number || "",
+            languages: Array.isArray(json.data.languages) ? json.data.languages.join(", ") : (json.data.languages || ""),
+          });
         }
       } catch (err) {
-        toast.error("Failed to load application details");
+        toast.error("Failed to load details");
       } finally {
         setLoading(false);
       }
@@ -55,297 +110,213 @@ const ApplicationDetails = ({
     fetchDetail();
   }, [applicationId]);
 
-  const handleAction = async (action: "approve" | "reject") => {
-    // Validation for rejection reason
-    if (action === "reject" && !rejectionReason.trim()) {
-      return toast.error("Please provide a reason for rejection");
-    }
+  useEffect(() => {
+    const fetchSpecializations = async () => {
+      try {
+        const res = await fetch("/api/form-data/appointment-config");
+        const d = await res.json();
+        setSpecializations(d.services || []);
+      } catch (err) { console.error(err); }
+    };
+    fetchSpecializations();
+  }, []);
 
+  const handleChange = (field: string, value: string | string[]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const toggleSpecialization = (slug: string) => {
+    const current = Array.isArray(formData.specialization) ? formData.specialization : [];
+    handleChange("specialization", current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug]);
+  };
+
+  const handleCancel = () => {
+    if (data) {
+      setFormData({
+        first_name: data.first_name || "",
+        last_name: data.last_name || "",
+        email: data.email || "",
+        specialization: data.specialization || [],
+        experience_years: data.experience_years || "",
+        city: data.city || "",
+        state: data.state || "",
+        contact_number: data.contact_number || "",
+        qualification: data.qualification || "",
+        profile_bio: data.profile_bio || "",
+        license_number: data.license_number || "",
+        bank_name: data.bank_details?.bank_name || "",
+        account_name: data.bank_details?.account_name || "",
+        account_number: data.bank_details?.account_number || "",
+        languages: Array.isArray(data.languages) ? data.languages.join(", ") : (data.languages || ""),
+      });
+    }
+    setIsEditing(false);
+    setIsSpecOpen(false);
+  };
+
+  const handleSave = async () => {
     setProcessing(true);
     try {
-      const res = await authFetch(
-        `/api/practitioner-applications/${applicationId}/approve`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action,
-            reason: action === "reject" ? rejectionReason : undefined,
-            license_number: isEditingLicense ? license : undefined,
-          }),
-        }
-      );
-
-      if (!res.ok) {
-          throw new Error(`Failed to approve/reject the application: ${res.status}`);
-        }
-
-      const result = await res.json();
-
+      const payload = {
+        action: "approve",
+        ...formData,
+        languages: formData.languages.split(",").map(l => l.trim()).filter(l => l !== ""),
+        specialization: Array.isArray(formData.specialization) ? formData.specialization : [],
+      };
+      const res = await authFetch(`/api/practitioner-applications/${applicationId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       if (res.ok) {
-        toast.success(`Application ${action === "approve" ? "approved" : "rejected"} successfully`);
+        toast.success("Application approved");
         onBack();
       } else {
-        toast.error(result.message || `Failed to ${action} application`);
+        toast.error("Failed to approve");
       }
-    } catch (err: any) {
-      toast.error("An unexpected error occurred. Please try again.");
+    } catch (err) {
+      toast.error("An error occurred");
     } finally {
       setProcessing(false);
-      setShowRejectModal(false);
       setShowApproveModal(false);
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="animate-spin" />
-      </div>
-    );
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>;
 
   return (
     <div className="space-y-4 relative">
-      <Button size="sm" onClick={onBack} className="flex items-center gap-2">
-        <ArrowLeft size={16} /> Back to List
-      </Button>
+      <div className="flex justify-between items-center">
+        <Button size="sm" onClick={onBack} className="flex items-center gap-2"><ArrowLeft size={16} /> Back</Button>
+        <div className="flex gap-2">
+          {!isEditing ? (
+            <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}><Edit2 size={16} className="mr-1" /> Edit</Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={handleCancel}>Cancel</Button>
+              <Button size="sm" onClick={() => setShowApproveModal(true)} loading={processing}><Save size={16} className="mr-1" /> Save</Button>
+            </>
+          )}
+        </div>
+      </div>
 
       <Card>
         <CardBody className="space-y-8">
-          {/* Section: Basic Info */}
           <section>
-            <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">
-              Basic Information
-            </h3>
+            <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">Basic Information</h3>
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Full Name"
-                value={`${data.first_name} ${data.last_name}`}
-                disabled
-              />
-              <Input label="Email" value={data.email} disabled />
-              <Input
-                label="Specialization"
-                value={data.specialization?.join(", ")}
-                disabled
-              />
-              <Input
-                label="Experience"
-                value={`${data.experience_years} Years`}
-                disabled
-              />
-              <Input
-                label="Location"
-                value={`${data.city}, ${data.state}`}
-                disabled
-              />
-              <Input label="Contact" value={data.contact_number} disabled />
-              <Input
-                label="Qualification"
-                value={data.qualification}
-                disabled
-              />
-              <div className="col-span-2">
-                <label className="text-xs text-slate-600 mb-1 block">Profile Bio</label>
-                <textarea 
-                  className="w-full border border-slate-200 rounded-lg p-2 text-sm bg-slate-50 text-slate-600" 
-                  rows={2} 
-                  value={data.profile_bio} 
-                  disabled 
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Section: Fees & Availability */}
-          <div className="grid grid-cols-2 gap-8">
-            <section>
-              <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">
-                Fees
-              </h3>
-              {Object.values(data.fees || {}).map((f: any, i) => (
-                <div key={i} className="text-xs p-2 bg-slate-50 rounded mb-2 border border-slate-100">
-                  <strong>{f.type}</strong>: LKR {f.fee} (+ LKR {f.platform_fee}{" "}
-                  platform)
-                </div>
-              ))}
-            </section>
-            <section>
-              <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">
-                Availability
-              </h3>
-              <div className="text-xs text-slate-600 space-y-1">
-                <p><strong>Time:</strong> {data.availability?.start_time} - {data.availability?.end_time}</p>
-                <p><strong>Timezone:</strong> {data.availability?.timezone}</p>
-                <p><strong>Unavailable:</strong> {data.availability?.days_unavailable?.join(", ") || "None"}</p>
-              </div>
-            </section>
-          </div>
-
-          {/* Section: Registration */}
-          <section>
-            <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">
-              Registration
-            </h3>
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <Input
-                  label="License Number"
-                  value={license}
-                  onChange={(e) => setLicense(e.target.value)}
-                  disabled={!isEditingLicense}
-                />
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setIsEditingLicense(!isEditingLicense)}
-              >
-                {isEditingLicense ? <Save size={16} /> : <Edit2 size={16} />}
-              </Button>
-            </div>
-          </section>
-
-          {/* Section: Bank Details */}
-          <section>
-            <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">
-              Bank Details
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Bank" value={data.bank_details?.bank_name} disabled />
-              <Input label="Account Name" value={data.bank_details?.account_name} disabled />
-              <Input label="A/C Number" value={data.bank_details?.account_number} disabled />
-              <Input label="IFSC Code" value={data.bank_details?.ifsc_code} disabled />
-              <Input label="Swift Code" value={data.bank_details?.swift_code} disabled />
-            </div>
-          </section>
-
-          {/* Section: Documents */}
-          <section>
-            <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">
-              Supporting Documents
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              {data.documents?.map((doc: any, idx: number) => (
-                <a
-                  key={idx}
-                  href={doc.view_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText size={18} className="text-slate-400 group-hover:text-blue-600" />
-                    <span className="text-xs font-medium uppercase">
-                      {doc.document_type.replace("_", " ")}
-                    </span>
+              <Input label="First Name" value={formData.first_name} onChange={(e) => handleChange("first_name", e.target.value)} disabled={!isEditing} />
+              <Input label="Last Name" value={formData.last_name} onChange={(e) => handleChange("last_name", e.target.value)} disabled={!isEditing} />
+              <Input label="Email" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} disabled={!isEditing} />
+              <Input label="Languages" value={formData.languages} onChange={(e) => handleChange("languages", e.target.value)} disabled={!isEditing} placeholder="English, Spanish..." />
+              
+              {!isEditing ? (
+                <Input label="Specialization" value={Array.isArray(formData.specialization) ? formData.specialization.join(", ") : ""} disabled={true} />
+              ) : (
+                <div className="relative">
+                  <label className="text-xs text-slate-600 mb-1 block font-medium">Specialization</label>
+                  <div className="w-full min-h-[40px] px-3 py-2 rounded-lg border border-slate-200 bg-white flex items-center justify-between cursor-pointer" onClick={() => setIsSpecOpen(!isSpecOpen)}>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.isArray(formData.specialization) && formData.specialization.length === 0 ? <span className="text-slate-400 text-sm">Select...</span> : 
+                        (Array.isArray(formData.specialization) ? formData.specialization : []).map(slug => (
+                          <span key={slug} className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm">{specializations.find(s => s.slug === slug)?.name || slug}</span>
+                        ))
+                      }
+                    </div>
+                    <ChevronDown size={18} className="text-slate-400" />
                   </div>
-                  <ExternalLink size={14} className="text-slate-300 group-hover:text-blue-600" />
+                  {isSpecOpen && (
+                    <div className="absolute z-20 mt-2 w-full max-h-60 overflow-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                      {specializations.filter(s => s.active).map(spec => (
+                        <label key={spec.id} className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 cursor-pointer">
+                          <input type="checkbox" className="rounded accent-teal-600" checked={Array.isArray(formData.specialization) && formData.specialization.includes(spec.slug)} onChange={() => toggleSpecialization(spec.slug)} />
+                          <span className="text-slate-700">{spec.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <Input label="Experience" value={formData.experience_years} onChange={(e) => handleChange("experience_years", e.target.value)} disabled={!isEditing} />
+              <Input label="City" value={formData.city} onChange={(e) => handleChange("city", e.target.value)} disabled={!isEditing} />
+              <Input label="State" value={formData.state} onChange={(e) => handleChange("state", e.target.value)} disabled={!isEditing} />
+              <Input label="Contact" value={formData.contact_number} onChange={(e) => handleChange("contact_number", e.target.value)} disabled={!isEditing} />
+            </div>
+            <div className="mt-4">
+              <label className="text-xs text-slate-600 mb-1 block font-medium">Profile Bio</label>
+              <textarea className="w-full p-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-teal-500 outline-none" rows={4} value={formData.profile_bio} onChange={(e) => handleChange("profile_bio", e.target.value)} disabled={!isEditing} />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">Professional & Payout Info</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="Qualification" value={formData.qualification} onChange={(e) => handleChange("qualification", e.target.value)} disabled={!isEditing} />
+              <Input label="License #" value={formData.license_number} onChange={(e) => handleChange("license_number", e.target.value)} disabled={!isEditing} />
+              <Input label="Bank Name" value={formData.bank_name} onChange={(e) => handleChange("bank_name", e.target.value)} disabled={!isEditing} />
+              <Input label="Account Name" value={formData.account_name} onChange={(e) => handleChange("account_name", e.target.value)} disabled={!isEditing} />
+              <Input label="Account Number" value={formData.account_number} onChange={(e) => handleChange("account_number", e.target.value)} disabled={!isEditing} />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">Documents</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {data.documents?.map((doc: any, idx: number) => (
+                <a key={doc.id || idx} href={doc.file_url} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-50">
+                  <FileText className="text-teal-600" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{doc.document_type.replace("_", " ")}</p>
+                    <p className="text-xs text-slate-500">View Document</p>
+                  </div>
                 </a>
               ))}
             </div>
           </section>
 
-          {/* Footer Actions */}
-          <div className="flex gap-4 pt-6 border-t">
-            <Button
-              className="flex-1 bg-red-600 hover:bg-red-700"
-              onClick={() => setShowRejectModal(true)}
-            >
-              Reject Application
-            </Button>
-            <Button
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              onClick={() => setShowApproveModal(true)}
-            >
-              Approve & Create Clinician
-            </Button>
-          </div>
+          {!isEditing && (
+            <div className="flex gap-4 pt-6 border-t">
+              <Button className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 border-none" onClick={() => setShowRejectModal(true)}>Reject Application</Button>
+              <Button className="flex-1 bg-teal-600" onClick={() => setShowApproveModal(true)}>Approve Application</Button>
+            </div>
+          )}
         </CardBody>
       </Card>
 
-      {/* --- MODALS --- */}
-
-      {/* Rejection Modal */}
-      {showRejectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-slate-900">Reject Application</h3>
-              <button onClick={() => setShowRejectModal(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <p className="text-sm text-slate-600 mb-4">
-              Please provide a reason for rejecting{" "}
-              <strong>{data.first_name}</strong>'s application.
-            </p>
-            <textarea
-              className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-500 outline-none"
-              rows={4}
-              placeholder="Enter rejection reason..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-            />
-            <div className="flex gap-3 mt-6">
-              <Button
-                
-                className="flex-1"
-                onClick={() => setShowRejectModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-red-600"
-                disabled={processing}
-                onClick={() => handleAction("reject")}
-              >
-                {processing ? (
-                  <Loader2 className="animate-spin mr-2" />
-                ) : (
-                  "Confirm Reject"
-                )}
+      {/* Approve Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl text-center">
+            <h3 className="font-bold text-slate-900 mb-2">{isEditing ? "Save Changes?" : "Approve Application?"}</h3>
+            <p className="text-sm text-slate-600 mb-6">Confirming will save details and update the status.</p>
+            <div className="flex gap-3">
+              <Button className="flex-1" variant="outline" onClick={() => setShowApproveModal(false)}>Back</Button>
+              <Button className="flex-1 bg-teal-600" disabled={processing} onClick={handleSave}>
+                {processing ? <Loader2 className="animate-spin" /> : "Confirm"}
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Approval Modal */}
-      {showApproveModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Save size={32} />
-            </div>
-            <h3 className="font-bold text-slate-900 mb-2">
-              Approve Application?
-            </h3>
-            <p className="text-sm text-slate-600 mb-6">
-              This will create a practitioner account for{" "}
-              <strong>
-                {data.first_name} {data.last_name}
-              </strong>
-              . This action cannot be undone.
-            </p>
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl">
+            <h3 className="font-bold text-slate-900 mb-4">Reject Application</h3>
+            <textarea className="w-full p-3 border rounded-lg text-sm mb-4" placeholder="Reason for rejection..." rows={3} value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} />
             <div className="flex gap-3">
-              <Button
-                
-                className="flex-1"
-                onClick={() => setShowApproveModal(false)}
-              >
-                Go Back
-              </Button>
-              <Button
-                className="flex-1 bg-green-600"
-                disabled={processing}
-                onClick={() => handleAction("approve")}
-              >
-                {processing ? (
-                  <Loader2 className="animate-spin mr-2" />
-                ) : (
-                  "Confirm & Approve"
-                )}
-              </Button>
+              <Button className="flex-1" variant="outline" onClick={() => setShowRejectModal(false)}>Cancel</Button>
+              <Button className="flex-1 bg-red-600 text-white" disabled={processing || !rejectionReason} onClick={async () => {
+                setProcessing(true);
+                const res = await authFetch(`/api/practitioner-applications/${applicationId}/approve`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "reject", reason: rejectionReason }),
+                });
+                if (res.ok) { toast.success("Rejected"); onBack(); } else { toast.error("Failed"); }
+                setProcessing(false);
+              }}>Reject</Button>
             </div>
           </div>
         </div>

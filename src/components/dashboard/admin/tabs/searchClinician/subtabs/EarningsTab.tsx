@@ -11,6 +11,7 @@ interface EarningsSummary {
   grossAmount: number;
   platformFees: number;
   netAmount: number;
+  consultationFees?: number; // Optional, in case we want to display it later
 }
 
 interface EarningsTabProps {
@@ -30,6 +31,7 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
     grossAmount: 0,
     platformFees: 0,
     netAmount: 0,
+    consultationFees: 0,
   });
 
   /* ---------------- FETCH REAL TRANSACTION DATA ---------------- */
@@ -54,6 +56,7 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
           grossAmount: json.analytics.totalGrossAmount || 0,
           platformFees: json.analytics.totalPlatformFees || 0,
           netAmount: json.analytics.netAmount || 0,
+          consultationFees: json.analytics.totalConsultationFees || 0,
         });
       }
     } catch (err) {
@@ -152,7 +155,7 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
 
         <StatCard
           label="Net Amount (LKR)"
-          value={summary.netAmount.toLocaleString()}
+          value={(summary.consultationFees ?? 0).toLocaleString()}
           valueClass="text-blue-600"
         />
       </div>

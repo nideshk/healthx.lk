@@ -6,7 +6,14 @@ import Input from "@/components/atom/Input/Input";
 import AppointmentCalendar from "@/components/dashboard/admin/tabs/shared/AppointmentCalendar";
 import { Appointment } from "@/types/Dashboard";
 import Loader from "@/components/atom/Loader/Loader";
-import { ChevronLeft, ChevronRight, User, Stethoscope, Search, SearchCode } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  User,
+  Stethoscope,
+  Search,
+  SearchCode,
+} from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
 /* -------------------------------------------------------------------------- */
@@ -32,7 +39,7 @@ interface AdminStats {
 const formatDate = (iso: string) => {
   const d = new Date(iso);
   return `${String(d.getDate()).padStart(2, "0")}/${String(
-    d.getMonth() + 1
+    d.getMonth() + 1,
   ).padStart(2, "0")}/${d.getFullYear()}`;
 };
 
@@ -63,7 +70,7 @@ const HomeTab: React.FC = () => {
   const [search, setSearch] = useState("");
   const [clinicians, setClinicians] = useState<Clinician[]>([]);
   const [selectedClinician, setSelectedClinician] = useState<Clinician | null>(
-    null
+    null,
   );
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -78,7 +85,6 @@ const HomeTab: React.FC = () => {
   /* -------------------------------------------------------------------------- */
   /* FETCH OVERVIEW                                */
   /* -------------------------------------------------------------------------- */
-
 
   useEffect(() => {
     const fetchOverview = async () => {
@@ -138,7 +144,7 @@ const HomeTab: React.FC = () => {
             id: d.id,
             name: d.full_name,
             specialty: d.specialization?.join(", ") || "-",
-          }))
+          })),
         );
         setCurrentPage(1);
       } catch (err) {
@@ -161,7 +167,7 @@ const HomeTab: React.FC = () => {
   const fetchAppointments = async (
     practitionerId: string,
     view: "weekly" | "daily",
-    date: string
+    date: string,
   ) => {
     setCalendarLoading(true);
 
@@ -198,6 +204,7 @@ const HomeTab: React.FC = () => {
           prescriptions: "",
           followUpNeeded: false,
           patient: a.patient,
+          patientId: a.id,
         };
       });
 
@@ -243,7 +250,7 @@ const HomeTab: React.FC = () => {
   const totalPages = Math.ceil(clinicians.length / itemsPerPage);
   const currentData = clinicians.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   /* -------------------------------------------------------------------------- */
@@ -330,26 +337,32 @@ const HomeTab: React.FC = () => {
               /* State 1: Initial load / No search query */
               <div className="p-12 text-center flex flex-col items-center justify-center bg-slate-50/50">
                 <SearchCode size={32} className="text-slate-300 mb-2" />
-                <div className="text-slate-500 text-sm font-medium">Ready to search</div>
-                <div className="text-slate-400 text-xs mt-1">Start typing above to find a clinician</div>
+                <div className="text-slate-500 text-sm font-medium">
+                  Ready to search
+                </div>
+                <div className="text-slate-400 text-xs mt-1">
+                  Start typing above to find a clinician
+                </div>
               </div>
             ) : currentData.length > 0 ? (
               /* State 2: Results found */
               currentData.map((c) => (
                 <button
                   key={c.id}
-                  className={`w-full text-left px-5 py-3 transition-colors flex items-center justify-between group ${selectedClinician?.id === c.id
-                    ? "bg-blue-50"
-                    : "hover:bg-slate-50"
-                    }`}
+                  className={`w-full text-left px-5 py-3 transition-colors flex items-center justify-between group ${
+                    selectedClinician?.id === c.id
+                      ? "bg-blue-50"
+                      : "hover:bg-slate-50"
+                  }`}
                   onClick={() => handleSelectClinician(c)}
                 >
                   <div className="flex items-center gap-4">
                     <div
-                      className={`p-2 rounded-full ${selectedClinician?.id === c.id
-                        ? "bg-blue-100 text-blue-600"
-                        : "bg-slate-100 text-slate-400 group-hover:text-blue-500 transition-colors"
-                        }`}
+                      className={`p-2 rounded-full ${
+                        selectedClinician?.id === c.id
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-slate-100 text-slate-400 group-hover:text-blue-500 transition-colors"
+                      }`}
                     >
                       <User size={18} />
                     </div>

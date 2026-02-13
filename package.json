@@ -17,6 +17,8 @@
     "amazon-ivs-web-broadcast": "^1.31.1",
     "axios": "^1.12.2",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "form-data": "^4.0.4",
     "jsonwebtoken": "^9.0.3",
     "localforage": "^1.10.0",
@@ -41,6 +43,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/file-saver": "^2.0.7",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/lodash.debounce": "^4.0.9",
     "@types/luxon": "^3.7.1",

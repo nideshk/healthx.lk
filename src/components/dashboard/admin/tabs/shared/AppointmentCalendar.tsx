@@ -1,4 +1,3 @@
-// healthx.lk\src\components\dashboard\practitioner\tabs\shared\AppointmentCalendar.tsx
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -6,6 +5,7 @@ import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import { Appointment } from "@/types/Dashboard";
 import ManageAppointmentModal from "./ManageAppointmentModal";
+import PatientDetailsModal from "./PatientDetailsModal"; // New Import
 import Link from "next/link";
 
 type ViewMode = "weekly" | "daily";
@@ -17,7 +17,6 @@ interface AppointmentCalendarProps {
   userRole?: "admin" | "superadmin" | "practitioner";
 }
 
-
 const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   appointments,
   onCompleteAppointment,
@@ -27,13 +26,18 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [anchorDate, setAnchorDate] = useState<Date>(new Date());
   const [selectedAppt, setSelectedAppt] = useState<CalendarAppointment | null>(
-    null
+    null,
   );
   const [confirmAppt, setConfirmAppt] = useState<CalendarAppointment | null>(
-    null
+    null,
   );
   const [showManage, setShowManage] = useState(false);
 
+  // New state for Patient Detail Modal
+  const [viewPatientId, setViewPatientId] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const parsedAppointments = useMemo<CalendarAppointment[]>(() => {
     return appointments.map((a) => ({
@@ -85,7 +89,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             <div className="text-sm font-semibold text-slate-900">
               Appointment Calendar
             </div>
-
           </div>
 
           <div className="flex gap-2 text-xs">
@@ -161,7 +164,10 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
               ))}
               {viewMode === "daily" &&
                 Array.from({ length: 6 }).map((_, i) => (
-                  <div key={`empty-${i}`} className="border-l border-slate-200" />
+                  <div
+                    key={`empty-${i}`}
+                    className="border-l border-slate-200"
+                  />
                 ))}
             </div>
 
@@ -201,6 +207,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                               onClick={() => setSelectedAppt(appt)}
                             >
                               {appt.patient || "Patient"} • {appt.time}
+                              {appt.patient || "Patient"} • {appt.time}
                             </button>
                           );
                         })}
@@ -228,6 +235,8 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
           onClose={() => setSelectedAppt(null)}
           onMarkCompleted={() => setConfirmAppt(selectedAppt)}
           onManage={() => setShowManage(true)}
+          // Pass the setter to the modal
+          onViewPatient={(id, name) => setViewPatientId({ id, name })}
         />
       )}
 
@@ -244,13 +253,22 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
         />
       )}
 
-      {/* {showManage && selectedAppt && (
-      <ManageAppointmentModal
-        open={showManage}
-        appointment={selectedAppt}
-        onClose={() => setShowManage(false)}
-      />
-    )} */}
+      {showManage && selectedAppt && (
+        <ManageAppointmentModal
+          open={showManage}
+          appointment={selectedAppt}
+          onClose={() => setShowManage(false)}
+        />
+      )}
+
+      {/* New Patient Details Modal */}
+      {viewPatientId && (
+        <PatientDetailsModal
+          patientId={viewPatientId.id}
+          patientName={viewPatientId.name}
+          onClose={() => setViewPatientId(null)}
+        />
+      )}
     </>
   );
 };
@@ -324,9 +342,10 @@ const isSameDay = (a: Date, b: Date) =>
   a.getDate() === b.getDate();
 
 const formatDate = (d: Date) =>
-  `${String(d.getDate()).padStart(2, "0")}/${String(
-    d.getMonth() + 1
-  ).padStart(2, "0")}/${d.getFullYear()}`;
+  `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}/${d.getFullYear()}`;
 
 const formatDayName = (d: Date) =>
   d.toLocaleDateString(undefined, { weekday: "short" });
@@ -341,13 +360,24 @@ interface DetailsModalProps {
   onClose: () => void;
   onMarkCompleted: () => void;
   onManage: () => void;
+  onViewPatient: (id: string, name: string) => void; // Added Prop
 }
 
 const DetailsModal: React.FC<DetailsModalProps> = ({
   appointment,
   onClose,
+  onMarkCompleted,
+  onManage,
+  onViewPatient,
 }) => {
   const isCompleted = appointment.status === "completed";
+  // Check if appointment is in the past
+  const isPastAppointment = () => {
+    if (!appointment.start) return false;
+    const today = startOfDay(new Date());
+    return appointment.start < today;
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md text-xs">
@@ -364,18 +394,53 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
           </button>
         </div>
 
+
         <div className="px-5 py-4 space-y-3">
-          <DetailRow label="Patient" value={`${appointment.patient}`} />
+          {/* Made Patient Name Clickable */}
+          <div className="flex gap-4 text-xs">
+            <div className="w-24 text-[11px] font-medium text-slate-600">
+              Patient
+            </div>
+            <div className="flex-1">
+              <button
+                onClick={() =>
+                  onViewPatient(
+                    appointment.id || "",
+                    appointment.patient || "",
+                  )
+                }
+                className="text-blue-600 font-semibold hover:underline text-left"
+              >
+                {appointment.patient}
+              </button>
+            </div>
+          </div>
+
           <DetailRow label="Time" value={`${appointment.time}`} />
-          <DetailRow label="Appointment Type" value={`${appointment.appointmentType}`} />
+          <DetailRow
+            label="Appointment Type"
+            value={`${appointment.appointmentType}`}
+          />
           <DetailRow label="Participants" value="1" />
-          <DetailRow label="Reason" value={appointment.reason || "Not specified"} />
+          <DetailRow label="Reason" value={appointment.reason || "-"} />
           <DetailRow
             label="Status"
             value={appointment.status ? capitalize(appointment.status) : "-"}
           />
         </div>
 
+        {!isPastAppointment() && (
+          <div className="flex justify-end gap-2 px-5 py-4 border-t">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={onManage}
+            >
+              Manage Appointment
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -386,9 +451,7 @@ const DetailRow: React.FC<{ label: string; value: string }> = ({
   value,
 }) => (
   <div className="flex gap-4 text-xs">
-    <div className="w-24 text-[11px] font-medium text-slate-600">
-      {label}
-    </div>
+    <div className="w-24 text-[11px] font-medium text-slate-600">{label}</div>
     <div className="flex-1 text-slate-800">{value}</div>
   </div>
 );
