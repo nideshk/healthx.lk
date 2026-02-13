@@ -113,8 +113,9 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
     <div className="min-h-screen py-10 px-4 bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-10">
-          {t("title")}
+          {t("title")} 
         </h1>
+        <h2 className="text-xl text-gray-900 text-center mb-10"> {t("newstatus.subtitle")}</h2>
 
         <div className="grid lg:grid-cols-3 gap-10">
           {/* LEFT COLUMN */}
@@ -136,9 +137,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                   <div>
                     <p className="text-lg font-semibold">
                       {doctor?.name}{" "}
-                      <span className="text-sm">
-                        {doctor?.qualification}
-                      </span>
+                      <span className="text-sm">{doctor?.qualification}</span>
                     </p>
                     <p className="text-sm text-gray-600">
                       {doctor?.specialization}
@@ -171,20 +170,16 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
               <p>
                 <strong>{t("date")}:</strong>{" "}
                 {bookingData.starts_at
-                  ? new Date(
-                    bookingData.starts_at
-                  ).toLocaleDateString()
+                  ? new Date(bookingData.starts_at).toLocaleDateString()
                   : "—"}
               </p>
               <p>
                 <strong>{t("time")}:</strong>{" "}
                 {bookingData.starts_at
-                  ? new Date(
-                    bookingData.starts_at
-                  ).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                  ? new Date(bookingData.starts_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                   : "—"}
               </p>
             </div>
@@ -200,43 +195,60 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
             {/* CONSENT & POLICY STATUS */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 tracking-wider">
-                Consents & Agreements
+                {t("consents.title")}
               </h3>
 
               <div className="space-y-3">
                 {/* Telehealth Consent */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-full ${bookingData.consent.telehealth ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    <div
+                      className={`p-1.5 rounded-full ${bookingData.consent.telehealth ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}
+                    >
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">Telehealth Consultation Consent</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {t("consents.telehealth")}
+                    </span>
                   </div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${bookingData.consent.telehealth ? 'text-green-700' : 'text-red-700'}`}>
-                    {bookingData.consent.telehealth ? "ACCEPTED" : "DECLINED"}
+                  <span
+                    className={`text-xs font-bold px-2 py-1 rounded ${bookingData.consent.telehealth ? "text-green-700" : "text-red-700"}`}
+                  >
+                    {bookingData.consent.telehealth
+                      ? t("newstatus.accepted")
+                      : t("newstatus.declined")}
                   </span>
                 </div>
 
                 {/* Terms & Conditions */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-full ${bookingData.consent.terms ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    <div
+                      className={`p-1.5 rounded-full ${bookingData.consent.terms ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}
+                    >
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">Terms of Service & Privacy Policy</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {t("consents.terms")}
+                    </span>
                   </div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${bookingData.consent.terms ? 'text-green-700' : 'text-red-700'}`}>
-                    {bookingData.consent.terms ? "ACCEPTED" : "DECLINED"}
+                  <span
+                    className={`text-xs font-bold px-2 py-1 rounded ${bookingData.consent.terms ? "text-green-700" : "text-red-700"}`}
+                  >
+                    {bookingData.consent.terms
+                      ? t("newstatus.accepted")
+                      : t("newstatus.declined")}
                   </span>
                 </div>
               </div>
             </div>
+
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               {/* Header */}
               <div className="bg-slate-50 px-6 py-4 border-b border-gray-100 flex items-center gap-2">
                 <ClipboardCheck className="w-5 h-5 text-blue-600" />
                 <h3 className="font-bold text-gray-800 uppercase tracking-wider text-sm">
-                  Pre-Consultation Summary
+                  {t("preConsultation.title")}
                 </h3>
               </div>
 
@@ -249,9 +261,12 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase">Primary Concern / Symptoms</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase">
+                      {t("preConsultation.concern")}
+                    </p>
                     <p className="text-gray-900 mt-1 font-medium leading-relaxed">
-                      {bookingData?.pre_consultation?.note?.concern || "No specific concern provided."}
+                      {bookingData?.pre_consultation?.note?.concern ||
+                        t("preConsultation.noConcern")}
                     </p>
                   </div>
                 </div>
@@ -264,9 +279,12 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase">Desired Outcome</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase">
+                      {t("preConsultation.outcome")}
+                    </p>
                     <p className="text-gray-900 mt-1 font-medium leading-relaxed">
-                      {bookingData?.pre_consultation?.note?.outcome || "No specific outcome mentioned."}
+                      {bookingData?.pre_consultation?.note?.outcome ||
+                        t("preConsultation.noOutcome")}
                     </p>
                   </div>
                 </div>
@@ -276,7 +294,9 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-gray-500">
                       <Megaphone className="w-4 h-4" />
-                      <span className="text-sm font-medium">How did you hear about us?</span>
+                      <span className="text-sm font-medium">
+                        {t("preConsultation.referral")}
+                      </span>
                     </div>
                     <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
                       {bookingData?.pre_consultation?.referral}
@@ -285,17 +305,18 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                 </div>
               </div>
             </div>
+
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               {/* Header */}
               <div className="bg-slate-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-blue-600" />
                   <h3 className="font-bold text-gray-800 uppercase tracking-wider text-sm">
-                    Participant Roster
+                    {t("participants.title")}
                   </h3>
                 </div>
                 <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                  {attendeeCount} Total
+                  {attendeeCount} {t("participants.total")}
                 </span>
               </div>
 
@@ -312,8 +333,12 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                             <Mail className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-900">{email.email} - {email.relationship}</p>
-                            <p className="text-xs text-gray-500 italic">Confirmed Participant</p>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {email.email} - {email.relationship}
+                            </p>
+                            <p className="text-xs text-gray-500 italic">
+                              {t("participants.confirmed")}
+                            </p>
                           </div>
                         </div>
                         <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -323,7 +348,9 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                 ) : (
                   <div className="text-center py-6">
                     <UserPlus className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">No additional attendees selected.</p>
+                    <p className="text-gray-500 text-sm">
+                      {t("participants.none")}
+                    </p>
                   </div>
                 )}
 
@@ -331,7 +358,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                 <div className="mt-6 flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
                   <div className="h-2 w-2 rounded-full bg-blue-600 mt-1.5 shrink-0" />
                   <p className="text-xs text-blue-700 leading-relaxed">
-                    All listed attendees will receive a secure meeting link and calendar invitation via their registered email addresses.
+                    {t("participants.info")}
                   </p>
                 </div>
               </div>
@@ -341,9 +368,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
           {/* RIGHT COLUMN */}
           <div className="lg:col-span-1">
             <div className="p-6 rounded-2xl bg-white shadow sticky top-24">
-              <h3 className="text-xl font-bold mb-5">
-                {t("pricingSummary")}
-              </h3>
+              <h3 className="text-xl font-bold mb-5">{t("pricingSummary")}</h3>
 
               {/* Countdown */}
               {isExpired ? (
@@ -389,9 +414,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                       disabled={couponLoading || !couponCode}
                       className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold disabled:bg-gray-400"
                     >
-                      {couponLoading
-                        ? t("applying")
-                        : t("apply")}
+                      {couponLoading ? t("applying") : t("apply")}
                     </button>
                   ) : (
                     <button
@@ -404,9 +427,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                 </div>
 
                 {couponError && (
-                  <p className="text-sm text-red-600">
-                    {couponError}
-                  </p>
+                  <p className="text-sm text-red-600">{couponError}</p>
                 )}
 
                 {appliedCoupon && (
@@ -440,34 +461,23 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
 
                 <div className="flex justify-between text-lg font-bold">
                   <span>{t("total")}</span>
-                  <span className="text-blue-700">
-                    LKR {finalTotal}
-                  </span>
+                  <span className="text-blue-700">LKR {finalTotal}</span>
                 </div>
               </div>
 
               <button
                 onClick={() =>
                   handlePayment({
-                    coupon_code: appliedCoupon
-                      ? couponCode
-                      : null,
+                    coupon_code: appliedCoupon ? couponCode : null,
                     discount: appliedCoupon?.discount || null,
                     final_amount: finalTotal,
                   })
                 }
-                disabled={
-                  isPaymentProcessing ||
-                  isVerifying ||
-                  isExpired
-                }
+                disabled={isPaymentProcessing || isVerifying || isExpired}
                 className="w-full mt-6 py-3 rounded-lg text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 flex items-center justify-center gap-2"
               >
                 {isPaymentProcessing ? (
-                  <Loader2
-                    size={20}
-                    className="animate-spin"
-                  />
+                  <Loader2 size={20} className="animate-spin" />
                 ) : (
                   t("payNow")
                 )}
