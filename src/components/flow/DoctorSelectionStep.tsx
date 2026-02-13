@@ -102,9 +102,16 @@ const DoctorSelectionStep = forwardRef(
 
     // NEW: sorted doctors
     const sortedDoctors = [...doctors].sort((a, b) => {
-      if (sortOrder === 'lowToHigh') return a.fee - b.fee;
-      return b.fee - a.fee;
+      const priceA = a.startingPrice ?? 0;
+      const priceB = b.startingPrice ?? 0;
+
+      if (sortOrder === 'lowToHigh') {
+        return priceA - priceB;
+      }
+
+      return priceB - priceA;
     });
+
 
     return (
       <div className="py-6 min-h-[60vh]">
