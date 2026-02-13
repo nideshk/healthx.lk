@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function PATCH(
-    req: Request,
+    req: NextRequest,
     {
         params,
     }: {
@@ -13,8 +15,8 @@ export async function PATCH(
     const { id } = await params;
     const { user } = await requireUser(req);
     const body = await req.json();
-
-    if (!["admin", "practitioner"].includes(user?.role || "")) {
+    const cnx = getAuditContext(req, user);
+    if (!user || !["admin", "practitioner"].includes(user?.role || "")) {
         return NextResponse.json(
             { error: "Unauthorized" },
             { status: 403 }
@@ -30,6 +32,17 @@ export async function PATCH(
             .single();
 
     if (fetchError || !coupon) {
+        await auditLog({
+            ...cnx,
+            action: "FAILED",
+            source: "dashboard",
+            entityType: "USER",
+            entityId: user?.auth_user_id,
+            metadata: {
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json(
             { error: "Coupon not found" },
             { status: 404 }
@@ -39,6 +52,17 @@ export async function PATCH(
     // Practitioner restrictions
     if (user?.role === "practitioner") {
         if (coupon.created_by_id !== user.practitioner_id) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                source: "dashboard",
+                entityType: "USER",
+                entityId: user?.auth_user_id,
+                metadata: {
+                    "user_id": user?.auth_user_id,
+                },
+                purpose: "operations",
+            })
             return NextResponse.json(
                 { error: "Forbidden" },
                 { status: 403 }
@@ -59,12 +83,35 @@ export async function PATCH(
                 .single();
 
         if (error) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                source: "dashboard",
+                entityType: "USER",
+                entityId: user?.auth_user_id,
+                metadata: {
+                    error: error.message,
+                    "user_id": user?.auth_user_id,
+                },
+                purpose: "operations",
+            })
             return NextResponse.json(
                 { error: error.message },
                 { status: 400 }
             );
         }
 
+        await auditLog({
+            ...cnx,
+            action: "UPDATED",
+            source: "dashboard",
+            entityType: "USER",
+            entityId: user?.auth_user_id,
+            metadata: {
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json(data);
     }
 
@@ -106,6 +153,17 @@ export async function PATCH(
     }
 
     if (Object.keys(updatePayload).length === 0) {
+        await auditLog({
+            ...cnx,
+            action: "FAILED",
+            source: "dashboard",
+            entityType: "USER",
+            entityId: user?.auth_user_id,
+            metadata: {
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json(
             { error: "No valid fields to update" },
             { status: 400 }
@@ -121,11 +179,35 @@ export async function PATCH(
             .single();
 
     if (error) {
+        await auditLog({
+            ...cnx,
+            action: "FAILED",
+            source: "dashboard",
+            entityType: "USER",
+            entityId: user?.auth_user_id,
+            metadata: {
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json(
             { error: error.message },
             { status: 400 }
         );
     }
+
+    await auditLog({
+        ...cnx,
+        action: "UPDATED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user?.auth_user_id,
+        metadata: {
+            data: data,
+            "user_id": user?.auth_user_id,
+        },
+        purpose: "operations",
+    })
 
     return NextResponse.json(data);
 }

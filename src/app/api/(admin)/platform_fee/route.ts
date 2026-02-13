@@ -11,15 +11,40 @@ import { auditLog } from "@/lib/audit/auditLog";
 
 export async function GET(req: NextRequest) {
   const { authorized, role, user } = await requireUser(req);
+  const cnx = getAuditContext(req, user);
+
   if (!authorized) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "unauthorized_fetch_appointment_types",
+      },
+    });
+
     return NextResponse.json(
       { error: "You are not authorized." },
       { status: 401 }
     );
   }
 
+
   const allowedRoles = ["admin", "superadmin"];
   if (!allowedRoles.includes(role)) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "insufficient_role_fetch_appointment_types",
+        role,
+      },
+    });
     return NextResponse.json(
       { error: "You do not have permission to view appointments." },
       { status: 403 }
@@ -43,13 +68,22 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (error) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "failed_to_fetch_appointment_types",
+      },
+    });
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }
     );
   }
 
-  const cnx = getAuditContext(req, user);
   await auditLog({
     ...cnx,
     action: "VIEWED",
@@ -72,7 +106,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const { authorized, role, user } = await requireUser(req);
+  const cnx = getAuditContext(req, user);
   if (!authorized) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "unauthorized_fetch_appointment_types",
+      },
+    });
     return NextResponse.json(
       { error: "You are not authorized." },
       { status: 401 }
@@ -99,6 +144,16 @@ export async function POST(req: NextRequest) {
   } = body;
 
   if (!name) {
+     await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "missing_name",
+      },
+    });
     return NextResponse.json(
       { success: false, message: "Name is required" },
       { status: 400 }
@@ -120,12 +175,21 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "appointment_type_insert_failed",
+      },
+    });
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }
     );
   }
-  const cnx = getAuditContext(req, user);
   await auditLog({
     ...cnx,
     action: "CREATED",
@@ -149,7 +213,19 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const { authorized, role, user } = await requireUser(req);
+  const cnx = getAuditContext(req, user);
+
   if (!authorized) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "unauthorized_fetch_appointment_types",
+      },
+    });
     return NextResponse.json(
       { error: "You are not authorized." },
       { status: 401 }
@@ -167,6 +243,16 @@ export async function PUT(req: NextRequest) {
   const updatesArray = body?.updates;
 
   if (!Array.isArray(updatesArray) || updatesArray.length === 0) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "invalid_updates_array",
+        },
+      });
     return NextResponse.json(
       { success: false, message: "updates array is required" },
       { status: 400 }
@@ -180,6 +266,16 @@ export async function PUT(req: NextRequest) {
       item;
 
     if (!id) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "missing_appointment_type_id",
+        },
+      });
       return NextResponse.json(
         { success: false, message: "Each update must include id" },
         { status: 400 }
@@ -193,6 +289,17 @@ export async function PUT(req: NextRequest) {
 
     if (name !== undefined) {
       if (typeof name !== "string" || name.trim().length === 0) {
+        await auditLog({
+          ...cnx,
+          action: "FAILED",
+          entityType: "ADMIN_USER",
+          entityId: id,
+          purpose: "operations",
+          source: "dashboard",
+          metadata: {
+            reason: "invalid_name",
+          },
+        });
         return NextResponse.json(
           { success: false, message: "Invalid appointment type name" },
           { status: 400 }
@@ -220,6 +327,17 @@ export async function PUT(req: NextRequest) {
       .single();
 
     if (error) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        entityId: id,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "appointment_type_update_failed",
+        },
+      });
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }
@@ -229,7 +347,6 @@ export async function PUT(req: NextRequest) {
     results.push(data);
   }
 
-  const cnx = getAuditContext(req, user);
   await auditLog({
     ...cnx,
     action: "UPDATED",
@@ -249,14 +366,37 @@ export async function PUT(req: NextRequest) {
   });
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
   try {
-    const { authorized, role } = await requireUser(req);
+    const { authorized, role, user } = await requireUser(req);
+    const cnx = getAuditContext(req, user);
     if (!authorized) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED_ACCESS",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "unauthorized_delete_appointment_type",
+        },
+      });
+
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (!["admin", "superadmin"].includes(role)) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED_ACCESS",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "insufficient_role_delete_appointment_type",
+          role,
+        },
+      });
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -264,6 +404,16 @@ export async function DELETE(req: Request) {
     const appointmentTypeId = body?.id;
 
     if (!appointmentTypeId) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "missing_appointment_type_id",
+        },
+      });
       return NextResponse.json(
         { error: "appointment type id is required" },
         { status: 400 }
@@ -282,13 +432,39 @@ export async function DELETE(req: Request) {
       })
       .eq("id", appointmentTypeId);
 
-    if (typeError) throw typeError;
+    if (typeError) 
+      {
+        await auditLog({
+          ...cnx,
+          action: "FAILED",
+          entityType: "ADMIN_USER",
+          entityId: appointmentTypeId,
+          purpose: "operations",
+          source: "dashboard",
+          metadata: {
+            reason: "soft_delete_failed",
+          },
+        });
+        throw typeError;
+      }
 
     // 2️⃣ Remove from practitioners (services + fees)
     await supabaseAdmin.rpc(
       "remove_appointment_type_from_practitioners",
       { type_id: appointmentTypeId }
     );
+
+    await auditLog({
+      ...cnx,
+      action: "DELETED",
+      entityType: "ADMIN_USER",
+      entityId: appointmentTypeId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        event: "soft_deleted",
+      },
+    });
 
     return NextResponse.json({
       success: true,

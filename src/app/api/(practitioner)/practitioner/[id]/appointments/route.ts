@@ -124,38 +124,6 @@ export async function GET(
     (a) => a.status === "completed"
   ).length;
 
-  console.log(user.practitioner_id, practitionerId)
-  console.log(
-    {
-      ...cnx,
-      action: "VIEWED",
-      entityType: "APPOINTMENT",
-      purpose: "operations",
-      source: "dashboard",
-      metadata: {
-        counts: {
-          confirmed: confirmedCount,
-          completed: completedCount,
-        },
-        data: data.map((a) => ({
-          id: a.id,
-          patient: (a.patient as unknown as { full_name: string } | null)?.full_name ?? null,
-          appointment_type: (a.type as unknown as { name: string } | null)?.name ?? null,
-          starts_at: a.starts_at,
-          ends_at: a.ends_at,
-          participants: 1 + (a.additional_attendees?.length || 0),
-          reason: a.notes,
-          room_key: a.room_key,
-          status: a.status,
-          duration_minutes: getDurationInMinutes(
-            a.starts_at,
-            a.ends_at
-          )
-        }))
-      }
-
-    }
-  )
   await auditLog(
     {
       ...cnx,
@@ -198,7 +166,7 @@ export async function GET(
       id: a.id,
       patient: (a.patient as unknown as { full_name: string } | null)?.full_name ?? null,
       email: (a.patient as unknown as { email: string } | null)?.email ?? null,
-      contact_number : (a.patient as unknown as { contact_number: string } | null)?.contact_number ?? null,
+      contact_number: (a.patient as unknown as { contact_number: string } | null)?.contact_number ?? null,
       appointment_type: (a.type as unknown as { name: string } | null)?.name ?? null,
       starts_at: a.starts_at,
       ends_at: a.ends_at,

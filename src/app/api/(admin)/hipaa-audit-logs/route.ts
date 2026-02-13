@@ -13,7 +13,19 @@ export async function GET(req: NextRequest) {
        1️⃣ Auth + role check
     ----------------------------------------------------- */
     const { authorized, user, role } = await requireUser(req);
+    const cnx = getAuditContext(req, user);
+
     if (!authorized) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "HIPAA_AUDIT_LOG",
+        purpose: "compliance",
+        source: "admin_panel",
+        metadata: {
+          reason: "Unauthorized attempt to access HIPAA audit logs"
+        }
+      });
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
@@ -21,6 +33,17 @@ export async function GET(req: NextRequest) {
     }
 
     if (role !== "admin" && role !== "superadmin") {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "HIPAA_AUDIT_LOG",
+        purpose: "compliance",
+        source: "admin_panel",
+        metadata: {
+          reason: "Forbidden - non-admin attempted to access audit logs",
+          role
+        }
+      });
       return NextResponse.json(
         { error: "Forbidden" },
         { status: 403 }
@@ -106,9 +129,19 @@ export async function GET(req: NextRequest) {
     ----------------------------------------------------- */
     const { data, error, count } = await query;
 
-    if (error) throw error;
-
-    const cnx = getAuditContext(req, user);
+    if (error) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "HIPAA_AUDIT_LOG",
+        purpose: "compliance",
+        source: "admin_panel",
+        metadata: {
+          reason: "Database query failed while fetching audit logs"
+        }
+      });
+      throw error;
+    }
 
     await auditLog({
       ...cnx,
@@ -130,6 +163,17 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("❌ HIPAA audit fetch failed:", err);
+    const cnx = getAuditContext(req);
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "HIPAA_AUDIT_LOG",
+      purpose: "compliance",
+      source: "admin_panel",
+      metadata: {
+        reason: "Unexpected server error while fetching audit logs"
+      }
+    });
     return NextResponse.json(
       { error: "Failed to fetch audit logs" },
       { status: 500 }

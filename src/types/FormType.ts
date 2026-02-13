@@ -56,7 +56,9 @@ export interface Doctor {
   registration: string;
   qualification: string;
   profileImage: string;
-  fee: number;
+  // fee: number;
+  startingPrice: number;  
+  endingPrice: number;
   currency: string;
   rating: { advice: number; punctuality: number; overall: number };
 }
