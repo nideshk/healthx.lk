@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `http://localhost:3000/reset-password`,
+    redirectTo: `https://www.clinecxa.com/reset-password`,
   });
 
   if (error) {

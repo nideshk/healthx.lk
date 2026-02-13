@@ -1,3 +1,5 @@
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { computeDiscount } from "@/lib/coupons/computeDiscount";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -29,8 +31,23 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const cnx = getAuditContext(req, user);
+
+
+
     const patient_id = user?.patient_id;
     if (!patient_id) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Patient profile missing" },
         { status: 400 }
@@ -38,6 +55,17 @@ export async function POST(
     }
 
     if (!starts_at || !ends_at || !appointment_type_id || !practitionerId) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Missing booking parameters" },
         { status: 400 }
@@ -75,6 +103,17 @@ export async function POST(
         .single();
 
     if (typeErr || !appointmentType) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Invalid appointment type" },
         { status: 400 }
@@ -93,6 +132,18 @@ export async function POST(
       .maybeSingle();
 
     if (existing) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "error": "Time slot already booked",
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Time slot already booked" },
         { status: 409 }
@@ -106,6 +157,18 @@ export async function POST(
       .single();
 
     if (!practitioner) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "error": "Invalid practitioner",
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Invalid practitioner" },
         { status: 400 }
@@ -197,6 +260,18 @@ export async function POST(
         .single();
 
     if (insertError || !appointment) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "error": "Failed to create appointment",
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Failed to create appointment" },
         { status: 500 }
@@ -231,6 +306,18 @@ export async function POST(
       .from("appointment_draft")
       .delete()
       .eq("patient_id", patient_id);
+
+    await auditLog({
+      ...cnx,
+      action: "CREATED",
+      source: "dashboard",
+      entityType: "USER",
+      entityId: user.auth_user_id,
+      metadata: {
+        "user_id": user.auth_user_id,
+      },
+      purpose: "operations",
+    })
 
     return NextResponse.json({
       success: true,

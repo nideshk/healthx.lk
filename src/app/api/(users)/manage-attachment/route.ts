@@ -2,7 +2,6 @@ import { auditLog } from "@/lib/audit/auditLog";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseClient } from "@/lib/supabaseClient";
-import { get } from "http";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {

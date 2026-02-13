@@ -1,8 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { computeDiscount } from "@/lib/coupons/computeDiscount";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
+import { requireUser } from "@/lib/authGuard";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
         code,
@@ -10,7 +13,10 @@ export async function POST(req: Request) {
         practitioner_id,
         pricing
     } = body;
+    const { user } = await requireUser(req);
 
+
+    const cnx = getAuditContext(req, user);
     const { data: coupon } = await supabaseAdmin
         .from("discount_coupons")
         .select("*")
@@ -19,6 +25,17 @@ export async function POST(req: Request) {
         .single();
 
     if (!coupon) {
+        await auditLog({
+            ...cnx,
+            action: "FAILED",
+            source: "dashboard",
+            entityType: "COUPON",
+            entityId: user?.auth_user_id,
+            metadata: {
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json(
             { valid: false, error: "Invalid coupon" },
             { status: 400 }
@@ -33,6 +50,18 @@ export async function POST(req: Request) {
         (coupon.valid_until &&
             new Date(coupon.valid_until) < now)
     ) {
+        await auditLog({
+            ...cnx,
+            action: "FAILED",
+            source: "dashboard",
+            entityType: "COUPON",
+            entityId: user?.auth_user_id,
+            metadata: {
+                error: "Coupon expired",
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json(
             { valid: false, error: "Coupon expired" },
             { status: 400 }
@@ -53,6 +82,18 @@ export async function POST(req: Request) {
             m => m.practitioner_id === practitioner_id
         )
     ) {
+        await auditLog({
+            ...cnx,
+            action: "FAILED",
+            source: "dashboard",
+            entityType: "COUPON",
+            entityId: user?.auth_user_id,
+            metadata: {
+                error: "Coupon not applicable",
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json(
             {
                 valid: false,
@@ -73,6 +114,18 @@ export async function POST(req: Request) {
         totalUses && coupon.max_total_uses &&
         totalUses >= coupon.max_total_uses
     ) {
+        await auditLog({
+            ...cnx,
+            action: "FAILED",
+            source: "dashboard",
+            entityType: "COUPON",
+            entityId: user?.auth_user_id,
+            metadata: {
+                error: "Usage limit reached",
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json(
             { valid: false, error: "Usage limit reached" },
             { status: 400 }
@@ -90,6 +143,18 @@ export async function POST(req: Request) {
         userUses && coupon.max_uses_per_user &&
         userUses >= coupon.max_uses_per_user
     ) {
+        await auditLog({
+            ...cnx,
+            action: "FAILED",
+            source: "dashboard",
+            entityType: "COUPON",
+            entityId: user?.auth_user_id,
+            metadata: {
+                error: "Coupon already used",
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json(
             {
                 valid: false,
@@ -104,6 +169,17 @@ export async function POST(req: Request) {
         pricing
     });
 
+    await auditLog({
+        ...cnx,
+        action: "APPROVED",
+        source: "dashboard",
+        entityType: "COUPON",
+        entityId: user?.auth_user_id,
+        metadata: {
+            "user_id": user?.auth_user_id,
+        },
+        purpose: "operations",
+    })
     return NextResponse.json({
         valid: true,
         discount,

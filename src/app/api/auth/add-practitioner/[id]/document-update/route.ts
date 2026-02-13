@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function PUT(
   req: NextRequest,
@@ -16,13 +18,38 @@ export async function PUT(
     }
 
     const { user, role } = await requireUser(req);
+
+    const cnx = getAuditContext(req, user);
+
     if (!user || !["admin", "superadmin"].includes(user?.admin?.role as any)) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "PRACTITIONER",
+        entityId: practitioner_id,
+        metadata: {
+          "error": "Unauthorized"
+        },
+        purpose: "operations",
+      })
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { documents } = await req.json();
 
     if (!Array.isArray(documents)) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "PRACTITIONER",
+        entityId: practitioner_id,
+        metadata: {
+          "error": "Invalid documents"
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "documents must be an array" },
         { status: 400 }
@@ -44,12 +71,18 @@ export async function PUT(
       );
     }
 
-    // logAuditEvent({
-    //   userId: user.auth_user_id,
-    //   eventType: "UPDATED",
-    //   entityType: "PRACTITIONER_APPLICATION_DOCUMENTS",
-    //   metadata: { applicationId },
-    // }).catch(console.error);
+    await auditLog({
+      ...cnx,
+      action: "UPDATED",
+      source: "dashboard",
+      entityType: "PRACTITIONER",
+      entityId: practitioner_id,
+      metadata: {
+        type: "document",
+        "practitioner_id": practitioner_id,
+      },
+      purpose: "operations",
+    })
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {

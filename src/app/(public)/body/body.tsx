@@ -125,7 +125,6 @@ const DisclaimerModal = () => {
       "disclaimerModalDismissed",
     );
 
-    // Only prevent modal if value is explicitly "true"
     if (disclaimerDismissed !== "true") {
       const timer = setTimeout(() => {
         setIsOpen(true);
@@ -201,7 +200,6 @@ const DisclaimerModal = () => {
   );
 };
 
-
 /* ================= DISCLAIMER SECTION ================= */
 
 const DisclaimerSection = () => {
@@ -232,26 +230,29 @@ const DisclaimerSection = () => {
 /* ================= PAGE ================= */
 
 const Body = () => {
+  const t = useTranslations("homepage");
+
   return (
     <main>
-      {/* DISCLAIMER MODAL - Shows 3 seconds after landing */}
       <DisclaimerModal />
-
-      {/* HERO */}
       <HeroSection />
-
-      {/* DISCLAIMER SECTION - Visual warning on page */}
       <DisclaimerSection />
+
+      {/* NEW HEALTHCARE TITLE SECTION */}
+      <section className="py-8 bg-white">
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+            {t("healthcareTitle")}
+          </h2>
+        </div>
+      </section>
 
       {/* PRIMARY BOOKING FLOW */}
       <section id="book">
         <ServiceDoctorFlow />
       </section>
 
-      {/* TRUST / FEATURES */}
       <FeaturesSection />
-
-      {/* PRACTITIONER CTA */}
       <PractitionerSection />
     </main>
   );
@@ -265,7 +266,6 @@ const PractitionerSection = () => {
 
   return (
     <section className="py-24 bg-cyan-900 text-white relative overflow-hidden">
-      {/* Subtle Background Decorative Circles */}
       <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-cyan-800 rounded-full blur-3xl opacity-50" />
       <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-96 h-96 bg-cyan-950 rounded-full blur-3xl opacity-50" />
 
@@ -280,7 +280,6 @@ const PractitionerSection = () => {
             </p>
           </div>
 
-          {/* Benefits Grid - Better for text-only layouts */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-6">
             {[1, 2, 3].map((key) => (
               <div

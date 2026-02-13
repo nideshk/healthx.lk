@@ -7,6 +7,7 @@ export type ActorRole =
 
 export type AuditAction =
   | "VIEWED"
+  | "READ"
   | "SYSTEM_CANCELLED"
   | "CREATED"
   | "UPDATED"
@@ -35,6 +36,10 @@ export type AuditPurpose =
 export type EntityType =
   | "PRACTITIONER_AVAILABILITY"
   | "PATIENT"
+  | "PENDING_REVIEW"
+  | "COUPON"
+  | "USER"
+  | "PROFILE"
   | "ATTACHMENT"
   | "APPOINTMENT_REVIEW"
   | "APPOINTMENT_DRAFT"

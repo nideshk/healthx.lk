@@ -7,7 +7,6 @@ export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
-    const cookieStore = cookies();
     const supabase = supabaseAdmin
 
     /* ------------------------------------------------
