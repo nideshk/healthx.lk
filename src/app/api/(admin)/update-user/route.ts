@@ -110,6 +110,42 @@ export async function PATCH(req: NextRequest) {
 
     /* ---------------- PATIENT ---------------- */
     if (target_role === "patient") {
+      if (!user_id) {
+        return NextResponse.json(
+          { error: "user_id (patient id) is required" },
+          { status: 400 }
+        );
+      }
+
+      // 🔹 Fetch patient row first
+      const { data: patientRow, error: pErr } =
+        await supabaseAdmin
+          .from("patients")
+          .select("id, supabase_user_id")
+          .eq("id", user_id) // 🔥 match by patient.id
+          .single();
+
+      if (pErr || !patientRow) {
+        await auditLog({
+          ...cnx,
+          action: "FAILED",
+          entityType: "PATIENT",
+          entityId: user_id,
+          purpose: "operations",
+          source: "admin_panel",
+          metadata: { reason: "patient_not_found" },
+        });
+
+        return NextResponse.json(
+          { error: "Patient not found" },
+          { status: 404 }
+        );
+      }
+
+      const supabaseUserId = patientRow.supabase_user_id;
+
+      /* ---------- PROFILE UPDATE ---------- */
+
       const profileUpdate = clean({
         first_name: patient?.first_name,
         last_name: patient?.last_name,
@@ -122,30 +158,37 @@ export async function PATCH(req: NextRequest) {
         country: patient?.country,
       });
 
+      /* ---------- PATIENT UPDATE ---------- */
+
       const patientUpdate = clean({
-        full_name : 
-        patient?.first_name || patient?.last_name
-          ? `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim()
-          : undefined,
+        full_name:
+          patient?.first_name || patient?.last_name
+            ? `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim()
+            : undefined,
         dob: patient?.dob,
         gender: patient?.gender,
         contact_number: patient?.contact_number,
         emergency_contact: patient?.emergency_contact,
         address: patient?.address,
         notes: patient?.notes,
-        updated_at: new Date().toISOString(),
         allergies: patient?.allergies,
-        blood_type: patient?.blood_type
+        blood_type: patient?.blood_type,
+        updated_at: new Date().toISOString(),
       });
 
+      // 🔹 Update profile using supabase_user_id
       if (Object.keys(profileUpdate).length)
-        await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", user_id);
+        await supabaseAdmin
+          .from("profiles")
+          .update(profileUpdate)
+          .eq("id", supabaseUserId);
 
+      // 🔹 Update patient using patient.id
       if (Object.keys(patientUpdate).length)
         await supabaseAdmin
           .from("patients")
           .update(patientUpdate)
-          .eq("supabase_user_id", user_id);
+          .eq("id", user_id);
 
       const editedFields = [
         ...Object.keys(profileUpdate),
@@ -162,15 +205,15 @@ export async function PATCH(req: NextRequest) {
       });
 
       await notify({
-        userId: user_id,
+        userId: supabaseUserId,
         role: "patient",
         eventType: "profile_updated_by_admin",
         title: "Profile Updated",
         message: `
-Your profile has been updated by an administrator.
+    Your profile has been updated by an administrator.
 
-Updated fields:
-${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
+    Updated fields:
+    ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         `.trim(),
         channels: ["email"],
       });
