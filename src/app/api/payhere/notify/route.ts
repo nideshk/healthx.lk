@@ -153,8 +153,12 @@ export async function POST(request: NextRequest) {
     }
     else {
         // This handles cancelled, failed.
-        console.warn(`Payment not successful. Status Code: ${status_code} for Order: ${order_id}`);
+        // console.warn(`Payment not successful. Status Code: ${status_code} for Order: ${order_id}`);
 
+        let mappedStatus = 'payment_failed';
+        if(status_code === '-1')
+            mappedStatus = 'payment_cancelled';
+        
         try {
             // Update the transaction record
             await supabaseAdmin
@@ -166,6 +170,16 @@ export async function POST(request: NextRequest) {
                 })
                 .eq('order_id', order_id)
                 .neq('status', 'paid');
+            
+            // Update appointment record here as well.
+            await supabaseAdmin
+                .from('appointments')
+                .update({
+                    status: mappedStatus,
+                    payment_status:'failed'
+                })
+                .eq('id', order_id)
+                .eq('status', 'pending');
 
         } catch (error) {
             console.error("Error updating failed payment status:", error);

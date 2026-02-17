@@ -43,13 +43,14 @@ declare global {
   }
 }
 
-const releaseAppointmentSlot = async (appointmentId: string | null) => {
+type releaseReason = "PAYMENT_FAILED" | "PAYMENT_DISMISSED" | "SESSION_EXPIRED" | "MISSING_DATA";
+const releaseAppointmentSlot = async (appointmentId: string | null, reason : releaseReason) => {
   if (!appointmentId) return;
   try {
     const res = await authFetch("/api/booking/release-slot", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ appointmentId }),
+      body: JSON.stringify({ appointmentId, reason}),
     });
   } catch (err) {
     console.error("Error calling release-slot API:", err);
@@ -95,7 +96,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
       setIsExpired(true);
       setIsPaymentProcessing(false);
       setIsVerifying(true);
-      releaseAppointmentSlot(appointmentIdRef.current);
+      releaseAppointmentSlot(appointmentIdRef.current, "SESSION_EXPIRED");
       setTimeout(() => {
         window.location.href = "/dashboard/appointment";
       }, 2300);
@@ -242,7 +243,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
         if (!payRes.ok) {
           setIsPaymentProcessing(false);
-          releaseAppointmentSlot(currentAppointmentId);
+          releaseAppointmentSlot(currentAppointmentId, "MISSING_DATA");
           toast.error(t("errors.paymentInitFailed"));
           return;
         }
@@ -296,8 +297,10 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
               toast.success("Payment verified! Your appointment is successfully booked.");
             }
             else if (attempts >= maxAttempts) {
+              const res = await authFetch(`/api/booking/check-status?appointmentId=${currentAppointmentId}`);
+              const data = await res.json();
+              releaseAppointmentSlot(currentAppointmentId, "PAYMENT_FAILED");
               clearInterval(checkInterval);
-              releaseAppointmentSlot(currentAppointmentId);
               setIsVerifying(false);
               toast.error("Booking cancelled, Payment could not be verified.");
               router.push("/dashboard/appointment");
@@ -312,7 +315,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
             "pointer-events-none",
           );
           setIsPaymentProcessing(false);
-          releaseAppointmentSlot(currentAppointmentId);
+          releaseAppointmentSlot(currentAppointmentId, "PAYMENT_DISMISSED");
           toast.error(t("errors.cancelled"));
         };
 
