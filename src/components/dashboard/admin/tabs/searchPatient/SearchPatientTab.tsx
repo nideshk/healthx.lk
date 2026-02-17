@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import Input from "@/components/atom/Input/Input";
@@ -17,6 +17,7 @@ export interface AdminAppointment {
   time: string;
   info: string;
   doctorName: string;
+  appointmentType: string;
   category: "upcoming" | "previous";
 }
 
@@ -66,76 +67,119 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit, setLimit] = useState(10); 
+  const [limit, setLimit] = useState(10);
 
   // Deletion States
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Debounce state
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
   // Sync local state ONLY when initialPatients changes from parent and we are on page 1
   useEffect(() => {
     if (initialPatients.length > 0 && currentPage === 1 && !search) {
-        setLocalPatients(initialPatients);
+      setLocalPatients(initialPatients);
     }
     setLocalLoading(initialLoading);
-  }, [initialPatients, initialLoading]);
+}, [initialPatients, initialLoading, currentPage, search]);
 
-  // Reset page when search term or limit changes
+
+  /* -------------------------------------------------------------------------- */
+  /* SEARCH DEBOUNCE LOGIC                                                      */
+  /* -------------------------------------------------------------------------- */
   useEffect(() => {
-    setCurrentPage(1);
-  }, [search, limit]);
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [search]);
 
   /* -------------------------------------------------------------------------- */
   /* DYNAMIC FETCH LOGIC                                                        */
   /* -------------------------------------------------------------------------- */
-  const fetchPatientList = async (page: number) => {
-    try {
-      setLocalLoading(true);
-      const params = new URLSearchParams();
-      if (search.length >= 3) {
-        params.append("q", search);
-      }
-      params.append("limit", limit.toString());
-      params.append("page", page.toString());
+ const fetchPatientList = async (page: number, searchValue: string) => {
+  try {
+    setLocalLoading(true);
+    const params = new URLSearchParams();
 
-      const res = await authFetch(`/api/patient?${params.toString()}`, {
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch Patients: ${res.status}`);
-      }
-      const result = await res.json();
-
-      // Based on your provided JSON structure (result.data and result.meta)
-      if (result.data) {
-        setLocalPatients(result.data);
-
-        // Robust total pages calculation based on your "meta" object
-        const meta = result.meta || {};
-        const totalCount = meta.total || 0;
-        const apiTotalPages = meta.totalPages;
-
-        if (apiTotalPages) {
-          setTotalPages(apiTotalPages);
-        } else if (totalCount > 0) {
-          setTotalPages(Math.ceil(totalCount / limit));
-        } else {
-          setTotalPages(
-            result.data.length === limit ? currentPage + 1 : currentPage
-          );
-        }
-      }
-    } catch (err) {
-      console.error("Failed to refresh patient list", err);
-    } finally {
-      setLocalLoading(false);
+    // Only search when 4+ chars
+    if (searchValue && searchValue.length >= 4) {
+      params.append("q", searchValue);
     }
+
+    params.append("limit", limit.toString());
+    params.append("page", page.toString());
+
+    const res = await authFetch(`/api/patient?${params.toString()}`, {
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch Patients: ${res.status}`);
+    }
+    const result = await res.json();
+
+    if (result.data) {
+      setLocalPatients(result.data);
+
+      const meta = result.meta || {};
+      const totalCount = meta.total || 0;
+      const apiTotalPages = meta.totalPages;
+
+      if (apiTotalPages) {
+        setTotalPages(apiTotalPages);
+      } else if (totalCount > 0) {
+        setTotalPages(Math.ceil(totalCount / limit));
+      } else {
+        setTotalPages(
+          result.data.length === limit ? page + 1 : page
+        );
+      }
+    }
+  } catch (err) {
+    console.error("Failed to refresh patient list", err);
+  } finally {
+    setLocalLoading(false);
+  }
+};
+
+useEffect(() => {
+  const runFetch = async () => {
+    // Case 1: empty search → normal listing
+    if (!debouncedSearch) {
+      await fetchPatientList(currentPage, "");
+      return;
+    }
+
+    // Case 2: search length less than 4 → do nothing
+    if (debouncedSearch.length < 4) {
+      setLocalPatients([]);
+      return;
+    }
+
+    // Case 3: valid search
+    // Always force page = 1 for search
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return; // wait for next render
+    }
+
+    await fetchPatientList(1, debouncedSearch);
   };
 
-  useEffect(() => {
-    fetchPatientList(currentPage);
-  }, [currentPage, search, limit]);
+  runFetch();
+}, [debouncedSearch, currentPage, limit]);
 
   useEffect(() => {
     if (!selectedPatient) return;
@@ -157,12 +201,22 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
             info: a.appointment_date + " at " + a.start_time,
             doctorName: a.doctor?.name || "Unknown",
             category: "upcoming",
+            appointmentType: a.appointment_type?.name|| "Unknown",
+          })),
+            ...(data.ongoing ?? []).map((a: any) => ({
+            id: a.id,
+            date: a.appointment_date,
+            time: a.start_time,
+            doctorName: a.doctor?.name || "Unknown",
+            appointmentType: a.appointment_type?.name|| "Unknown",
+            category: "ongoing",
           })),
           ...(data.completed ?? []).map((a: any) => ({
             id: a.id,
             date: a.appointment_date,
             time: a.start_time,
             doctorName: a.doctor?.name || "Unknown",
+            appointmentType: a.appointment_type?.name|| "Unknown",
             category: "previous",
           })),
         ];
@@ -200,7 +254,7 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
       if (data.success) {
         toast.success(data.message || "Patient removed successfully ✨");
         setPatientToDelete(null);
-        await fetchPatientList(currentPage);
+        await fetchPatientList(currentPage, debouncedSearch);
       } else {
         throw new Error(data.message || "Failed to delete patient");
       }
@@ -211,6 +265,23 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
       setIsDeleting(false);
     }
   };
+
+  function calculateAge(dob: string): number {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  }
+
 
   if (selectedPatient) {
     return (
@@ -282,13 +353,31 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
                       <button
                         type="button"
                         className="text-blue-600 font-semibold text-left hover:underline"
-                        onClick={() => onSelectPatient(p)}
+                        onClick={() =>
+                          onSelectPatient({
+                            id: p.id,
+                            patientId: p.id, // use id as display id (or map real one if exists)
+                            full_name: p.full_name || "",
+                            age: p.dob ? calculateAge(p.dob) : 0,
+                            dob: p.dob || "",
+                            gender: p.gender || "",
+                            email: p.email || "",
+                            contact_number: p.contact_number || "",
+                            addressLine1: p.address || "",
+                            allergies: Array.isArray(p.allergies) ? p.allergies : [],
+                            city: p.city || "",
+                            state: p.state || "",
+                            country: p.country || "",
+                            government_id: p.government_id ?? null,
+                          })
+                        }
                       >
-                        {/* Mapping full_name from API response */}
                         {p.full_name || p.name}
                       </button>
                       <span className="text-xs text-slate-500">{p.email}</span>
-                      <span className="text-xs text-slate-500">{p.contact_number || p.phone}</span>
+                      <span className="text-xs text-slate-500">
+                        {p.contact_number || p.phone}
+                      </span>
                     </div>
                     <Button
                       variant="danger"
@@ -312,120 +401,8 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
               )}
             </div>
           )}
-
-          {/* ---------------- PAGINATION CONTROLS ---------------- */}
-          {(localPatients.length > 0 || currentPage > 1) && (
-            <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-auto">
-              <div className="text-xs text-slate-500 font-medium">
-                Page{" "}
-                <span className="font-bold text-slate-900">{currentPage}</span>
-                {totalPages > 1 && (
-                  <>
-                    {" "}
-                    of{" "}
-                    <span className="font-bold text-slate-900">
-                      {totalPages}
-                    </span>
-                  </>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1 h-8"
-                  disabled={currentPage === 1 || localLoading}
-                  onClick={() => setCurrentPage((prev) => prev - 1)}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Prev
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1 h-8"
-                  disabled={
-                    (totalPages > 1 && currentPage === totalPages) ||
-                    (totalPages === 1 && localPatients.length < limit) ||
-                    localLoading
-                  }
-                  onClick={() => setCurrentPage((prev) => prev + 1)}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
         </CardBody>
       </Card>
-
-      {/* ---------------- DELETION MODAL ---------------- */}
-      {patientToDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
-            onClick={() => !isDeleting && setPatientToDelete(null)}
-          />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center gap-3 mb-4 text-red-600">
-              <div className="p-2 bg-red-100 rounded-full">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                  <path d="M12 9v4" />
-                  <path d="M12 17h.01" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold">Confirm Deletion</h3>
-            </div>
-
-            <p className="text-sm text-slate-600 leading-relaxed mb-6">
-              Are you sure you want to permanently delete the record for{" "}
-              <span className="font-bold text-slate-900">
-                {patientToDelete.full_name || patientToDelete.full_name}
-              </span>
-              ? This will remove all associated appointment history and cannot
-              be undone.
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                className="flex-1 px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
-                onClick={() => setPatientToDelete(null)}
-                disabled={isDeleting}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                onClick={handlePermanentDelete}
-                disabled={isDeleting}
-              >
-                {isDeleting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  "Confirm Delete"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

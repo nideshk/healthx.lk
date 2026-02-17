@@ -35,11 +35,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     if (!appointment) return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
 
     // Authorization: patient, assigned practitioner, or admin/support
-    debugger;
     const isPatient = user?.patient_id === appointment.patient_id;
     const isPractitioner = user?.practitioner_id === appointment.practitioner_id;
-    const isAdmin = role === "admin";
-
+    const isAdmin = role === "admin" || role === "superadmin";
     if (!isPatient && !isPractitioner && !isAdmin) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
@@ -67,7 +65,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     let attachments: any[] = [];
 
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("attachments")
       .select(
         `
@@ -77,7 +75,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       .eq("appointment_id", appointmentId)
       .eq("practitioner_id", user?.practitioner_id);
     attachments = data ?? [];
-
 
     const signedAttachments = await Promise.all(
       attachments.map(async (atc) => ({
@@ -131,8 +128,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   }
 
 
-
   const { authorized, user, role } = await requireUser(request);
+  const cnx = getAuditContext(request, user);
+
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: PostBody;
@@ -210,6 +208,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         .select()
         .single();
       if (updErr) throw updErr;
+
+      await auditLog({
+        ...cnx,
+        action: "UPDATED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
+
       return NextResponse.json({ encounter: updated }, { status: 200 });
     }
   } catch (err: any) {

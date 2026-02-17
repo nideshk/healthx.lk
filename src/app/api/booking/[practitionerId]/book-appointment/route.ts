@@ -1,11 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { auditLog } from "@/lib/audit/auditLog";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
-import crypto from "crypto";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { computeDiscount } from "@/lib/coupons/computeDiscount";
-
-export const runtime = "nodejs";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { supabaseClient } from "@/lib/supabaseClient";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
   req: NextRequest,
@@ -13,8 +12,17 @@ export async function POST(
 ) {
   try {
     const { practitionerId } = await context.params;
-    const { appointment_type_id, attendeeList = [], coupon_code, starts_at, ends_at, pre_consultation, consent } =
-      await req.json();
+
+    const {
+      appointment_type_id,
+      attendeeList = [], // now array of objects
+      coupon_code,
+      starts_at,
+      ends_at,
+      pre_consultation,
+      consent,
+    } = await req.json();
+
     // ---------------------------
     // 1️⃣ Auth
     // ---------------------------
@@ -23,8 +31,23 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const cnx = getAuditContext(req, user);
+
+
+
     const patient_id = user?.patient_id;
     if (!patient_id) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Patient profile missing" },
         { status: 400 }
@@ -32,6 +55,17 @@ export async function POST(
     }
 
     if (!starts_at || !ends_at || !appointment_type_id || !practitionerId) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Missing booking parameters" },
         { status: 400 }
@@ -39,13 +73,22 @@ export async function POST(
     }
 
     // ---------------------------
-    // 3️⃣ Fetch Appointment Type (SOURCE OF TRUTH)
+    // 2️⃣ Normalize attendees
+    // ---------------------------
+    const normalizedAttendees = (attendeeList || []).map((a: any) => ({
+      email: a.email,
+      relationship: a.relationship || "other",
+    }));
+
+    const attendeeCount = normalizedAttendees.length;
+
+    // ---------------------------
+    // 3️⃣ Fetch Appointment Type
     // ---------------------------
     const { data: appointmentType, error: typeErr } =
       await supabaseClient
         .from("appointment_type")
-        .select(
-          `
+        .select(`
           id,
           name,
           base_fee,
@@ -53,19 +96,30 @@ export async function POST(
           duration_mins,
           max_attendee,
           extra_fee_per_attendee
-        `
-        )
+        `)
         .eq("id", appointment_type_id)
         .eq("is_active", true)
         .is("deleted_at", null)
         .single();
 
     if (typeErr || !appointmentType) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Invalid appointment type" },
         { status: 400 }
       );
     }
+
     // ---------------------------
     // 4️⃣ Slot conflict check
     // ---------------------------
@@ -78,32 +132,63 @@ export async function POST(
       .maybeSingle();
 
     if (existing) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "error": "Time slot already booked",
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Time slot already booked" },
         { status: 409 }
       );
     }
 
-    const { data: practitioner } = await supabaseAdmin.from("practitioners").select("*").eq("id", practitionerId).single();
+    const { data: practitioner } = await supabaseAdmin
+      .from("practitioners")
+      .select("*")
+      .eq("id", practitionerId)
+      .single();
 
     if (!practitioner) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "error": "Invalid practitioner",
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Invalid practitioner" },
         { status: 400 }
       );
     }
 
-    const consultation_fee_by_practitioner = practitioner.fees[appointmentType.id];
+    const consultation_fee_by_practitioner =
+      practitioner.fees[appointmentType.id];
 
-    const consultation_fee = consultation_fee_by_practitioner.fee || appointmentType.base_fee + appointmentType.platform_fee;
+    const consultation_fee =
+      consultation_fee_by_practitioner.fee ||
+      appointmentType.base_fee + appointmentType.platform_fee;
+
     const platform_fee = appointmentType.platform_fee;
 
     // ---------------------------
-    // 6️⃣ Create Appointment
+    // 5️⃣ Discount
     // ---------------------------
     let discount_total = 0;
-    let platform_discount = 0;
-    let practitioner_discount = 0;
+
     if (coupon_code) {
       const { data: coupon } = await supabaseAdmin
         .from("discount_coupons")
@@ -123,18 +208,30 @@ export async function POST(
         coupon,
         pricing: {
           consultation_fee,
-          platform_fee
-        }
+          platform_fee,
+        },
       });
 
       discount_total = discount.discount_total;
-      platform_discount = discount.platform_discount;
-      practitioner_discount = discount.practitioner_discount;
     }
 
-    const fees_charged = (consultation_fee_by_practitioner.fee || appointmentType.base_fee) + (appointmentType.platform_fee) + (100 * attendeeList.length) - (discount_total || 0);
+    // ---------------------------
+    // 6️⃣ Pricing
+    // ---------------------------
+    const attendeeServiceFee = 100 * attendeeCount;
+
+    const fees_charged =
+      (consultation_fee_by_practitioner.fee ||
+        appointmentType.base_fee) +
+      appointmentType.platform_fee +
+      attendeeServiceFee -
+      (discount_total || 0);
+
     const tax_amount = fees_charged * 0.08;
 
+    // ---------------------------
+    // 7️⃣ Create Appointment
+    // ---------------------------
     const { data: appointment, error: insertError } =
       await supabaseClient
         .from("appointments")
@@ -147,20 +244,34 @@ export async function POST(
           status: "pending",
           source: "web",
           room_key: crypto.randomUUID(),
-          additional_attendees: attendeeList,
-          // 💰 PRICING SNAPSHOT
+
+          // 🔑 JSONB attendees
+          additional_attendees: normalizedAttendees,
+
+          // pricing
           fee_charged: fees_charged,
           consultation_fee: consultation_fee,
-          service_fee: 100 * attendeeList.length,
+          service_fee: attendeeServiceFee,
           tax_amount: tax_amount,
           platform_fee: platform_fee,
-
           currency: "LKR",
         })
         .select()
         .single();
 
     if (insertError || !appointment) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "error": "Failed to create appointment",
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
       return NextResponse.json(
         { error: "Failed to create appointment" },
         { status: 500 }
@@ -168,58 +279,46 @@ export async function POST(
     }
 
     // ---------------------------
-    // 7️⃣ Insert Consent
+    // Consent
     // ---------------------------
     if (consent) {
-      const { data: consentData, error: consentError } =
-        await supabaseClient
-          .from("consents")
-          .insert({
-            appointment_id: appointment.id,
-            telehealth: consent.telehealth ?? false,
-            terms: consent.terms ?? false,
-            accepted_at: new Date(),
-            version: "v1",
-          })
-          .select()
-          .single();
-
-      if (consentError || !consentData) {
-        return NextResponse.json(
-          { error: "Failed to create consent" },
-          { status: 500 }
-        );
-      }
+      await supabaseClient.from("consents").insert({
+        appointment_id: appointment.id,
+        telehealth: consent.telehealth ?? false,
+        terms: consent.terms ?? false,
+        accepted_at: new Date(),
+        version: "v1",
+      });
     }
 
     // ---------------------------
-    // 8️⃣ Insert Pre-consultation
+    // Pre-consultation
     // ---------------------------
     if (pre_consultation) {
-      const { data: preConsultationData, error: preConsultationError } =
-        await supabaseClient
-          .from("preconsult_responses")
-          .insert({
-            appointment_id: appointment.id,
-            raw_payload: pre_consultation,
-            patient_id: patient_id,
-          })
-          .select()
-          .single();
-
-      if (preConsultationError || !preConsultationData) {
-        return NextResponse.json(
-          { error: "Failed to create pre consultation" },
-          { status: 500 }
-        );
-      }
+      await supabaseClient.from("preconsult_responses").insert({
+        appointment_id: appointment.id,
+        raw_payload: pre_consultation,
+        patient_id: patient_id,
+      });
     }
 
+    await supabaseAdmin
+      .from("appointment_draft")
+      .delete()
+      .eq("patient_id", patient_id);
 
-    await supabaseAdmin.from("appointment_draft").delete().eq("patient_id", patient_id)
-    // ---------------------------
-    // 7️⃣ Return payment payload
-    // ---------------------------
+    await auditLog({
+      ...cnx,
+      action: "CREATED",
+      source: "dashboard",
+      entityType: "USER",
+      entityId: user.auth_user_id,
+      metadata: {
+        "user_id": user.auth_user_id,
+      },
+      purpose: "operations",
+    })
+
     return NextResponse.json({
       success: true,
       appointment,
@@ -227,7 +326,7 @@ export async function POST(
         appointment_id: appointment.id,
         amount: fees_charged,
         consultation_fee: consultation_fee,
-        platform_fee: platform_fee, // informational
+        platform_fee: platform_fee,
         currency: "LKR",
       },
     });

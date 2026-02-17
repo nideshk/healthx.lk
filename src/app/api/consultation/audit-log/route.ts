@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { verifyTelehealthToken } from "@/lib/telehealthToken";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,6 +24,8 @@ export async function POST(req: NextRequest) {
     // ---------------------------------------------------------
     const { authorized, user } = await requireUser(req);
 
+    const cnx = getAuditContext(req, user);
+
     if (authorized && user?.auth_user_id) {
       actorUserId = user.auth_user_id;
       actorRole = user.role; // patient / practitioner / admin
@@ -31,6 +35,7 @@ export async function POST(req: NextRequest) {
     // 2️⃣ IF NOT LOGGED IN → USE GUEST TOKEN
     // ---------------------------------------------------------
     if (!actorUserId) {
+
       if (!token) {
         return NextResponse.json(
           { error: "User not authenticated and no guest token provided" },
@@ -71,6 +76,18 @@ export async function POST(req: NextRequest) {
       event_type: eventType,
       metadata: { ...metadata, role: actorRole },
     });
+
+    await auditLog({
+      ...cnx,
+      action: "CREATED",
+      source: "dashboard",
+      entityType: "USER",
+      entityId: user?.auth_user_id,
+      metadata: {
+        "user_id": user?.auth_user_id,
+      },
+      purpose: "operations",
+    })
 
     return NextResponse.json({ success: true });
   } catch (err) {

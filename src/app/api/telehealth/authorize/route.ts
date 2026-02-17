@@ -60,15 +60,14 @@ const APPOINTMENT_SELECT = `
   ends_at,
   status,
   patient_id,
-  practitioner_id
+  practitioner_id,
+  additional_attendees
 `;
 
 /* ------------------------------------------------
    API HANDLER
 ------------------------------------------------ */
 export async function POST(req: Request) {
-  console.log("reaching here check here", req)
-
   try {
     const body = await req.json();
     const { token, roomKey } = body as {
@@ -85,7 +84,6 @@ export async function POST(req: Request) {
       try {
         decoded = jwt.verify(token, JWT_SECRET) as InviteTokenPayload;
       } catch {
-        console.log("invalid")
         return NextResponse.json(
           { authorized: false, error: "Invalid or expired invite link" },
           { status: 401 }
@@ -129,6 +127,20 @@ export async function POST(req: Request) {
         );
       }
 
+      // 🔐 Validate attendee email inside JSONB
+      const attendees = appt.additional_attendees || [];
+
+      const isAllowed = attendees.some(
+        (a: any) => a.email === decoded.email
+      );
+
+      if (!isAllowed) {
+        return NextResponse.json(
+          { authorized: false, error: "Invite not valid for this email" },
+          { status: 403 }
+        );
+      }
+
       // 🔐 Issue short-lived media token
       const mediaToken = jwt.sign(
         {
@@ -163,7 +175,6 @@ export async function POST(req: Request) {
 
     const { user, authorized } = await requireUser(req);
     if (!authorized) {
-      console.log("user", user, authorized)
       return NextResponse.json(
         { authorized: false, error: "Unauthorized" },
         { status: 401 }
@@ -194,8 +205,6 @@ export async function POST(req: Request) {
     // ⏱ Time window enforcement
     const timing = isWithinJoinWindow(appt.starts_at, appt.ends_at);
     if (!timing.allowed) {
-      console.log("Timing is not allowed")
-
       return NextResponse.json(
         { authorized: false, error: timing.reason },
         { status: 403 }
@@ -212,7 +221,6 @@ export async function POST(req: Request) {
     }
 
     if (!role) {
-      console.log("role denied")
       return NextResponse.json(
         { authorized: false, error: "Not allowed" },
         { status: 403 }

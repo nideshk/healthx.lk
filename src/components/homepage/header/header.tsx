@@ -58,6 +58,19 @@ export default function Header() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
 
+
+  const checkUserStatus = async (session: any) => {
+    const { data } = await supabaseBrowser.from("profiles").select("*").eq("id", session.user.id).single();
+    if (!data.is_active) {
+      supabaseBrowser.auth.signOut();
+      router.push("/");
+      toast.error("Your account has been deactivated");
+    }
+    else {
+      router.push(redirectTo || "/dashboard")
+    }
+  }
+
   // --- Navigation Arrays ---
 
   // Visible on both Desktop Header and Mobile Sidebar
@@ -97,8 +110,8 @@ export default function Header() {
   async function finalizeLogin(session: any) {
     setMfa(null);
     setOtp("");
+    checkUserStatus(session)
     closeLoginModal();
-    router.push(redirectTo || "/dashboard");
   }
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -215,9 +228,6 @@ export default function Header() {
               ) : (
                 <div className="flex items-center gap-4">
                   {/* Notification Bell (Simplified for full code) */}
-                  <button className="p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl transition-all relative">
-                    <Bell size={22} />
-                  </button>
 
                   {/* USER DROPDOWN */}
                   <div className="relative" ref={userMenuRef}>

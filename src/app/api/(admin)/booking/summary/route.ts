@@ -7,10 +7,36 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 export async function GET(request: NextRequest) {
   try {
     const { authorized, user, } = await requireUser(request);
-    if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const cnx = getAuditContext(request, user);
+
+    if (!authorized) 
+      {
+        await auditLog({
+          ...cnx,
+          action: "FAILED",
+          entityType: "APPOINTMENT",
+          purpose: "operations",
+          source: "dashboard",
+          metadata: {
+            reason: "Unauthorized access attempt - appointment summary",
+          },
+        });
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
 
     /** RBAC: admin + superadmin */
     if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Forbidden - insufficient admin role",
+          role: user?.role ?? null,
+        },
+      });
       return NextResponse.json(
         { success: false, message: "Forbidden" },
         { status: 403 }
@@ -22,6 +48,16 @@ export async function GET(request: NextRequest) {
     const to = searchParams.get("to");
 
     if (!from || !to) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Missing date range parameters"
+        },
+      });
       return NextResponse.json(
         {
           success: false,
@@ -37,8 +73,19 @@ export async function GET(request: NextRequest) {
       .gte("starts_at", `${from}T00:00:00`)
       .lte("starts_at", `${to}T23:59:59`);
 
-    if (error) throw error;
-
+    if (error) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Database fetch failed - appointment summary",
+        },
+      });
+      throw error;
+    }
     let upcoming = 0;
     let completed = 0;
     let cancelled = 0;
@@ -57,7 +104,6 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const cnx = getAuditContext(request, user);
     await auditLog({
       ...cnx,
       action: "VIEWED",
@@ -86,6 +132,17 @@ export async function GET(request: NextRequest) {
     });
   } catch (err: any) {
     console.error("GET /reports/appointments/summary error:", err);
+    const cnx = getAuditContext(request);
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "APPOINTMENT",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: err?.message ?? "Unexpected server error",
+      },
+    });
     return NextResponse.json(
       { success: false, message: err?.message ?? "Server error" },
       { status: 500 }

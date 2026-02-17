@@ -12,10 +12,23 @@ const TIMEZONE = "Asia/Colombo";
 export async function GET(req: NextRequest) {
   try {
     const { authorized, role, user } = await requireUser(req);
+    const cnx = getAuditContext(req, user);
 
     if (!authorized || role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "APPOINTMENT",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "unauthorized_dashboard_summary_access",
+        role,
+      },
+    });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
     // -----------------------------------
     // 📅 1. Today range (local → UTC)
@@ -45,7 +58,20 @@ export async function GET(req: NextRequest) {
       .gte("starts_at", from)
       .lte("ends_at", to);
 
-    if (error) throw error;
+    if (error) 
+      {
+        await auditLog({
+          ...cnx,
+          action: "FAILED",
+          entityType: "APPOINTMENT",
+          purpose: "operations",
+          source: "dashboard",
+          metadata: {
+            reason: "failed_to_fetch_today_appointments",
+          },
+        });
+        throw error;
+      }
 
     // -----------------------------------
     // ✅ 3. Upcoming & completed counts
@@ -83,9 +109,6 @@ export async function GET(req: NextRequest) {
     // -----------------------------------
     // ✅ Response
     // -----------------------------------
-
-
-    const cnx = getAuditContext(req, user);
 
     await auditLog({
       ...cnx,

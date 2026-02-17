@@ -1,10 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/atom/Button/Button";
 import { useModalStore } from "@/store/useModalStore";
-import { ShieldCheck, Clock, BadgeCheck } from "lucide-react";
+import { ShieldCheck, Clock, BadgeCheck, X, AlertTriangle } from "lucide-react";
 import ServiceDoctorFlow from "@/components/homepage/home/ServiceDoctorFlow";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
@@ -21,7 +21,6 @@ const HeroSection = () => {
   return (
     <section className="pt-24 pb-20 bg-gradient-to-b from-white to-cyan-50">
       <div className="max-w-7xl mx-auto px-6 text-center">
-
         <h1
           className="text-4xl md:text-5xl font-bold text-gray-900"
           suppressHydrationWarning
@@ -116,23 +115,144 @@ const Feature = ({ title, text }: { title: string; text: string }) => (
   </div>
 );
 
+/* ================= DISCLAIMER MODAL ================= */
+const DisclaimerModal = () => {
+  const t = useTranslations("footer");
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const disclaimerDismissed = localStorage.getItem(
+      "disclaimerModalDismissed",
+    );
+
+    if (disclaimerDismissed !== "true") {
+      const timer = setTimeout(() => {
+        setIsOpen(true);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    localStorage.setItem("disclaimerModalDismissed", "true");
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-amber-50 flex items-center justify-center p-4 
+                    bg-white/10 backdrop-blur-md">
+      <div className="bg-white/90 bg-amber-50 backdrop-blur-lg 
+                      rounded-2xl shadow-2xl 
+                      max-w-2xl w-full max-h-[90vh] overflow-y-auto
+                      border border-white/40">
+
+        <div className="sticky top-0 bg-amber-50 backdrop-blur-md
+                        border-b border-gray-200 
+                        p-6 flex items-start justify-between
+                        rounded-t-2xl">
+          <div className="flex items-start gap-3">
+            <div className="bg-amber-100 p-2 rounded-xl">
+              <AlertTriangle
+                className="text-amber-600 bg-amber-50 flex-shrink-0"
+                size={22}
+              />
+            </div>
+            <h2 className="text-xl font-semibold bg-amber-50 text-gray-900">
+              {t("disclaimerTitle")}
+            </h2>
+          </div>
+
+          <button
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-700 
+                       hover:bg-gray-100 rounded-lg p-2 transition"
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 bg-amber-50">
+          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">
+            {t("disclaimerText")}
+          </p>
+        </div>
+
+        <div className="border-t border-gray-200 p-6 
+                        bg-amber-50 backdrop-blur-md
+                        flex justify-end rounded-b-2xl">
+          <Button
+            onClick={handleClose}
+            className="bg-cyan-600 hover:bg-cyan-700 
+                       text-white px-6 py-2.5 
+                       rounded-xl font-medium
+                       shadow-md hover:shadow-lg
+                       transition-all"
+          >
+            I Understand
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ================= DISCLAIMER SECTION ================= */
+
+const DisclaimerSection = () => {
+  const t = useTranslations("footer");
+
+  return (
+    <section className="py-12 bg-amber-50 border-l-4 border-amber-600">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="flex items-start gap-4">
+          <AlertTriangle
+            className="text-amber-600 flex-shrink-0 mt-1"
+            size={28}
+          />
+          <div>
+            <h3 className="text-lg font-bold text-amber-900 mb-2">
+              {t("disclaimerTitle")}
+            </h3>
+            <p className="text-sm text-amber-800 leading-relaxed whitespace-pre-wrap">
+              {t("disclaimerText")}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 /* ================= PAGE ================= */
 
 const Body = () => {
+  const t = useTranslations("homepage");
+
   return (
     <main>
-      {/* HERO */}
+      <DisclaimerModal />
       <HeroSection />
+      <DisclaimerSection />
+
+      {/* NEW HEALTHCARE TITLE SECTION */}
+      <section className="py-8 bg-white">
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+            {t("healthcareTitle")}
+          </h2>
+        </div>
+      </section>
 
       {/* PRIMARY BOOKING FLOW */}
       <section id="book">
         <ServiceDoctorFlow />
       </section>
 
-      {/* TRUST / FEATURES */}
       <FeaturesSection />
-
-      {/* PRACTITIONER CTA */}
       <PractitionerSection />
     </main>
   );
@@ -146,7 +266,6 @@ const PractitionerSection = () => {
 
   return (
     <section className="py-24 bg-cyan-900 text-white relative overflow-hidden">
-      {/* Subtle Background Decorative Circles */}
       <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-cyan-800 rounded-full blur-3xl opacity-50" />
       <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-96 h-96 bg-cyan-950 rounded-full blur-3xl opacity-50" />
 
@@ -161,7 +280,6 @@ const PractitionerSection = () => {
             </p>
           </div>
 
-          {/* Benefits Grid - Better for text-only layouts */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-6">
             {[1, 2, 3].map((key) => (
               <div

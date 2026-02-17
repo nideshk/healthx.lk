@@ -1,10 +1,8 @@
 // /api/auth/logout/route.ts
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function POST() {
-  const cookieStore = cookies();
   const supabase = supabaseAdmin;
   const { error } = await supabase.auth.signOut();
 

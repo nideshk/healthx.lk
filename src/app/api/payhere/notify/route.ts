@@ -129,17 +129,20 @@ export async function POST(request: NextRequest) {
                 },
             });
 
-            if (Array.isArray(appointment?.additional_attendees) && appointment.additional_attendees?.length > 0) {
+            if (
+                Array.isArray(appointment?.additional_attendees) &&
+                appointment.additional_attendees.length > 0
+            ) {
                 try {
                     await sendAppointmentInvites({
                         appointmentId: appointment.id,
-                        practitionerId: appointment?.practitioner_id,
-                        attendees: appointment?.additional_attendees,
-                        meetingStartISO: appointment?.starts_at,
-                        room_key: appointment.room_key
+                        practitionerId: appointment.practitioner_id,
+                        attendees: appointment.additional_attendees, // now objects
+                        meetingStartISO: appointment.starts_at,
+                        room_key: appointment.room_key,
                     });
                 } catch (attendeeInviteError) {
-                    console.log("Attendee invites failed : ", attendeeInviteError);
+                    console.log("Attendee invites failed:", attendeeInviteError);
                 }
             }
 

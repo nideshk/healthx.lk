@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function GET(
   req: NextRequest,
@@ -159,6 +161,29 @@ export async function GET(
     // ---------------------------
     // 6️⃣ Admin / Self View
     // ---------------------------
+    const cnx = getAuditContext(req, user);
+    await auditLog({
+      ...cnx,
+      action: "VIEWED",
+      source: "dashboard",
+      entityType: "PRACTITIONER",
+      entityId: id,
+      metadata: {
+        "practitioner_id": id,
+        "practitioner_name": practitioner.full_name,
+        "practitioner_specialization": practitioner.specialization,
+        "practitioner_experience": practitioner.experience_years,
+        "practitioner_qualification": practitioner.qualification,
+        "practitioner_languages": practitioner.languages,
+        "practitioner_contact_number": practitioner.contact_number,
+        "practitioner_contact_email": practitioner.contact_email,
+        "practitioner_profile_image": practitioner.profile_picture_url,
+        "practitioner_available_services": practitioner.available_services,
+        "practitioner_appointment_types": appointmentTypes,
+        "practitioner_available_days": available
+      },
+      purpose: "operations",
+    })
     return NextResponse.json({
       success: true,
       practitioner: {
@@ -268,6 +293,17 @@ export async function DELETE(
 
       if (profileError) throw profileError;
     }
+    const { user } = await requireUser(request);
+    const cnx = getAuditContext(request, user);
+    await auditLog({
+      ...cnx,
+      action: "DELETED",
+      source: "dashboard",
+      entityType: "PRACTITIONER",
+      entityId: practitionerId,
+      metadata: practitioner,
+      purpose: "operations",
+    })
 
     return NextResponse.json({
       success: true,

@@ -20,8 +20,21 @@ export async function POST(
    * 1️⃣ Authentication & Authorization
    * -------------------------------------------------- */
   const { authorized, role, user } = await requireUser(req);
+  const cnx = getAuditContext(req, user);
 
   if (!authorized || !["admin", "superadmin"].includes(role)) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "unauthorized_or_insufficient_role_application_action",
+        role,
+      },
+    });
+
     return NextResponse.json(
       {
         success: false,
@@ -37,6 +50,16 @@ export async function POST(
   const { id: applicationId } = await context.params;
 
   if (!applicationId) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "missing_application_id",
+      },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -59,6 +82,18 @@ export async function POST(
   const action: ActionType = body?.action;
 
   if (!action || !["approve", "reject"].includes(action)) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      entityId: applicationId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "invalid_action",
+        provided_action: action,
+      },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -107,6 +142,17 @@ export async function POST(
       .eq("id", app.id);
 
     if (rejectErr) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        entityId: app.id,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "reject_update_failed",
+        },
+      });
       return NextResponse.json(
         {
           success: false,
@@ -115,6 +161,18 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    await auditLog({
+      ...cnx,
+      action: "DENIED",
+      entityType: "ADMIN_USER",
+      entityId: app.id,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason_provided: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
@@ -127,15 +185,26 @@ export async function POST(
    * ================================================== */
 
   // Only editable field
-  const finalLicenseNumber =
-    typeof body?.license_number === "string"
-      ? body.license_number
-      : app.license_number;
+  // const finalLicenseNumber =
+  //   typeof body?.license_number === "string"
+  //     ? body.license_number
+  //     : app.license_number;
 
   // Decrypt password from application
   const password = decrypt(app.encrypted_password);
 
   if (!password) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      entityId: app.id,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "password_decryption_failed",
+      },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -145,35 +214,67 @@ export async function POST(
     );
   }
 
-  const applicationDocuments = Array.isArray(app.documents)
-    ? app.documents
-    : [];
+  /* --------------------------------------------------
+    Merge Application Data with Admin Overrides
+  -------------------------------------------------- */
+
+  const practitionerPayload = {
+    practitioner_id: app.id,
+
+    email: body?.email ?? app.email,
+    password,
+
+    first_name: body?.first_name ?? app.first_name,
+    last_name: body?.last_name ?? app.last_name,
+
+    qualification: body?.qualification ?? app.qualification,
+    specialization: body?.specialization ?? app.specialization,
+
+    license_number: body?.license_number ?? app.license_number,
+    experience_years: body?.experience_years ?? app.experience_years,
+
+    contact_email: body?.contact_email ?? app.contact_email,
+    contact_number: body?.contact_number ?? app.contact_number,
+
+    profile_bio: body?.profile_bio ?? app.profile_bio,
+    available_services: body?.available_services ?? app.available_services,
+    fees: body?.fees ?? app.fees,
+
+    bank_details: body?.bank_details ?? app.bank_details,
+
+    documents: Array.isArray(body?.documents)
+      ? body.documents
+      : Array.isArray(app.documents)
+      ? app.documents
+      : [],
+
+    languages: Array.isArray(body?.languages)
+      ? body.languages
+      : Array.isArray(app.languages)
+      ? app.languages
+      : [],
+  };
+
 
   /* --------------------------------------------------
    * 1️⃣ Create practitioner
    * -------------------------------------------------- */
-  const result = await createPractitioner({
-    practitioner_id: app.id,
-    email: app.email,
-    password,
-    first_name: app.first_name,
-    last_name: app.last_name,
-    qualification: app.qualification,
-    specialization: app.specialization,
-    license_number: finalLicenseNumber,
-    experience_years: app.experience_years,
-    contact_email: app.contact_email,
-    contact_number: app.contact_number,
-    profile_bio: app.profile_bio,
-    available_services: app.available_services,
-    fees: app.fees,
-    // availability: app.availability,
-    bank_details: app.bank_details,
-    documents: Array.isArray(app.documents) ? app.documents : [],
-    languages: Array.isArray(app.languages) ? app.languages : [],
-  });
+  const result = await createPractitioner(practitionerPayload);
 
   if (!result.success) {
+     await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        entityId: applicationId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "create_practitioner_failed",
+          message: result.message,
+        },
+      });
+
     return NextResponse.json(
       {
         success: false,
@@ -232,7 +333,6 @@ export async function POST(
     );
   }
 
-  const cnx = getAuditContext(req, user);
   await auditLog({
     ...cnx,
     action: "APPROVED",

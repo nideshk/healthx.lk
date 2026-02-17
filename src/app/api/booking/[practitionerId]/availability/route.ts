@@ -2,16 +2,6 @@ import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { DateTime } from "luxon";
 
-// ------------------------
-// TIME HELPERS
-// ------------------------
-const BLOCKING_STATUSES = [
-  "pending",
-  "scheduled",
-  "confirmed",
-  "payment_initiated",
-  "awaiting_payment",
-];
 
 function toMinutes(t: string) {
   const [h, m] = t.split(":").map(Number);

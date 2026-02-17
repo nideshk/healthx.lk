@@ -1,6 +1,10 @@
-// lib/appointmentInvites.ts
 import { notify } from "@/lib/notify";
 import { generateAppointmentInviteToken } from "./GenerateAppointmentInvitationToken";
+
+type Attendee = {
+  email: string;
+  relationship: string;
+};
 
 export async function sendAppointmentInvites({
   appointmentId,
@@ -11,23 +15,22 @@ export async function sendAppointmentInvites({
 }: {
   appointmentId: string;
   practitionerId: string;
-  attendees: string[];
+  attendees: Attendee[];
   meetingStartISO: string;
   room_key: string;
 }) {
-  for (const email of attendees) {
+  for (const attendee of attendees) {
     const token = generateAppointmentInviteToken({
       appointmentId,
-      email,
+      email: attendee.email,
       meetingStartISO,
-      room_key
+      room_key,
     });
 
     const inviteLink = `https://www.clinecxa.com/meeting?token=${token}`;
 
     await notify({
-
-      userId: "20d75bab-f17c-4173-a06f-01b4515711c7", // Using email as userId for guest invites
+      userId: attendee.email, // guest identifier
       role: "guest",
       eventType: "appointment_invite",
       channels: ["email"],
@@ -38,13 +41,14 @@ export async function sendAppointmentInvites({
       ).toLocaleString()}`,
 
       payload: {
-        email,
+        email: attendee.email,
         subject: "Consultation Invite",
         actionUrl: inviteLink,
         actionText: "Join Consultation",
         appointment_id: appointmentId,
         practitioner_id: practitionerId,
         starts_at: meetingStartISO,
+        relationship: attendee.relationship,
       },
     });
   }

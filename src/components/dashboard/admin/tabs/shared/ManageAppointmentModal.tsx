@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Input from "@/components/atom/Input/Input";
 import Button from "@/components/atom/Button/Button";
+import { toast } from "react-toastify";
+import { authFetch } from "@/lib/authFetch";
 
 interface ManageAppointmentModalProps {
   open: boolean;
@@ -10,18 +12,7 @@ interface ManageAppointmentModalProps {
   onClose: () => void;
 }
 
-type Screen =
-  | "menu"
-  | "cancel"
-  | "reschedule"
-  | "refund"
-  | "resend";
-
-const mockClinicians = [
-  { id: "c1", name: "Dr. Rohan Fernando" },
-  { id: "c2", name: "Dr. Priya Wijesinghe" },
-  { id: "c3", name: "Dr. Saman Jayawardena" },
-];
+type Screen = "menu" | "cancel" | "resend";
 
 const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
   open,
@@ -29,8 +20,10 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
   onClose,
 }) => {
   const [screen, setScreen] = useState<Screen>("menu");
-
   const [cancelReason, setCancelReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Note: These were in your original code, keeping them to avoid removing code
   const [selectedClinician, setSelectedClinician] = useState("");
   const [newTime, setNewTime] = useState("");
   const [refundReason, setRefundReason] = useState("");
@@ -38,7 +31,112 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
   if (!open) return null;
 
   /* -------------------------------------------------------------------------- */
-  /*                             Reusable Modal Wrapper                          */
+  /* API Handlers                                                               */
+  /* -------------------------------------------------------------------------- */
+
+  const handleCancelAppointment = async () => {
+    if (!cancelReason.trim()) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await authFetch(`/api/booking/appointment/${appointment?.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "cancel",
+          reason: cancelReason,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message || "Appointment cancelled");
+        // Refresh the page to reflect changes in the calendar/list
+        window.location.reload();
+      } else {
+        throw new Error(data.message || "Failed to cancel appointment");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Unable to cancel appointment");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendDetails = async () => {
+    setIsSubmitting(true);
+    try {
+      // Dynamic content construction based on your requirements
+      const patientName = appointment.patient || "Patient";
+      const apptType = appointment.appointmentType || "Standard Consultation";
+      const apptDate = appointment.date || "N/A";
+      const apptTime = appointment.time || "N/A";
+      const roomKey = appointment.room_key || "";
+      const meetingUrl = `${window.location.origin}/appointment/meeting?room=${roomKey}`;
+
+      const messageContent = `
+Hello ${patientName},
+
+Here are your appointment details:
+
+Appointment Type: ${apptType}
+Date: ${apptDate}
+Time: ${apptTime}
+
+Join your appointment using the link below:
+${meetingUrl}
+
+Regards,
+Clinecxa Team
+      `.trim();
+
+      const response = await authFetch("/api/notify-send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: appointment.patient_id || appointment.userId,
+          role: "patient",
+          eventType: "appointment_resend",
+          title: "Your Appointment Details",
+          message: messageContent,
+          channels: ["email", "sms"],
+          payload: {
+            email: appointment.patient_email || "",
+            phone: appointment.patient_phone || "",
+            appointment_id: appointment.id,
+            room_key: roomKey,
+            meeting_url: meetingUrl,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Details resent successfully");
+        // Reset to first page and close modal
+        setScreen("menu");
+        onClose();
+      } else {
+        throw new Error(data.message || "Failed to resend details");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Unable to resend appointment details");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /* Reusable Modal Wrapper                          */
   /* -------------------------------------------------------------------------- */
 
   const ModalWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -56,51 +154,45 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
   );
 
   /* -------------------------------------------------------------------------- */
-  /*                                 Main Menu                                  */
+  /* Main Menu                                  */
   /* -------------------------------------------------------------------------- */
 
   if (screen === "menu") {
-  return (
-    <ModalWrapper>
-      <div className="text-lg font-semibold text-slate-900 mb-4">
-        Manage Appointment
-      </div>
+    return (
+      <ModalWrapper>
+        <div className="text-lg font-semibold text-slate-900 mb-4">
+          Manage Appointment
+        </div>
 
-      <div className="space-y-2">
-        {[
-          { label: "Cancel Appointment", action: () => setScreen("cancel") },
-          {
-            label: "Reschedule Appointment",
-            action: () => setScreen("reschedule"),
-          },
-          { label: "Request Refund", action: () => setScreen("refund") },
-          {
-            label: "Resend Telehealth Details",
-            action: () => setScreen("resend"),
-          },
-        ].map((item) => (
-          <button
-            key={item.label}
-            onClick={item.action}
-            className="
+        <div className="space-y-2">
+          {[
+            { label: "Cancel Appointment", action: () => setScreen("cancel") },
+            {
+              label: "Resend Telehealth Details",
+              action: () => setScreen("resend"),
+            },
+          ].map((item) => (
+            <button
+              key={item.label}
+              onClick={item.action}
+              className="
               w-full text-left px-4 py-3 rounded-lg
               border border-slate-200
               text-slate-700
               hover:bg-blue-500 hover:text-white
               transition-colors
             "
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </ModalWrapper>
-  );
-}
-
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </ModalWrapper>
+    );
+  }
 
   /* -------------------------------------------------------------------------- */
-  /*                             Cancel Appointment                              */
+  /* Cancel Appointment                              */
   /* -------------------------------------------------------------------------- */
 
   if (screen === "cancel") {
@@ -118,104 +210,31 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
           placeholder="Please provide a reason for cancellation..."
           value={cancelReason}
           onChange={(e) => setCancelReason(e.target.value)}
+          disabled={isSubmitting}
         />
 
         <div className="flex justify-between mt-4">
-          <Button variant="outline" onClick={() => setScreen("menu")}>
+          <Button
+            variant="outline"
+            onClick={() => setScreen("menu")}
+            disabled={isSubmitting}
+          >
             Back
           </Button>
-          <Button variant="danger">Confirm Cancellation</Button>
+          <Button
+            variant="danger"
+            onClick={handleCancelAppointment}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Cancelling..." : "Confirm Cancellation"}
+          </Button>
         </div>
       </ModalWrapper>
     );
   }
 
   /* -------------------------------------------------------------------------- */
-  /*                           Reschedule Appointment                            */
-  /* -------------------------------------------------------------------------- */
-
-  if (screen === "reschedule") {
-    return (
-      <ModalWrapper>
-        <div className="text-lg font-semibold text-slate-900 mb-3">
-          Manage Appointment
-        </div>
-
-        <div className="text-sm font-medium mb-1">Select New Clinician</div>
-
-        <select
-          className="w-full border border-slate-300 rounded-lg p-2 text-sm"
-          value={selectedClinician}
-          onChange={(e) => setSelectedClinician(e.target.value)}
-        >
-          <option value="">Choose clinician</option>
-          {mockClinicians.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-
-        <div className="text-sm font-medium mt-3 mb-1">New Time Slot</div>
-
-        <Input
-          type="time"
-          value={newTime}
-          onChange={(e) => setNewTime(e.target.value)}
-        />
-
-        <div className="flex justify-between mt-4">
-          <Button variant="outline" onClick={() => setScreen("menu")}>
-            Back
-          </Button>
-          <Button>Confirm Reschedule</Button>
-        </div>
-      </ModalWrapper>
-    );
-  }
-
-  /* -------------------------------------------------------------------------- */
-  /*                              Refund Request Screen                         */
-  /* -------------------------------------------------------------------------- */
-
-  if (screen === "refund") {
-    return (
-      <ModalWrapper>
-        <div className="text-lg font-semibold text-slate-900 mb-3">
-          Manage Appointment
-        </div>
-
-        <div className="text-sm font-medium mb-2">Refund Reason</div>
-
-        <div className="space-y-2 text-sm">
-          {["Duplicate Payment", "Fraudulent Transaction", "Customer Request"].map(
-            (reason) => (
-              <label key={reason} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="refundReason"
-                  value={reason}
-                  checked={refundReason === reason}
-                  onChange={(e) => setRefundReason(e.target.value)}
-                />
-                {reason}
-              </label>
-            )
-          )}
-        </div>
-
-        <div className="flex justify-between mt-4">
-          <Button variant="outline" onClick={() => setScreen("menu")}>
-            Back
-          </Button>
-          <Button>Submit Refund Request</Button>
-        </div>
-      </ModalWrapper>
-    );
-  }
-
-  /* -------------------------------------------------------------------------- */
-  /*                          Resend Telehealth Details                          */
+  /* Resend Telehealth Details                          */
   /* -------------------------------------------------------------------------- */
 
   if (screen === "resend") {
@@ -231,10 +250,19 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
         </p>
 
         <div className="flex justify-between mt-4">
-          <Button variant="outline" onClick={() => setScreen("menu")}>
+          <Button
+            variant="outline"
+            onClick={() => setScreen("menu")}
+            disabled={isSubmitting}
+          >
             Back
           </Button>
-          <Button>Resend Details</Button>
+          <Button
+            onClick={handleResendDetails}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Resending..." : "Resend Details"}
+          </Button>
         </div>
       </ModalWrapper>
     );

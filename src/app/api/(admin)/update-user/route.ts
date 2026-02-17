@@ -70,8 +70,20 @@ function clean<T extends Record<string, any>>(obj?: T) {
 export async function PATCH(req: NextRequest) {
   try {
     const { authorized, role, user } = await requireUser(req);
+    const cnx = getAuditContext(req, user);
 
     if (!authorized || !["admin", "superadmin"].includes(role)) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED_ACCESS",
+        entityType: "ADMIN_USER",
+        purpose: "operations",
+        source: "admin_panel",
+        metadata: {
+          reason: "unauthorized_profile_update_attempt",
+          role,
+        },
+      });
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -79,16 +91,61 @@ export async function PATCH(req: NextRequest) {
     const { user_id, target_role, patient, practitioner } = body;
 
     if (!user_id || !target_role) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "USER_ACCOUNT",
+        purpose: "operations",
+        source: "admin_panel",
+        metadata: {
+          reason: "missing_user_id_or_target_role",
+        },
+      });
+
       return NextResponse.json(
         { error: "user_id and target_role are required" },
         { status: 400 }
       );
     }
 
-    const cnx = getAuditContext(req, user);
-
     /* ---------------- PATIENT ---------------- */
     if (target_role === "patient") {
+      if (!user_id) {
+        return NextResponse.json(
+          { error: "user_id (patient id) is required" },
+          { status: 400 }
+        );
+      }
+
+      // 🔹 Fetch patient row first
+      const { data: patientRow, error: pErr } =
+        await supabaseAdmin
+          .from("patients")
+          .select("id, supabase_user_id")
+          .eq("id", user_id) // 🔥 match by patient.id
+          .single();
+
+      if (pErr || !patientRow) {
+        await auditLog({
+          ...cnx,
+          action: "FAILED",
+          entityType: "PATIENT",
+          entityId: user_id,
+          purpose: "operations",
+          source: "admin_panel",
+          metadata: { reason: "patient_not_found" },
+        });
+
+        return NextResponse.json(
+          { error: "Patient not found" },
+          { status: 404 }
+        );
+      }
+
+      const supabaseUserId = patientRow.supabase_user_id;
+
+      /* ---------- PROFILE UPDATE ---------- */
+
       const profileUpdate = clean({
         first_name: patient?.first_name,
         last_name: patient?.last_name,
@@ -101,30 +158,37 @@ export async function PATCH(req: NextRequest) {
         country: patient?.country,
       });
 
+      /* ---------- PATIENT UPDATE ---------- */
+
       const patientUpdate = clean({
-        full_name : 
-        patient?.first_name || patient?.last_name
-          ? `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim()
-          : undefined,
+        full_name:
+          patient?.first_name || patient?.last_name
+            ? `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim()
+            : undefined,
         dob: patient?.dob,
         gender: patient?.gender,
         contact_number: patient?.contact_number,
         emergency_contact: patient?.emergency_contact,
         address: patient?.address,
         notes: patient?.notes,
-        updated_at: new Date().toISOString(),
         allergies: patient?.allergies,
-        blood_type: patient?.blood_type
+        blood_type: patient?.blood_type,
+        updated_at: new Date().toISOString(),
       });
 
+      // 🔹 Update profile using supabase_user_id
       if (Object.keys(profileUpdate).length)
-        await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", user_id);
+        await supabaseAdmin
+          .from("profiles")
+          .update(profileUpdate)
+          .eq("id", supabaseUserId);
 
+      // 🔹 Update patient using patient.id
       if (Object.keys(patientUpdate).length)
         await supabaseAdmin
           .from("patients")
           .update(patientUpdate)
-          .eq("supabase_user_id", user_id);
+          .eq("id", user_id);
 
       const editedFields = [
         ...Object.keys(profileUpdate),
@@ -141,15 +205,15 @@ export async function PATCH(req: NextRequest) {
       });
 
       await notify({
-        userId: user_id,
+        userId: supabaseUserId,
         role: "patient",
         eventType: "profile_updated_by_admin",
         title: "Profile Updated",
         message: `
-Your profile has been updated by an administrator.
+    Your profile has been updated by an administrator.
 
-Updated fields:
-${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
+    Updated fields:
+    ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         `.trim(),
         channels: ["email"],
       });
@@ -158,9 +222,42 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
     }
 
     /* ---------------- PRACTITIONER ---------------- */
-    let bankUpdate: Record<string, any> | null = null;
-
     if (target_role === "practitioner") {
+      if (!user_id) {
+        return NextResponse.json(
+          { error: "user_id (practitioner id) is required" },
+          { status: 400 }
+        );
+      }
+
+      // 🔹 Fetch practitioner using practitioner.id (NOT supabase_user_id)
+      const { data: practitionerRow, error: pErr } =
+        await supabaseAdmin
+          .from("practitioners")
+          .select("id, supabase_user_id")
+          .eq("id", user_id) // 🔥 IMPORTANT CHANGE
+          .single();
+
+      if (pErr || !practitionerRow) {
+        await auditLog({
+          ...cnx,
+          action: "FAILED",
+          entityType: "PRACTITIONER",
+          entityId: user_id,
+          purpose: "operations",
+          source: "admin_panel",
+          metadata: {
+            reason: "practitioner_not_found",
+          },
+        });
+        return NextResponse.json(
+          { error: "Practitioner not found" },
+          { status: 404 }
+        );
+      }
+
+      const supabaseUserId = practitionerRow.supabase_user_id;
+
       const profileUpdate = clean({
         first_name: practitioner?.first_name,
         last_name: practitioner?.last_name,
@@ -191,36 +288,28 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         updated_at: new Date().toISOString(),
       });
 
+      // 🔹 Update profile (needs supabase_user_id)
       if (Object.keys(profileUpdate).length)
-        await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", user_id);
+        await supabaseAdmin
+          .from("profiles")
+          .update(profileUpdate)
+          .eq("id", supabaseUserId);
 
+      // 🔹 Update practitioner using practitioner.id
       if (Object.keys(practitionerUpdate).length)
         await supabaseAdmin
           .from("practitioners")
           .update(practitionerUpdate)
-          .eq("supabase_user_id", user_id);
+          .eq("id", user_id);
 
-       const editedFields = [
+      const editedFields = [
         ...Object.keys(profileUpdate),
         ...Object.keys(practitionerUpdate),
       ];
 
-      let bankUpdate: Record<string, any> | null = null;
-      
+      /* -------- BANK DETAILS -------- */
       if (practitioner?.bank_details) {
-        // 1. Get practitioner_id
-        const { data: practitionerRow, error: pErr } =
-          await supabaseAdmin
-            .from("practitioners")
-            .select("id")
-            .eq("supabase_user_id", user_id)
-            .single();
-
-        if (pErr || !practitionerRow) {
-          throw new Error("Practitioner not found");
-        }
-
-         bankUpdate = clean({
+        const bankUpdate = clean({
           account_holder_name: practitioner.bank_details.account_holder_name,
           bank_name: practitioner.bank_details.bank_name,
           account_number: practitioner.bank_details.account_number,
@@ -231,29 +320,27 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         });
 
         if (Object.keys(bankUpdate).length > 0) {
-          // 2. Check if row exists
           const { data: existingBank } =
             await supabaseAdmin
               .from("practitioner_bank_details")
               .select("id")
-              .eq("practitioner_id", practitionerRow.id)
+              .eq("practitioner_id", user_id)
               .single();
 
           if (existingBank) {
-            // UPDATE
             await supabaseAdmin
               .from("practitioner_bank_details")
               .update(bankUpdate)
-              .eq("practitioner_id", practitionerRow.id);
+              .eq("practitioner_id", user_id);
           } else {
-            // INSERT
             await supabaseAdmin
               .from("practitioner_bank_details")
               .insert({
-                practitioner_id: practitionerRow.id,
+                practitioner_id: user_id,
                 ...bankUpdate,
               });
-            }
+          }
+
           Object.keys(bankUpdate)
             .filter(k => k !== "updated_at")
             .forEach(k => {
@@ -266,21 +353,21 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         ...cnx,
         action: "UPDATED",
         entityType: "PRACTITIONER",
-        entityId: user_id,
+        entityId: user_id, // practitioner id
         source: "admin_panel",
         metadata: { edited_fields: editedFields },
       });
 
       await notify({
-        userId: user_id,
+        userId: supabaseUserId, // 🔹 notify auth user
         role: "practitioner",
         eventType: "profile_updated_by_admin",
         title: "Profile Updated",
         message: `
-Your profile has been updated by an administrator.
+    Your profile has been updated by an administrator.
 
-Updated fields:
-${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
+    Updated fields:
+    ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         `.trim(),
         channels: ["email"],
       });
@@ -288,6 +375,19 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
       return NextResponse.json({ success: true });
     }
 
+
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "USER_ACCOUNT",
+      entityId: user_id,
+      purpose: "operations",
+      source: "admin_panel",
+      metadata: {
+        reason: "invalid_target_role",
+        provided_role: target_role,
+      },
+    });
     return NextResponse.json({ error: "Invalid target_role" }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json(

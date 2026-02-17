@@ -12,17 +12,22 @@ export type Patient = {
   patientId: string;
   full_name: string;
   age: number;
-  email: string;
-  contact_number: string;
-  gender: "Male" | "Female" | "Other";
-  dob: string;
-  allergies?: string;
+  dob?: string;
+  gender?: string;
+  email?: string;
+  contact_number?: string;
+  allergies?: string; // backend sends array
+  created_at?: string;
   lastConsultation?: string;
-  consentGiven: boolean;
-  // contact & address (for overview tab)
+  consentGiven?: boolean;
   addressLine1?: string;
   city?: string;
+  state?: string;
   country?: string;
+  government_id?: {
+    type: string;
+    number: string;
+  } | null;
 };
 
 export type PatientDetailTab =
