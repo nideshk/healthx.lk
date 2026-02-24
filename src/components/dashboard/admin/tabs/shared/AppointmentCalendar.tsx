@@ -426,6 +426,8 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
             label="Status"
             value={appointment.status ? capitalize(appointment.status) : "-"}
           />
+          <DetailRow label="email" value={appointment.email || "-"}/>
+          <DetailRow label="contact_number" value={appointment.contact_number || "-"}/>
         </div>
 
         {!isPastAppointment() && (

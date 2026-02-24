@@ -109,8 +109,8 @@ Clinecxa Team
           message: messageContent,
           channels: ["email", "sms"],
           payload: {
-            email: appointment.patient_email || "",
-            phone: appointment.patient_phone || "",
+            email: appointment.email || "",
+            phone: appointment.contact_number || "",
             appointment_id: appointment.id,
             room_key: roomKey,
             meeting_url: meetingUrl,

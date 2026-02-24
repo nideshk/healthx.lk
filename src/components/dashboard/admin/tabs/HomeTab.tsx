@@ -205,6 +205,9 @@ const HomeTab: React.FC = () => {
           followUpNeeded: false,
           patient: a.patient,
           patientId: a.id,
+          email: a.email || "-",
+          contact_number: a.contact_number || "-",
+          room_key: a.room_key,
         };
       });
 
