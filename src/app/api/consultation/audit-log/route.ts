@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
      1️⃣ Authenticate
   ---------------------------------------- */
   const { user, authorized } = await requireUser(req);
-
+  const cnx = getAuditContext(req, user);
   if (!authorized) {
     return NextResponse.json(
       { error: "Unauthorized" },
@@ -172,6 +172,18 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
+
+  await auditLog({
+    ...cnx,
+    action: "READ",
+    source: "dashboard",
+    entityType: "USER",
+    entityId: user?.auth_user_id,
+    metadata: {
+      "user_id": user?.auth_user_id,
+    },
+    purpose: "operations",
+  })
 
   return NextResponse.json({ data });
 }

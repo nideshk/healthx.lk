@@ -266,23 +266,6 @@ useEffect(() => {
     }
   };
 
-  function calculateAge(dob: string): number {
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    return age;
-  }
-
-
   if (selectedPatient) {
     return (
       <PatientDetails
@@ -353,24 +336,7 @@ useEffect(() => {
                       <button
                         type="button"
                         className="text-blue-600 font-semibold text-left hover:underline"
-                        onClick={() =>
-                          onSelectPatient({
-                            id: p.id,
-                            patientId: p.id, // use id as display id (or map real one if exists)
-                            full_name: p.full_name || "",
-                            age: p.dob ? calculateAge(p.dob) : 0,
-                            dob: p.dob || "",
-                            gender: p.gender || "",
-                            email: p.email || "",
-                            contact_number: p.contact_number || "",
-                            addressLine1: p.address || "",
-                            allergies: Array.isArray(p.allergies) ? p.allergies : [],
-                            city: p.city || "",
-                            state: p.state || "",
-                            country: p.country || "",
-                            government_id: p.government_id ?? null,
-                          })
-                        }
+                        onClick={() => onSelectPatient(p)}
                       >
                         {p.full_name || p.name}
                       </button>
