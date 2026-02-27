@@ -350,29 +350,24 @@ export default function PreConsultationStep({
                 />
 
                 <select
-  value={emailInput.relationship}
-  onChange={(e) =>
-    setEmailInput({
-      ...emailInput,
-      relationship: e.target.value,
-    })
-  }
-  className="border-2 border-slate-50 rounded-2xl p-3 text-sm bg-slate-50/50 outline-none font-medium"
->
-  <option value="" disabled>
-    {t("select")}
-  </option>
-  <option value="husband">{t("husband")}</option>
-  <option value="wife">{t("wife")}</option>
-  <option value="partner">{t("partner")}</option>
-  <option value="parent">{t("parent")}</option>
-  <option value="child">{t("child")}</option>
-  <option value="sibling">{t("sibling")}</option>
-  <option value="friend">{t("friend")}</option>
-  <option value="caregiver">{t("caregiver")}</option>
-  <option value="other">{t("other")}</option>
-</select>
-
+                  value={emailInput.relationship}
+                  onChange={(e) =>
+                    setEmailInput({
+                      ...emailInput,
+                      relationship: e.target.value,
+                    })
+                  }
+                  className="border-2 border-slate-50 rounded-2xl p-3 text-sm bg-slate-50/50 outline-none font-medium"
+                >
+                  <option value="" disabled>
+                    Relationship
+                  </option>
+                  <option value="partner">Partner</option>
+                  <option value="child">Child</option>
+                  <option value="parent">Parent</option>
+                  <option value="sibling">Sibling</option>
+                  <option value="other">Other</option>
+                </select>
 
                 <button
                   onClick={addAttendee}

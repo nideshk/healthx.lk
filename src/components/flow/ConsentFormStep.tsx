@@ -154,6 +154,7 @@ const ConsentFormStep = forwardRef(
                       </p>
                       <p>{t("termsP1")}</p>
                       <p>{t("termsP2")}</p>
+                      <p>{t("termsP3")}</p>
                     </>
                   ),
                 },

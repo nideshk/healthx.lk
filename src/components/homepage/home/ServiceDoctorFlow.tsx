@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import HomepageSlotPicker from "./HomepageSlotPicker";
 import { useTranslations } from "next-intl";
@@ -10,6 +10,7 @@ import {
   Clock,
   ArrowLeft,
   Star,
+  ChevronRight,
 } from "lucide-react";
 import { BadgeCheck } from "lucide-react";
 import { ICON_MAP } from "@/lib/lucideIcons";
@@ -185,61 +186,79 @@ const ServicePicker = ({
   onSelect: (s: Service) => void;
 }) => {
   const t = useTranslations("bookingFlow.servicePicker");
-  return (
-    <div>
-      <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-        {t("title")}
-      </h2>
-      <p className="text-gray-500 mb-6">
-        {t("subtitle")}
-      </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        {services.map((s) => {
-          const Icon =
-            ICON_MAP[s.icon as string] || Stethoscope;
+  // Memoize sorted services to prevent mutation and unnecessary re-sorts
+  const sortedServices = useMemo(() => {
+    return [...services].sort((a, b) => a.name.localeCompare(b.name));
+  }, [services]);
+
+  return (
+    <div className="max-w-4xl mx-auto px-4">
+      <header className="mb-8">
+        <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+          {t("title")}
+        </h2>
+        <p className="mt-2 text-lg text-gray-600">
+          {t("subtitle")}
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sortedServices.map((s) => {
+          const Icon = ICON_MAP[s.icon as string] || Stethoscope;
 
           return (
             <button
               key={s.id}
               onClick={() => onSelect(s)}
               className="
-                group relative text-left rounded-2xl border border-gray-200
-                p-5 bg-white
-                hover:border-cyan-500 hover:shadow-lg
-                transition-all duration-200
+                group relative flex flex-col text-left p-6 
+                bg-white rounded-2xl border-2 border-transparent
+                shadow-sm ring-1 ring-gray-200
+                hover:ring-cyan-500 hover:shadow-md
+                active:scale-[0.98]
+                transition-all duration-200 ease-out
               "
             >
-              <div className="flex items-start gap-4">
-                {/* Icon */}
-                <div
-                  className="
-                    w-12 h-12 rounded-xl flex items-center justify-center
-                    bg-cyan-50 text-cyan-600
-                    group-hover:bg-cyan-600 group-hover:text-white
-                    transition
-                  "
-                >
-                  <Icon className="w-6 h-6" />
+              <div className="flex items-start gap-5">
+                {/* Icon Container with subtle animation */}
+                <div className="
+                  shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center
+                  bg-cyan-50 text-cyan-600
+                  group-hover:bg-cyan-500 group-hover:text-white
+                  group-hover:rotate-3
+                  transition-all duration-300
+                ">
+                  <Icon className="w-7 h-7" strokeWidth={1.5} />
                 </div>
 
-                {/* Info */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {s.name}
-                  </h3>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-gray-900 truncate">
+                      {s.name}
+                    </h3>
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all" />
+                  </div>
 
-                  <p className="text-sm text-gray-500 mt-1 leading-snug">
-                    {s.description}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1 leading-snug">
-                    {s.sin_description}
-                  </p>
+                  {/* Descriptions with improved typography */}
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                      {s.description}
+                    </p>
+                    {s.sin_description && (
+                      <p className="text-xs font-medium text-cyan-700/70 italic">
+                        {s.sin_description}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-4 text-sm font-medium text-cyan-600 opacity-0 group-hover:opacity-100 transition">
-                {t("actionText")}
+              {/* Action Hint */}
+              <div className="mt-4 pt-4 border-t border-gray-50 flex items-center text-sm font-semibold text-cyan-600">
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  {t("actionText")}
+                </span>
               </div>
             </button>
           );
@@ -251,86 +270,173 @@ const ServicePicker = ({
 
 /* ---------- Doctor Picker ---------- */
 
-const DoctorPicker = ({
-  doctors,
-  onSelect,
-}: {
+interface DoctorPickerProps {
   doctors: Doctor[];
   onSelect: (d: Doctor) => void;
-}) => {
-  const t = useTranslations("bookingFlow.doctorPicker");
+}
+
+const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
+  const tSelection = useTranslations("doctorSelection");
+  const tPicker = useTranslations("bookingFlow.doctorPicker");
+
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // 🔥 Memoized sorted doctors
+  const sortedDoctors = useMemo(() => {
+    return [...doctors].sort((a: any, b: any) => {
+      const priceA = a.starting_price ?? 0;
+      const priceB = b.starting_price ?? 0;
+
+      return sortOrder === "asc"
+        ? priceA - priceB
+        : priceB - priceA;
+    });
+  }, [doctors, sortOrder]);
+
   return (
-    <div>
-      <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-        {t("title")}
-      </h2>
-      <p className="text-gray-500 mb-6">
-        {t("subtitle")}
-      </p>
+    <div className="max-w-2xl mx-auto">
+      <header className="mb-6">
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+          {tSelection("title")}
+        </h2>
+        <p className="text-slate-500 font-medium mt-1">
+          {tSelection("subtitle")}
+        </p>
+
+        {/* 🔥 Sort Control */}
+        {doctors.length > 0 && (
+          <div className="mt-4 flex items-center justify-end">
+            <select
+              value={sortOrder}
+              onChange={(e) =>
+                setSortOrder(e.target.value as "asc" | "desc")
+              }
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            >
+              <option value="asc">Price: Low → High</option>
+              <option value="desc">Price: High → Low</option>
+            </select>
+          </div>
+        )}
+      </header>
 
       <div className="space-y-4">
-        {doctors.length > 0 ? doctors.slice(0, 6).map((d) => (
-          <button
-            key={d.id}
-            onClick={() => onSelect(d)}
-            className="
-              group w-full text-left
-              border border-gray-200 rounded-2xl p-5
-              hover:border-cyan-500 hover:shadow-lg
-              transition-all
-            "
-          >
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                {d.profile_picture_url ? (
-                  <img
-                    src={d.profile_picture_url}
-                    alt={d.full_name}
-                    className="w-14 h-14 rounded-full object-cover border"
-                  />
-                ) : (
-                  <div className="w-14 h-14 rounded-full bg-cyan-100 flex items-center justify-center text-cyan-600 font-bold text-lg">
-                    {d.full_name.charAt(0)}
-                  </div>
-                )}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-gray-900 truncate">
-                    {d.full_name}
-                  </p>
-
-                  <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
-                    <BadgeCheck size={12} />
-                    {t("verified")}
-                  </span>
+        {sortedDoctors.length > 0 ? (
+          sortedDoctors.map((d: any) => (
+            <button
+              key={d.id}
+              onClick={() => onSelect(d)}
+              className="group w-full text-left bg-white
+                border border-slate-200 rounded-2xl p-4 sm:p-5
+                hover:border-cyan-500 hover:shadow-lg
+                active:scale-[0.99]
+                transition-all duration-200"
+            >
+              <div className="flex items-start gap-4">
+                {/* Avatar */}
+                <div className="flex-shrink-0">
+                  {d.profile_picture_url ? (
+                    <img
+                      src={d.profile_picture_url}
+                      alt={d.full_name}
+                      className="w-16 h-16 rounded-2xl object-cover border border-slate-100"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center text-cyan-600 font-bold text-xl">
+                      {d.full_name.charAt(0)}
+                    </div>
+                  )}
                 </div>
 
-                <p className="text-sm text-gray-600 mt-0.5">
-                  {d.qualification || t("fallbackQualification")}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-900 text-lg leading-tight whitespace-normal">
+                        {d.full_name}
+                      </h3>
+                      <span className="text-cyan-600 shrink-0">
+                        <BadgeCheck
+                          size={18}
+                          fill="currentColor"
+                          className="text-white"
+                        />
+                        <span className="sr-only">
+                          {tPicker("verified")}
+                        </span>
+                      </span>
+                    </div>
 
-                {d.profile_bio && (
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-3">
-                    {d.profile_bio}
-                  </p>
-                )}
+                    {/* Price Badge */}
+                    <div className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-50 text-slate-900 border border-slate-100 shrink-0">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1.5">
+                        From
+                      </span>
+                      <span className="text-sm font-black">
+                        Rs.
+                        {(d.starting_price ?? 1500).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Specializations */}
+                  <div className="mt-0.5 min-w-0">
+                    {d.specialization?.length > 0 ? (
+                      <p className="text-cyan-600 text-sm font-semibold truncate">
+                        {d.specialization.join(", ")}
+                      </p>
+                    ) : (
+                      <p className="text-slate-400 text-sm italic">
+                        {tPicker("fallbackQualification")}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Bio */}
+                  {d.profile_bio && (
+                    <p className="mt-1 text-gray-500 text-sm line-clamp-3">
+                      {d.profile_bio}
+                    </p>
+                  )}
+
+                  {/* Languages */}
+                  {d.languages?.length > 0 && (
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex gap-1 overflow-hidden">
+                        {d.languages.slice(0, 2).map((lang: any) => (
+                          <span
+                            key={lang}
+                            className="text-[10px] uppercase font-bold tracking-wider bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded"
+                          >
+                            {lang}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="hidden sm:flex items-center text-cyan-500 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1">
+                        <span className="text-xs font-bold mr-1">
+                          {tPicker("actionText").replace(" →", "")}
+                        </span>
+                        <ChevronRight size={18} />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-
-              {/* Rating */}
-              <div className="flex items-center gap-1 text-sm text-gray-700">
-                <Star size={14} className="text-yellow-500" />
-                {d.avg_rating ? d.avg_rating.toFixed(1) : t("new")}
-              </div>
-            </div>
-
-            <div className="mt-4 text-sm font-medium text-cyan-600 opacity-0 group-hover:opacity-100 transition">
-              {t("actionText")}
-            </div>
-          </button>
-        )) : <p className="text-sm text-gray-500 mt-1 line-clamp-3">No doctors found</p>}
+            </button>
+          ))
+        ) : (
+          <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-3xl">
+            <p className="text-slate-500 font-bold">
+              {tSelection("noDoctors")}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 text-cyan-600 underline font-bold text-sm"
+            >
+              {tSelection("tryAnotherService")}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

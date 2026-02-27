@@ -158,56 +158,28 @@
     "confirming": "Confirming...",
     "continuePayment": "Continue to payment"
   },
-  
-  "profile": {
-    "title": "Patient Profile",
-    "subtitle": "Review and confirm your information.",
-    "personalInfo": "Personal Information",
-    "disclaimer": "Please ensure all information is accurate before proceeding with your appointment booking. This information will be used for your medical records and appointment confirmation.",
-    "fullName": "Full Name",
-    "firstName": "First Name",
-    "dateOfBirth": "Date of Birth",
-    "gender": "Gender",
-    "bloodGroup": "Blood Group",
-    "emergencyContact": "Emergency Contact",
-    "allergies": "Allergies",
-    "homeAddress": "Home Address",
-    "medicalNotes": "Medical Notes",
-
-    "editProfile": "Edit Information",
-    "confirmAccurate": "Confirm above is accurate",
-
-    "previous": "Previous",
-    "continue": "Confirm above is accurate",
-    "cancel": "Cancel",
-    "save": "Save",
-    "selectGender": "Select Gender",
-    "selectBloodGroup": "Select Group",
-
-    "updateSuccess": "Medical record updated",
-    "updateFailed": "Update failed"
-  },
   "consentForm": {
     "acceptBothError": "Please accept both agreements to continue.",
-    "declineTitle": "Are you sure?",
-    "declineMessage": "You have the right to disagree with these terms and conditions. This is completely within your rights as a patient. However, please understand that by choosing not to agree, we cannot proceed with the telehealth appointment booking as these consents are required for providing telehealth services safely and legally. You may still schedule an in-person appointment if you prefer, or take time to review these documents and return when you're ready to proceed.",
-    "exitBooking": "Confirm – I do not agree",
-    "goBackReview": "Go Back",
-    "title": "Consent & Terms",
+    "declineTitle": "Wait, Consent is Required",
+    "declineMessage": "To provide legal telehealth care and protect your privacy, we must have your signed agreement. Exiting now will cancel your booking progress.",
+    "exitBooking": "Yes, Exit Booking",
+    "goBackReview": "Go Back & Review",
+    "title": "Review & Sign",
     "subtitle": "Almost done! We just need your legal consent.",
     "telehealthTitle": "Telehealth Consent",
     "telehealthHeading": "Digital Healthcare Agreement",
     "telehealthP1": "Telehealth involves electronic communication technologies to provide care when the provider and patient are not in the same location.",
     "telehealthP2": "By checking the box, you acknowledge that you understand the limitations of virtual care, including technical risks and the lack of physical examination.",
     "telehealthP3": "I understand I can withdraw consent at any time without affecting my right to future care or treatment.",
-    "termsTitle": "Consent & Terms",
+    "termsTitle": "Terms & Conditions",
     "termsHeading": "Service Agreement",
-    "termsP1": "Please review and accept the following to proceed with your appointment.",
-    "termsP2": "I would like to receive emails about future promotions, health tips, and updates from Clinico. I understand I can unsubscribe at any time.",
+    "termsP1": "Appointments must be cancelled 24 hours in advance to avoid a no-show fee. Payment is processed securely via our encrypted partner.",
+    "termsP2": "The platform acts as a facilitator and does not directly provide medical advice. All medical outcomes are the responsibility of the licensed practitioner.",
+    "termsP3": "By proceeding, you agree to abide by the platform's legal and ethical policies.",
     "scrollToRead": "Scroll to read",
     "agreeText": "I have read and agree to the {section}",
     "finalize": "Finalize Appointment",
-    "declineTerms": "I do not agree",
+    "declineTerms": "I do not agree to these terms",
     "back": "Back"
   },
   "PaymentConfirmation": {
@@ -234,7 +206,7 @@
     "returnHome": "Return to Home"
   },
   "preConsultation": {
-    "title": "Pre-Consultation Information",
+    "title": "Pre-Consultation",
     "subtitle": "Please provide some information to help your doctor prepare for the consultation",
     "privacy": "Clinical Privacy",
     "maxLabel": "MAX",
@@ -242,28 +214,18 @@
     "concernPlaceholder": "Please describe your main health concerns or symptoms",
     "outcome": "What are you hoping to achieve from this consultation?",
     "outcomePlaceholder": "Diagnosis, treatment options, second opinion, prescription renewal etc",
-    "referral": "How did you hear about this platform?",
+    "referral": "How did you hear about us?",
     "selectOption": "Select an option...",
     "customReferral": "Please specify source...",
     "attachments": "Attachments (Optional)",
     "uploadHint": "Medical Records / Photos",
-    "attendees": "Additional attendee information",
+    "attendees": "Attendees",
     "attendeesSubtitle": "Will there be additional family members?",
     "invitePlaceholder": "Invite via email",
     "back": "Back",
     "continue": "Continue to Payment",
     "duration": "How long have you had this concern?",
     "durationPlaceholder": "How long have you had this concern?",
-     "select": " Relationship",
-    "husband": "Husband",
-    "wife": "Wife",
-    "partner": "Partner",
-    "parent": "Parent",
-    "child": "Child",
-    "sibling": "Sibling",
-    "friend": "Friend",
-    "caregiver": "Caregiver",
-    "other": "Other",
     "errors": {
       "concern": "Main concern is required",
       "outcome": "Desired outcome is required",
@@ -295,7 +257,6 @@
     }
   },
   "homepage": {
-        "healthcareTitle": "Our Healthcare Services",
     "practitioner": {
       "title": "Are you a healthcare professional?",
       "subtitle": "Join Clinecxa to manage your appointments, reach more patients, and streamline your practice with our digital tools.",
@@ -446,7 +407,7 @@
   "footer": {
     "links": {
       "about": "About Us",
-      "contact": "Contact Us",
+      "contact": "Contact Support",
       "help": "Help Center & FAQs",
       "terms": "Terms of Service",
       "privacy": "Privacy Policy (HIPAA Compliant)"
@@ -454,8 +415,7 @@
     "secure": "Secure & HIPAA Compliant Platform",
     "disclaimerTitle": "Disclaimer",
     "disclaimerText": "Please do not use this service for emergencies or if you require medical certificates.For emergencies: Go to your nearest hospital or emergency service immediately, or call 110. For medical certificates or physical examinations: Please visit a doctor in person, as these services cannot be provided through telehealth. This platform is intended only for telehealth consultations that do not require in-person care.",
-    "rights": "All rights reserved.", 
-    "healthcareTitle": "Our Healthcare Services"
+    "rights": "All rights reserved."
   },
   "header": {
     "nav": {
@@ -497,56 +457,42 @@
       "backLogin": "Back to Login"
     }
   },
- "signup": {
-  "title": "Create an Account",
-  "marketingConsent": "I agree to receive updates, offers, and health tips via email or SMS. You can unsubscribe anytime.",
-  "countryDefault": "Sri Lanka",
-  "buttonDefault": "Sign Up",
-  "buttonLoading": "Signing up...",
-  "placeholders": {
-    "firstName": "First Name",
-    "lastName": "Last Name",
-    "email": "Email",
-    "password": "Password",
-    "emergencyContact": "Emergency Contact (optional)",
-    "idNumber": "ID Number",
-    "address": "Address",
-    "province": "State / Province",
-    "city": "City",
-    "pinCode": "Postal Code (e.g. 00100)"
+  "signup": {
+    "title": "Patient Signup",
+    "marketingConsent": "I agree to receive updates, offers, and health tips via email or SMS. You can unsubscribe anytime.",
+    "countryDefault": "Sri Lanka",
+    "buttonDefault": "Sign Up",
+    "buttonLoading": "Signing up...",
+    "placeholders": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "password": "Password",
+      "emergencyContact": "Emergency Contact (optional)",
+      "idNumber": "ID Number",
+      "address": "Address",
+      "province": "State / Province",
+      "city": "City",
+      "pinCode": "Postal Code (e.g. 00100)"
+    },
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "nonBinary": "Non-binary",
+      "unspecified": "Prefer not to say"
+    },
+    "idType": {
+      "passport": "Passport",
+      "nic": "National Identity Card",
+      "license": "Driving License"
+    },
+    "messages": {
+      "verifyEmail": "Check your email to verify your account",
+      "signupFailed": "Signup failed",
+      "signupSuccess": "Account created successfully 🎉",
+      "unexpectedError": "Unexpected error occurred"
+    }
   },
-  "labels": {
-    "subtitle": "Please enter your details to create an account",
-    "firstName": "First Name",
-    "lastName": "Last Name",
-    "email": "Email Address",
-    "password": "Password",
-    "dateOfBirth": "Date of Birth",
-    "gender": "Gender",
-    "phoneNumber": "Phone Number",
-    "idType": "ID Type",
-    "idNumber": "ID Number",
-    "streetAddress": "Street Address",
-    "country": "Country",
-    "stateProvince": "State / Province",
-    "city": "City"
-  },
-  "gender": {
-    "male": "Male",
-    "female": "Female",
-    "others": "Others"
-  },
-  "idType": {
-    "passport": "Passport",
-    "nic": "National Identity Card",
-    "license": "Driving License"
-  },
-  "messages": {
-    "verifyEmail": "Check your email to verify your account",
-    "signupFailed": "Signup failed",
-    "signupSuccess": "Account created successfully 🎉",
-    "unexpectedError": "Unexpected error occurred"
-  }},
   "bookingFlow": {
     "back": "Back",
     "loadingText": "Loading available options...",
@@ -556,7 +502,7 @@
       "time": "Time"
     },
     "servicePicker": {
-      "title": "Select Service",
+      "title": "Choose a service",
       "subtitle": "Choose from our comprehensive range of medical specialties and connect with the right healthcare professional for your needs.",
       "actionText": "View doctors →"
     },
@@ -599,14 +545,10 @@
     },
     "story": {
       "title": "The Founder’s Story",
-      "para1": "Our journey began with someone very close to the founder - his little sister. She is autistic, with heightened senses that make everyday environments feel overwhelming. A trip to the doctor, something most of us take for granted, can be incredibly stressful for her. The long queues, crowded waiting rooms, noise, and unpredictability often lead to anxiety and emotional overload.",
-      "para2": "As he moved further away from home, his parents became the ones responsible for taking her to appointments. Over time, it became harder: the travel, the waiting, the emotional toll, all of it felt exhausting and unfair, not just for his sister, but for thousands of families across Sri Lanka facing similar challenges.",
-      "para3": "During his time abroad, he saw how other countries had embraced telehealth, not as a luxury, but as a necessity. It wasn’t just a video call with a doctor; it was a system built around accessibility, dignity, and patient comfort.",
-      "para4": "He wondered why Sri Lanka didn’t have something like this. Yes, there had been attempts, but they were technology-first, not people-first. They weren’t shaped by clinicians or the realities of Sri Lankan families.",
-      "para5": "So he returned to the drawing board. He spent months speaking with Sri Lankan doctors, specialists, patients, and caregivers to understand what actually mattered. He built the first version from his own savings. ",
-      "para6": "And at the heart of it was one simple goal:",
-      "quote": " To create a system that makes healthcare easier for families like his, for people with disabilities, and for anyone who deserves a kinder way to access care."
-
+      "para1": "Our journey began with someone very close to our founder—his little sister. She is autistic, and for her, everyday environments can feel overwhelming. A trip to the doctor, which most of us take for granted, was a source of intense anxiety.",
+      "para2": "While living abroad, Nidesh watched his parents handle these exhausting appointments alone. He realized that telehealth should be a necessity for dignity and comfort, not just a video call.",
+      "quote": "I wondered why Sri Lanka didn’t have something like this. Existing attempts were technology-first, not people-first. They weren’t shaped by the realities of Sri Lankan families.",
+      "para3": "He returned to the drawing board and spent months speaking with doctors and patients. Built from personal savings, Clinecxa was created to provide a kinder way to access care for everyone."
     },
     "vision": {
       "text": "To be Sri Lanka’s number-one telehealth service: where patients feel safe, care is stress-free, clinicians thrive, and privacy is uncompromised.",
@@ -616,56 +558,28 @@
       "heading": "Our Core Commitments",
       "trust": {
         "title": "Trust and Safety First",
-        "description": "At Clinecxa, we work hard every day to ensure that patients feel safe, clinicians feel protected, and partners trust our platform. Every decision we make; from clinical workflows to data security and governance; is driven by an uncompromising commitment to ethics, privacy, and patient safety. Trust is not a slogan for us; it is the standard we operate by."
+        "description": "Every decision, from clinical workflows to data security, is driven by an uncompromising commitment to ethics, privacy, and patient safety."
       },
       "quality": {
-        "title": " Medical Quality Comes First. Technology Follows.",
-        "description": "Clinecxa is a clinically led platform. This system was not designed by technologists alone, it was built with and guided by practicing clinicians. Clinical standards, professional judgment, and patient outcomes lead to every design decision. Technology exists to support great medicine, remove friction, and enhance care, never to override or dilute clinical quality."
+        "title": "Medical Quality First",
+        "description": "Clinecxa is clinically led. Technology exists to support great medicine and enhance care, never to override professional clinical judgment."
       },
       "equality": {
-        "title": " Equal Care and Opportunity for Every Patient and Clinician",
-        "description": "Clinecxa exists to remove barriers. We believe every patient deserves the same standard of care, and every clinician deserves equal access to high-quality tools, reach, and opportunity; regardless of location, background, or size of practice. By building an inclusive and fair platform, we enable better outcomes for everyone."
+        "title": "Equal Care for All",
+        "description": "We exist to remove barriers. We believe every patient and clinician deserves equal access to high-quality tools regardless of location."
       }
     },
     "founder": {
       "role": "Founder, Clinecxa",
       "noteTitle": "A Note from the Founder",
       "greeting": "Hi friend, thank you for being here.",
-      "para1": "Clinecxa was born from a simple but powerful idea: healthcare should be easier, kinder, and more accessible for everyone, especially for families like mine. Watching my little sister struggle with appointments, being overwhelmed by her environment, and knowing my parents had to handle them while I was far away, made me wish I could be there to support them too.",
-      "para2": "I also saw the challenges clinicians face in Sri Lanka. Unlike in some other countries, they often juggle long commutes, heavy patient loads, and endless queues, which adds stress and reduces the time they can give to each patient. I wanted to change that. A system that gives clinicians better work-life balance leads to happier, less stressed doctors...and that directly means better care for patients.",
-      "para3": "There are so many people in similar situations, living far from their parents and families back home, caring for someone with a disability, or juggling work, life, and financial pressures. Healthcare shouldn’t add to that burden.",
-      "para4": "Our mission is to change all of this. Clinecxa is built to put people first: patients, caregivers, and clinicians alike. Every feature, every process, every decision is guided by one goal: to make healthcare simpler, safer, and more compassionate for everyone, no matter where they are or what their circumstances are.",
-      "para5": "Thank you for trusting us with your care. ",
+      "para1": "Clinecxa was born because I watched my sister struggle with appointments and wanted to support my family from afar. I realized healthcare shouldn't add to a family's burden.",
+      "para2": "I also saw the challenges clinicians face. By giving doctors better tools and a better work-life balance, we ensure they can provide even better care to their patients.",
+      "para3": "Our mission is to put people first—patients, caregivers, and clinicians alike. We are building something safer and more compassionate for everyone.",
       "signoff": "Nidesh Kulatunga"
     }
   },
   "paymentUI": {
-     "consents": {
-    "title": "Consents & Agreements",
-    "telehealth": "Telehealth Consultation Consent",
-    "terms": "Terms of Service & Privacy Policy"
-  },
-  "newstatus": {
-    "accepted": "ACCEPTED",
-    "declined": "DECLINED",
-        "subtitle":"Complete your payment to confirm your appointment"
-
-  },
-  "preConsultation": {
-    "title": "Pre-Consultation Summary",
-    "concern": "Primary Concern / Symptoms",
-    "noConcern": "No specific concern provided.",
-    "outcome": "Desired Outcome",
-    "noOutcome": "No specific outcome mentioned.",
-    "referral": "How did you hear about us?"
-  },
-  "participants": {
-    "title": "Participant Roster",
-    "confirmed": "Confirmed Participant",
-    "none": "No additional attendees selected.",
-    "info": "All listed attendees will receive a secure meeting link and calendar invitation via their registered email addresses.",
-    "total": "Total"
-  },
     "scheduleDetails": "Schedule Details",
     "consultationDetails": "Consultation",
     "preConsultationNotes": "Pre-Consultation Notes",
@@ -686,7 +600,7 @@
     },
     "title": "Review & Complete Payment",
     "doctorDetails": "Doctor Details",
-    "appointmentDetails": "Appointment Summary",
+    "appointmentDetails": "Appointment Details",
     "service": "Service",
     "type": "Type",
     "duration": "Duration",

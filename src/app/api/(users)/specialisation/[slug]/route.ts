@@ -68,7 +68,9 @@ export async function GET(
         qualification,
         license_number,
         contact_email,
+        supabase_user_id,
         fees,
+        specialization,
         languages,
         profiles!practitioners_profiles_fkey (
           avatar_url
@@ -88,7 +90,6 @@ export async function GET(
         { status: 500 }
       );
     }
-
     /* -------- map practitioners + compute prices -------- */
 
     const practitioners = (data || []).map((p) => {
@@ -104,6 +105,7 @@ export async function GET(
         profile_picture_url: getAvatarUrl(p.profiles),
         starting_price,
         ending_price,
+        specialization: p.specialization,
         languages: p.languages ?? [],
       };
     });

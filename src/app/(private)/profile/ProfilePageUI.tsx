@@ -16,7 +16,7 @@ import { toast } from "react-toastify";
    S3 Upload Helper
 ----------------------------- */
 async function uploadAvatarToS3(file: File) {
-    const presignRes = await authFetch("/api/uploads/avatar-url", {
+    const presignRes = await fetch("/api/uploads/avatar-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contentType: file.type }),
@@ -32,7 +32,6 @@ async function uploadAvatarToS3(file: File) {
 }
 
 export default function UnifiedProfileUI() {
-    const router = useRouter();
     const { user } = useAuth();
 
     const [userData, setUserData] = useState<any>(null);
@@ -47,6 +46,7 @@ export default function UnifiedProfileUI() {
         if (!user) return;
 
         setUserData(user);
+        console.log(user)
         setEditForm({
             first_name: user.profile?.first_name || "",
             last_name: user.profile?.last_name || "",
@@ -257,7 +257,7 @@ export default function UnifiedProfileUI() {
 
                                 {isPractitioner ? (
                                     <>
-                                        <FormInput label="Specialty" value={editForm.specialty} isEditing={isEditing} onChange={(v: string) => setEditForm({ ...editForm, specialty: v })} icon={<Activity size={16} />} />
+                                        <FormInput label="Specialty" value={user.practitioner.specialization.join(", ")} isEditing={false} onChange={(v: string) => setEditForm({ ...editForm, specialty: v })} icon={<Activity size={16} />} />
                                     </>
                                 ) : (
                                     <>
