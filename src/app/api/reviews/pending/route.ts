@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export async function GET(req: NextRequest) {
     try {
         /* ---------------- AUTH ---------------- */
         const { authorized, user } = await requireUser(req);
+        const cnx = getAuditContext(req, user);
 
         if (!authorized) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -13,6 +16,18 @@ export async function GET(req: NextRequest) {
 
         const patientId = user?.patient_id;
         if (!patientId) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                source: "dashboard",
+                entityType: "PENDING_REVIEW",
+                entityId: user?.auth_user_id,
+                metadata: {
+                    error: "No patient profile found",
+                    "user_id": user?.auth_user_id,
+                },
+                purpose: "operations",
+            })
             return NextResponse.json(
                 { error: "No patient profile found" },
                 { status: 400 }
@@ -38,6 +53,18 @@ export async function GET(req: NextRequest) {
             .maybeSingle();
 
         if (error) {
+            await auditLog({
+                ...cnx,
+                action: "FAILED",
+                source: "dashboard",
+                entityType: "PENDING_REVIEW",
+                entityId: user?.auth_user_id,
+                metadata: {
+                    error: error.message,
+                    "user_id": user?.auth_user_id,
+                },
+                purpose: "operations",
+            })
             console.error("Pending review fetch error:", error);
             return NextResponse.json(
                 { error: "Failed to fetch pending review" },
@@ -59,6 +86,18 @@ export async function GET(req: NextRequest) {
                 : data.practitioners;
 
         const practitionerName = practitioner?.full_name ?? "";
+
+        await auditLog({
+            ...cnx,
+            action: "CREATED",
+            source: "dashboard",
+            entityType: "PENDING_REVIEW",
+            entityId: user?.auth_user_id,
+            metadata: {
+                "user_id": user?.auth_user_id,
+            },
+            purpose: "operations",
+        })
         return NextResponse.json({
             pending: true,
             appointment: {

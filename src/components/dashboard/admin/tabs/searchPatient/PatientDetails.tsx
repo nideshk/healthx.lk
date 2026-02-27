@@ -151,8 +151,6 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
     }
   };
 
-  const dobValue = isEditing ? formData.dob : patient.dob ?? "";
-
   return (
     <div className="space-y-4">
       {/* Back and Edit Actions */}
@@ -212,10 +210,10 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
             </div>
             <div className="flex flex-wrap gap-6 text-xs text-slate-700">
               <DetailLine label="Patient ID" value={patient.id} />
-              <DetailLine label="Date of Birth" value={isEditing ? formData.dob : patient.dob || "-"} />
+              <DetailLine label="Date of Birth" value={isEditing ? formData.dob : patient.dob} />
               <DetailLine
                 label="Age"
-                value={dobValue ? `${calculateAge(dobValue)} years` : "-"}
+                value={`${calculateAge(isEditing ? formData.dob : patient.dob)} years`}
               />
               <DetailLine label="Gender" value={(isEditing ? formData.gender : patient.gender) || "N/A"} />
               <DetailLine 

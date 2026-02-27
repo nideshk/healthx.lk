@@ -27,13 +27,10 @@ export default function AboutUs() {
                     <div className="space-y-4 text-slate-700">
                         <p>{t("story.para1")}</p>
                         <p>{t("story.para2")}</p>
-                        <p>{t("story.para3")}</p>
-                        <p>{t("story.para4")}</p>
-                        <p>{t("story.para5")}</p>
-                        <p>{t("story.para6")}</p>
-                         <p className="italic border-l-4 border-blue-500 pl-4 py-1 text-slate-600 bg-slate-50/50">
+                        <p className="italic border-l-4 border-blue-500 pl-4 py-1 text-slate-600 bg-slate-50/50">
                             {t("story.quote")}
                         </p>
+                        <p>{t("story.para3")}</p>
                     </div>
                 </div>
             </section>
@@ -96,8 +93,6 @@ export default function AboutUs() {
                             <p>{t("founder.para1")}</p>
                             <p>{t("founder.para2")}</p>
                             <p>{t("founder.para3")}</p>
-                            <p>{t("founder.para4")}</p>
-                            <p>{t("founder.para5")}</p>
                             <p className="font-bold text-slate-900 pt-4 italic">
                                 ~ {t("founder.signoff")}
                             </p>

@@ -362,9 +362,7 @@ useEffect(() => {
                       <button
                         type="button"
                         className="text-blue-600 font-semibold text-left hover:underline"
-                        onClick={() =>
-                          onSelectPatient(p)
-                        }
+                        onClick={() => onSelectPatient(p)}
                       >
                         {p.full_name || p.name}
                       </button>

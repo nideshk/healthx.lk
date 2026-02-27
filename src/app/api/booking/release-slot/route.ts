@@ -12,17 +12,29 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { appointmentId } = await req.json();
+        const { appointmentId, reason } = await req.json();
 
         if (!appointmentId) {
             return NextResponse.json({ error: "Missing Appointment ID" }, { status: 400 });
+        }
+
+        let finalStatus = 'cancelled';
+        switch(reason)
+        {
+            case "PAYMENT_FAILED":
+                finalStatus = 'payment_failed';
+                break;
+            
+            case "PAYMENT_DISMISSED":
+                finalStatus = 'payment_cancelled';
+                break;
         }
 
         // 1. Update the Appointment status to release the slot
         const { error: appError } = await supabaseAdmin
             .from('appointments')
             .update({
-                status: 'cancelled',
+                status: finalStatus,
                 payment_status: 'failed'
             })
             .eq('id', appointmentId)
