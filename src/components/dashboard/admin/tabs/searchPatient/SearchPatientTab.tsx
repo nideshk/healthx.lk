@@ -266,6 +266,15 @@ useEffect(() => {
     }
   };
 
+  function maskGovernmentId(govId: any): string {
+    if (!govId?.number) return "";
+
+    const number = String(govId.number);
+    const last4 = number.slice(-4);
+
+    return `xxx-${last4}`;
+  }
+
   function calculateAge(dob: string): number {
     const birthDate = new Date(dob);
     const today = new Date();
@@ -354,22 +363,7 @@ useEffect(() => {
                         type="button"
                         className="text-blue-600 font-semibold text-left hover:underline"
                         onClick={() =>
-                          onSelectPatient({
-                            id: p.id,
-                            patientId: p.id, // use id as display id (or map real one if exists)
-                            full_name: p.full_name || "",
-                            age: p.dob ? calculateAge(p.dob) : 0,
-                            dob: p.dob || "",
-                            gender: p.gender || "",
-                            email: p.email || "",
-                            contact_number: p.contact_number || "",
-                            addressLine1: p.address || "",
-                            allergies: Array.isArray(p.allergies) ? p.allergies : [],
-                            city: p.city || "",
-                            state: p.state || "",
-                            country: p.country || "",
-                            government_id: p.government_id ?? null,
-                          })
+                          onSelectPatient(p)
                         }
                       >
                         {p.full_name || p.name}
@@ -378,6 +372,11 @@ useEffect(() => {
                       <span className="text-xs text-slate-500">
                         {p.contact_number || p.phone}
                       </span>
+                      {p.government_id?.number && (
+                        <span className="text-xs text-slate-500">
+                          Gov ID: {maskGovernmentId(p.government_id)}
+                        </span>
+                      )}
                     </div>
                     <Button
                       variant="danger"

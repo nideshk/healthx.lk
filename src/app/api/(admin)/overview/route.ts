@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
       `)
       .neq("status", "cancelled")
       .gte("starts_at", from)
-      .lte("ends_at", to);
+      .lt("starts_at", to);
 
     if (error) 
       {
