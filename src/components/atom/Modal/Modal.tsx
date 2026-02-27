@@ -51,7 +51,7 @@ export default function Modal({
           {title && <h2 className="text-lg font-semibold truncate">{title}</h2>}
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 transition"
+            className="text-gray-500 hover:text-gray-800 transition"
           >
             <X size={20} />
           </button>

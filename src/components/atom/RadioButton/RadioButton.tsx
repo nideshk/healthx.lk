@@ -75,7 +75,7 @@ export default function RadioButton({
       {label && (
         <span
           className={cn(
-            "text-gray-700 dark:text-gray-300",
+            "text-gray-700",
             disabled && "opacity-50"
           )}
         >

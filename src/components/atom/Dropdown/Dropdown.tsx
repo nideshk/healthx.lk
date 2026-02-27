@@ -63,7 +63,7 @@ export default function Dropdown({
   return (
     <div className={cn("flex flex-col gap-1 relative", className)} ref={ref}>
       {label && (
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="text-sm font-medium text-gray-700">
           {label}
         </label>
       )}
@@ -101,9 +101,9 @@ export default function Dropdown({
                 setOpen(false);
               }}
               className={cn(
-                "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700",
+                "w-full text-left px-4 py-2 text-sm hover:bg-gray-100",
                 opt.value === value &&
-                  "bg-[#018BB5] text-white hover:bg-[#017A9F]"
+                "bg-[#018BB5] text-white hover:bg-[#017A9F]"
               )}
             >
               {opt.label}

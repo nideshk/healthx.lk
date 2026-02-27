@@ -6,7 +6,7 @@ export default function NotFound() {
     <main className="flex min-h-[80vh] flex-col items-center justify-center px-6 text-center">
       <div className="space-y-4">
         {/* Visual Cue */}
-        <h1 className="text-9xl font-extrabold tracking-widest text-gray-200 dark:text-gray-800">
+        <h1 className="text-9xl font-extrabold tracking-widest text-gray-200">
           404
         </h1>
 
@@ -19,7 +19,7 @@ export default function NotFound() {
           Uh-oh! We lost you.
         </h2>
 
-        <p className="mx-auto max-w-lg text-gray-500 dark:text-gray-400">
+        <p className="mx-auto max-w-lg text-gray-500">
           The page you’re looking for doesn’t exist or has been moved.
           Don't worry, even the best explorers get lost sometimes.
         </p>
