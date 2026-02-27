@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
-import { useTranslations } from "next-intl"; // Added for translations
+import { useTranslations } from "next-intl";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 /* ─────────────────────────────────────────────
    Sri Lanka Static Location Data
@@ -23,6 +24,8 @@ const SRI_LANKA_LOCATIONS: Record<string, string[]> = {
 export default function SignupForm() {
   const t = useTranslations("signup");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl');
 
   const [form, setForm] = useState({
     first_name: "",
@@ -75,7 +78,7 @@ export default function SignupForm() {
       const data = await res.json();
       if (data.requires_email_verification) {
         toast.info(t("messages.verifyEmail"));
-        router.push("/");
+        router.push(callbackUrl || "/");
         return;
       }
 
@@ -83,10 +86,24 @@ export default function SignupForm() {
         throw new Error(data.error || t("messages.signupFailed"));
       }
 
-      toast.success(t("messages.signupSuccess"));
+      // Auto-login the user
+      const { error: signInError } = await supabaseBrowser.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (signInError) {
+        toast.error("Account created, but auto-login failed. Please log in manually.");
+        setTimeout(() => {
+          router.push("/");
+        }, 1200);
+        return;
+      }
+
+      toast.success(t("messages.signupSuccess") || "Account created successfully!");
 
       setTimeout(() => {
-        router.push("/");
+        router.push(callbackUrl || "/appointment");
       }, 1200);
     } catch (err: any) {
       console.error(err);
