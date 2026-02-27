@@ -14,6 +14,23 @@ interface ManageAppointmentModalProps {
 
 type Screen = "menu" | "cancel" | "resend";
 
+/* -------------------------------------------------------------------------- */
+/* Reusable Modal Wrapper                          */
+/* -------------------------------------------------------------------------- */
+const ModalWrapper = ({ children, onClose }: { children: React.ReactNode, onClose: () => void }) => (
+  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 px-4">
+    <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl relative">
+      <button
+        className="absolute right-4 top-4 text-slate-500 hover:text-slate-700 text-xl cursor-pointer"
+        onClick={onClose}
+      >
+        ×
+      </button>
+      {children}
+    </div>
+  </div>
+);
+
 const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
   open,
   appointment,
@@ -136,30 +153,12 @@ Clinecxa Team
   };
 
   /* -------------------------------------------------------------------------- */
-  /* Reusable Modal Wrapper                          */
-  /* -------------------------------------------------------------------------- */
-
-  const ModalWrapper = ({ children }: { children: React.ReactNode }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl relative">
-        <button
-          className="absolute right-4 top-4 text-slate-500 hover:text-slate-700 text-xl"
-          onClick={onClose}
-        >
-          ×
-        </button>
-        {children}
-      </div>
-    </div>
-  );
-
-  /* -------------------------------------------------------------------------- */
   /* Main Menu                                  */
   /* -------------------------------------------------------------------------- */
 
   if (screen === "menu") {
     return (
-      <ModalWrapper>
+      <ModalWrapper onClose={onClose}>
         <div className="text-lg font-semibold text-slate-900 mb-4">
           Manage Appointment
         </div>
@@ -197,7 +196,7 @@ Clinecxa Team
 
   if (screen === "cancel") {
     return (
-      <ModalWrapper>
+      <ModalWrapper onClose={onClose}>
         <div className="text-lg font-semibold text-slate-900 mb-3">
           Manage Appointment
         </div>
@@ -239,7 +238,7 @@ Clinecxa Team
 
   if (screen === "resend") {
     return (
-      <ModalWrapper>
+      <ModalWrapper onClose={onClose}>
         <div className="text-lg font-semibold text-slate-900 mb-3">
           Manage Appointment
         </div>
