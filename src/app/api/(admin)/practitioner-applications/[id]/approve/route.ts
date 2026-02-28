@@ -233,15 +233,27 @@ export async function POST(
     license_number: body?.license_number ?? app.license_number,
     experience_years: body?.experience_years ?? app.experience_years,
 
-    contact_email: body?.contact_email ?? app.contact_email,
+    contact_email: body?.email ?? body?.contact_email ?? app.contact_email,
     contact_number: body?.contact_number ?? app.contact_number,
 
     profile_bio: body?.profile_bio ?? app.profile_bio,
     available_services: body?.available_services ?? app.available_services,
     fees: body?.fees ?? app.fees,
 
-    bank_details: body?.bank_details ?? app.bank_details,
-
+    bank_details:
+      body?.bank_details ??
+      (body?.bank_name || body?.account_name || body?.account_number
+        ? {
+            bank_name: body?.bank_name,
+            account_name: body?.account_name,
+            account_number: body?.account_number,
+            branch_location: body?.branch_location ?? null,
+            branch_address: body?.branch_address ?? null,
+            ifsc_code: body?.ifsc_code ?? null,
+            swift_code: body?.swift_code ?? null,
+          }
+        : app.bank_details),
+        
     documents: Array.isArray(body?.documents)
       ? body.documents
       : Array.isArray(app.documents)
