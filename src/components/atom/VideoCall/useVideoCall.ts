@@ -23,6 +23,7 @@ export function useVideoCall({ token }: { token: string }) {
 
   const [joined, setJoined] = useState(false);
   const [peers, setPeers] = useState<Record<string, MediaStream>>({});
+  const [peerMetadata, setPeerMetadata] = useState<Record<string, any>>({});
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
 
@@ -101,7 +102,11 @@ export function useVideoCall({ token }: { token: string }) {
       /* ---------------- REMOTE EVENTS ---------------- */
 
       stage.on(StageEvents.STAGE_PARTICIPANT_JOINED, (participant: any) => {
-        logEvent("PEER_JOINED", { participantId: participant.id });
+        logEvent("PEER_JOINED", { participantId: participant.id, attributes: participant.attributes });
+        setPeerMetadata((prev) => ({
+          ...prev,
+          [participant.id]: participant.attributes || {},
+        }));
       });
 
       stage.on(
@@ -138,6 +143,7 @@ export function useVideoCall({ token }: { token: string }) {
             delete copy[participant.id];
             return copy;
           });
+          // Do not remove metadata here, as participant is still in stage
         }
       );
 
@@ -146,6 +152,12 @@ export function useVideoCall({ token }: { token: string }) {
           const stream = prev[participant.id];
           stream?.getTracks().forEach((t) => t.stop());
 
+          const copy = { ...prev };
+          delete copy[participant.id];
+          return copy;
+        });
+
+        setPeerMetadata((prev) => {
           const copy = { ...prev };
           delete copy[participant.id];
           return copy;
@@ -238,6 +250,7 @@ export function useVideoCall({ token }: { token: string }) {
   return {
     localVideoRef,
     peers,
+    peerMetadata,
     joined,
     isMuted,
     isCameraOff,

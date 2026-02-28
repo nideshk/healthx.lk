@@ -22,6 +22,7 @@ export default function VideoCallContainer({
   const {
     localVideoRef,
     peers,
+    peerMetadata,
     joined,
     isMuted,
     isCameraOff,
@@ -120,6 +121,7 @@ export default function VideoCallContainer({
               <VideoGrid
                 localVideoRef={localVideoRef}
                 peers={peers}
+                peerMetadata={peerMetadata}
                 isCameraOff={isCameraOff}
                 localStream={localStream}
               />
