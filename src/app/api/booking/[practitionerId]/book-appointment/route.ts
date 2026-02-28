@@ -129,6 +129,7 @@ export async function POST(
       .eq("practitioner_id", practitionerId)
       .eq("starts_at", starts_at)
       .neq("status", "cancelled")
+      .neq("status", "payment_cancelled")
       .maybeSingle();
 
     if (existing) {
