@@ -73,6 +73,10 @@ const ConsultationStep = forwardRef(
       setSelectedServiceId(service.id);
       updateData({
         selectedService: service as AppointmentFormInputs['selectedService'],
+        appointmentType: null,
+        selectedAttendees: [],
+        starts_at: null,
+        ends_at: null,
       });
     };
 
