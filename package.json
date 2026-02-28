@@ -53,5 +53,8 @@
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@parcel/watcher": "2.1.0"
   }
 }

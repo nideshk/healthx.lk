@@ -1,4 +1,4 @@
-import Body from "./(public)/body/body";
+import Body from "./body/body";
 import Footer from "@/components/homepage/footer/footer";
 
 export default function LandingPage() {
