@@ -23,6 +23,7 @@ export type Patient = {
   addressLine1?: string;
   city?: string;
   country?: string;
+  state?: string;
 };
 
 export type PatientDetailTab =
@@ -63,6 +64,7 @@ export type Appointment = {
   room_key?: string;
   email? :string;
   contact_number? : string
+  patient_id? : string
 };
 
 // ---------------- Analytics ---------------- //

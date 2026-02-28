@@ -73,6 +73,7 @@ export async function GET(
     .from("appointments")
     .select(`
         id,
+        patient_id,
         starts_at,
         ends_at,
         status,
@@ -81,6 +82,7 @@ export async function GET(
         room_key,
 
         patient:patients (
+            id,
             full_name,
             email,
             contact_number
@@ -138,6 +140,7 @@ export async function GET(
         },
         data: data.map((a) => ({
           id: a.id,
+          patient_id: a.patient_id,
           patient: (a.patient as unknown as { full_name: string } | null)?.full_name ?? null,
           appointment_type: (a.type as unknown as { name: string } | null)?.name ?? null,
           starts_at: a.starts_at,
@@ -164,6 +167,7 @@ export async function GET(
     },
     data: data.map((a) => ({
       id: a.id,
+      patient_id: a.patient_id,
       patient: (a.patient as unknown as { full_name: string } | null)?.full_name ?? null,
       email: (a.patient as unknown as { email: string } | null)?.email ?? null,
       contact_number: (a.patient as unknown as { contact_number: string } | null)?.contact_number ?? null,

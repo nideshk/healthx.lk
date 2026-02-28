@@ -110,6 +110,41 @@ export async function PATCH(req: NextRequest) {
 
     /* ---------------- PATIENT ---------------- */
     if (target_role === "patient") {
+      if (!user_id) {
+        return NextResponse.json(
+          { error: "user_id (patient id) is required" },
+          { status: 400 }
+        );
+      }
+
+      // 🔹 Fetch patient using patient.id
+      const { data: patientRow, error: pErr } =
+        await supabaseAdmin
+          .from("patients")
+          .select("id, supabase_user_id, email")
+          .eq("id", user_id)
+          .single();
+
+      if (pErr || !patientRow) {
+        await auditLog({
+          ...cnx,
+          action: "FAILED",
+          entityType: "PATIENT",
+          entityId: user_id,
+          purpose: "operations",
+          source: "admin_panel",
+          metadata: { reason: "patient_not_found" },
+        });
+
+        return NextResponse.json(
+          { error: "Patient not found" },
+          { status: 404 }
+        );
+      }
+
+      const supabaseUserId = patientRow.supabase_user_id;
+
+      /* ---------- PROFILE UPDATE ---------- */
       const profileUpdate = clean({
         first_name: patient?.first_name,
         last_name: patient?.last_name,
@@ -122,36 +157,43 @@ export async function PATCH(req: NextRequest) {
         country: patient?.country,
       });
 
+      if (Object.keys(profileUpdate).length) {
+        await supabaseAdmin
+          .from("profiles")
+          .update(profileUpdate)
+          .eq("id", supabaseUserId);
+      }
+
+      /* ---------- PATIENT TABLE UPDATE ---------- */
       const patientUpdate = clean({
-        full_name : 
-        patient?.first_name || patient?.last_name
-          ? `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim()
-          : undefined,
+        full_name:
+          patient?.first_name || patient?.last_name
+            ? `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim()
+            : undefined,
         dob: patient?.dob,
         gender: patient?.gender,
         contact_number: patient?.contact_number,
         emergency_contact: patient?.emergency_contact,
         address: patient?.address,
         notes: patient?.notes,
-        updated_at: new Date().toISOString(),
         allergies: patient?.allergies,
-        blood_type: patient?.blood_type
+        blood_type: patient?.blood_type,
+        updated_at: new Date().toISOString(),
       });
 
-      if (Object.keys(profileUpdate).length)
-        await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", user_id);
-
-      if (Object.keys(patientUpdate).length)
+      if (Object.keys(patientUpdate).length) {
         await supabaseAdmin
           .from("patients")
           .update(patientUpdate)
-          .eq("supabase_user_id", user_id);
+          .eq("id", user_id); // 🔥 IMPORTANT FIX
+      }
 
       const editedFields = [
         ...Object.keys(profileUpdate),
         ...Object.keys(patientUpdate),
       ];
 
+      /* ---------- AUDIT ---------- */
       await auditLog({
         ...cnx,
         action: "UPDATED",
@@ -161,18 +203,23 @@ export async function PATCH(req: NextRequest) {
         metadata: { edited_fields: editedFields },
       });
 
+      /* ---------- NOTIFY ---------- */
       await notify({
-        userId: user_id,
+        userId: supabaseUserId,
         role: "patient",
         eventType: "profile_updated_by_admin",
         title: "Profile Updated",
         message: `
-Your profile has been updated by an administrator.
+    Your profile has been updated by an administrator.
 
-Updated fields:
-${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
+    Updated fields:
+    ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         `.trim(),
         channels: ["email"],
+        payload: {
+            email: patientRow?.email,
+            supabaseUserId:supabaseUserId,
+        },
       });
 
       return NextResponse.json({ success: true });
@@ -191,7 +238,7 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
       const { data: practitionerRow, error: pErr } =
         await supabaseAdmin
           .from("practitioners")
-          .select("id, supabase_user_id")
+          .select("id, supabase_user_id, contact_email")
           .eq("id", user_id) // 🔥 IMPORTANT CHANGE
           .single();
 
@@ -327,6 +374,10 @@ ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
     ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         `.trim(),
         channels: ["email"],
+        payload: {
+            email: practitionerRow?.contact_email,
+            supabaseUserId: supabaseUserId,
+        },
       });
 
       return NextResponse.json({ success: true });

@@ -207,7 +207,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                               onClick={() => setSelectedAppt(appt)}
                             >
                               {appt.patient || "Patient"} • {appt.time}
-                              {appt.patient || "Patient"} • {appt.time}
                             </button>
                           );
                         })}
@@ -405,7 +404,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
               <button
                 onClick={() =>
                   onViewPatient(
-                    appointment.id || "",
+                    appointment.patient_id || "",
                     appointment.patient || "",
                   )
                 }
