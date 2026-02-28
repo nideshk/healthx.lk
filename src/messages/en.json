@@ -7,7 +7,7 @@
     "followUps": "Follow-Ups",
     "newBooking": "New Booking",
     "privacyTitle": "Patient Privacy",
-    "privacyDescription": "Your medical data is encrypted and HIPAA compliant.",
+    "privacyDescription": "Your medical data is encrypted",
     "subtitle": "Manage your healthcare journey and records",
     "tabs": {
       "appointments": "Appointments",
@@ -107,8 +107,8 @@
     "selectServiceToProceed": "Please select a service to proceed.",
     "preparingServices": "Preparing Services",
     "stepLabel": "Step 1: Specialization",
-    "title": "Consultation Type",
-    "subtitle": "Select the medical specialization that best fits your current health needs.",
+    "title": "Our Healthcare Services",
+    "subtitle": "Choose from our comprehensive range of medical specialties and connect with the right healthcare professional for your needs.",
     "defaultServiceDescription": "Expert medical consultation tailored to your specific symptoms and health goals.",
     "currentSelection": "Current Selection",
     "selectType": "Select Type",
@@ -121,16 +121,19 @@
     "selectDoctorError": "Please select a healthcare professional.",
     "fetchDoctorError": "Unable to retrieve practitioner list.",
     "backToSpecialization": "Back to specialisation",
-    "title": "Choose your Doctor",
+    "title": "Select a doctor for your appointment.",
     "subtitle": "Available specialists for",
     "loadingDoctors": "Finding best specialists...",
     "noDoctors": "No doctors available for this service yet.",
     "tryAnotherService": "Try another service",
     "verifiedSpecialist": "Verified Specialist",
     "consultationFee": "Consultation starting at",
-    "sortBy": "Sort",
+    "sortBy": "Sort by:",
     "priceLowHigh": "Price: Low to High",
-    "priceHighLow": "Price: High to Low"
+    "priceHighLow": "Price: High to Low",
+    "priceLabel": "Price",
+    "viewLabel": "View:",
+    "doctorsAvailable": "{count} Doctors available"
   },
   "bookAppointment": {
     "loadDoctorError": "Unable to load doctor details",
@@ -140,7 +143,7 @@
     "selectDateError": "Please select a date",
     "selectTimeError": "Please select a time",
     "changeDoctor": "Change doctor",
-    "secured": "HIPAA Secure",
+    "secured": "Secure",
     "specialist": "Specialist",
     "clinicalPractice": "General Medical Practice",
     "experience": "Experience",
@@ -150,22 +153,27 @@
     "sessionType": "Session Type",
     "minuteSession": "Minute Session",
     "chooseDate": "Choose a date",
-    "availableSlots": "Available Time Slots",
+    "availableSlots": "Available times:",
     "pickDate": "Select a date to view available time slots",
     "fullyBooked": "No Slots Available",
     "tryAnotherDate": "Try another date",
     "summary": "Appointment Summary",
     "confirming": "Confirming...",
-    "continuePayment": "Continue to payment"
+    "continuePayment": "Confirm Booking",
+    "title": "Book Appointment.",
+    "scheduleTitle": "Schedule your appointment.",
+    "selectDateTime": "Select date and time.",
+    "confirmButton": "Confirm Booking",
+    "recommendedDoctors": "Other Recommended Doctors."
   },
   "consentForm": {
     "acceptBothError": "Please accept both agreements to continue.",
-    "declineTitle": "Wait, Consent is Required",
-    "declineMessage": "To provide legal telehealth care and protect your privacy, we must have your signed agreement. Exiting now will cancel your booking progress.",
-    "exitBooking": "Yes, Exit Booking",
-    "goBackReview": "Go Back & Review",
-    "title": "Review & Sign",
-    "subtitle": "Almost done! We just need your legal consent.",
+    "declineTitle": "Are you sure?",
+    "declineMessage": "You have the right to disagree with these terms and conditions. This is completely within your rights as a patient.\n\nHowever, please understand that by choosing not to agree, we cannot proceed with the telehealth appointment booking as these consents are required for providing telehealth services safely and legally.\n\nYou may still schedule an in-person appointment if you prefer, or take time to review these documents and return when you're ready to proceed.",
+    "exitBooking": "Confirm – I do not agree",
+    "goBackReview": "Go back",
+    "title": "Consent & Terms",
+    "subtitle": "Please review and accept the following to proceed with your appointment.",
     "telehealthTitle": "Telehealth Consent",
     "telehealthHeading": "Digital Healthcare Agreement",
     "telehealthP1": "Telehealth involves electronic communication technologies to provide care when the provider and patient are not in the same location.",
@@ -180,53 +188,69 @@
     "agreeText": "I have read and agree to the {section}",
     "finalize": "Finalize Appointment",
     "declineTerms": "I do not agree to these terms",
-    "back": "Back"
+    "back": "Back",
+    "agreeButton": "I agree",
+    "disagreeButton": "I do not agree"
   },
   "PaymentConfirmation": {
-    "title": "Payment Made, Appointment Confirmed!",
+    "title": "Payment made, appointment confirmed! Congratulations.",
     "subtitle": "Congratulations",
     "prepareTitle": "How to Prepare for Your Telehealth Appointment",
+    "prepareHeading": "How to prepare for your telehealth appointment.",
     "email": {
-      "title": "Email Confirmation",
-      "description": "You will receive an email to your registered email address with the appointment link. Please check your SPAM folder if you don’t see this email in your inbox."
+      "title": "Email confirmation:",
+      "description": "You will shortly receive an email to your registered email address with the appointment link. Please check your SPAM folder if you don’t see this email in your email."
     },
     "appointmentDay": {
-      "title": "On Appointment Day",
-      "description": "Click on the link provided in your email to join the appointment. Your doctor will join you on time. Make sure you have a stable internet connection and are in a quiet environment."
+      "title": "On appointment day:",
+      "description": "Click on the link provided in your email to join the appointment. Your doctor will join you on time. Make sure you have a stable internet connection and are in a quiet and private environment."
     },
     "members": {
-      "title": "Additional Members",
-      "description": "If you selected additional members for this appointment, please forward the appointment link to them so they can join the consultation as well."
+      "title": "Additional members:",
+      "description": "If you selected additional members for this appointment, please let them know that they will also receive an email."
     },
     "followup": {
-      "title": "Follow-up Call",
+      "title": "Follow-up call:",
       "description": "Once your appointment is completed, we will call you to see how we did and how we can improve our services. Your feedback is valuable to us."
     },
     "footer": "Thank you for choosing our telehealth services. We look forward to providing you with excellent care.",
     "returnHome": "Return to Home"
   },
   "preConsultation": {
-    "title": "Pre-Consultation",
-    "subtitle": "Please provide some information to help your doctor prepare for the consultation",
+    "title": "Pre-consultation information",
+    "subtitle": "Please provide some information to help your doctor prepare for the consultation.",
     "privacy": "Clinical Privacy",
     "maxLabel": "MAX",
     "concern": "What is your main concern today?",
-    "concernPlaceholder": "Please describe your main health concerns or symptoms",
-    "outcome": "What are you hoping to achieve from this consultation?",
+    "concernPlaceholder": "(please describe your main health concerns or symptoms)",
+    "outcome": "What are you hoping to achieve from this consultation? (diagnosis, treatment options, second opinion, prescription renewal etc)",
     "outcomePlaceholder": "Diagnosis, treatment options, second opinion, prescription renewal etc",
-    "referral": "How did you hear about us?",
+    "referral": "How did you hear about this platform?",
     "selectOption": "Select an option...",
     "customReferral": "Please specify source...",
     "attachments": "Attachments (Optional)",
     "uploadHint": "Medical Records / Photos",
     "attendees": "Attendees",
-    "attendeesSubtitle": "Will there be additional family members?",
+    "attendeesSubtitle": "How many attendees to the appointment?\n\nWill you be joining the appointment alone, or will there be additional family members? You can add up to 1 additional member. *Pricing may differ)",
     "invitePlaceholder": "Invite via email",
     "back": "Back",
     "continue": "Continue to Payment",
-    "duration": "How long have you had this concern?",
+    "duration": "How long have you had this concern? (for example: 2 weeks, 3 months, 1 year)",
     "durationPlaceholder": "How long have you had this concern?",
     "attendeeFeeNote": "Note: An additional fee of {currency} {fee} per attendee will be charged.",
+    "detailsHeader": "Consultation details",
+    "attachmentsLabel": "Document upload for the Doctor\n(Upload any relevant medical documents, test results, or reports (maximum 3 documents)",
+    "attendeesHeader": "Additional attendee information",
+    "attendeesDescription": "If someone will be joining this consultation with you, please provide their details.",
+    "attendeeFirstName": "Additional attendee’s first name",
+    "attendeeSurname": "Additional attendee’s surname",
+    "attendeeEmail": "Additional attendee’s email",
+    "relationshipLabel": "Relationship to patient:",
+    "attendeeOptions": {
+      "onlyPatient": "Only the patient.",
+      "withFamily": "Additional family member with patient."
+    },
+    "selectButton": "Select",
     "errors": {
       "concern": "Main concern is required",
       "outcome": "Desired outcome is required",
@@ -264,20 +288,20 @@
       "benefits": {
         "1": "Reach new patients in your area",
         "2": "Full-featured scheduling dashboard",
-        "3": "Secure, HIPAA-compliant patient data"
+        "3": "Secure patient data"
       },
       "cta": "Register as a Practitioner"
     },
     "hero": {
       "title": "Healthcare at Your Fingertips",
-      "subtitle": "Connect with certified healthcare professionals from the comfort of your home. Quality care, anytime, anywhere",
+      "subtitle": "Connect with certified healthcare professionals from the comfort of your home. Quality care, anytime, anywhere.",
       "trust": {
-        "verified": "Verified doctors",
-        "secure": "Secure & private",
-        "instant": "Instant booking"
+        "verified": "Licensed Professionals.",
+        "secure": "Secure and Private discussions.",
+        "instant": "Choose your date and time."
       },
       "cta": {
-        "bookNow": "Book now",
+        "bookNow": "Select Service",
         "dashboard": "Dashboard",
         "login": "Log in"
       }
@@ -291,7 +315,7 @@
         },
         "secure": {
           "title": "Secure platform",
-          "text": "HIPAA-compliant, privacy-first healthcare experience"
+          "text": "privacy-first healthcare experience"
         },
         "fast": {
           "title": "Fast booking",
@@ -411,18 +435,18 @@
       "contact": "Contact Support",
       "help": "Help Center & FAQs",
       "terms": "Terms of Service",
-      "privacy": "Privacy Policy (HIPAA Compliant)"
+      "privacy": "Privacy Policy"
     },
-    "secure": "Secure & HIPAA Compliant Platform",
+    "secure": "Secure Platform",
     "disclaimerTitle": "Disclaimer",
-    "disclaimerText": "Please do not use this service for emergencies or if you require medical certificates.For emergencies: Go to your nearest hospital or emergency service immediately, or call 110. For medical certificates or physical examinations: Please visit a doctor in person, as these services cannot be provided through telehealth. This platform is intended only for telehealth consultations that do not require in-person care.",
+    "disclaimerText": "Please do not use this service for emergencies or if you require medical certificates. For emergencies: Go to your nearest hospital or emergency service immediately, or call 110. For medical certificates or physical examinations: Please visit a doctor in person, as these services cannot be provided through telehealth. This platform is intended only for telehealth consultations that do not require in-person care.",
     "rights": "All rights reserved."
   },
   "header": {
     "nav": {
-      "dashboard": "Dashboard",
+      "dashboard": "Home",
       "ourStory": "Our Story",
-      "help": "Help"
+      "help": "How To"
     },
     "portal": {
       "appointments": "Appointments",
@@ -447,34 +471,40 @@
     "modal": {
       "mfaTitle": "Two-Factor Auth",
       "recoverTitle": "Recover Account",
-      "signInTitle": "Sign In",
-      "confirm": "Confirm",
-      "emailLabel": "Email Address",
-      "passwordLabel": "Password",
-      "forgot": "Forgot Password?",
-      "createAccount": "Create Account",
+      "signInTitle": "Login to your account.",
+      "signInDescription": "Enter your credentials to continue with your booking.",
+      "confirm": "Login.",
+      "emailLabel": "Email address.",
+      "passwordLabel": "Password.",
+      "forgot": "Forgot password or username?",
+      "createAccount": "Create new account.",
       "accountEmail": "Account Email",
       "sendLink": "Send Recovery Link",
       "backLogin": "Back to Login"
     }
   },
   "signup": {
-    "title": "Patient Signup",
-    "marketingConsent": "I agree to receive updates, offers, and health tips via email or SMS. You can unsubscribe anytime.",
+    "title": "Create new account.",
+    "subtitle": "Fill in your details to get started.",
+    "marketingConsent": "I would like to receive emails about future promotions, health tips, and updates from MedX. I understand I can unsubscribe at any time.",
     "countryDefault": "Sri Lanka",
-    "buttonDefault": "Sign Up",
+    "buttonDefault": "Create Account",
     "buttonLoading": "Signing up...",
     "placeholders": {
       "firstName": "First Name",
       "lastName": "Last Name",
-      "email": "Email",
+      "email": "Email Address",
       "password": "Password",
       "emergencyContact": "Emergency Contact (optional)",
-      "idNumber": "ID Number",
+      "idNumber": "ID Number (ID/Passport)",
       "address": "Address",
       "province": "State / Province",
       "city": "City",
-      "pinCode": "Postal Code (e.g. 00100)"
+      "pinCode": "Postal Code (e.g. 00100)",
+      "phone": "Phone number",
+      "dob": "Date of birth",
+      "gender": "Gender",
+      "confirmPassword": "Confirm Password."
     },
     "gender": {
       "male": "Male",
@@ -599,7 +629,9 @@
       "timeLeft": "Time left",
       "completePayment": "Complete payment to secure slot"
     },
-    "title": "Review & Complete Payment",
+    "title": "Payment",
+    "subtitle": "Complete your payment to confirm your appointment",
+    "summaryHeader": "Appointment summary",
     "doctorDetails": "Doctor Details",
     "appointmentDetails": "Appointment Details",
     "service": "Service",
@@ -620,6 +652,21 @@
     "total": "Total",
     "payNow": "Pay Now →",
     "back": "← Back",
+    "patientProfileReview": {
+      "title": "Patient Profile.",
+      "subtitle": "Review and confirm your information.",
+      "personalInfoHeader": "Personal Information.",
+      "firstName": "First Name",
+      "surname": "Surname",
+      "idNumber": "ID Number (ID/Passport)",
+      "email": "Email Address",
+      "phone": "Phone Number",
+      "dob": "Date of Birth",
+      "gender": "Gender",
+      "editButton": "Edit Information",
+      "confirmButton": "Confirm above is accurate",
+      "accurateNote": "Please ensure all information is accurate before proceeding with your appointment booking. This information will be used for your medical records and appointment confirmation."
+    },
     "errors": {
       "invalidCoupon": "Invalid coupon",
       "couponFailed": "Failed to validate coupon"
