@@ -58,6 +58,7 @@ export default function PreConsultationStep({
     relationship: "",
   });
 
+  console.log("booking", bookingData)
   const [attachment, setAttachment] = useState<File | null>(null);
 
   const isCustomReferral =
@@ -69,7 +70,7 @@ export default function PreConsultationStep({
   const platformFee = bookingData?.appointmentType?.platform_fee || 0;
   const currency = bookingData?.selectedDoctor?.currency || "LKR";
   const totalPayable =
-    typeFee + platformFee + selectedAttendees.length * 100;
+    typeFee + platformFee + selectedAttendees.length * 500;
 
   const validateFields = () => {
     if (!note.concern?.trim()) {
@@ -333,6 +334,16 @@ export default function PreConsultationStep({
                 <label className="text-xs font-black uppercase tracking-widest text-slate-400 leading-none">
                   {t("attendees")}
                 </label>
+              </div>
+
+              <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
+                <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                <p className="text-[11px] font-bold text-blue-700 leading-normal">
+                  {t("attendeeFeeNote", {
+                    fee: (500).toLocaleString(),
+                    currency: currency,
+                  })}
+                </p>
               </div>
 
               <div className="flex gap-2 mt-4">

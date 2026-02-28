@@ -61,7 +61,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const { user } = useAuth();
 
-  const platformFee = attendeeCount * 100;
+  const platformFee = attendeeCount * 500;
   const baseTotal = consultationFee + platformFee;
   const discountAmount = appliedCoupon?.discount?.discount_total || 0;
   const finalTotal = Math.max(baseTotal - discountAmount, 0);

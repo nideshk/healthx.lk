@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import HomepageSlotPicker from "./HomepageSlotPicker";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Stethoscope,
   User,
@@ -24,6 +24,7 @@ type Service = {
   icon: string | null;
   description: string;
   sin_description: string;
+  sin_name?: string;
 };
 
 type Doctor = {
@@ -186,6 +187,7 @@ const ServicePicker = ({
   onSelect: (s: Service) => void;
 }) => {
   const t = useTranslations("bookingFlow.servicePicker");
+  const locale = useLocale();
 
   // Memoize sorted services to prevent mutation and unnecessary re-sorts
   const sortedServices = useMemo(() => {
@@ -235,7 +237,7 @@ const ServicePicker = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-gray-900 truncate">
-                      {s.name}
+                      {locale === 'si' && s.sin_name ? s.sin_name : s.name}
                     </h3>
                     <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all" />
                   </div>
@@ -243,13 +245,8 @@ const ServicePicker = ({
                   {/* Descriptions with improved typography */}
                   <div className="mt-2 space-y-1">
                     <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                      {s.description}
+                      {locale === 'si' && s.sin_description ? s.sin_description : s.description}
                     </p>
-                    {s.sin_description && (
-                      <p className="text-xs font-medium text-cyan-700/70 italic">
-                        {s.sin_description}
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>

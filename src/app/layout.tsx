@@ -26,10 +26,10 @@ export default async function RootLayout({
   const messages = await getMessages({ locale });
 
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body>
         <NextIntlClientProvider
-          locale="en"
+          locale={locale}
           timeZone="Asia/Colombo" // 👈 REQUIRED HERE
           messages={messages}
         >
