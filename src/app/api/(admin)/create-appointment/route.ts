@@ -237,7 +237,8 @@ export async function POST(req: NextRequest) {
                 .eq("practitioner_id", practitioner_id)
                 .lt("starts_at", endsAt.toISOString())
                 .gt("ends_at", startsAt.toISOString())
-                .in("status", ["pending", "scheduled", "confirmed", "payment_cancelled"]);
+                .in("status", ["pending", "scheduled", "confirmed", "payment_cancelled"])
+                .order("created_at", { ascending: false })
 
         if (conflictErr) {
             await auditLog({

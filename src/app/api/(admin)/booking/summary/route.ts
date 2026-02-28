@@ -9,20 +9,19 @@ export async function GET(request: NextRequest) {
     const { authorized, user, } = await requireUser(request);
     const cnx = getAuditContext(request, user);
 
-    if (!authorized) 
-      {
-        await auditLog({
-          ...cnx,
-          action: "FAILED",
-          entityType: "APPOINTMENT",
-          purpose: "operations",
-          source: "dashboard",
-          metadata: {
-            reason: "Unauthorized access attempt - appointment summary",
-          },
-        });
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    if (!authorized) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "Unauthorized access attempt - appointment summary",
+        },
+      });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     /** RBAC: admin + superadmin */
     if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
@@ -71,7 +70,8 @@ export async function GET(request: NextRequest) {
       .from("appointments")
       .select("id, status")
       .gte("starts_at", `${from}T00:00:00`)
-      .lte("starts_at", `${to}T23:59:59`);
+      .lte("starts_at", `${to}T23:59:59`)
+      .order("created_at", { ascending: false })
 
     if (error) {
       await auditLog({
