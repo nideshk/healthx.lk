@@ -226,6 +226,7 @@
     "continue": "Continue to Payment",
     "duration": "How long have you had this concern?",
     "durationPlaceholder": "How long have you had this concern?",
+    "attendeeFeeNote": "Note: An additional fee of {currency} {fee} per attendee will be charged.",
     "errors": {
       "concern": "Main concern is required",
       "outcome": "Desired outcome is required",

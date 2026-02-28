@@ -12,7 +12,7 @@ import { Stethoscope, CheckCircle2, ArrowRight, ChevronRight, Loader2 } from 'lu
 import { toast } from 'react-toastify';
 import { AppointmentFormInputs } from '@/types/FormType';
 import Loader from '@/components/atom/Loader/Loader';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 type Service = {
   id: string | number;
@@ -33,11 +33,12 @@ interface Props {
 const ConsultationStep = forwardRef(
   ({ updateData, bookingData, draftData, nextStep, prevStep }: Props, ref) => {
     const t = useTranslations("serviceSelection");
+    const locale = useLocale();
 
     const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // Initialize from bookingData or draftData
     const [selectedServiceId, setSelectedServiceId] = useState<string | number | null>(
       bookingData?.selectedService?.id || (draftData?.data?.selectedService as any)?.id || null
@@ -72,6 +73,10 @@ const ConsultationStep = forwardRef(
       setSelectedServiceId(service.id);
       updateData({
         selectedService: service as AppointmentFormInputs['selectedService'],
+        appointmentType: null,
+        selectedAttendees: [],
+        starts_at: null,
+        ends_at: null,
       });
     };
 
@@ -123,11 +128,10 @@ const ConsultationStep = forwardRef(
                 <div
                   key={service.id}
                   onClick={() => handleSelectService(service)}
-                  className={`group relative rounded-[2rem] p-8 transition-all duration-300 cursor-pointer border-2 flex flex-col ${
-                    isSelected
-                      ? 'bg-slate-900 border-slate-900 shadow-2xl shadow-slate-200 -translate-y-1'
-                      : 'bg-white border-slate-100 hover:border-teal-200 hover:shadow-xl hover:shadow-slate-100 hover:-translate-y-1'
-                  }`}
+                  className={`group relative rounded-[2rem] p-8 transition-all duration-300 cursor-pointer border-2 flex flex-col ${isSelected
+                    ? 'bg-slate-900 border-slate-900 shadow-2xl shadow-slate-200 -translate-y-1'
+                    : 'bg-white border-slate-100 hover:border-teal-200 hover:shadow-xl hover:shadow-slate-100 hover:-translate-y-1'
+                    }`}
                 >
                   {isSelected && (
                     <div className="absolute top-6 right-6 text-teal-400 animate-in zoom-in duration-300">
@@ -135,28 +139,28 @@ const ConsultationStep = forwardRef(
                     </div>
                   )}
 
-                  <div className={`w-14 h-14 flex items-center justify-center rounded-2xl mb-6 transition-colors ${
-                      isSelected ? 'bg-slate-800 text-teal-400' : 'bg-slate-50 text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600'
+                  <div className={`w-14 h-14 flex items-center justify-center rounded-2xl mb-6 transition-colors ${isSelected ? 'bg-slate-800 text-teal-400' : 'bg-slate-50 text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600'
                     }`}
                   >
                     <Icon className="w-7 h-7" />
                   </div>
 
                   <h3 className={`text-xl font-bold mb-3 tracking-tight ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                    {service.name}
+                    {locale === 'si' && service.sin_name ? (service.sin_name as string) : service.name}
                   </h3>
 
                   <p className={`text-sm font-medium leading-relaxed mb-8 line-clamp-3 ${isSelected ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {service.description || t("defaultServiceDescription")}
+                    {locale === 'si' && service.sin_description
+                      ? (service.sin_description as string)
+                      : (service.description || t("defaultServiceDescription"))}
                   </p>
 
                   <div className="mt-auto flex items-center justify-between">
                     <span className={`text-xs font-black uppercase tracking-widest ${isSelected ? 'text-teal-400' : 'text-slate-300 group-hover:text-teal-600'}`}>
                       {isSelected ? t("currentSelection") : t("selectType")}
                     </span>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                        isSelected ? 'bg-teal-400 text-slate-900' : 'bg-slate-50 text-slate-400 group-hover:bg-teal-600 group-hover:text-white group-hover:rotate-[-45deg]'
-                    }`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-teal-400 text-slate-900' : 'bg-slate-50 text-slate-400 group-hover:bg-teal-600 group-hover:text-white group-hover:rotate-[-45deg]'
+                      }`}>
                       <ArrowRight className="w-4 h-4" />
                     </div>
                   </div>
@@ -174,8 +178,12 @@ const ConsultationStep = forwardRef(
                 {t("currentProgress")}
               </p>
               <p className="text-sm font-bold text-slate-900">
-                {selectedServiceId 
-                  ? services.find(s => s.id === selectedServiceId)?.name 
+                {selectedServiceId
+                  ? (() => {
+                    const sel = services.find(s => s.id === selectedServiceId);
+                    if (!sel) return t("selectServicePrompt");
+                    return locale === 'si' && sel.sin_name ? (sel.sin_name as string) : sel.name;
+                  })()
                   : t("selectServicePrompt")}
               </p>
             </div>

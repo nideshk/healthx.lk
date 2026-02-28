@@ -218,7 +218,7 @@ export async function POST(
     // ---------------------------
     // 6️⃣ Pricing
     // ---------------------------
-    const attendeeServiceFee = 100 * attendeeCount;
+    const attendeeServiceFee = 500 * attendeeCount;
 
     const fees_charged =
       (consultation_fee_by_practitioner.fee ||

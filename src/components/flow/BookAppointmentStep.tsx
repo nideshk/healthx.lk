@@ -256,7 +256,10 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                       setSelectedType(type);
                       setSelectedDate(null);
                       setSelectedTime(null);
-                      updateData({ appointmentType: type });
+                      updateData({
+                        appointmentType: type,
+                        selectedAttendees: type.max_attendees <= 1 ? [] : bookingData.selectedAttendees?.slice(0, Math.max(0, type.max_attendees - 1))
+                      });
                     }}
                     className={`group relative p-6 rounded-3xl border-2 text-left transition-all ${selectedType?.id === type.id
                       ? "border-teal-500 bg-teal-50/30"

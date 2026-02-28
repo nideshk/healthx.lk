@@ -14,6 +14,8 @@ import {
   Mail,
   UserPlus,
   Users,
+  TimerIcon,
+  User2,
 } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,7 +50,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
   setCoupon,
 }) => {
   const t = useTranslations("paymentUI");
-
+  console.log("booking data", bookingData)
   const doctor = bookingData.selectedDoctor;
   const type = bookingData.appointmentType;
   const service = bookingData.selectedService;
@@ -59,7 +61,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const { user } = useAuth();
 
-  const platformFee = attendeeCount * 100;
+  const platformFee = attendeeCount * 500;
   const baseTotal = consultationFee + platformFee;
   const discountAmount = appliedCoupon?.discount?.discount_total || 0;
   const finalTotal = Math.max(baseTotal - discountAmount, 0);
@@ -128,11 +130,13 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
 
               <div className="flex justify-between">
                 <div className="flex gap-4">
-                  <img
-                    src={doctor?.profileImage || "/doctor.png"}
+                  {doctor?.profileImage ? <img
+                    src={doctor?.profileImage}
                     className="w-20 h-20 rounded-full object-cover"
                     alt=""
-                  />
+                  /> :
+                    <User2 />
+                  }
                   <div>
                     <p className="text-lg font-semibold">
                       {doctor?.name}{" "}
@@ -269,6 +273,20 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                       {bookingData?.pre_consultation?.note?.outcome || "No specific outcome mentioned."}
                     </p>
                   </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="mt-1">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <TimerIcon className="w-5 h-5 text-blue-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase">Desired Outcome</p>
+                    <p className="text-gray-900 mt-1 font-medium leading-relaxed">
+                      {bookingData?.pre_consultation?.note?.duration || "No specific duration mentioned."}
+                    </p>
+                  </div>
+
                 </div>
 
                 {/* Referral Source */}

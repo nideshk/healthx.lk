@@ -153,7 +153,7 @@ export async function GET(
       .eq("practitioner_id", practitionerId)
       .gte("starts_at", dayStartUTC)
       .lte("starts_at", dayEndUTC)
-      .in("status", ["pending", "scheduled", "confirmed"])
+      .in("status", ["pending", "scheduled", "confirmed", "payment_cancelled"])
       .or(`expires_at.is.null,expires_at.gt.${nowUTC}`)
       .neq("payment_status", "failed");
 

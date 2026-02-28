@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -441,16 +440,23 @@ export async function PATCH(
           eventType: "appointment_cancelled",
           title: "Appointment Cancelled",
           message: `
-    Hello ${patient.full_name},
+Hello ${patient.full_name},
 
-    Your appointment has been cancelled by the ${cancelledBy}.
+We regret to inform you that your appointment has been cancelled by the ${cancelledBy}.
 
-    Reason:
-    ${reason || "No reason provided"}
+Reason:
+${reason || "No reason provided"}
 
-    Regards,
-    Clinecxa Team
-          `.trim(),
+If you have already made a payment, your refund will be initiated shortly. 
+Please allow 5–7 business days for the amount to reflect in your original payment method.
+
+You may book a new appointment at your convenience through your dashboard.
+
+If you need any assistance, feel free to contact our support team.
+
+Regards,
+Clinecxa Team
+`.trim(),
           channels: ["email"],
           payload: {
             email: patient.email,

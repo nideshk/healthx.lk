@@ -433,7 +433,11 @@ export default function Header() {
               <button disabled={isSubmitting} className="w-full bg-slate-900 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-3 shadow-xl transition-all">
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : t("modal.signInTitle")}
               </button>
-              <button type="button" onClick={() => { closeLoginModal(); router.push("/create-account"); }} className="w-full bg-slate-100 text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all">
+              <button type="button" onClick={() => {
+                const dest = redirectTo;
+                closeLoginModal();
+                router.push(dest ? `/create-account?callbackUrl=${encodeURIComponent(dest)}` : "/create-account");
+              }} className="w-full bg-slate-100 text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all">
                 {t("modal.createAccount")}
               </button>
             </form>

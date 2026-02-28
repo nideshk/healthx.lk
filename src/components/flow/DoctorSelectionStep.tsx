@@ -66,7 +66,7 @@ const DoctorSelectionStep = forwardRef(
             profileImage: p.profile_picture_url || null,
             // fee: 950 + (p.fees || 0),
             startingPrice: 950 + (p.starting_price || 0),
-            endingPrice: 950 + (p.ending_price || 0 ),
+            endingPrice: 950 + (p.ending_price || 0),
             currency: 'LKR',
             rating: { overall: 4.8 },
           }));
@@ -86,7 +86,12 @@ const DoctorSelectionStep = forwardRef(
       setIsSaving(true);
       setSelectedDoctorId(doctor.id);
 
-      updateData({ selectedDoctor: doctor });
+      updateData({
+        selectedDoctor: doctor,
+        appointmentType: null,
+        starts_at: null,
+        ends_at: null,
+      });
 
       setTimeout(async () => {
         try {
