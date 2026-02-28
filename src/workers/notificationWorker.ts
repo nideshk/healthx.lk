@@ -85,6 +85,8 @@ export async function processNotifications() {
             html = generateAppointmentConfirmationEmail({
               recipientName: n.payload?.recipientName,
               appointment: appointmentData,
+              actionUrl: n.payload?.actionUrl,
+              actionText: n.payload?.actionText,
             });
             break;
 
@@ -101,6 +103,8 @@ export async function processNotifications() {
                 roomKey: appointmentData.roomKey,
                 meetingUrl: appointmentData.meetingUrl,
               },
+              actionUrl: n.payload?.actionUrl,
+              actionText: n.payload?.actionText,
             });
             break;
 
@@ -113,6 +117,8 @@ export async function processNotifications() {
                 status: "Successful",
                 appointmentId: n.payload?.appointment_id,
               },
+              actionUrl: n.payload?.actionUrl,
+              actionText: n.payload?.actionText,
             });
             break;
 

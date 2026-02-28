@@ -24,7 +24,7 @@ type Service = {
   icon: string | null;
   description: string;
   sin_description: string;
-  sin_name?: string;
+  sin_slug?: string;
 };
 
 type Doctor = {
@@ -79,7 +79,7 @@ export default function ServiceDoctorFlow() {
 
   return (
     <section className="py-16 bg-gradient-to-b from-white to-cyan-50">
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-5xl mx-auto px-6">
         {/* Progress */}
         <ProgressHeader step={step} />
 
@@ -189,23 +189,24 @@ const ServicePicker = ({
   const t = useTranslations("bookingFlow.servicePicker");
   const locale = useLocale();
 
-  // Memoize sorted services to prevent mutation and unnecessary re-sorts
   const sortedServices = useMemo(() => {
     return [...services].sort((a, b) => a.name.localeCompare(b.name));
   }, [services]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4">
-      <header className="mb-8">
-        <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Header with Decorative Element */}
+      <header className="relative mb-12 text-center md:text-left">
+        <div className="absolute -top-6 -left-4 w-24 h-24 bg-cyan-100 rounded-full blur-3xl opacity-50 -z-10" />
+        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-600">
           {t("title")}
         </h2>
-        <p className="mt-2 text-lg text-gray-600">
+        <p className="mt-4 text-lg text-slate-500 max-w-2xl leading-relaxed">
           {t("subtitle")}
         </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sortedServices.map((s) => {
           const Icon = ICON_MAP[s.icon as string] || Stethoscope;
 
@@ -214,48 +215,63 @@ const ServicePicker = ({
               key={s.id}
               onClick={() => onSelect(s)}
               className="
-                group relative flex flex-col text-left p-6 
-                bg-white rounded-2xl border-2 border-transparent
-                shadow-sm ring-1 ring-gray-200
-                hover:ring-cyan-500 hover:shadow-md
+                group relative overflow-hidden flex flex-col justify-between p-8
+                bg-white rounded-3xl border border-slate-100
+                shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]
+                hover:shadow-[0_20px_40px_-12px_rgba(6,182,212,0.15)]
+                hover:border-cyan-100 hover:-translate-y-2
                 active:scale-[0.98]
-                transition-all duration-200 ease-out
+                transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]
               "
             >
-              <div className="flex items-start gap-5">
-                {/* Icon Container with subtle animation */}
+              {/* Animated Hover Background Gradient */}
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+              <div className="relative z-10 flex flex-col gap-6">
+                {/* Icon with Soft Glow */}
                 <div className="
-                  shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center
-                  bg-cyan-50 text-cyan-600
+                  relative shrink-0 w-16 h-16 rounded-2xl 
+                  flex items-center justify-center
+                  bg-slate-50 text-slate-600
                   group-hover:bg-cyan-500 group-hover:text-white
-                  group-hover:rotate-3
-                  transition-all duration-300
+                  group-hover:shadow-[0_8px_20px_-4px_rgba(6,182,212,0.4)]
+                  transition-all duration-500
                 ">
-                  <Icon className="w-7 h-7" strokeWidth={1.5} />
+                  <Icon className="w-8 h-8 relative z-10" strokeWidth={1.5} />
+                  {/* Subtle inner glow for icon */}
+                  <div className="absolute inset-0 rounded-2xl bg-white opacity-0 group-hover:opacity-20 scale-75 group-hover:scale-110 transition-all duration-500" />
                 </div>
-
-                <div className="flex-1 min-w-0">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-gray-900 truncate">
-                      {locale === 'si' && s.sin_name ? s.sin_name : s.name}
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                      {locale === 'si' ? s.sin_slug : s.name}
                     </h3>
-                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all" />
                   </div>
 
-                  {/* Descriptions with improved typography */}
-                  <div className="mt-2 space-y-1">
-                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                      {locale === 'si' && s.sin_description ? s.sin_description : s.description}
-                    </p>
-                  </div>
+                  <p className="text-[15px] text-slate-500 line-clamp-3 leading-relaxed group-hover:text-slate-600 transition-colors">
+                    {locale === 'si' && s.sin_description ? s.sin_description : s.description}
+                  </p>
                 </div>
               </div>
 
-              {/* Action Hint */}
-              <div className="mt-4 pt-4 border-t border-gray-50 flex items-center text-sm font-semibold text-cyan-600">
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                  {t("actionText")}
+              {/* Action Bar - Replaced simple border with a subtle badge style */}
+              <div className="relative z-10 mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
+                <span className="
+                  px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase
+                  bg-slate-50 text-slate-400
+                  group-hover:bg-cyan-50 group-hover:text-cyan-600
+                  transition-all duration-300
+                ">
+                  {t("actionText") || "Select Service"}
                 </span>
+                <div className="
+                  w-8 h-8 rounded-full flex items-center justify-center
+                  bg-slate-50 text-slate-300
+                  group-hover:bg-cyan-500 group-hover:text-white group-hover:rotate-[360deg]
+                  transition-all duration-700
+                ">
+                  <ChevronRight className="w-4 h-4" />
+                </div>
               </div>
             </button>
           );

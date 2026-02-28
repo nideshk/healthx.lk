@@ -289,10 +289,7 @@ export default function Header() {
           {/* Header */}
           <div className="p-6 border-b border-slate-50 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-white shadow-md">
-                <ShieldCheck size={18} />
-              </div>
-              <span className="text-xl font-black tracking-tighter text-slate-900">Med<span className="text-teal-600">X</span></span>
+              <img src="/assets/logo.png" alt="logo" className="w-20 h-20" />
             </div>
             <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 rounded-xl transition-all">
               <X size={20} />
