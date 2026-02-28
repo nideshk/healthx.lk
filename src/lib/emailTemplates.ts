@@ -1,6 +1,8 @@
 type BaseEmailParams = {
   recipientName?: string;
   eventType?: string;
+  actionUrl?: string;
+  actionText?: string;
 };
 
 type AppointmentEmailParams = BaseEmailParams & {
@@ -37,14 +39,14 @@ type ReminderEmailParams = BaseEmailParams & {
 type GenericEmailParams = BaseEmailParams & {
   title: string;
   message: string;
-  actionUrl?: string;
-  actionText?: string;
 };
 
 // Appointment Confirmation Template
 export function generateAppointmentConfirmationEmail({
   recipientName,
   appointment,
+  actionUrl,
+  actionText,
 }: AppointmentEmailParams) {
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hello,';
   const startTime = new Date(appointment.startsAt).toLocaleString();
@@ -84,12 +86,12 @@ export function generateAppointmentConfirmationEmail({
         <p style="margin: 5px 0;"><strong>Practitioner:</strong> ${appointment.practitionerName}</p>
         <p style="margin: 5px 0;"><strong>Date & Time:</strong> ${startTime} - ${endTime}</p>
         ${appointment.roomKey ? `<p style="margin: 5px 0;"><strong>Room Number:</strong> ${appointment.roomKey}</p>` : ''}
-        ${appointment.meetingUrl ? `<p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${appointment.meetingUrl}" style="color: #007bff; text-decoration: none;">${appointment.meetingUrl}</a></p>` : ''}
+        <p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${"https://clinecxa.com/appointment/meeting?room=" + appointment.roomKey}" style="color: #007bff; text-decoration: none;">Join Meeting</a></p>
       </div>
 
       <p>You can join the meeting using the link above at the scheduled time. If you need to reschedule or cancel, please contact us.</p>
 
-      ${appointment.meetingUrl ? `<a href="${appointment.meetingUrl}" class="join-button">Join Meeting</a>` : ''}
+      ${`<a href="${"https://clinecxa.com/appointment/meeting?room=" + appointment.roomKey}" class="join-button">Join Meeting</a>`}
     </div>
     <div class="footer">
       <p>This email was sent by Clinecxa Telehealth Platform.</p>
@@ -105,9 +107,14 @@ export function generateAppointmentConfirmationEmail({
 export function generateAppointmentReminderEmail({
   recipientName,
   appointment,
+  actionUrl,
+  actionText,
 }: ReminderEmailParams) {
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hello,';
   const startTime = new Date(appointment.startsAt).toLocaleString();
+
+  const finalActionUrl = actionUrl || appointment.meetingUrl;
+  const finalActionText = actionText || 'Join Meeting';
 
   return `
 <!DOCTYPE html>
@@ -142,12 +149,12 @@ export function generateAppointmentReminderEmail({
         <p style="margin: 5px 0;"><strong>Practitioner:</strong> ${appointment.practitionerName}</p>
         <p style="margin: 5px 0;"><strong>Time:</strong> ${startTime}</p>
         ${appointment.roomKey ? `<p style="margin: 5px 0;"><strong>Room Number:</strong> ${appointment.roomKey}</p>` : ''}
-        ${appointment.meetingUrl ? `<p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${appointment.meetingUrl}" style="color: #007bff; text-decoration: none;">${appointment.meetingUrl}</a></p>` : ''}
+        ${finalActionUrl ? `<p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${finalActionUrl}" style="color: #007bff; text-decoration: none;">${finalActionUrl}</a></p>` : ''}
       </div>
 
       <p>Please ensure you have a stable internet connection and are in a quiet environment for your appointment.</p>
 
-      ${appointment.meetingUrl ? `<a href="${appointment.meetingUrl}" class="join-button">Join Meeting</a>` : ''}
+      ${finalActionUrl ? `<a href="${finalActionUrl}" class="join-button">${finalActionText}</a>` : ''}
     </div>
     <div class="footer">
       <p>This email was sent by Clinecxa Telehealth Platform.</p>
@@ -163,6 +170,8 @@ export function generateAppointmentReminderEmail({
 export function generatePaymentSuccessEmail({
   recipientName,
   payment,
+  actionUrl,
+  actionText,
 }: PaymentEmailParams) {
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hello,';
 
@@ -181,6 +190,7 @@ export function generatePaymentSuccessEmail({
     .title { font-size: 20px; font-weight: bold; color: #28a745; margin-bottom: 20px; }
     .payment-details { background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
     .amount { font-size: 24px; font-weight: bold; color: #155724; }
+    .join-button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 20px; }
     .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee; font-size: 12px; color: #666666; text-align: center; }
   </style>
 </head>
@@ -202,6 +212,8 @@ export function generatePaymentSuccessEmail({
       </div>
 
       <p>You will receive a confirmation of your appointment details shortly if you haven't already.</p>
+      
+      ${actionUrl ? `<a href="${actionUrl}" class="join-button">${actionText || 'View Appointment'}</a>` : ''}
     </div>
     <div class="footer">
       <p>This email was sent by Clinecxa Telehealth Platform.</p>
@@ -223,10 +235,6 @@ export function generateGenericEmail({
 }: GenericEmailParams) {
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hello,';
 
-  const actionButton = actionUrl && actionText
-    ? `<a href="${actionUrl}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">${actionText}</a>`
-    : '';
-
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -241,6 +249,7 @@ export function generateGenericEmail({
     .logo { font-size: 24px; font-weight: bold; color: #007bff; margin-bottom: 10px; }
     .title { font-size: 20px; font-weight: bold; color: #333333; margin-bottom: 20px; }
     .message { margin-bottom: 30px; }
+    .join-button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 20px; }
     .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee; font-size: 12px; color: #666666; text-align: center; }
   </style>
 </head>
@@ -253,7 +262,7 @@ export function generateGenericEmail({
     <div class="message">
       <p>${greeting}</p>
       <p>${message}</p>
-      ${actionButton}
+      ${actionUrl ? `<a href="${actionUrl}" class="join-button">${actionText || 'Click Here'}</a>` : ''}
     </div>
     <div class="footer">
       <p>This email was sent by Clinecxa Telehealth Platform.</p>

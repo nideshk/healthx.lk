@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
                 eventType: "appointment_confirmed",
                 title: "Appointment Confirmed",
                 message: `Your appointment is confirmed on ${new Date(appointment.starts_at).toLocaleString('en-LK', { timeZone: 'Asia/Colombo' })}`,
-                channels: ["in_app", "email", "sms"], // Added sms as well, but can be disabled during testing to avoid costs.
+                channels: ["in_app", "email", "sms"],
                 payload: {
                     appointment_id: appointment.id,
                     practitioner_id: appointment.practitioner_id,
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
                     email: patientData.email,
                     recipientName: patientData.full_name,
                     subject: "Your appointment is confirmed",
-                    actionUrl: `https://Clinecxa-rho.vercel.app/consultation/meeting?room=${appointment.room_key}`,
+                    actionUrl: `https://Clinecxa.com/consultation/meeting?room=${appointment.room_key}`,
                     actionText: "Join Meeting",
                     phone: patientData.contact_number,
                 },
@@ -159,9 +159,9 @@ export async function POST(request: NextRequest) {
         // console.warn(`Payment not successful. Status Code: ${status_code} for Order: ${order_id}`);
 
         let mappedStatus = 'payment_failed';
-        if(status_code === '-1')
+        if (status_code === '-1')
             mappedStatus = 'payment_cancelled';
-        
+
         try {
             // Update the transaction record
             await supabaseAdmin
@@ -173,13 +173,13 @@ export async function POST(request: NextRequest) {
                 })
                 .eq('order_id', order_id)
                 .neq('status', 'paid');
-            
+
             // Update appointment record here as well.
             await supabaseAdmin
                 .from('appointments')
                 .update({
                     status: mappedStatus,
-                    payment_status:'failed'
+                    payment_status: 'failed'
                 })
                 .eq('id', order_id)
                 .eq('status', 'pending');

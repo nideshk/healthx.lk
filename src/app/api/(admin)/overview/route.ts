@@ -16,19 +16,19 @@ export async function GET(req: NextRequest) {
 
     if (!authorized || role !== "admin") {
 
-    await auditLog({
-      ...cnx,
-      action: "FAILED_ACCESS",
-      entityType: "APPOINTMENT",
-      purpose: "operations",
-      source: "dashboard",
-      metadata: {
-        reason: "unauthorized_dashboard_summary_access",
-        role,
-      },
-    });
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+      await auditLog({
+        ...cnx,
+        action: "FAILED_ACCESS",
+        entityType: "APPOINTMENT",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "unauthorized_dashboard_summary_access",
+          role,
+        },
+      });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     // -----------------------------------
     // 📅 1. Today range (local → UTC)
@@ -56,22 +56,23 @@ export async function GET(req: NextRequest) {
       `)
       .neq("status", "cancelled")
       .gte("starts_at", from)
-      .lt("starts_at", to);
+      .lt("starts_at", to)
+      .order("created_at", { ascending: false })
 
-    if (error) 
-      {
-        await auditLog({
-          ...cnx,
-          action: "FAILED",
-          entityType: "APPOINTMENT",
-          purpose: "operations",
-          source: "dashboard",
-          metadata: {
-            reason: "failed_to_fetch_today_appointments",
-          },
-        });
-        throw error;
-      }
+
+    if (error) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "APPOINTMENT",
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "failed_to_fetch_today_appointments",
+        },
+      });
+      throw error;
+    }
 
     // -----------------------------------
     // ✅ 3. Upcoming & completed counts

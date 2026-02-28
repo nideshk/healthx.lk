@@ -39,7 +39,8 @@ export async function DELETE(
           updated_at: new Date().toISOString(),
         })
         .eq("patient_id", patientId)
-        .eq("practitioner_id", practitionerId);
+        .eq("practitioner_id", practitionerId)
+        .order("created_at", { ascending: false })
 
       if (error) throw error;
 

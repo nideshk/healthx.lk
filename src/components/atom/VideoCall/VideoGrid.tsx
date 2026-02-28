@@ -6,6 +6,7 @@ import { User, Mic, MicOff, Video, VideoOff, PhoneOff, MoreVertical } from "luci
 interface VideoGridProps {
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
   peers: Record<string, MediaStream>;
+  peerMetadata?: Record<string, any>;
   isCameraOff: boolean;
   localStream: MediaStream | null;
 
@@ -14,6 +15,7 @@ interface VideoGridProps {
 export default function VideoGrid({
   localVideoRef,
   peers,
+  peerMetadata = {},
   isCameraOff,
   localStream,
 
@@ -43,11 +45,14 @@ export default function VideoGrid({
               <p className="text-sm font-medium tracking-wide uppercase">Waiting for others to join...</p>
             </div>
           ) : (
-            peerEntries.map(([id, stream]) => (
-              <TileContainer key={id} label={`User ${id.slice(0, 4)}`}>
-                <RemoteVideoTile stream={stream} />
-              </TileContainer>
-            ))
+            peerEntries.map(([id, stream]) => {
+              const displayName = peerMetadata[id]?.displayName || `User ${id.slice(0, 4)}`;
+              return (
+                <TileContainer key={id} label={displayName}>
+                  <RemoteVideoTile stream={stream} />
+                </TileContainer>
+              );
+            })
           )}
         </div>
       </div>

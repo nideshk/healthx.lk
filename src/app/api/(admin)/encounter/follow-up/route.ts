@@ -13,18 +13,18 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const { authorized, user } = await requireUser(req);
   const cnx = getAuditContext(req, user);
-  if (!authorized){
-      await auditLog({
-        ...cnx,
-        action: "FAILED",
-        entityType: "FOLLOW_UP_ENCOUNTERS",
-        purpose: "operations",
-        source: "dashboard",
-        metadata: {
-          reason: "Unauthorized access attempt"
-        }
-      });
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!authorized) {
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "FOLLOW_UP_ENCOUNTERS",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "Unauthorized access attempt"
+      }
+    });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   if (!["admin", "superadmin"].includes(user?.profile?.role)) {
@@ -109,6 +109,8 @@ export async function GET(req: NextRequest) {
     .from("appointments")
     .select("id, ends_at, status, patient_id, practitioner_id")
     .in("id", appointmentIds)
+    .order("created_at", { ascending: false })
+
 
   const appointmentMap = Object.fromEntries(
     (appointments ?? []).map((a) => [a.id, a])

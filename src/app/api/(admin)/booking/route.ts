@@ -130,6 +130,7 @@ export async function GET(req: NextRequest) {
       .gte("starts_at", `${fromDate}T00:00:00`)
       .lte("starts_at", `${toDate}T23:59:59`)
       .in("status", statuses)
+      .order("created_at", { ascending: false })
     // .range(from, to);
 
     if (isPractitioner) {

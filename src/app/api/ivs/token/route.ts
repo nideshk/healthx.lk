@@ -27,10 +27,16 @@ export async function POST(req: Request) {
                 ParticipantTokenCapability.SUBSCRIBE,
             ];
 
+    const displayName = user?.profile?.full_name || user?.patient?.full_name || user?.practitioner?.full_name || "Guest User";
+
     const command = new CreateParticipantTokenCommand({
         stageArn: process.env.IVS_STAGE_ARN!,
         capabilities,
         duration: 900, // 15 minutes
+        userId: user?.auth_user_id || undefined,
+        attributes: {
+            displayName: displayName
+        }
     });
 
     const res = await ivsClient.send(command);
