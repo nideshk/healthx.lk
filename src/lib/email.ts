@@ -8,14 +8,16 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Optional but useful during dev
-transporter.verify((err, success) => {
-  if (err) {
-    console.error("❌ SMTP connection failed:", err);
-  } else {
-    console.log("📨 SMTP server is ready to send emails");
-  }
-});
+// Connect check (optional)
+if (process.env.NODE_ENV === "development") {
+  transporter.verify((err) => {
+    if (err) {
+      console.error("❌ SMTP connection failed:", err);
+    } else {
+      console.log("📨 SMTP server is ready to send emails");
+    }
+  });
+}
 
 type SendEmailParams = {
   to: string;
