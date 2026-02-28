@@ -1,7 +1,7 @@
 "use client";
 
 import { authFetch } from "@/lib/authFetch";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Props = {
   appointmentId: string;
@@ -16,7 +16,56 @@ export default function ConsultationPanel({ appointmentId }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [consultationLoading, setConsultationLoading] = useState(false);
+  const [consultationMeta, setConsultationMeta] = useState({
+    mainConcern: "",
+    goal: "",
+    duration: ""
+  });
+  const [attachments, setAttachments] = useState<
+    Array<{ name?: string; document_type?: string; url: string }>
+  >([]);
 
+  useEffect(() => {
+  const fetchConsultationDetails = async () => {
+    setConsultationLoading(true);
+    try {
+      const res = await authFetch(
+        `/api/booking/appointment/${appointmentId}/consultation`
+      );
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      setConsultationMeta({
+        mainConcern: data.preconsult?.raw_payload?.note?.concern || "",
+        goal: data.preconsult?.raw_payload?.note?.outcome || "",
+        duration: data.preconsult?.raw_payload?.note?.duration || ""
+
+      });
+
+      setAttachments(
+        (data.attachments || []).map((a: any) => ({
+          url: a.view_url,
+          name: a.file_name,
+          document_type: a.file_type,
+        }))
+      );
+
+      // preload existing encounter values
+      setClinicianNotes(data.encounter?.clinician_notes || "");
+      setPrescriptions(data.encounter?.prescriptions || "");
+      setFollowUpNeeded(!!data.encounter?.follow_up_needed);
+      setFollowUpDate(
+        data.encounter?.follow_up_date?.slice(0, 10) || null
+      );
+    } finally {
+      setConsultationLoading(false);
+    }
+  };
+
+  fetchConsultationDetails();
+}, [appointmentId]);
   /* ---------------------------------------------------------
      Save consultation (POST only)
   --------------------------------------------------------- */
@@ -77,6 +126,92 @@ export default function ConsultationPanel({ appointmentId }: Props) {
         <p className="text-gray-900 mt-1 text-sm font-mono break-all">
           {appointmentId}
         </p>
+      </div>
+
+      {/* Pre-Consultation Details */}
+      <div className="mb-4 p-4 rounded-xl bg-white shadow-sm border">
+        <h3 className="text-sm font-medium text-gray-700 mb-4">
+          Pre-Consultation Details
+        </h3>
+
+        {consultationLoading ? (
+          <p className="text-xs text-gray-500">Loading...</p>
+        ) : (
+          <div className="space-y-4">
+            {/* Main Concern */}
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                What is your main concern today?
+              </label>
+              <div className="mt-2 w-full min-h-[100px] p-3 rounded-lg border bg-gray-50 text-gray-900 whitespace-pre-wrap">
+                {consultationMeta.mainConcern || "—"}
+              </div>
+            </div>
+
+            {/* Goal */}
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                What are you hoping to achieve?
+              </label>
+              <div className="mt-2 w-full min-h-[100px] p-3 rounded-lg border bg-gray-50 text-gray-900 whitespace-pre-wrap">
+                {consultationMeta.goal || "—"}
+              </div>
+            </div>
+
+            {/* Duration */}
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                Duration of symptoms
+              </label>
+              <div className="mt-2 w-full p-3 rounded-lg border bg-gray-50 text-gray-900">
+                {consultationMeta.duration || "—"}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Supporting Documents */}
+      <div className="mb-4 p-4 rounded-xl bg-white shadow-sm border">
+        <h3 className="text-sm font-medium text-gray-700 mb-4">
+          Supporting Documents
+        </h3>
+
+        {attachments.length === 0 ? (
+          <div className="mt-2 w-full p-3 rounded-lg border bg-gray-50 text-gray-500 text-sm italic">
+            No supporting documents uploaded.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {attachments.map((doc, idx) => (
+              <a
+                key={idx}
+                href={doc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-between p-3 rounded-lg border bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition"
+              >
+                {/* LEFT SIDE */}
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="text-sm font-medium text-slate-900 truncate">
+                    {(doc.name || doc.document_type || "Document").replace(/_/g, " ")}
+                  </span>
+
+                  {doc.document_type && (
+                    <span className="text-xs text-gray-500 uppercase">
+                      {doc.document_type}
+                    </span>
+                  )}
+                </div>
+
+                {/* RIGHT SIDE */}
+                <span className="text-xs font-medium text-blue-600 ml-4 shrink-0">
+                  View
+                </span>
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Clinician Notes */}

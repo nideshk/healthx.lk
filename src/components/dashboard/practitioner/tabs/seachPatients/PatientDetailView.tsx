@@ -428,6 +428,7 @@ const AppointmentRow: React.FC<{
     termsAccepted: false,
     mainConcern: "",
     goal: "",
+    duration: ""
   });
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
@@ -587,6 +588,7 @@ const AppointmentRow: React.FC<{
         termsAccepted: !!data.consent?.terms,
         mainConcern: data.preconsult?.raw_payload?.note?.concern || "",
         goal: data.preconsult?.raw_payload?.note?.outcome || "",
+        duration: data.preconsult?.raw_payload?.note?.duration || ""
       });
 
       setAppointmentForm((prev) => ({
@@ -742,7 +744,10 @@ const AppointmentRow: React.FC<{
               label="What are you hoping to achieve from this consultation?"
               value={consultationMeta.goal || "-"}
             />
-
+            <InfoRow
+              label="Duration of symptoms"
+              value={consultationMeta.duration || "-"}
+            />
             <section>
               <h3 className="font-semibold text-slate-900 pb-2">
                 Supporting Documents
