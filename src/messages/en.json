@@ -486,7 +486,7 @@
   "signup": {
     "title": "Create new account.",
     "subtitle": "Fill in your details to get started.",
-    "marketingConsent": "I would like to receive emails about future promotions, health tips, and updates from MedX. I understand I can unsubscribe at any time.",
+    "marketingConsent": "I would like to receive emails about future promotions, health tips, and updates from Clinecxa. I understand I can unsubscribe at any time.",
     "countryDefault": "Sri Lanka",
     "buttonDefault": "Create Account",
     "buttonLoading": "Signing up...",
@@ -495,27 +495,27 @@
       "lastName": "Last Name",
       "email": "Email Address",
       "password": "Password",
-      "emergencyContact": "Emergency Contact (optional)",
       "idNumber": "ID Number (ID/Passport)",
       "address": "Address",
+      "country": "Country",
       "province": "State / Province",
       "city": "City",
-      "pinCode": "Postal Code (e.g. 00100)",
-      "phone": "Phone number",
+      "phone": "Phone number (with country code e.g. +94)",
       "dob": "Date of birth",
       "gender": "Gender",
-      "confirmPassword": "Confirm Password."
+      "confirmPassword": "Confirm Password"
     },
     "gender": {
+      "select": "Select Gender",
       "male": "Male",
       "female": "Female",
+      "other": "Other",
       "nonBinary": "Non-binary",
       "unspecified": "Prefer not to say"
     },
     "idType": {
       "passport": "Passport",
-      "nic": "National Identity Card",
-      "license": "Driving License"
+      "nic": "National Identity Card"
     },
     "messages": {
       "verifyEmail": "Check your email to verify your account",
