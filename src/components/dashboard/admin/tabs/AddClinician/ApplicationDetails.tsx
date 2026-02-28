@@ -263,7 +263,7 @@ const ApplicationDetails = ({
             <h3 className="text-sm font-semibold mb-4 border-b pb-2 text-slate-900">Documents</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {data.documents?.map((doc: any, idx: number) => (
-                <a key={doc.id || idx} href={doc.file_url} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-50">
+                <a key={doc.id || idx} href={doc.view_url} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-50">
                   <FileText className="text-teal-600" />
                   <div>
                     <p className="text-sm font-medium text-slate-900">{doc.document_type.replace("_", " ")}</p>
