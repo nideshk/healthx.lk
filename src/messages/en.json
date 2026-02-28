@@ -309,11 +309,11 @@
         "items": [
           {
             "q": "How do I create an account?",
-            "a": "Select the service you need and follow the steps to book your appointment. During this process, you can sign up using your email address."
+            "a": "Select the service you need, and follow the instructions to make the appointment. During this process you can sign up using your email address."
           },
           {
             "q": "Can I create an account for a family member?",
-            "a": "Yes. You can create an account for yourself or a family member, and you may also attend the consultation with them."
+            "a": "Absolutely. You can create an account for you, or your family member. You also have the ability to attend the consultation with them."
           }
         ]
       },
@@ -322,15 +322,15 @@
         "items": [
           {
             "q": "How do I book a session with a doctor or specialist?",
-            "a": "Go to the home page and select the service you need. Choose the number of attendees, confirm a date and time, log in or create an account, complete the payment, and you will receive an email with the appointment confirmation and video link."
+            "a": "Go to the home page, and select the service you are after. Select the number of attendees to the appointment, and confirm a date and a time for your appointment. Then follow the given steps to login to your account (or create new account), and make the appointment payment, you will receive an email with the appointment confirmation and video link."
           },
           {
-            "q": "How do I know which specialist to book?",
-            "a": "Each specialty is explained on the home page. After selecting a specialist, you can view their expertise, languages spoken, and profile details. If unsure, you may book a general practitioner first."
+            "q": "How do I know which specialist I should book?",
+            "a": "Home page shows the definition of each specialty. When you select a specialist, the next page will show their expertise, languages spoken, and a short description of them. If you’re unsure, you can book a general practitioner first for guidance."
           },
           {
             "q": "Can I reschedule or cancel an appointment?",
-            "a": "Yes. If you cancel or reschedule at least 12 hours before your appointment, there is no fee. Changes within 12 hours may incur a fee."
+            "a": "Yes, you can. If you cancel or reschedule at least 12 hours before your appointment, there’s no fee. Changes made within 12 hours may include a cancellation or rescheduling fee."
           }
         ]
       },
@@ -338,16 +338,16 @@
         "title": "During the Consultation",
         "items": [
           {
-            "q": "What do I need for the video call?",
-            "a": "You only need a smartphone, tablet, or computer with internet access. Ensure your camera and microphone are enabled."
+            "q": "what do i need for the video call?",
+            "a": "Only a smart phone. Our platform has been built to make it easy for you, and it works in your browser and on smart mobile devices. Just ensure your camera and microphone are enabled."
           },
           {
-            "q": "What if my internet connection drops?",
-            "a": "You can rejoin the consultation using the same link. If issues continue, the clinician may switch to an audio call or reschedule."
+            "q": "What if my internet connection drops during the session?",
+            "a": "If the call disconnects, you can rejoin from the same link. If the issue continues, the clinician may request to switch to an audio call or reschedule the session."
           },
           {
-            "q": "Are consultations private?",
-            "a": "Yes. Consultations are never recorded. Only you and your clinician have access unless you invite an additional attendee."
+            "q": "Are the consultations private?",
+            "a": "Absolutely. No video/audio consultation is ever recorded. Only you and your clinician have access to the conversation, unless an additional attendee is joined to that conversation from the patient’s side."
           }
         ]
       },
@@ -355,16 +355,16 @@
         "title": "Prescriptions & Reports",
         "items": [
           {
-            "q": "How can I send reports to the doctor?",
-            "a": "During booking, you can upload up to three medical documents or photos, which will be shared directly with your doctor."
+            "q": "How can I send my reports to the doctor?",
+            "a": "When booking your appointment, you’ll be asked a few questions about your reason for the visit. You’ll also be able to upload up to 3 documents or photos (including images taken from your phone). These will be shared directly with your doctor."
           },
           {
             "q": "How do I receive a prescription?",
-            "a": "Prescriptions are sent as images via our official WhatsApp number. This number is not a direct line to the doctor."
+            "a": "After your consultation, your prescription will be sent to you as an image through our official WhatsApp number. Please note that this number is not a direct line to the doctor, and no medical advice will be provided through WhatsApp."
           },
           {
-            "q": "Can I get a medical certificate?",
-            "a": "No. Under Sri Lankan regulations, medical certificates cannot be issued through telehealth without a physical examination."
+            "q": "Can I get a medical certificate from a clinician?",
+            "a": "No. Under Sri Lankan regulations, medical certificates cannot be issued through telehealth without a physical examination. You will need to visit a doctor or hospital in person to obtain one."
           }
         ]
       },
@@ -373,11 +373,11 @@
         "items": [
           {
             "q": "How do I pay for my appointment?",
-            "a": "You can pay using debit/credit cards or supported Sri Lankan mobile payment methods."
+            "a": "You can pay using your debit/credit card or other popular Sri Lankan mobile payment methods during the final step of your booking."
           },
           {
             "q": "Is my payment information secure?",
-            "a": "Yes. Payments are processed through secure gateways and card details are never stored."
+            "a": "Yes. All payment data is processed through secure gateways. We never store your card details."
           }
         ]
       },
@@ -386,11 +386,11 @@
         "items": [
           {
             "q": "What devices can I use?",
-            "a": "Any smartphone, tablet, or computer with a stable internet connection, camera, and microphone."
+            "a": "Any smartphone, tablet, or computer with stable internet connection, video, and microphone."
           },
           {
             "q": "What should I do if I cannot join the video call?",
-            "a": "Check your internet connection and browser permissions. If the issue persists, contact our support team."
+            "a": "Check your internet connection, browser permissions for camera and mic, and try refreshing the page. If it still doesn’t work, please contact our support team immediately."
           }
         ]
       },
@@ -399,7 +399,7 @@
         "items": [
           {
             "q": "Are the clinicians qualified and registered?",
-            "a": "Yes. All clinicians are verified Sri Lankan medical professionals registered with relevant medical councils."
+            "a": "Yes. All clinicians are verified Sri Lankan medical professionals registered with the relevant medical councils."
           }
         ]
       }
