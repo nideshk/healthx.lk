@@ -1,13 +1,15 @@
 import type { NextConfig } from "next";
 import nextIntlPlugin from "next-intl/plugin";
+import path from "path";
 
-// 👇 This MUST point to src/i18n.ts
-const withNextIntl = nextIntlPlugin("./src/i18n.ts");
+const withNextIntl = nextIntlPlugin(
+  path.resolve("./src/i18n.ts")
+);
 
 const nextConfig: NextConfig = {
-  experimental: {
-    typedRoutes: false,
-  },
+  typedRoutes: false,
+
+  output: "standalone", // ✅ important for Vercel tracing
 };
 
 export default withNextIntl(nextConfig);
