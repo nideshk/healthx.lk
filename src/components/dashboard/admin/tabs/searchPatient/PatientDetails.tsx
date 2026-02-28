@@ -489,6 +489,7 @@ const AppointmentList: React.FC<{
 const AppointmentRow: React.FC<{
   appointment: AdminAppointment;
 }> = ({ appointment }) => {
+  const canManage = appointment.category === "upcoming" || appointment.category === "ongoing";  
   const [open, setOpen] = useState(false);
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
@@ -723,7 +724,7 @@ const AppointmentRow: React.FC<{
               variant="outline"
               size="sm"
               onClick={() => handleNotify(["email"])}
-              disabled={isNotifying}
+              disabled={isNotifying || !canManage}
             >
               Re-send Email
             </Button>
@@ -733,7 +734,7 @@ const AppointmentRow: React.FC<{
               variant="secondary"
               size="sm"
               onClick={() => handleNotify(["sms"])}
-              disabled={isNotifying}
+              disabled={isNotifying || !canManage}
             >
               Send SMS
             </Button>
@@ -743,6 +744,7 @@ const AppointmentRow: React.FC<{
               variant="danger"
               size="sm"
               onClick={() => setShowCancelModal(true)}
+              disabled={!canManage}
             >
               Cancel
             </Button>

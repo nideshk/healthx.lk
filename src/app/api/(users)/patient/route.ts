@@ -4,6 +4,12 @@ import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
 
+function isUUID(value: string) {
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { authorized, role, user } = await requireUser(request);
@@ -69,25 +75,33 @@ export async function GET(request: NextRequest) {
     let matchedUserIds: string[] = [];
 
     if (q) {
-      // 🔎 Search government ID table first
-      const { data: govMatches, error: govErr } = await supabaseAdmin
-        .from("user_government_ids")
-        .select("user_id")
-        .ilike("id_number_encrypted", `%${q}%`);
-
-      if (govErr) throw govErr;
-
-      matchedUserIds = govMatches?.map((g) => g.user_id) ?? [];
-
-      // 🔎 Apply search filter
-      if (matchedUserIds.length > 0) {
-        query = query.or(
-          `full_name.ilike.%${q}%,email.ilike.%${q}%,contact_number.ilike.%${q}%,supabase_user_id.in.(${matchedUserIds.join(",")})`
-        );
+      /* -------------------------------------------------------
+        If q is UUID → exact ID lookup
+      ------------------------------------------------------- */
+      if (isUUID(q)) {
+        query = query.eq("id", q);
       } else {
-        query = query.or(
-          `full_name.ilike.%${q}%,email.ilike.%${q}%,contact_number.ilike.%${q}%`
-        );
+
+        // 🔎 Search government ID table first
+        const { data: govMatches, error: govErr } = await supabaseAdmin
+          .from("user_government_ids")
+          .select("user_id")
+          .ilike("id_number_encrypted", `%${q}%`);
+
+        if (govErr) throw govErr;
+
+        matchedUserIds = govMatches?.map((g) => g.user_id) ?? [];
+
+        // 🔎 Apply search filter
+        if (matchedUserIds.length > 0) {
+          query = query.or(
+            `full_name.ilike.%${q}%,email.ilike.%${q}%,contact_number.ilike.%${q}%,supabase_user_id.in.(${matchedUserIds.join(",")})`
+          );
+        } else {
+          query = query.or(
+            `full_name.ilike.%${q}%,email.ilike.%${q}%,contact_number.ilike.%${q}%`
+          );
+        }
       }
     }
 

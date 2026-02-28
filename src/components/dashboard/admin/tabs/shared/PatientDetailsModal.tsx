@@ -31,7 +31,7 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
         setLoading(true);
         // Step 1: Fetch Patient Basic Info using the search query with patient name
         const patientRes = await authFetch(
-          `/api/patient?q=${encodeURIComponent(patientName)}`,
+          `/api/patient?q=${encodeURIComponent(patientId)}`,
           {
             credentials: "include",
           },
@@ -57,10 +57,10 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
       }
     };
 
-    if (patientName) {
+    if (patientId) {
       fetchFullPatientData();
     }
-  }, [patientName]);
+  }, [patientId]);
 
   // Step 2: Fetch Appointments ONLY after we have confirmed patientData and a valid ID
   useEffect(() => {

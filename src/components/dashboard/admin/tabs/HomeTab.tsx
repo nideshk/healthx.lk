@@ -204,7 +204,7 @@ const HomeTab: React.FC = () => {
           prescriptions: "",
           followUpNeeded: false,
           patient: a.patient,
-          patientId: a.id,
+          patient_id: a.patient_id,
           email: a.email || "-",
           contact_number: a.contact_number || "-",
           room_key: a.room_key,

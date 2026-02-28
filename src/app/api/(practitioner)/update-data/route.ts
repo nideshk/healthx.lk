@@ -71,6 +71,13 @@ export async function PATCH(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", patient_id);
+      
+      const { data: patientRow, error: patientErr } = await supabaseAdmin
+        .from("patients")
+        .select("email")
+        .eq("id", patient_id)
+        .single();
+                    
 
       await auditLog({
         ...cnx,
@@ -92,6 +99,10 @@ Your clinician has updated the following field:
 • allergies
         `.trim(),
         channels: ["email"],
+        payload: {
+            email: patientRow?.email,
+            appointment_id: allowed.id,
+        },
       });
 
       return NextResponse.json({ success: true });
@@ -156,6 +167,13 @@ Your clinician has updated the following field:
       );
     }
 
+    const { data: practitionerRow, error: pErr } =
+        await supabaseAdmin
+          .from("practitioners")
+          .select("contact_email")
+          .eq("supabase_user_id", user.auth_user_id) // 🔥 IMPORTANT CHANGE
+          .single();
+
     await auditLog({
       ...cnx,
       action: "UPDATED",
@@ -177,6 +195,10 @@ Updated fields:
 ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
       `.trim(),
       channels: ["email"],
+      payload: {
+            email: practitionerRow?.contact_email,
+            Id: user.auth_user_id,
+        },
     });
 
     return NextResponse.json({ success: true });
