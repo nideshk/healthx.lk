@@ -266,6 +266,32 @@ useEffect(() => {
     }
   };
 
+  function maskGovernmentId(govId: any): string {
+    if (!govId?.number) return "";
+
+    const number = String(govId.number);
+    const last4 = number.slice(-4);
+
+    return `xxx-${last4}`;
+  }
+
+  function calculateAge(dob: string): number {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  }
+
+
   if (selectedPatient) {
     return (
       <PatientDetails
@@ -344,6 +370,11 @@ useEffect(() => {
                       <span className="text-xs text-slate-500">
                         {p.contact_number || p.phone}
                       </span>
+                      {p.government_id?.number && (
+                        <span className="text-xs text-slate-500">
+                          Gov ID: {maskGovernmentId(p.government_id)}
+                        </span>
+                      )}
                     </div>
                     <Button
                       variant="danger"

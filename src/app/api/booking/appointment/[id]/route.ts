@@ -373,13 +373,14 @@ export async function PATCH(
     --------------------------------------------------------------*/
     if (action === "cancel") {
 
-      let cancelledBy: "patient" | "practitioner" | null = null;
+      // let cancelledBy: "patient" | "practitioner" | null = null;
+      let cancelledBy: "patient" | "practitioner" | "admin" | null = null;
 
-      if (user?.patient_id && appt.patient_id === user.patient_id) {
+      if (user?.role === "admin" || user?.role === "superadmin") {
+        cancelledBy = "admin";
+      } else if (user?.patient_id && appt.patient_id === user.patient_id) {
         cancelledBy = "patient";
-      }
-
-      if (user?.practitioner_id && appt.practitioner_id === user.practitioner_id) {
+      } else if (user?.practitioner_id && appt.practitioner_id === user.practitioner_id) {
         cancelledBy = "practitioner";
       }
 

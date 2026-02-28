@@ -20,6 +20,11 @@ export interface AdminAppointment {
   doctorName: string;
   appointmentType: string;
   category: "upcoming" | "ongoing" | "previous";
+  patient_id?: string;
+  patientName?: string;
+  email?: string;
+  contact_number?: string;
+  room_key?: string;
 }
 
 interface PatientDetailViewProps {
@@ -487,6 +492,10 @@ const AppointmentRow: React.FC<{
   const [open, setOpen] = useState(false);
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
+  const [isNotifying, setIsNotifying] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
   const [consultationMeta, setConsultationMeta] = useState({
     telehealthConsent: false,
     termsAccepted: false,
@@ -505,6 +514,101 @@ const AppointmentRow: React.FC<{
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  const handleNotify = async (channels: Array<"email" | "sms">) => {
+    setIsNotifying(true);
+
+    try {
+      const meetingUrl = `${window.location.origin}/appointment/meeting?room=${appointment.room_key}`;
+
+      const htmlMessage = `
+        <div style="font-family: Arial; line-height: 1.6;">
+          <p>Hello ${appointment.patientName || "Patient"},</p>
+          <p>Here are your appointment details:</p>
+          <p>
+            <strong>Appointment Type:</strong> ${appointment.appointmentType}<br/>
+            <strong>Date:</strong> ${appointment.date}<br/>
+            <strong>Time:</strong> ${appointment.time}
+          </p>
+          <p>
+            Join using this link:<br/>
+            <a href="${meetingUrl}">${meetingUrl}</a>
+          </p>
+          <p>Regards,<br/>Clinecxa Team</p>
+        </div>
+      `.trim();
+
+      const textMessage = `
+  Hello ${appointment.patientName || "Patient"},
+
+  Appointment: ${appointment.date} at ${appointment.time}
+  Join: ${meetingUrl}
+
+  Regards,
+  Clinecxa Team
+      `.trim();
+
+      const res = await authFetch("/api/notify-send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: appointment.patient_id,
+          role: "patient",
+          eventType: "appointment_resend",
+          title: "Your Appointment Details",
+          message: channels.includes("email") ? htmlMessage : textMessage,
+          channels,
+          payload: {
+            email: appointment.email,
+            phone: appointment.contact_number,
+            appointment_id: appointment.id,
+            meeting_url: meetingUrl,
+          },
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed");
+
+      toast.success(`${channels.join(" & ").toUpperCase()} sent successfully`);
+    } catch (err) {
+      toast.error("Failed to send notification");
+    } finally {
+      setIsNotifying(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!cancelReason.trim()) {
+      toast.error("Please provide a cancellation reason");
+      return;
+    }
+
+    setIsCancelling(true);
+
+    try {
+      const res = await authFetch(
+        `/api/booking/appointment/${appointment.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "cancel",
+            reason: cancelReason,
+          }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Cancel failed");
+
+      toast.success("Appointment cancelled");
+
+      setShowCancelModal(false);
+      setCancelReason("");
+    } catch (err) {
+      toast.error("Unable to cancel appointment");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
   const fetchConsultationDetails = async () => {
     if (consultationFetched) return;
     setConsultationLoading(true);
@@ -603,7 +707,7 @@ const AppointmentRow: React.FC<{
             </div>
             <div className="text-slate-700 mt-1">{appointment.appointmentType}</div>
           </div>
-          <button
+          {/* <button
             type="button"
             onClick={() => {
               if (!open) fetchConsultationDetails();
@@ -612,7 +716,49 @@ const AppointmentRow: React.FC<{
             className="text-xs border rounded-full px-2 py-1 hover:bg-slate-50"
           >
             {open ? "▴" : "▾"}
-          </button>
+          </button> */}
+          <div className="flex items-center gap-2">
+            {/* Re-send Email */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleNotify(["email"])}
+              disabled={isNotifying}
+            >
+              Re-send Email
+            </Button>
+
+            {/* Send SMS */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleNotify(["sms"])}
+              disabled={isNotifying}
+            >
+              Send SMS
+            </Button>
+
+            {/* Cancel */}
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowCancelModal(true)}
+            >
+              Cancel
+            </Button>
+
+            {/* Existing Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!open) fetchConsultationDetails();
+                setOpen((o) => !o);
+              }}
+              className="text-xs border rounded-full px-2 py-1 hover:bg-slate-50"
+            >
+              {open ? "▴" : "▾"}
+            </button>
+          </div>
         </div>
 
         {open && (
@@ -662,6 +808,52 @@ const AppointmentRow: React.FC<{
           </div>
         )}
       </CardBody>
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl relative">
+
+            <div className="text-sm font-semibold mb-3 text-slate-900">
+              Cancel Appointment
+            </div>
+
+            <div className="text-xs text-slate-600 mb-2">
+              Please provide a reason for cancellation:
+            </div>
+
+            <textarea
+              className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none"
+              rows={4}
+              placeholder="Enter cancellation reason..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              disabled={isCancelling}
+            />
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelReason("");
+                }}
+                disabled={isCancelling}
+              >
+                Back
+              </Button>
+
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleCancel}
+                disabled={isCancelling}
+              >
+                {isCancelling ? "Cancelling..." : "Confirm Cancel"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
