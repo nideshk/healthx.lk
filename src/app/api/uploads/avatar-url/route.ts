@@ -16,6 +16,7 @@ const s3 = new S3Client({
 });
 
 export async function POST(req: NextRequest) {
+    console.log("UPLOAD API HIT");
     const auth = await requireUser(req);
     if (!auth.authorized) return auth.response;
     const cnx = getAuditContext(req, auth.user);

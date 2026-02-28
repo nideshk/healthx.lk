@@ -16,21 +16,46 @@ import { toast } from "react-toastify";
    S3 Upload Helper
 ----------------------------- */
 async function uploadAvatarToS3(file: File) {
-    const presignRes = await fetch("/api/uploads/avatar-url", {
+    console.log("STEP 1: requesting presigned url");
+
+    const presignRes = await authFetch("/api/uploads/avatar-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contentType: file.type }),
     });
 
-    if (!presignRes.ok) throw new Error("Failed to get upload URL");
+    console.log("presign status", presignRes.status);
+
+    if (!presignRes.ok) {
+        const t = await presignRes.text();
+        console.log("presign error", t);
+        throw new Error("Failed to get upload URL");
+    }
+
     const { uploadUrl, publicUrl } = await presignRes.json();
 
-    const uploadRes = await fetch(uploadUrl, { method: "PUT", body: file });
-    if (!uploadRes.ok) throw new Error("Image upload failed");
+    console.log("STEP 2: uploading to S3");
+
+    const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+            "Content-Type": file.type,
+        },
+        body: file,
+    });
+
+    console.log("upload status", uploadRes.status);
+
+    if (!uploadRes.ok) {
+        const t = await uploadRes.text();
+        console.log("upload error", t);
+        throw new Error("Image upload failed");
+    }
+
+    console.log("STEP 3: success");
 
     return publicUrl;
 }
-
 export default function UnifiedProfileUI() {
     const { user } = useAuth();
 
