@@ -50,7 +50,11 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
   setCoupon,
 }) => {
   const t = useTranslations("paymentUI");
-  console.log("booking data", bookingData)
+  console.log("booking data", bookingData);
+  const consent = bookingData?.consent ?? {
+    telehealth: false,
+    terms: false,
+  };
   const doctor = bookingData.selectedDoctor;
   const type = bookingData.appointmentType;
   const service = bookingData.selectedService;
@@ -211,26 +215,26 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                 {/* Telehealth Consent */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-full ${bookingData.consent.telehealth ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    <div className={`p-1.5 rounded-full ${consent.telehealth ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">Telehealth Consultation Consent</span>
                   </div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${bookingData.consent.telehealth ? 'text-green-700' : 'text-red-700'}`}>
-                    {bookingData.consent.telehealth ? "ACCEPTED" : "DECLINED"}
+                  <span className={`text-xs font-bold px-2 py-1 rounded ${consent.telehealth ? 'text-green-700' : 'text-red-700'}`}>
+                    {consent.telehealth ? "ACCEPTED" : "DECLINED"}
                   </span>
                 </div>
 
                 {/* Terms & Conditions */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-full ${bookingData.consent.terms ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    <div className={`p-1.5 rounded-full ${consent.terms ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">Terms of Service & Privacy Policy</span>
                   </div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${bookingData.consent.terms ? 'text-green-700' : 'text-red-700'}`}>
-                    {bookingData.consent.terms ? "ACCEPTED" : "DECLINED"}
+                  <span className={`text-xs font-bold px-2 py-1 rounded ${consent.terms ? 'text-green-700' : 'text-red-700'}`}>
+                    {consent.terms ? "ACCEPTED" : "DECLINED"}
                   </span>
                 </div>
               </div>

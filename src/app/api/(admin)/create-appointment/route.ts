@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
+import { notify } from "@/lib/notify";
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -345,6 +346,67 @@ export async function POST(req: NextRequest) {
                 currency: "LKR"
             }
         });
+
+        /* ---------------- FETCH DETAILS FOR NOTIFICATION ---------------- */
+
+        const { data: patient } = await supabaseAdmin
+        .from("patients")
+        .select("id, full_name, email")
+        .eq("id", patient_id)
+        .single();
+
+        const { data: practitionerProfile } = await supabaseAdmin
+        .from("practitioners")
+        .select("id, full_name, contact_email")
+        .eq("id", practitioner_id)
+        .single();
+
+        const readableDate = startsAt.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+            });
+
+            const readableTime = startsAt.toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+            });
+
+        /* ---------------- NOTIFY PATIENT ---------------- */
+
+        try {
+        if (patient?.email) {
+            await notify({
+            userId: patient.id,
+            role: "patient",
+            eventType: "appointment_created",
+            title: "Appointment Created Successfully",
+            message: `
+        Hello ${patient.full_name},
+
+        Your appointment has been successfully created.
+
+        Doctor: ${practitionerProfile?.full_name || "Your Practitioner"}
+        Date: ${readableDate}
+        Time: ${readableTime}
+
+        Total Fee: LKR ${totalFee}
+
+        Please complete the payment before expiry.
+
+        Regards,
+        Clinecxa Team
+            `.trim(),
+            channels: ["email"],
+            payload: {
+                email: patient.email,
+                appointment_id: appointment.id,
+            },
+            });
+        }
+        } catch (err) {
+        console.error("Patient notification failed:", err);
+        }
 
         return NextResponse.json({
             success: true,
