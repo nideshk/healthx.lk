@@ -273,7 +273,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                     <p className={`font-black text-lg ${selectedType?.id === type.id ? 'text-teal-900' : 'text-slate-800'}`}>
                       {type.name}{" "}
                       <span className="text-xs font-bold uppercase tracking-tight">
-                        ({type.fee + type.platform_fee} LKR)
+                        ({(type.fee ?? 0) + (type.platform_fee ?? 0)} LKR)
                       </span>
                     </p>
 

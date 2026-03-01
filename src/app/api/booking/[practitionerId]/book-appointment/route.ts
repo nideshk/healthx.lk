@@ -180,8 +180,8 @@ export async function POST(
       practitioner.fees[appointmentType.id];
 
     const consultation_fee =
-      consultation_fee_by_practitioner.fee ||
-      appointmentType.base_fee + appointmentType.platform_fee;
+      consultation_fee_by_practitioner?.fee ??
+      (appointmentType.base_fee + appointmentType.platform_fee);
 
     const platform_fee = appointmentType.platform_fee;
 
@@ -222,11 +222,11 @@ export async function POST(
     const attendeeServiceFee = 500 * attendeeCount;
 
     const fees_charged =
-      (consultation_fee_by_practitioner.fee ||
+      (consultation_fee_by_practitioner?.fee ??
         appointmentType.base_fee) +
-      appointmentType.platform_fee +
+      (appointmentType.platform_fee ?? 0) +
       attendeeServiceFee -
-      (discount_total || 0);
+      (discount_total ?? 0);
 
     const tax_amount = fees_charged * 0.08;
 
