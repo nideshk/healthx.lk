@@ -228,7 +228,7 @@
     "referral": "How did you hear about this platform?",
     "selectOption": "Select an option...",
     "customReferral": "Please specify source...",
-    "attachments": "Attachments (Optional)",
+    "attachments": "Document upload for the Doctor (Upload any relevant medical documents, test results, or reports)",
     "uploadHint": "Medical Records / Photos",
     "attendees": "Attendees",
     "attendeesSubtitle": "How many attendees to the appointment?\n\nWill you be joining the appointment alone, or will there be additional family members? You can add up to 1 additional member. *Pricing may differ)",
@@ -259,7 +259,8 @@
       "maxAttendees": "Maximum attendees allowed.",
       "duplicateEmail": "Email already added.",
       "selfInvite": "You cannot add yourself as an attendee."
-    }
+    },
+    "fileDeletionNote": "Note: Files uploaded will be deleted from the system after 3 months."
   },
   "paymentStep": {
     "errors": {
@@ -533,7 +534,7 @@
       "time": "Time"
     },
     "servicePicker": {
-      "title": "Choose a service",
+      "title": "Our Healthcare Services",
       "subtitle": "Choose from our comprehensive range of medical specialties and connect with the right healthcare professional for your needs.",
       "actionText": "View doctors →"
     },
