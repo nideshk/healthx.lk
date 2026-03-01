@@ -30,7 +30,7 @@ export async function sendAppointmentInvites({
     const inviteLink = `https://www.clinecxa.com/meeting?token=${token}`;
 
     await notify({
-      userId: attendee.email, // guest identifier
+      userId: null, // guest identifier handled via payload.email
       role: "guest",
       eventType: "appointment_invite",
       channels: ["email"],
