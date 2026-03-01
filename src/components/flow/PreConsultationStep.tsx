@@ -147,7 +147,28 @@ export default function PreConsultationStep({
   };
 
   const handleNext = () => {
-    if (validateFields()) nextStep();
+    if (!validateFields()) return;
+
+    // Check if user has filled out attendee fields but forgot to click "Add"
+    if (emailInput.email.trim() || emailInput.relationship) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const isValidEmail = emailRegex.test(emailInput.email);
+      const isDuplicate = selectedAttendees.some((a) => a.email === emailInput.email);
+      const isSelf = user?.user?.email === emailInput.email;
+      const spaceLeft = selectedAttendees.length < maxAttendees;
+
+      if (isValidEmail && emailInput.relationship && !isDuplicate && !isSelf && spaceLeft) {
+        // Auto-add it for them
+        addAttendee();
+      } else {
+        // Something is wrong or incomplete (e.g. invalid email or missing relationship)
+        // Warn the user so they don't move forward thinking the attendee was added
+        toast.warning("You have unsaved attendee info. Please click the '+' button or clear the fields to continue.");
+        return;
+      }
+    }
+
+    nextStep();
   };
 
   return (
@@ -290,7 +311,7 @@ export default function PreConsultationStep({
             )}
         </div>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 mt-6">
           {/* Attachment */}
           <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
             <label className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-4">
