@@ -196,6 +196,11 @@ useEffect(() => {
         const mapped: AdminAppointment[] = [
           ...(data.scheduled ?? []).map((a: any) => ({
             id: a.id,
+            patient_id: a.patientId,
+            patientName: selectedPatient.full_name,
+            email: a.patient?.email,
+            contact_number: a.patient?.contact_number,
+            room_key: a.room_key,
             date: a.appointment_date,
             time: a.start_time,
             info: a.appointment_date + " at " + a.start_time,
@@ -205,7 +210,12 @@ useEffect(() => {
           })),
             ...(data.ongoing ?? []).map((a: any) => ({
             id: a.id,
+            patient_id: a.patientId,
+            patientName: selectedPatient.full_name,
+            email: a.patient?.email,
+            contact_number: a.patient?.contact_number,
             date: a.appointment_date,
+            room_key: a.room_key,
             time: a.start_time,
             doctorName: a.doctor?.name || "Unknown",
             appointmentType: a.appointment_type?.name|| "Unknown",
@@ -213,6 +223,11 @@ useEffect(() => {
           })),
           ...(data.completed ?? []).map((a: any) => ({
             id: a.id,
+            patient_id: a.patientId,
+            patientName: selectedPatient.full_name,
+            email: a.patient?.email,
+            contact_number: a.patient?.contact_number,
+            room_key: a.room_key,
             date: a.appointment_date,
             time: a.start_time,
             doctorName: a.doctor?.name || "Unknown",
