@@ -175,7 +175,7 @@ export default function PreConsultationStep({
 
         {/* MAIN FORM */}
         <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50">
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="flex flex-col gap-8">
             {/* Concern */}
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
@@ -290,7 +290,7 @@ export default function PreConsultationStep({
             )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="flex flex-col gap-6">
           {/* Attachment */}
           <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
             <label className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-4">
@@ -325,6 +325,9 @@ export default function PreConsultationStep({
                 </button>
               </div>
             )}
+            <p className="mt-4 text-[11px] font-bold text-slate-400 italic">
+              {t("fileDeletionNote")}
+            </p>
           </div>
 
           {/* Attendees */}

@@ -56,7 +56,7 @@ export async function processNotifications() {
 
             // Fetch appointment type name
             const { data: appointmentType } = await supabaseAdmin
-              .from("appointment_types")
+              .from("appointment_type")
               .select("name")
               .eq("id", appointment.appointment_type_id)
               .eq("is_active", true)

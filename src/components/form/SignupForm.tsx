@@ -35,15 +35,13 @@ export default function SignupForm() {
     date_of_birth: "",
     gender_identity: "",
     phone: "",
-    emergency_contact: "",
     government_id_type: "passport",
     government_id_number: "",
     address: "",
     country: "",
     state_province: "",
     city: "",
-    marketing_consent: false, // ← add this
-
+    marketing_consent: false,
   });
 
   const [loading, setLoading] = useState(false);
@@ -180,45 +178,51 @@ export default function SignupForm() {
 
         {/* DOB & Gender */}
         <div className="grid grid-cols-2 gap-4">
-          <input
-            name="date_of_birth"
-            type="date"
-            value={form.date_of_birth}
-            onChange={handleChange}
-            required
-            className="input"
-          />
-          <select
-            name="gender_identity"
-            value={form.gender_identity}
-            onChange={handleChange}
-            className="input"
-          >
-            <option value="male">{t("gender.male")}</option>
-            <option value="female">{t("gender.female")}</option>
-            <option value="non-binary">{t("gender.nonBinary")}</option>
-            <option value="unspecified">{t("gender.unspecified")}</option>
-          </select>
+          <div className="space-y-1">
+            <label className="ml-1 text-xs font-semibold uppercase text-gray-500">
+              {t("placeholders.dob")}
+            </label>
+            <input
+              name="date_of_birth"
+              type="date"
+              value={form.date_of_birth}
+              onChange={handleChange}
+              required
+              className="input"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="ml-1 text-xs font-semibold uppercase text-gray-500">
+              {t("placeholders.gender")}
+            </label>
+            <select
+              name="gender_identity"
+              value={form.gender_identity}
+              onChange={handleChange}
+              className="input"
+              required
+            >
+              <option value="">{t("gender.select")}</option>
+              <option value="male">{t("gender.male")}</option>
+              <option value="female">{t("gender.female")}</option>
+              <option value="other">{t("gender.other")}</option>
+              <option value="non-binary">{t("gender.nonBinary")}</option>
+              <option value="unspecified">{t("gender.unspecified")}</option>
+            </select>
+          </div>
         </div>
 
         {/* Phone */}
         <input
           name="phone"
-          placeholder="+94771234567"
+          placeholder={t("placeholders.phone")}
           value={form.phone}
           onChange={handleChange}
           required
           className="input"
         />
 
-        {/* Emergency Contact */}
-        <input
-          name="emergency_contact"
-          placeholder={t("placeholders.emergencyContact")}
-          value={form.emergency_contact}
-          onChange={handleChange}
-          className="input"
-        />
+
 
         {/* Government ID */}
         <div className="grid grid-cols-2 gap-4">
@@ -230,7 +234,6 @@ export default function SignupForm() {
           >
             <option value="passport">{t("idType.passport")}</option>
             <option value="nic">{t("idType.nic")}</option>
-            <option value="driving_license">{t("idType.license")}</option>
           </select>
 
           <input
@@ -254,9 +257,12 @@ export default function SignupForm() {
 
         {/* Country */}
         <input
-          value={t("countryDefault")}
-          disabled
-          className="input bg-gray-100"
+          name="country"
+          placeholder={t("placeholders.country")}
+          value={form.country}
+          onChange={handleChange}
+          required
+          className="input"
         />
 
         {/* Province */}
@@ -321,6 +327,7 @@ export default function SignupForm() {
           border-radius: 0.375rem;
           padding: 0.5rem 0.75rem;
           font-size: 0.875rem;
+          color: #374151;
         }
         .input:focus {
           outline: none;

@@ -30,7 +30,7 @@ export async function sendAppointmentInvites({
     const inviteLink = `https://www.clinecxa.com/meeting?token=${token}`;
 
     await notify({
-      userId: attendee.email, // guest identifier
+      userId: null, // guest identifier handled via payload.email
       role: "guest",
       eventType: "appointment_invite",
       channels: ["email"],
@@ -38,7 +38,7 @@ export async function sendAppointmentInvites({
       title: "You’re invited to a consultation",
       message: `You’ve been invited to join a consultation scheduled at ${new Date(
         meetingStartISO
-      ).toLocaleString()}`,
+      ).toLocaleString("en-LK", { timeZone: "Asia/Colombo" })}`,
 
       payload: {
         email: attendee.email,

@@ -350,38 +350,40 @@ export async function POST(req: NextRequest) {
         /* ---------------- FETCH DETAILS FOR NOTIFICATION ---------------- */
 
         const { data: patient } = await supabaseAdmin
-        .from("patients")
-        .select("id, full_name, email")
-        .eq("id", patient_id)
-        .single();
+            .from("patients")
+            .select("id, full_name, email")
+            .eq("id", patient_id)
+            .single();
 
         const { data: practitionerProfile } = await supabaseAdmin
-        .from("practitioners")
-        .select("id, full_name, contact_email")
-        .eq("id", practitioner_id)
-        .single();
+            .from("practitioners")
+            .select("id, full_name, contact_email")
+            .eq("id", practitioner_id)
+            .single();
 
-        const readableDate = startsAt.toLocaleDateString("en-GB", {
+        const readableDate = startsAt.toLocaleDateString("en-LK", {
             day: "2-digit",
             month: "long",
             year: "numeric",
-            });
+            timeZone: "Asia/Colombo",
+        });
 
-            const readableTime = startsAt.toLocaleTimeString("en-GB", {
+        const readableTime = startsAt.toLocaleTimeString("en-LK", {
             hour: "2-digit",
             minute: "2-digit",
-            });
+            timeZone: "Asia/Colombo",
+        });
 
         /* ---------------- NOTIFY PATIENT ---------------- */
 
         try {
-        if (patient?.email) {
-            await notify({
-            userId: patient.id,
-            role: "patient",
-            eventType: "appointment_created",
-            title: "Appointment Created Successfully",
-            message: `
+            if (patient?.email) {
+                await notify({
+                    userId: patient.id,
+                    role: "patient",
+                    eventType: "appointment_created",
+                    title: "Appointment Created Successfully",
+                    message: `
         Hello ${patient.full_name},
 
         Your appointment has been successfully created.
@@ -397,15 +399,15 @@ export async function POST(req: NextRequest) {
         Regards,
         Clinecxa Team
             `.trim(),
-            channels: ["email"],
-            payload: {
-                email: patient.email,
-                appointment_id: appointment.id,
-            },
-            });
-        }
+                    channels: ["email"],
+                    payload: {
+                        email: patient.email,
+                        appointment_id: appointment.id,
+                    },
+                });
+            }
         } catch (err) {
-        console.error("Patient notification failed:", err);
+            console.error("Patient notification failed:", err);
         }
 
         return NextResponse.json({

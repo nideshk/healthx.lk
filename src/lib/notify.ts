@@ -32,5 +32,9 @@ export async function notify({
     scheduled_at: scheduledAt ?? new Date().toISOString(),
   }));
 
-  const { data, error } = await supabaseAdmin.from("notifications").insert(rows);
+  const { error } = await supabaseAdmin.from("notifications").insert(rows);
+  if (error) {
+    console.error("Failed to insert notification:", error);
+    throw error;
+  }
 }
