@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabaseClient } from '@/lib/supabaseClient' // client-side Supabase instance
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -16,11 +18,11 @@ export default function LoginPage() {
     const checkSession = async () => {
       const { data: { session } } = await supabaseClient.auth.getSession()
       if (session) {
-        router.replace('/dashboard')
+        router.replace(callbackUrl || '/dashboard')
       }
     }
     checkSession()
-  }, [router])
+  }, [router, callbackUrl])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,7 +39,7 @@ export default function LoginPage() {
     setLoading(false)
 
     if (res.ok) {
-      router.push('/dashboard') // redirect after login
+      router.push(callbackUrl || '/dashboard') // redirect after login
     } else {
       setError(data.error || 'Login failed')
     }

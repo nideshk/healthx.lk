@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = supabaseBrowser.auth.onAuthStateChange((event) => {
             // do NOT trigger loading state on refresh
             if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
-                fetchMe(false);
+                fetchMe(true);
             }
 
             if (event === "SIGNED_OUT") {
