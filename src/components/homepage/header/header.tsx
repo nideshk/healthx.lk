@@ -23,7 +23,8 @@ import {
   Clock,
   Languages,
   File,
-  BarChart3
+  BarChart3,
+  Phone
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -48,7 +49,6 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
 
   // --- MFA States ---
   const [mfa, setMfa] = useState<{ factorId: string; challengeId: string } | null>(null);
@@ -78,6 +78,7 @@ export default function Header() {
     { name: t("nav.dashboard"), href: "/dashboard", icon: Search },
     { name: t("nav.ourStory"), href: "/about-us", icon: ShieldCheck },
     { name: t("nav.help"), href: "/help", icon: Calendar },
+    { name: t("nav.contactUs"), href: "/contact-us", icon: Phone },
   ];
 
   // Visible ONLY in the Mobile Sidebar (Left Drawer)

@@ -447,7 +447,8 @@
     "nav": {
       "dashboard": "Home",
       "ourStory": "Our Story",
-      "help": "How To"
+      "help": "How To",
+      "contactUs": "Contact Us"
     },
     "portal": {
       "appointments": "Appointments",
@@ -672,5 +673,19 @@
       "invalidCoupon": "Invalid coupon",
       "couponFailed": "Failed to validate coupon"
     }
+  },
+  "contactUs": {
+    "title": "Get in Touch",
+    "subtitle": "We'd love to hear from you. Please fill out the form below.",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "name@example.com",
+    "phoneLabel": "Phone Number",
+    "phonePlaceholder": "+1 (555) 000-0000",
+    "concernLabel": "How can we help?",
+    "concernPlaceholder": "Tell us about your concern...",
+    "submitButton": "Send Message",
+    "successMessage": "Message sent successfully! Our team will get in touch with you soon.",
+    "errorMessage": "Failed to send message. Please try again later.",
+    "privacy": "Clinical Privacy"
   }
 }
