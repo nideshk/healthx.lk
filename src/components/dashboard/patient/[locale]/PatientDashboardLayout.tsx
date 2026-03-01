@@ -134,6 +134,17 @@ export default function PatientDashboardLayout({
               </div>
             </header>
 
+              {/* ✅ MOBILE NEW BOOKING BUTTON - Proper Placement */}
+              <div className="lg:hidden mb-6">
+                <Link
+                  href="/appointment"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-lg active:scale-[0.98]"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t("newBooking")}
+                </Link>
+              </div>
+
             <div className="min-h-[60vh]">
               {activeTab === "appointment" && <AppointmentTab />}
               {activeTab === "reschedule" && <RescheduleTab />}

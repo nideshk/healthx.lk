@@ -3,6 +3,7 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
+import { email } from "zod";
 
 export async function GET(
   request: NextRequest,
@@ -42,6 +43,7 @@ export async function GET(
         starts_at,
         ends_at,
         status,
+        room_key,
         practitioner:practitioner_id (
           id,
           full_name
@@ -49,6 +51,10 @@ export async function GET(
         appointment_type:appointment_type!fk_appointments_type (
           id,
           name
+        ),
+        patient:patient_id(
+          email,
+          contact_number
         )
       `)
       .eq("patient_id", patientId)
@@ -86,11 +92,17 @@ export async function GET(
 
       const item = {
         id: appt.id,
+        patientId: patientId,
         appointment_date,
         start_time,
+        room_key: appt.room_key,
         doctor: {
           id: appt.practitioner.id,
           name: appt.practitioner.full_name,
+        },
+        patient:{
+          email : appt.patient.email,
+          contact_number: appt.patient.contact_number,
         },
         appointment_type: appt.appointment_type
           ? {
