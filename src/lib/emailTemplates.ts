@@ -49,8 +49,8 @@ export function generateAppointmentConfirmationEmail({
   actionText,
 }: AppointmentEmailParams) {
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hello,';
-  const startTime = new Date(appointment.startsAt).toLocaleString();
-  const endTime = new Date(appointment.endsAt).toLocaleString();
+  const startTime = new Date(appointment.startsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
+  const endTime = new Date(appointment.endsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
 
   return `
 <!DOCTYPE html>
@@ -111,7 +111,7 @@ export function generateAppointmentReminderEmail({
   actionText,
 }: ReminderEmailParams) {
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hello,';
-  const startTime = new Date(appointment.startsAt).toLocaleString();
+  const startTime = new Date(appointment.startsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
 
   const finalActionUrl = actionUrl || appointment.meetingUrl;
   const finalActionText = actionText || 'Join Meeting';
