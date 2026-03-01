@@ -433,16 +433,22 @@ const HomeTab: React.FC = () => {
                 Viewing Schedule: {selectedClinician.name}
               </h3>
             </div>
-            {calendarLoading ? (
-              <div className="flex justify-center py-20 bg-white border border-slate-200 rounded-2xl">
-                <Loader size="md" />
-              </div>
-            ) : (
+            <div className="relative">
               <AppointmentCalendar
                 appointments={appointments}
                 userRole="admin"
+                onRangeChange={(view, date) => {
+                  if (!selectedClinician) return;
+                  fetchAppointments(selectedClinician.id, view, date);
+                }}
               />
-            )}
+
+              {calendarLoading && (
+                <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl">
+                  <Loader size="md" />
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
