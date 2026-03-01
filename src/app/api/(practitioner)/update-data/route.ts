@@ -190,9 +190,6 @@ Your clinician has updated the following field:
       title: "Profile Updated",
       message: `
 You have updated your profile.
-
-Updated fields:
-${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
       `.trim(),
       channels: ["email"],
       payload: {

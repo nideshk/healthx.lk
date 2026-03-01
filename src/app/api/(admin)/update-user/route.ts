@@ -211,9 +211,6 @@ export async function PATCH(req: NextRequest) {
         title: "Profile Updated",
         message: `
     Your profile has been updated by an administrator.
-
-    Updated fields:
-    ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         `.trim(),
         channels: ["email"],
         payload: {
@@ -369,9 +366,6 @@ export async function PATCH(req: NextRequest) {
         title: "Profile Updated",
         message: `
     Your profile has been updated by an administrator.
-
-    Updated fields:
-    ${editedFields.map(f => `• ${f.replace(/_/g, " ")}`).join("\n")}
         `.trim(),
         channels: ["email"],
         payload: {

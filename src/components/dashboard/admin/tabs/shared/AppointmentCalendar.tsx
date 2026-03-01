@@ -13,7 +13,7 @@ type ViewMode = "weekly" | "daily";
 interface AppointmentCalendarProps {
   appointments: Appointment[];
   onCompleteAppointment?: (id: string) => void;
-  onRangeChange?: (from: string, to: string) => void;
+  onRangeChange?: (view: "weekly" | "daily", date: string) => void;
   userRole?: "admin" | "superadmin" | "practitioner";
 }
 
@@ -46,34 +46,73 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     }));
   }, [appointments]);
 
-  const weekStart = getWeekStart(anchorDate);
+  // const weekStart = getWeekStart(anchorDate);
 
-  const daysInView: Date[] =
-    viewMode === "weekly"
+  // const daysInView: Date[] =
+  //   viewMode === "weekly"
+  //     ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  //     : [startOfDay(anchorDate)];
+
+  const daysInView = useMemo(() => {
+    const weekStart = getWeekStart(anchorDate);
+
+    return viewMode === "weekly"
       ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
       : [startOfDay(anchorDate)];
-
-  // Robust Range Syncing for Parent API calls
-  useEffect(() => {
-    if (onRangeChange && daysInView.length > 0) {
-      const fromDate = daysInView[0];
-      const toDate = daysInView[daysInView.length - 1];
-
-      const formatLocal = (d: Date) => {
-        const offset = d.getTimezoneOffset();
-        const local = new Date(d.getTime() - offset * 60 * 1000);
-        return local.toISOString().split("T")[0];
-      };
-
-      onRangeChange(formatLocal(fromDate), formatLocal(toDate));
-    }
   }, [anchorDate, viewMode]);
+  // Robust Range Syncing for Parent API calls
+  // useEffect(() => {
+  //   if (onRangeChange && daysInView.length > 0) {
+  //     const fromDate = daysInView[0];
+  //     const toDate = daysInView[daysInView.length - 1];
+
+  //     const formatLocal = (d: Date) => {
+  //       const offset = d.getTimezoneOffset();
+  //       const local = new Date(d.getTime() - offset * 60 * 1000);
+  //       return local.toISOString().split("T")[0];
+  //     };
+
+  //     onRangeChange(formatLocal(fromDate), formatLocal(toDate));
+  //   }
+  // }, [anchorDate, viewMode]);
+
+  const lastRangeRef = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!onRangeChange) return;
+
+    const weekStart = getWeekStart(anchorDate);
+
+    const formatLocal = (d: Date) => {
+      const offset = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - offset * 60 * 1000);
+      return local.toISOString().split("T")[0];
+    };
+
+    const formattedDate =
+      viewMode === "weekly"
+        ? formatLocal(weekStart)
+        : formatLocal(startOfDay(anchorDate));
+
+    const currentKey = `${viewMode}-${formattedDate}`;
+
+    // 🚨 Guard: if same range, DO NOT refetch
+    if (lastRangeRef.current === currentKey) return;
+
+    lastRangeRef.current = currentKey;
+
+    onRangeChange(viewMode, formattedDate);
+  }, [anchorDate, viewMode, onRangeChange]);
 
   const timeSlots = generateHourSlots(0, 24); // 00:00 – 24:00
 
+  // const headerLabel =
+  //   viewMode === "weekly"
+  //     ? `Week of ${formatDate(weekStart)}`
+  //     : formatDate(anchorDate);
   const headerLabel =
     viewMode === "weekly"
-      ? `Week of ${formatDate(weekStart)}`
+      ? `Week of ${formatDate(getWeekStart(anchorDate))}`
       : formatDate(anchorDate);
 
   const changePeriod = (direction: -1 | 1) => {
