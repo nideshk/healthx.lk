@@ -129,16 +129,7 @@ const ConsentFormStep = forwardRef(
                   read: telehealthRead,
                   setter: setTelehealthRead,
                   checked: consent.telehealth,
-                  content: (
-                    <>
-                      <p className="font-bold text-slate-900 underline underline-offset-4">
-                        {t("telehealthHeading")}
-                      </p>
-                      <p>{t("telehealthP1")}</p>
-                      <p>{t("telehealthP2")}</p>
-                      <p>{t("telehealthP3")}</p>
-                    </>
-                  ),
+                  content: t("telehealthContent"),
                 },
                 {
                   id: "terms",
@@ -147,16 +138,7 @@ const ConsentFormStep = forwardRef(
                   read: termsRead,
                   setter: setTermsRead,
                   checked: consent.terms,
-                  content: (
-                    <>
-                      <p className="font-bold text-slate-900 underline underline-offset-4">
-                        {t("termsHeading")}
-                      </p>
-                      <p>{t("termsP1")}</p>
-                      <p>{t("termsP2")}</p>
-                      <p>{t("termsP3")}</p>
-                    </>
-                  ),
+                  content: t("termsContent"),
                 },
               ].map((section) => (
                 <div key={section.id} className={`group bg-white border-2 rounded-2xl transition-all duration-300 ${section.checked ? 'border-blue-500 shadow-md' : 'border-slate-200'}`}>
@@ -177,9 +159,11 @@ const ConsentFormStep = forwardRef(
                       <div
                         ref={section.ref}
                         onScroll={() => handleScroll(section.ref, section.setter)}
-                        className="h-48 overflow-y-auto bg-slate-50 rounded-xl p-5 text-sm leading-relaxed text-slate-600 border border-slate-100 scroll-smooth"
+                        className="h-80 overflow-y-auto bg-slate-50 rounded-xl p-5 text-sm leading-relaxed text-slate-600 border border-slate-100 scroll-smooth custom-scrollbar"
                       >
-                        <div className="space-y-4">{section.content}</div>
+                        <div className="whitespace-pre-wrap space-y-4">
+                          {section.content}
+                        </div>
                       </div>
 
                       {!section.read && (
