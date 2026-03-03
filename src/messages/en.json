@@ -578,38 +578,44 @@
     },
     "story": {
       "title": "The Founder’s Story",
-      "para1": "Our journey began with someone very close to our founder—his little sister. She is autistic, and for her, everyday environments can feel overwhelming. A trip to the doctor, which most of us take for granted, was a source of intense anxiety.",
-      "para2": "While living abroad, Nidesh watched his parents handle these exhausting appointments alone. He realized that telehealth should be a necessity for dignity and comfort, not just a video call.",
-      "quote": "I wondered why Sri Lanka didn’t have something like this. Existing attempts were technology-first, not people-first. They weren’t shaped by the realities of Sri Lankan families.",
-      "para3": "He returned to the drawing board and spent months speaking with doctors and patients. Built from personal savings, Clinecxa was created to provide a kinder way to access care for everyone."
+      "para1": "Our journey began with someone very close to the founder - his little sister. She is autistic, with heightened senses that make everyday environments feel overwhelming. A trip to the doctor, something most of us take for granted, can be incredibly stressful for her. The long queues, crowded waiting rooms, noise, and unpredictability often lead to anxiety and emotional overload.",
+      "para2": "As he moved further away from home, his parents became the ones responsible for taking her to appointments. Over time, it became harder: the travel, the waiting, the emotional toll, all of it felt exhausting and unfair, not just for his sister, but for thousands of families across Sri Lanka facing similar challenges.",
+      "para3": "During his time abroad, he saw how other countries had embraced telehealth, not as a luxury, but as a necessity. It wasn’t just a video call with a doctor; it was a system built around accessibility, dignity, and patient comfort.",
+      "para4": "He wondered why Sri Lanka didn’t have something like this. Yes, there had been attempts, but they were technology-first, not people-first. They weren’t shaped by clinicians or the realities of Sri Lankan families.",
+      "para5": "So he returned to the drawing board.",
+      "para6": "He spent months speaking with Sri Lankan doctors, specialists, patients, and caregivers to understand what actually mattered. He built the first version from his own savings. And at the heart of it was one simple goal: to create a system that makes healthcare easier for families like his, for people with disabilities, and for anyone who deserves a kinder way to access care."
     },
     "vision": {
-      "text": "To be Sri Lanka’s number-one telehealth service: where patients feel safe, care is stress-free, clinicians thrive, and privacy is uncompromised.",
-      "label": "Clinecxa Vision"
+      "label": "Our Vision",
+      "text": "To be Sri Lanka’s number-one telehealth service: where patients feel safe, care is stress-free, clinicians thrive, and privacy and data security are uncompromised."
     },
     "commitments": {
-      "heading": "Our Core Commitments",
+      "heading": "Clinecxa’s Core Commitments",
       "trust": {
-        "title": "Trust and Safety First",
-        "description": "Every decision, from clinical workflows to data security, is driven by an uncompromising commitment to ethics, privacy, and patient safety."
+        "title": "1. Trust and Safety First",
+        "description": "At Clinecxa, we work hard every day to ensure that patients feel safe, clinicians feel protected, and partners trust our platform. Every decision we make; from clinical workflows to data security and governance; is driven by an uncompromising commitment to ethics, privacy, and patient safety. Trust is not a slogan for us; it is the standard we operate by."
       },
       "quality": {
-        "title": "Medical Quality First",
-        "description": "Clinecxa is clinically led. Technology exists to support great medicine and enhance care, never to override professional clinical judgment."
+        "title": "2. Medical Quality Comes First. Technology Follows.",
+        "description": "Clinecxa is a clinically led platform. This system was not designed by technologists alone, it was built with and guided by practicing clinicians. Clinical standards, professional judgment, and patient outcomes lead to every design decision. Technology exists to support great medicine, remove friction, and enhance care, never to override or dilute clinical quality."
       },
       "equality": {
-        "title": "Equal Care for All",
-        "description": "We exist to remove barriers. We believe every patient and clinician deserves equal access to high-quality tools regardless of location."
+        "title": "3. Equal Care and Opportunity for Every Patient and Clinician",
+        "description": "Clinecxa exists to remove barriers. We believe every patient deserves the same standard of care, and every clinician deserves equal access to high-quality tools, reach, and opportunity; regardless of location, background, or size of practice. By building an inclusive and fair platform, we enable better outcomes for everyone."
       }
     },
     "founder": {
       "role": "Founder, Clinecxa",
       "noteTitle": "A Note from the Founder",
-      "greeting": "Hi friend, thank you for being here.",
-      "para1": "Clinecxa was born because I watched my sister struggle with appointments and wanted to support my family from afar. I realized healthcare shouldn't add to a family's burden.",
-      "para2": "I also saw the challenges clinicians face. By giving doctors better tools and a better work-life balance, we ensure they can provide even better care to their patients.",
-      "para3": "Our mission is to put people first—patients, caregivers, and clinicians alike. We are building something safer and more compassionate for everyone.",
-      "signoff": "Nidesh Kulatunga"
+      "greeting1": "Hi friend,",
+      "greeting2": "Thank you for being here.",
+      "para1": "Clinecxa was born from a simple but powerful idea: healthcare should be easier, kinder, and more accessible for everyone, especially for families like mine. Watching my little sister struggle with appointments, being overwhelmed by her environment, and knowing my parents had to handle them while I was far away, made me wish I could be there to support them too.",
+      "para2": "I also saw the challenges clinicians face in Sri Lanka. Unlike in some other countries, they often juggle long commutes, heavy patient loads, and endless queues, which adds stress and reduces the time they can give to each patient. I wanted to change that. A system that gives clinicians better work-life balance leads to happier, less stressed doctors...and that directly means better care for patients.",
+      "para3": "There are so many people in similar situations, living far from their parents and families back home, caring for someone with a disability, or juggling work, life, and financial pressures. Healthcare shouldn’t add to that burden.",
+      "para4": "Our mission is to change all of this. Clinecxa is built to put people first: patients, caregivers, and clinicians alike. Every feature, every process, every decision is guided by one goal: to make healthcare simpler, safer, and more compassionate for everyone, no matter where they are or what their circumstances.",
+      "para5": "Thank you for trusting us with your care.",
+      "signoff": "Nidesh Kulatunga",
+      "linkedin": "https://www.linkedin.com/in/nidesh-kulatunga/"
     }
   },
   "paymentUI": {

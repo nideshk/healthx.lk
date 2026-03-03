@@ -27,10 +27,10 @@ export default function AboutUs() {
                     <div className="space-y-4 text-slate-700">
                         <p>{t("story.para1")}</p>
                         <p>{t("story.para2")}</p>
-                        <p className="italic border-l-4 border-blue-500 pl-4 py-1 text-slate-600 bg-slate-50/50">
-                            {t("story.quote")}
-                        </p>
                         <p>{t("story.para3")}</p>
+                        <p>{t("story.para4")}</p>
+                        <p>{t("story.para5")}</p>
+                        <p>{t("story.para6")}</p>
                     </div>
                 </div>
             </section>
@@ -38,12 +38,12 @@ export default function AboutUs() {
             {/* Vision Banner */}
             <section className="bg-blue-900 py-16 px-6 text-center text-white">
                 <div className="max-w-3xl mx-auto">
-                    <h2 className="text-2xl md:text-3xl font-light italic mb-4 leading-snug">
-                        "{t("vision.text")}"
-                    </h2>
-                    <p className="text-blue-300 font-medium uppercase tracking-widest text-sm">
+                    <p className="text-blue-300 font-medium uppercase tracking-widest text-sm mb-4">
                         {t("vision.label")}
                     </p>
+                    <h2 className="text-2xl md:text-3xl font-light italic leading-snug">
+                        "{t("vision.text")}"
+                    </h2>
                 </div>
             </section>
 
@@ -89,13 +89,26 @@ export default function AboutUs() {
                     <div className="md:w-2/3 p-8 md:p-12">
                         <h2 className="text-2xl font-bold mb-6 text-slate-900">{t("founder.noteTitle")}</h2>
                         <div className="space-y-4 text-slate-600 text-sm leading-relaxed">
-                            <p>{t("founder.greeting")}</p>
+                            <p>{t("founder.greeting1")}</p>
+                            <p>{t("founder.greeting2")}</p>
                             <p>{t("founder.para1")}</p>
                             <p>{t("founder.para2")}</p>
                             <p>{t("founder.para3")}</p>
-                            <p className="font-bold text-slate-900 pt-4 italic">
-                                ~ {t("founder.signoff")}
-                            </p>
+                            <p>{t("founder.para4")}</p>
+                            <p>{t("founder.para5")}</p>
+                            <div className="pt-4">
+                                <p className="font-bold text-slate-900 italic">
+                                    ~ {t("founder.signoff")}
+                                </p>
+                                <a
+                                    href={t("founder.linkedin")}
+                                    className="text-blue-600 hover:underline text-xs mt-2 block"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    (Reach out to me: {t("founder.linkedin")})
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
