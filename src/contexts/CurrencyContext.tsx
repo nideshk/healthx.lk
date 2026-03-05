@@ -1,30 +1,113 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { CurrencyCode, Currency, CurrencyContextType } from '@/types/currency';
 
-const EXCHANGE_RATES: Record<CurrencyCode, Currency> = {
+const INITIAL_EXCHANGE_RATES: Record<string, Currency> = {
     LKR: { code: 'LKR', name: 'Sri Lankan Rupee', symbol: 'Rs.', rate: 1 },
-    USD: { code: 'USD', name: 'US Dollar', symbol: '$', rate: 1 / 295 },
-    EUR: { code: 'EUR', name: 'Euro', symbol: '€', rate: 1 / 315 },
-    GBP: { code: 'GBP', name: 'British Pound', symbol: '£', rate: 1 / 375 },
-    AUD: { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', rate: 1 / 195 },
-    SGD: { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', rate: 1 / 220 },
+    USD: { code: 'USD', name: 'US Dollar', symbol: '$', rate: 1 / 310 },
+    EUR: { code: 'EUR', name: 'Euro', symbol: '€', rate: 1 / 328 },
+    GBP: { code: 'GBP', name: 'British Pound', symbol: '£', rate: 1 / 392 },
+    AUD: { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', rate: 1 / 202 },
 };
+
+// Common currencies to prioritize in list
+const PRIORITY_CURRENCIES = ['LKR', 'USD', 'EUR', 'GBP', 'AUD', 'SGD', 'CAD', 'AED', 'SAR', 'JPY'];
+
+const CACHE_KEY = 'exchangeRatesCache';
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+interface CacheData {
+    rates: Record<string, number>;
+    timestamp: number;
+}
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('LKR');
-    const [mounted, setMounted] = useState(false);
+    const [currencies, setCurrencies] = useState<Record<string, Currency>>(INITIAL_EXCHANGE_RATES);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const updateRatesFromApi = useCallback((apiRates: Record<string, number>) => {
+        const displayNames = new Intl.DisplayNames(['en'], { type: 'currency' });
+
+        setCurrencies(prev => {
+            const next: Record<string, Currency> = { ...prev };
+
+            Object.entries(apiRates).forEach(([code, rate]) => {
+                // If it exists in initial/prev, just update rate
+                if (next[code]) {
+                    next[code] = { ...next[code], rate };
+                } else {
+                    // Create new currency entry
+                    try {
+                        const name = displayNames.of(code) || code;
+                        // Try to get symbol using Intl
+                        const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: code });
+                        const symbol = formatter.format(0).replace(/[0-9.,\s-]/g, '') || code;
+
+                        next[code] = {
+                            code,
+                            name,
+                            symbol,
+                            rate
+                        };
+                    } catch (e) {
+                        // Fallback if code isn't valid for Intl
+                        next[code] = {
+                            code,
+                            name: code,
+                            symbol: code,
+                            rate
+                        };
+                    }
+                }
+            });
+
+            return next;
+        });
+    }, []);
+
+    const fetchRates = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            // Check cache
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                const { rates, timestamp }: CacheData = JSON.parse(cached);
+                if (Date.now() - timestamp < CACHE_TTL) {
+                    updateRatesFromApi(rates);
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            const response = await fetch('https://open.er-api.com/v6/latest/LKR');
+            const data = await response.json();
+
+            if (data.result === 'success') {
+                updateRatesFromApi(data.rates);
+                localStorage.setItem(CACHE_KEY, JSON.stringify({
+                    rates: data.rates,
+                    timestamp: Date.now()
+                }));
+            }
+        } catch (error) {
+            console.error('Failed to fetch exchange rates:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [updateRatesFromApi]);
 
     useEffect(() => {
         const saved = localStorage.getItem('selectedCurrency') as CurrencyCode;
-        if (saved && EXCHANGE_RATES[saved]) {
+        // Check if saved exists in initial or fallback to LKR
+        if (saved) {
             setSelectedCurrency(saved);
         }
-        setMounted(true);
-    }, []);
+        fetchRates();
+    }, [fetchRates]);
 
     const setCurrency = (code: CurrencyCode) => {
         setSelectedCurrency(code);
@@ -32,33 +115,51 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     const convert = useCallback((amountLKR: number) => {
-        const currency = EXCHANGE_RATES[selectedCurrency];
+        const currency = currencies[selectedCurrency] || INITIAL_EXCHANGE_RATES.LKR;
         return amountLKR * currency.rate;
-    }, [selectedCurrency]);
+    }, [selectedCurrency, currencies]);
 
     const format = useCallback((amountLKR: number) => {
-        const currency = EXCHANGE_RATES[selectedCurrency];
+        const currency = currencies[selectedCurrency] || INITIAL_EXCHANGE_RATES.LKR;
         const converted = amountLKR * currency.rate;
 
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: selectedCurrency === 'LKR' ? 'LKR' : selectedCurrency,
-            currencyDisplay: 'symbol',
-            minimumFractionDigits: selectedCurrency === 'LKR' ? 0 : 2,
-            maximumFractionDigits: selectedCurrency === 'LKR' ? 0 : 2,
-        }).format(converted).replace('LKR', 'Rs.'); // Fix for Intl.numberFormat LKR symbol
-    }, [selectedCurrency]);
+        // Special handling for LKR symbol fix
+        if (selectedCurrency === 'LKR') {
+            return `Rs. ${Math.round(converted).toLocaleString()}`;
+        }
 
-    const value = {
+        try {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: selectedCurrency,
+                currencyDisplay: 'symbol',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }).format(converted);
+        } catch (e) {
+            // Fallback for codes that Intl doesn't like or fail
+            return `${currency.symbol} ${converted.toFixed(2)}`;
+        }
+    }, [selectedCurrency, currencies]);
+
+    // Derived sorted list for UI usage if needed
+    const sortedCurrencies = useMemo(() => {
+        const allCodes = Object.keys(currencies);
+        const priority = PRIORITY_CURRENCIES.filter(c => allCodes.includes(c));
+        const others = allCodes.filter(c => !PRIORITY_CURRENCIES.includes(c)).sort();
+        return [...priority, ...others];
+    }, [currencies]);
+
+    const value = useMemo(() => ({
         selectedCurrency,
         setCurrency,
-        currencies: EXCHANGE_RATES,
+        currencies,
+        sortedCurrencies, // Exposed for convenience
         convert,
         format,
-    };
+        isLoading,
+    }), [selectedCurrency, currencies, sortedCurrencies, convert, format, isLoading]);
 
-    // Skip rendering children until mounted to avoid hydration mismatch if needed
-    // But usually for currency it's better to render default (LKR) first
     return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 };
 

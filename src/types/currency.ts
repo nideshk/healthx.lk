@@ -1,4 +1,4 @@
-export type CurrencyCode = 'LKR' | 'USD' | 'EUR' | 'GBP' | 'AUD' | 'SGD';
+export type CurrencyCode = string;
 
 export interface Currency {
     code: CurrencyCode;
@@ -11,6 +11,8 @@ export interface CurrencyContextType {
     selectedCurrency: CurrencyCode;
     setCurrency: (code: CurrencyCode) => void;
     currencies: Record<CurrencyCode, Currency>;
+    sortedCurrencies: CurrencyCode[];
     convert: (amountLKR: number) => number;
     format: (amountLKR: number) => string;
+    isLoading: boolean;
 }
