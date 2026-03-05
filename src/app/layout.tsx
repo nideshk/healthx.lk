@@ -35,6 +35,7 @@ export default async function RootLayout({
         >
           <IdleLogoutProvider>
 
+<<<<<<< Updated upstream
             <AuthProvider>
               <Script
                 src="https://www.payhere.lk/lib/payhere.js"
@@ -44,6 +45,21 @@ export default async function RootLayout({
               <Header />
               {children}
             </AuthProvider>
+=======
+            <CurrencyProvider>
+              <AuthProvider>
+                {process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === "payhere" && (
+                  <Script
+                    src="https://www.payhere.lk/lib/payhere.js"
+                    strategy="lazyOnload"
+                  />
+                )}
+                <ToastProvider />
+                <Header />
+                {children}
+              </AuthProvider>
+            </CurrencyProvider>
+>>>>>>> Stashed changes
           </IdleLogoutProvider>
         </NextIntlClientProvider>
       </body>

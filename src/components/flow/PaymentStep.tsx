@@ -18,6 +18,7 @@ import { authFetch } from "@/lib/authFetch";
 import { useAuth } from "@/contexts/AuthContext";
 import PaymentStepUI from "../PaymentPageUI";
 import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
+import JSEncrypt from "jsencrypt";
 
 interface StepRefHandle {
   validateStep?: () => boolean;
@@ -178,7 +179,9 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     const handlePayment = async (payload: any) => {
       if (isPaymentProcessing || isVerifying) return;
 
-      if (typeof window === "undefined" || !window.payhere) {
+      const provider = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER || "webxpay";
+
+      if (provider === "payhere" && (typeof window === "undefined" || !window.payhere)) {
         toast.error(t("errors.paymentLoading"));
         return;
       }
@@ -221,14 +224,14 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
         appointmentIdRef.current = currentAppointmentId;
 
-        const payRes = await authFetch("/api/payhere", {
+        const payRes = await authFetch(provider === "payhere" ? "/api/payhere" : "/api/webxpay", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             first_name:
               user?.profile?.first_name || bookingData.fullName?.split(" ")[0],
             last_name:
-              user?.profile?.last_name || bookingData.fullName?.split(" ")[1],
+              user?.profile?.last_name || bookingData.fullName?.split(" ").slice(1).join(" ") || "Lastname",
             email: user?.user?.email || bookingData.email,
             phone: user?.phone || bookingData.phone,
             address: bookingData.address || "Default",
@@ -248,78 +251,110 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           return;
         }
 
-        const { payment } = await payRes.json();
-        mainLayout?.classList.add(
-          "blur-md",
-          "brightness-75",
-          "pointer-events-none",
-        );
+        if (provider === "webxpay") {
+          // WebXPay
+          const { success } = await payRes.json();
+          const publicKey = `-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDMSizE2F37IEZBKuvrLbRBvFZ+
+mXNLUaJffFULGafAjDQNf08HvyoAPmVrLa2DRDawWu7jx8w8M/cQgQXlVJhtS68E
+fFtirXIyW8XCgo18G1e6cMsc3ePtKuPntOe1oKikUV2sWnqk25BLLCFpKpZaLvrH
+oBqI0TMoxwrVRVvvXQIDAQAB
+-----END PUBLIC KEY-----`;
 
-        // Payment verification logic
-        const verifyPayment = async () => {
-          try {
-            const res = await authFetch(`/api/booking/check-status?appointmentId=${currentAppointmentId}`);
-            if (!res.ok) return false;
-            const data = await res.json();
-            if (data.status === 'confirmed' && data.payment_status === 'paid') {
-              return true;
-            }
-            return false;
-          } catch (err) {
-            console.error("Polling error:", err);
-            return false;
-          }
-        }
+          const encrypt = new JSEncrypt();
+          encrypt.setPublicKey(publicKey);
 
-        window.payhere.onCompleted = async () => {
+          const amount = payload?.final_amount || consultationFee;
+          const inputToEncrypt = `${amount}|${currentAppointmentId}`;
+          const encryptedPayment = encrypt.encrypt(inputToEncrypt);
 
-          setIsPaymentProcessing(false);
-          mainLayout?.classList.remove(
-            "blur-md",
-            "brightness-75",
-            "pointer-events-none",
-          );
-          setIsVerifying(true);
+          if (!encryptedPayment) throw new Error("Encryption failed");
 
-          let attempts = 0;
-          let maxAttempts = 15;
+          const webxpayForm = document.createElement("form");
+          webxpayForm.method = "POST";
+          webxpayForm.action = "https://webxpay.com/index.php?route=checkout/billing";
 
-          const checkInterval = setInterval(async () => {
-            attempts++;
+          const fields = {
+            first_name: user?.profile?.first_name || bookingData.fullName?.split(" ")[0] || "Customer",
+            last_name: user?.profile?.last_name || bookingData.fullName?.split(" ").slice(1).join(" ") || "Lastname",
+            email: user?.user?.email || bookingData.email || "",
+            contact_number: user?.phone || bookingData.phone || "",
+            address_line_one: bookingData.address || "No Address Provided",
+            address_line_two: "",
+            city: user?.profile?.city || "Colombo",
+            state: "Western",
+            postal_code: "10300",
+            country: user?.profile?.country || "Sri Lanka",
+            process_currency: "LKR",
+            cms: "PHP",
+            custom_fields: `${currentAppointmentId}`,
+            enc_method: "JCs3J+6oSz4V0LgE0zi/Bg==",
+            secret_key: "41e8b126-7368-4b28-9c2c-4db117a237ed",
+            payment: encryptedPayment.toString(),
+          };
 
-            const isVerified = await verifyPayment();
+          Object.entries(fields).forEach(([name, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value;
+            webxpayForm.appendChild(input);
+          });
 
-            if (isVerified) {
-              clearInterval(checkInterval);
-              await handlePostBookingActions(currentAppointmentId!);
-              setIsVerifying(false);
-              setPaymentDone(true);
-              toast.success("Payment verified! Your appointment is successfully booked.");
-            }
-            else if (attempts >= maxAttempts) {
+          document.body.appendChild(webxpayForm);
+          webxpayForm.submit();
+          return;
+        } else {
+          // PayHere
+          const { payment } = await payRes.json();
+          mainLayout?.classList.add("blur-md", "brightness-75", "pointer-events-none");
+
+          const verifyPayment = async () => {
+            try {
               const res = await authFetch(`/api/booking/check-status?appointmentId=${currentAppointmentId}`);
+              if (!res.ok) return false;
               const data = await res.json();
-              releaseAppointmentSlot(currentAppointmentId, "PAYMENT_FAILED");
-              clearInterval(checkInterval);
-              setIsVerifying(false);
-              toast.error("Booking cancelled, Payment could not be verified.");
-              router.push("/dashboard/appointment");
+              return data.status === 'confirmed' && data.payment_status === 'paid';
+            } catch (err) {
+              console.error("Polling error:", err);
+              return false;
             }
-          }, 2000);
-        };
+          };
 
-        window.payhere.onDismissed = () => {
-          mainLayout?.classList.remove(
-            "blur-md",
-            "brightness-75",
-            "pointer-events-none",
-          );
-          setIsPaymentProcessing(false);
-          releaseAppointmentSlot(currentAppointmentId, "PAYMENT_DISMISSED");
-          toast.error(t("errors.cancelled"));
-        };
+          window.payhere.onCompleted = async () => {
+            setIsPaymentProcessing(false);
+            mainLayout?.classList.remove("blur-md", "brightness-75", "pointer-events-none");
+            setIsVerifying(true);
 
-        window.payhere.startPayment(payment);
+            let attempts = 0;
+            let maxAttempts = 15;
+            const checkInterval = setInterval(async () => {
+              attempts++;
+              const isVerified = await verifyPayment();
+              if (isVerified) {
+                clearInterval(checkInterval);
+                await handlePostBookingActions(currentAppointmentId!);
+                setIsVerifying(false);
+                setPaymentDone(true);
+                toast.success("Payment verified! Your appointment is successfully booked.");
+              } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                setIsVerifying(false);
+                toast.error("Booking cancelled, Payment could not be verified.");
+                router.push("/dashboard/appointment");
+              }
+            }, 2000);
+          };
+
+          window.payhere.onDismissed = () => {
+            mainLayout?.classList.remove("blur-md", "brightness-75", "pointer-events-none");
+            setIsPaymentProcessing(false);
+            releaseAppointmentSlot(currentAppointmentId, "PAYMENT_DISMISSED");
+            toast.error(t("errors.cancelled"));
+          };
+
+          window.payhere.startPayment(payment);
+        }
       } catch {
         setIsPaymentProcessing(false);
         mainLayout?.classList.remove(
