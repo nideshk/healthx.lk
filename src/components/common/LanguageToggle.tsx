@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LanguageToggle() {
   const [lang, setLang] = useState<"en" | "si">("en");
+  const router = useRouter();
 
   useEffect(() => {
     const match = document.cookie.match(/locale=(en|si)/);
@@ -13,7 +15,10 @@ export default function LanguageToggle() {
   const switchLang = (next: "en" | "si") => {
     if (lang === next) return;
     document.cookie = `locale=${next}; path=/; max-age=31536000`;
-    window.location.reload();
+    setLang(next);
+
+    // Smoothly refresh the page data without hard-reloading the auth/app state
+    router.refresh();
   };
 
   return (
@@ -21,8 +26,8 @@ export default function LanguageToggle() {
       <button
         onClick={() => switchLang("en")}
         className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all duration-200 ${lang === "en"
-            ? "bg-white text-teal-600 shadow-sm ring-1 ring-slate-200/50"
-            : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+          ? "bg-white text-teal-600 shadow-sm ring-1 ring-slate-200/50"
+          : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
           }`}
       >
         EN
@@ -31,8 +36,8 @@ export default function LanguageToggle() {
       <button
         onClick={() => switchLang("si")}
         className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all duration-200 ${lang === "si"
-            ? "bg-white text-teal-600 shadow-sm ring-1 ring-slate-200/50"
-            : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+          ? "bg-white text-teal-600 shadow-sm ring-1 ring-slate-200/50"
+          : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
           }`}
       >
         සිං
