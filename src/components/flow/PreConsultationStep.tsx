@@ -17,6 +17,7 @@ import {
 import { AppointmentFormInputs } from "@/types/FormType";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
+import Price from "@/components/common/Price";
 
 interface Props {
   bookingControllerRef: React.MutableRefObject<{
@@ -68,7 +69,6 @@ export default function PreConsultationStep({
 
   const typeFee = bookingData?.appointmentType?.fee || 0;
   const platformFee = bookingData?.appointmentType?.platform_fee || 0;
-  const currency = bookingData?.selectedDoctor?.currency || "LKR";
   const totalPayable =
     typeFee + platformFee + selectedAttendees.length * 500;
 
@@ -363,9 +363,8 @@ export default function PreConsultationStep({
               <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
                 <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                 <p className="text-[11px] font-bold text-blue-700 leading-normal">
-                  {t("attendeeFeeNote", {
-                    fee: (500).toLocaleString(),
-                    currency: currency,
+                  {t.rich("attendeeFeeNote", {
+                    price: () => <Price amount={500} />,
                   })}
                 </p>
               </div>
@@ -457,7 +456,7 @@ export default function PreConsultationStep({
                 Total Amount
               </p>
               <p className="text-xl font-black text-slate-900">
-                {currency} {totalPayable.toLocaleString()}
+                <Price amount={totalPayable} />
               </p>
             </div>
 

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Button from "@/components/atom/Button/Button";
 import Loader from "@/components/atom/Loader/Loader";
+import Price from "@/components/common/Price";
 
 interface Fee {
   label: string;
@@ -51,9 +52,8 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
       <div className="flex justify-between items-start">
         <div>
           <div
-            className={`text-sm font-semibold text-blue-600 hover:underline cursor-pointer ${
-              loading ? "pointer-events-none opacity-60" : ""
-            }`}
+            className={`text-sm font-semibold text-blue-600 hover:underline cursor-pointer ${loading ? "pointer-events-none opacity-60" : ""
+              }`}
             onClick={handleViewProfile}
           >
             {clinician.name}
@@ -86,7 +86,7 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
         {clinician.fees && clinician.fees.length > 0 ? (
           clinician.fees.map((f, idx) => (
             <span key={idx}>
-              {f.label}: <span className="font-medium">{f.amount} LKR</span>
+              {f.label}: <span className="font-medium"><Price amount={f.amount} /></span>
               {idx !== clinician.fees.length - 1 && "  |  "}
             </span>
           ))

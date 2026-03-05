@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { AppointmentFormInputs } from '@/types/FormType';
 import { formatLocalDateTime } from '@/lib/utils';
+import Price from '../common/Price';
 
 interface ConfirmBookingModalProps {
   isOpen: boolean;
@@ -165,11 +166,11 @@ export default function ConfirmBookingModal({
           <div className="text-xs text-gray-700 space-y-1">
             <div className="flex justify-between">
               <span>Consultation Fee:</span>
-              <span>{baseFee} LKR</span>
+              <span><Price amount={baseFee} /></span>
             </div>
             <div className="flex justify-between font-semibold text-gray-900 border-t pt-2 mt-1">
               <span>Total payable:</span>
-              <span>{totalAmount.toLocaleString()} LKR</span>
+              <span><Price amount={totalAmount} /></span>
             </div>
           </div>
         </div>

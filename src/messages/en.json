@@ -232,7 +232,7 @@
     "continue": "Continue to Payment",
     "duration": "How long have you had this concern? (for example: 2 weeks, 3 months, 1 year)",
     "durationPlaceholder": "How long have you had this concern?",
-    "attendeeFeeNote": "Note: An additional fee of {currency} {fee} per attendee will be charged.",
+    "attendeeFeeNote": "Note: An additional fee of <price></price> per attendee will be charged.",
     "detailsHeader": "Consultation details",
     "attachmentsLabel": "Document upload for the Doctor\n(Upload any relevant medical documents, test results, or reports (maximum 3 documents)",
     "attendeesHeader": "Additional attendee information",
