@@ -24,6 +24,12 @@ interface CacheData {
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
+    'LK': 'LKR', 'US': 'USD', 'GB': 'GBP', 'AU': 'AUD', 'SG': 'SGD',
+    'CA': 'CAD', 'AE': 'AED', 'SA': 'SAR', 'JP': 'JPY', 'IN': 'INR',
+    'FR': 'EUR', 'DE': 'EUR', 'IT': 'EUR', 'ES': 'EUR', 'NZ': 'NZD',
+};
+
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('LKR');
     const [currencies, setCurrencies] = useState<Record<string, Currency>>(INITIAL_EXCHANGE_RATES);
@@ -69,43 +75,66 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
     }, []);
 
+    const detectCurrencyClient = useCallback(async () => {
+        try {
+            console.log('[Currency] Detecting location on client...');
+            const res = await fetch('https://ipapi.co/json/');
+            const data = await res.json();
+            if (data.country_code) {
+                const detected = COUNTRY_TO_CURRENCY[data.country_code] || 'LKR';
+                console.log(`[Currency] Detected Country: ${data.country_code}, Mapping to: ${detected}`);
+                setSelectedCurrency(detected);
+            }
+        } catch (e) {
+            console.error('[Currency] Client-side detection failed:', e);
+        }
+    }, []);
+
     const fetchRates = useCallback(async () => {
         setIsLoading(true);
         try {
-            // Check cache
+            const manualChoice = localStorage.getItem('selectedCurrency');
+
+            // 1. Check cache for rates
             const cached = localStorage.getItem(CACHE_KEY);
+            let ratesUpdated = false;
+
             if (cached) {
                 const { rates, timestamp }: CacheData = JSON.parse(cached);
                 if (Date.now() - timestamp < CACHE_TTL) {
                     updateRatesFromApi(rates);
-                    setIsLoading(false);
-                    return;
+                    ratesUpdated = true;
                 }
             }
 
-            const response = await fetch('https://open.er-api.com/v6/latest/LKR');
-            const data = await response.json();
-
-            if (data.result === 'success') {
-                updateRatesFromApi(data.rates);
-                localStorage.setItem(CACHE_KEY, JSON.stringify({
-                    rates: data.rates,
-                    timestamp: Date.now()
-                }));
+            // 2. Fetch fresh rates if needed
+            if (!ratesUpdated) {
+                const response = await fetch('/api/currency');
+                const data = await response.json();
+                if (data.rates) {
+                    updateRatesFromApi(data.rates);
+                    localStorage.setItem(CACHE_KEY, JSON.stringify({
+                        rates: data.rates,
+                        timestamp: Date.now()
+                    }));
+                }
             }
+
+            // 3. Handle initial currency selection (detection)
+            if (!manualChoice) {
+                await detectCurrencyClient();
+            } else {
+                setSelectedCurrency(manualChoice as CurrencyCode);
+            }
+
         } catch (error) {
-            console.error('Failed to fetch exchange rates:', error);
+            console.error('Failed to resolve currency setup:', error);
         } finally {
             setIsLoading(false);
         }
-    }, [updateRatesFromApi]);
+    }, [updateRatesFromApi, detectCurrencyClient]);
 
     useEffect(() => {
-        const saved = localStorage.getItem('selectedCurrency') as CurrencyCode;
-        // Check if saved exists in initial or fallback to LKR
-        if (saved) {
-            setSelectedCurrency(saved);
-        }
         fetchRates();
     }, [fetchRates]);
 
