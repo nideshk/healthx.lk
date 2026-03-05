@@ -225,6 +225,7 @@
     "customReferral": "Please specify source...",
     "attachments": "Document upload for the Doctor (Upload any relevant medical documents, test results, or reports)",
     "uploadHint": "Medical Records / Photos",
+    "uploadMoreHint": "Add more documents",
     "attendees": "Attendees",
     "attendeesSubtitle": "How many attendees to the appointment?\n\nWill you be joining the appointment alone, or will there be additional family members? You can add up to 1 additional member. *Pricing may differ)",
     "invitePlaceholder": "Invite via email",
@@ -253,7 +254,8 @@
       "email": "Enter a valid email address.",
       "maxAttendees": "Maximum attendees allowed.",
       "duplicateEmail": "Email already added.",
-      "selfInvite": "You cannot add yourself as an attendee."
+      "selfInvite": "You cannot add yourself as an attendee.",
+      "maxThreeFiles": "You can only upload up to 3 documents"
     },
     "fileDeletionNote": "Note: Files uploaded will be deleted from the system after 3 months."
   },
