@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { getLocaleFromCookie } from "@/utils/getLocale";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import IdleLogoutProvider from "@/components/providers/IdleLogoutProvider";
 
 export const metadata: Metadata = {
@@ -35,15 +36,17 @@ export default async function RootLayout({
         >
           <IdleLogoutProvider>
 
-            <AuthProvider>
-              <Script
-                src="https://www.payhere.lk/lib/payhere.js"
-                strategy="lazyOnload"
-              />
-              <ToastProvider />
-              <Header />
-              {children}
-            </AuthProvider>
+            <CurrencyProvider>
+              <AuthProvider>
+                <Script
+                  src="https://www.payhere.lk/lib/payhere.js"
+                  strategy="lazyOnload"
+                />
+                <ToastProvider />
+                <Header />
+                {children}
+              </AuthProvider>
+            </CurrencyProvider>
           </IdleLogoutProvider>
         </NextIntlClientProvider>
       </body>

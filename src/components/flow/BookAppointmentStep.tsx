@@ -20,6 +20,7 @@ import Calendar from "../atom/Calendar/Calendar";
 import Loader from "@/components/atom/Loader/Loader";
 import { useTranslations } from "next-intl";
 import { authFetch } from "@/lib/authFetch";
+import Price from "@/components/common/Price";
 
 const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
   const t = useTranslations("bookAppointment");
@@ -273,7 +274,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                     <p className={`font-black text-lg ${selectedType?.id === type.id ? 'text-teal-900' : 'text-slate-800'}`}>
                       {type.name}{" "}
                       <span className="text-xs font-bold uppercase tracking-tight">
-                        ({(type.fee ?? 0) + (type.platform_fee ?? 0)} LKR)
+                        (<Price amount={(type.fee ?? 0) + (type.platform_fee ?? 0)} />)
                       </span>
                     </p>
 

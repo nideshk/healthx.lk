@@ -31,7 +31,7 @@ interface Props {
   nextStep: () => void;
   bookingControllerRef: React.MutableRefObject<{
     validateStep?: () => boolean;
-    getAttachment?: () => File | null;
+    getAttachments?: () => File[];
   }>;
   isManualCheckout?: boolean;
   preExistingId?: string | null;
@@ -146,17 +146,19 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     };
 
     const handlePostBookingActions = async (appointmentId: string) => {
-      let file: File | null = null;
+      let files: File[] = [];
 
-      if (bookingControllerRef?.current?.getAttachment) {
-        file = bookingControllerRef.current.getAttachment();
+      if (bookingControllerRef?.current?.getAttachments) {
+        files = bookingControllerRef.current.getAttachments();
       }
 
-      if (file instanceof File) {
-        try {
-          await uploadAttachmentAfterBooking(file, appointmentId);
-        } catch {
-          toast.warn(t("warnings.attachmentUploadFailed"));
+      if (files.length > 0) {
+        for (const file of files) {
+          try {
+            await uploadAttachmentAfterBooking(file, appointmentId);
+          } catch {
+            toast.warn(t("warnings.attachmentUploadFailed"));
+          }
         }
       }
 

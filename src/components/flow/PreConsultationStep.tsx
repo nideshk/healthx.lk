@@ -13,15 +13,17 @@ import {
   ChevronRight,
   ShieldCheck,
   AlertCircle,
+  FileText,
 } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
+import Price from "@/components/common/Price";
 
 interface Props {
   bookingControllerRef: React.MutableRefObject<{
     validateStep?: () => boolean;
-    getAttachment?: () => File | null;
+    getAttachments?: () => File[];
   }>;
   bookingData: AppointmentFormInputs;
   updateData: (d: Partial<AppointmentFormInputs>) => void;
@@ -59,7 +61,7 @@ export default function PreConsultationStep({
   });
 
   console.log("booking", bookingData)
-  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   const isCustomReferral =
     pre.referral && !REFERRAL_SOURCES.includes(pre.referral);
@@ -68,7 +70,6 @@ export default function PreConsultationStep({
 
   const typeFee = bookingData?.appointmentType?.fee || 0;
   const platformFee = bookingData?.appointmentType?.platform_fee || 0;
-  const currency = bookingData?.selectedDoctor?.currency || "LKR";
   const totalPayable =
     typeFee + platformFee + selectedAttendees.length * 500;
 
@@ -93,9 +94,11 @@ export default function PreConsultationStep({
   };
 
   useEffect(() => {
-    bookingControllerRef.current.validateStep = validateFields;
-    bookingControllerRef.current.getAttachment = () => attachment;
-  }, [attachment, note, pre.referral, selectedAttendees]);
+    if (bookingControllerRef.current) {
+      bookingControllerRef.current.validateStep = validateFields;
+      bookingControllerRef.current.getAttachments = () => attachments;
+    }
+  }, [attachments, note, pre.referral, selectedAttendees]);
 
   const addAttendee = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -169,6 +172,22 @@ export default function PreConsultationStep({
     }
 
     nextStep();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    const remainingSlots = 3 - attachments.length;
+
+    if (selectedFiles.length > remainingSlots) {
+      toast.warning(t("errors.maxThreeFiles", { defaultValue: "You can only upload up to 3 documents" }));
+    }
+
+    const filesToAdd = selectedFiles.slice(0, remainingSlots);
+    setAttachments([...attachments, ...filesToAdd]);
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
   };
 
   return (
@@ -314,42 +333,64 @@ export default function PreConsultationStep({
         <div className="flex flex-col gap-6 mt-6">
           {/* Attachment */}
           <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-50">
-            <label className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-4">
-              {t("attachments")}
-            </label>
+            <div className="flex justify-between items-center mb-4">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400 block">
+                {t("attachments")}
+              </label>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                {attachments.length} / 3
+              </span>
+            </div>
 
-            {!attachment ? (
+            {attachments.length < 3 ? (
               <label className="group flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-200 rounded-3xl cursor-pointer hover:bg-teal-50/50 hover:border-teal-300 transition-all">
                 <Paperclip className="w-8 h-8 text-slate-300 group-hover:text-teal-500 mb-2 transition-colors" />
-                <p className="text-xs font-bold text-slate-400 group-hover:text-teal-700">
-                  {t("uploadHint")}
+                <p className="text-xs font-bold text-slate-400 group-hover:text-teal-700 text-center px-4">
+                  {attachments.length === 0 ? t("uploadHint") : t("uploadMoreHint", { defaultValue: "Add more documents" })}
                 </p>
                 <input
                   type="file"
                   className="hidden"
+                  multiple
                   accept=".pdf,.jpg,.png,.jpeg"
-                  onChange={(e) =>
-                    setAttachment(e.target.files?.[0] || null)
-                  }
+                  onChange={handleFileChange}
                 />
               </label>
             ) : (
-              <div className="flex items-center justify-between p-4 bg-teal-50 border border-teal-100 rounded-2xl">
-                <span className="text-sm font-bold text-teal-900 truncate">
-                  {attachment.name}
-                </span>
-                <button
-                  onClick={() => setAttachment(null)}
-                  className="p-1 hover:bg-white rounded-full text-teal-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+              <div className="w-full h-40 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center bg-slate-50/50 opacity-60">
+                <CheckCircle2 className="w-8 h-8 text-teal-400 mb-2" />
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Maximum limit reached
+                </p>
               </div>
             )}
+
+            <div className="mt-4 space-y-2">
+              {attachments.map((file, idx) => (
+                <div key={`${file.name}-${idx}`} className="flex items-center justify-between p-4 bg-teal-50 border border-teal-100 rounded-2xl">
+                  <div className="flex items-center gap-3 truncate">
+                    <div className="p-2 bg-white rounded-xl shadow-sm">
+                      <FileText className="w-4 h-4 text-teal-500" />
+                    </div>
+                    <span className="text-sm font-bold text-teal-900 truncate">
+                      {file.name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => removeAttachment(idx)}
+                    className="p-1 hover:bg-white rounded-full text-teal-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
             <p className="mt-4 text-[11px] font-bold text-slate-400 italic">
               {t("fileDeletionNote")}
             </p>
           </div>
+
 
           {/* Attendees */}
           {maxAttendees > 1 && (
@@ -363,9 +404,8 @@ export default function PreConsultationStep({
               <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
                 <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                 <p className="text-[11px] font-bold text-blue-700 leading-normal">
-                  {t("attendeeFeeNote", {
-                    fee: (500).toLocaleString(),
-                    currency: currency,
+                  {t.rich("attendeeFeeNote", {
+                    price: () => <Price amount={500} />,
                   })}
                 </p>
               </div>
@@ -457,7 +497,7 @@ export default function PreConsultationStep({
                 Total Amount
               </p>
               <p className="text-xl font-black text-slate-900">
-                {currency} {totalPayable.toLocaleString()}
+                <Price amount={totalPayable} />
               </p>
             </div>
 

@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { authFetch } from "@/lib/authFetch";
+import Price from "@/components/common/Price";
 
 interface Props {
   practitionerId: string;
@@ -149,7 +150,7 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
                   : "bg-white border-gray-300 hover:border-cyan-500"
                 }`}
             >
-              {type.name} · {type.duration_mins} {t("minLabel")} · {type.fee} <span className="text-xs">LKR</span>
+              {type.name} · {type.duration_mins} {t("minLabel")} · <Price amount={type.fee} />
             </button>
           ))}
         </div>

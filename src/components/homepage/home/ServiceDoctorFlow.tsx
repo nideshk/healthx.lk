@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import HomepageSlotPicker from "./HomepageSlotPicker";
 import { useTranslations, useLocale } from "next-intl";
+import Price from "@/components/common/Price";
 import {
   Stethoscope,
   User,
@@ -385,8 +386,7 @@ const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
                         From
                       </span>
                       <span className="text-sm font-black">
-                        Rs.
-                        {(d.starting_price ?? 1500).toLocaleString()}
+                        <Price amount={d.starting_price ?? 1500} />
                       </span>
                     </div>
                   </div>

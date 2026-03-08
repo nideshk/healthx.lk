@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle, Upload } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
+import Price from '@/components/common/Price';
 
 export default function AppointmentConfirmPage() {
   const router = useRouter();
@@ -357,7 +358,7 @@ export default function AppointmentConfirmPage() {
             <p><strong>Doctor:</strong> {booking.selectedDoctor?.full_name}</p>
             <p><strong>Date:</strong> {new Date(booking.starts_at).toLocaleDateString()}</p>
             <p><strong>Time:</strong> {new Date(booking.starts_at).toLocaleTimeString()}</p>
-            <p><strong>Total Fee:</strong> LKR {booking.total_amount}</p>
+            <p><strong>Total Fee:</strong> <Price amount={booking.total_amount} /></p>
           </div>
 
           {/* Payment */}
@@ -375,7 +376,7 @@ export default function AppointmentConfirmPage() {
               className="px-5 py-2 bg-green-600 text-white rounded-md flex items-center justify-center gap-2 w-full"
             >
               {paymentLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Pay LKR {booking.total_amount} Securely
+              Pay <Price amount={booking.total_amount} /> Securely
             </button>
 
             {paymentDone && (

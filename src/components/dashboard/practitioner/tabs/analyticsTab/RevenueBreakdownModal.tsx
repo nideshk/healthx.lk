@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import Button from "@/components/atom/Button/Button";
+import Price from "@/components/common/Price";
 
 interface RevenueBreakdownModalProps {
   data: {
@@ -68,8 +69,8 @@ const RevenueBreakdownModal: React.FC<RevenueBreakdownModalProps> = ({
             </ResponsiveContainer>
             {/* Total display in center of donut */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider">Total Gross</span>
-                <span className="text-lg font-bold">LKR {total.toLocaleString()}</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider">Total Gross</span>
+              <span className="text-lg font-bold"><Price amount={total} /></span>
             </div>
           </div>
         </div>
@@ -79,25 +80,25 @@ const RevenueBreakdownModal: React.FC<RevenueBreakdownModalProps> = ({
           <LegendItem
             color="bg-[#2DD4BF]"
             label="Platform Fees"
-            value={`LKR ${data.platformFees.toLocaleString()}`}
+            value={<Price amount={data.platformFees} />}
             percent={total > 0 ? ((data.platformFees / total) * 100).toFixed(1) : "0"}
           />
           <LegendItem
             color="bg-[#3B82F6]"
             label="Consultation Fees"
-            value={`LKR ${data.consultationFees.toLocaleString()}`}
+            value={<Price amount={data.consultationFees} />}
             percent={total > 0 ? ((data.consultationFees / total) * 100).toFixed(1) : "0"}
           />
           <LegendItem
             color="bg-[#F59E0B]"
             label="Service Fees"
-            value={`LKR ${data.serviceFees.toLocaleString()}`}
+            value={<Price amount={data.serviceFees} />}
             percent={total > 0 ? ((data.serviceFees / total) * 100).toFixed(1) : "0"}
           />
           <LegendItem
             color="bg-[#EF4444]"
             label="Taxes"
-            value={`LKR ${data.taxes.toLocaleString()}`}
+            value={<Price amount={data.taxes} />}
             percent={total > 0 ? ((data.taxes / total) * 100).toFixed(1) : "0"}
           />
         </div>
@@ -123,7 +124,7 @@ const LegendItem = ({
 }: {
   color: string;
   label: string;
-  value: string;
+  value: React.ReactNode;
   percent: string;
 }) => (
   <div className="flex items-center justify-between text-sm">

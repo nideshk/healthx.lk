@@ -33,6 +33,7 @@ import { useModalStore } from "@/store/useModalStore";
 import Modal from "@/components/atom/Modal/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import LanguageToggle from "@/components/common/LanguageToggle";
+import CurrencyToggle from "@/components/common/CurrencyToggle";
 
 export default function Header() {
   const t = useTranslations("header"); // Initialize translations
@@ -214,7 +215,8 @@ export default function Header() {
 
             {/* RIGHT SIDE: PROFILE / AUTH */}
             <div className="flex items-center gap-3">
-              <div className="hidden md:block mr-2">
+              <div className="hidden md:flex items-center gap-3 mr-2">
+                <CurrencyToggle />
                 <LanguageToggle />
               </div>
 
@@ -345,7 +347,8 @@ export default function Header() {
               </div>
             )}
 
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-4 border-t border-slate-100 flex flex-col gap-4">
+              <CurrencyToggle />
               <LanguageToggle />
             </div>
           </div>
