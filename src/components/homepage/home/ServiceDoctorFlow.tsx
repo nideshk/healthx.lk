@@ -122,6 +122,7 @@ export default function ServiceDoctorFlow() {
           {step === 3 && selectedDoctor && selectedService && (
             <HomepageSlotPicker
               practitionerId={selectedDoctor.id}
+              practitioner={selectedDoctor}
               selectedService={selectedService}
             />
           )}

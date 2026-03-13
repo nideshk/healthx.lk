@@ -17,10 +17,11 @@ import Price from "@/components/common/Price";
 
 interface Props {
   practitionerId: string;
+  practitioner: any;
   selectedService: any;
 }
 
-const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
+const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, selectedService }: Props) => {
   const t = useTranslations("slotFlow.slotPicker");
   const { openLoginModal } = useModalStore();
   const { user } = useAuth();
@@ -119,6 +120,93 @@ const HomepageSlotPicker = ({ practitionerId, selectedService }: Props) => {
 
   return (
     <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
+      {/* Doctor Info Card */}
+      <div className="mb-8 bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+
+          {/* Profile Image */}
+          {practitioner.profile_picture_url ? (
+            <img
+              src={practitioner.profile_picture_url}
+              alt={practitioner.full_name}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover"
+            />
+          ) : (
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-lg sm:text-xl">
+              {practitioner.full_name?.charAt(0)}
+            </div>
+          )}
+
+          {/* Doctor Details */}
+          <div className="flex-1">
+
+            {/* Name */}
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              {practitioner.full_name}
+            </h2>
+
+            {/* Specialization */}
+            {practitioner.specialization?.length > 0 && (
+              <p className="text-sm text-cyan-600 font-medium mt-1">
+                {practitioner.specialization.join(" • ")}
+              </p>
+            )}
+
+            {/* Qualification */}
+            {practitioner.qualifications && (
+              <p className="text-sm text-gray-500 mt-1">
+                {practitioner.qualifications}
+              </p>
+            )}
+
+            {practitioner.qualification && (
+              <p className="text-sm text-gray-600 mt-1">
+                {practitioner.qualification}
+              </p>
+            )}
+
+            {/* License */}
+            {practitioner.license_number && (
+              <p className="text-xs text-gray-400 mt-1">
+                Registration: {practitioner.license_number}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Languages */}
+        {practitioner.languages?.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs font-semibold text-gray-500 mb-1">
+              Languages
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              {practitioner.languages.slice(0, 3).map((lang: string) => (
+                <span
+                  key={lang}
+                  className="px-2 py-1 text-xs rounded-md bg-gray-100 text-gray-700"
+                >
+                  {lang}
+                </span>
+              ))}
+
+              {practitioner.languages.length > 3 && (
+                <span className="px-2 py-1 text-xs rounded-md bg-gray-100 text-gray-500">
+                  +{practitioner.languages.length - 3}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Bio */}
+        {practitioner.profile_bio && (
+          <p className="text-sm text-gray-600 mt-4 leading-relaxed line-clamp-3">
+            {practitioner.profile_bio}
+          </p>
+        )}
+      </div>
       {/* Step Header */}
       <div className="mb-6">
         <p className="text-sm font-medium text-cyan-600">
