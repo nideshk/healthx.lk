@@ -11,6 +11,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { authFetch } from "@/lib/authFetch";
 import { DateTime } from "luxon";
+import Price from "@/components/common/Price";
 
 /* ---------- constants ---------- */
 
@@ -140,7 +141,7 @@ const AnalyticsTab: React.FC = () => {
       const authRes = await authFetch("/api/auth/me");
       if (!authRes.ok) throw new Error("Authentication failed");
       const me = await authRes.json();
-      
+
       const role = me?.user?.role || me?.role;
       setUserRole(role);
 
@@ -431,7 +432,7 @@ const AnalyticsTab: React.FC = () => {
       `Date Range: ${fromDate} to ${toDate} | Generated: ${new Date().toLocaleString()}`;
     worksheet.getCell("A2").font = { italic: true, size: 10 };
 
-    worksheet.addRow([]); 
+    worksheet.addRow([]);
 
     const headerRow = worksheet.addRow(columns.map((c) => c.header));
     headerRow.eachCell((cell) => {
@@ -532,7 +533,7 @@ const AnalyticsTab: React.FC = () => {
           header: "Amount",
           render: (item: RefundItem) => (
             <span className="font-bold text-slate-900">
-              {item.currency} {item.refund_amount.toLocaleString()}
+              <Price amount={item.refund_amount} />
             </span>
           ),
         },
@@ -721,7 +722,7 @@ const AnalyticsTab: React.FC = () => {
             onRevenueClick={() => setShowRevenueModal(true)}
             onStatClick={handleStatClick}
             activeDetail={selectedDetail}
-            showRefunds={showRefunds} 
+            showRefunds={showRefunds}
           />
 
           {selectedDetail && (
@@ -850,7 +851,7 @@ const BookingsView = ({
         ))}
         <Stat
           label="Total Revenue"
-          value={`${stats.currency} ${stats.revenue.toLocaleString()}`}
+          value={<Price amount={stats.revenue} />}
           bg="bg-purple-500"
           onClick={onRevenueClick}
         />
@@ -887,7 +888,7 @@ const Stat = ({
   active
 }: {
   label: string;
-  value: string | number;
+  value: string | number | React.ReactNode;
   bg: string;
   onClick?: () => void;
   active?: boolean;

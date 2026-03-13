@@ -31,7 +31,7 @@ interface Props {
   nextStep: () => void;
   bookingControllerRef: React.MutableRefObject<{
     validateStep?: () => boolean;
-    getAttachment?: () => File | null;
+    getAttachments?: () => File[];
   }>;
   isManualCheckout?: boolean;
   preExistingId?: string | null;
@@ -44,13 +44,13 @@ declare global {
 }
 
 type releaseReason = "PAYMENT_FAILED" | "PAYMENT_DISMISSED" | "SESSION_EXPIRED" | "MISSING_DATA";
-const releaseAppointmentSlot = async (appointmentId: string | null, reason : releaseReason) => {
+const releaseAppointmentSlot = async (appointmentId: string | null, reason: releaseReason) => {
   if (!appointmentId) return;
   try {
     const res = await authFetch("/api/booking/release-slot", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ appointmentId, reason}),
+      body: JSON.stringify({ appointmentId, reason }),
     });
   } catch (err) {
     console.error("Error calling release-slot API:", err);
@@ -83,9 +83,9 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     const router = useRouter();
     const { user } = useAuth();
 
-    const consultationFee = (bookingData?.consultation_fee + bookingData?.platform_fee) ||
-      (bookingData?.appointmentType?.platform_fee || 950) +
-      (bookingData?.appointmentType?.fee || 1450);
+    const consultationFee = (bookingData?.consultation_fee ?? 0) > 0
+      ? (bookingData.consultation_fee + (bookingData.platform_fee ?? 0))
+      : (bookingData?.appointmentType?.platform_fee ?? 950) + (bookingData?.appointmentType?.fee ?? 1450);
     const attendeeCount = bookingData?.selectedAttendees?.length || 0;
 
     useEffect(() => {
@@ -146,17 +146,19 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     };
 
     const handlePostBookingActions = async (appointmentId: string) => {
-      let file: File | null = null;
+      let files: File[] = [];
 
-      if (bookingControllerRef?.current?.getAttachment) {
-        file = bookingControllerRef.current.getAttachment();
+      if (bookingControllerRef?.current?.getAttachments) {
+        files = bookingControllerRef.current.getAttachments();
       }
 
-      if (file instanceof File) {
-        try {
-          await uploadAttachmentAfterBooking(file, appointmentId);
-        } catch {
-          toast.warn(t("warnings.attachmentUploadFailed"));
+      if (files.length > 0) {
+        for (const file of files) {
+          try {
+            await uploadAttachmentAfterBooking(file, appointmentId);
+          } catch {
+            toast.warn(t("warnings.attachmentUploadFailed"));
+          }
         }
       }
 

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { notify } from "@/lib/notify";
+import { welcomeTemplate } from "@/lib/emailTemplates";
 
 export const runtime = "nodejs";
 
@@ -127,6 +129,18 @@ export async function POST(req: Request) {
     /* ───────────────────────────────
        5️⃣ Success
     ─────────────────────────────── */
+    await notify({
+      userId: createdUserId,
+      role: "patient",
+      eventType: "WELCOME",
+      title: "Welcome to Clinecxa",
+      message: welcomeTemplate(first_name),
+      channels: ["email"],
+      payload: {
+        email,
+        first_name,
+      },
+    });
     return NextResponse.json(
       {
         message:

@@ -20,6 +20,7 @@ import {
 import { AppointmentFormInputs } from "@/types/FormType";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
+import Price from "@/components/common/Price";
 
 interface PaymentStepUIProps {
   bookingData: AppointmentFormInputs;
@@ -443,18 +444,18 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span>{t("consultation")}</span>
-                  <span>LKR {consultationFee}</span>
+                  <span><Price amount={consultationFee} /></span>
                 </div>
 
                 <div className="flex justify-between">
                   <span>{t("additionalAttendees")}</span>
-                  <span>LKR {platformFee}</span>
+                  <span><Price amount={platformFee} /></span>
                 </div>
 
                 {appliedCoupon && (
                   <div className="flex justify-between text-green-700">
                     <span>{t("couponDiscount")}</span>
-                    <span>- LKR {discountAmount}</span>
+                    <span>- <Price amount={discountAmount} /></span>
                   </div>
                 )}
 
@@ -463,7 +464,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                 <div className="flex justify-between text-lg font-bold">
                   <span>{t("total")}</span>
                   <span className="text-blue-700">
-                    LKR {finalTotal}
+                    <Price amount={finalTotal} />
                   </span>
                 </div>
               </div>

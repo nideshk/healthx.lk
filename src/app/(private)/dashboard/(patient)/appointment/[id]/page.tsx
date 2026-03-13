@@ -75,6 +75,11 @@ export default function AppointmentDetailsPage() {
     const file = e.target.files?.[0];
     if (!file || !appointment?.id) return;
 
+    if (appointment.attachments?.length >= 3) {
+      toast.error("You have already uploaded 3 documents. Please remove one if you want to upload a new one.");
+      return;
+    }
+
     try {
       setUploading(true);
 
@@ -320,32 +325,49 @@ export default function AppointmentDetailsPage() {
         </label>
 
         {/* Upload Dropzone */}
-        <label className="group relative flex flex-col items-center justify-center gap-2 px-6 py-8 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200 hover:border-teal-500 hover:bg-teal-50/30 transition-all cursor-pointer overflow-hidden">
-          {uploading ? (
-            <div className="flex flex-col items-center gap-2 animate-pulse">
-              <RefreshCcw className="w-5 h-5 text-teal-500 animate-spin" />
-              <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Processing File...</span>
+        {appointment.attachments?.length < 3 ? (
+          <label className="group relative flex flex-col items-center justify-center gap-2 px-6 py-8 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200 hover:border-teal-500 hover:bg-teal-50/30 transition-all cursor-pointer overflow-hidden">
+            {uploading ? (
+              <div className="flex flex-col items-center gap-2 animate-pulse">
+                <RefreshCcw className="w-5 h-5 text-teal-500 animate-spin" />
+                <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Processing File...</span>
+              </div>
+            ) : (
+              <>
+                <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+                  <UploadCloud className="w-5 h-5 text-slate-400 group-hover:text-teal-500" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-black text-slate-600 uppercase tracking-widest">Upload Document</p>
+                  <p className="text-[9px] text-slate-400 font-medium mt-1">PDF, JPG or PNG (Max 10MB)</p>
+                  <p className="text-[9px] text-teal-600 font-bold mt-1 uppercase tracking-widest">
+                    {appointment.attachments?.length} / 3 Uploaded
+                  </p>
+                </div>
+              </>
+            )}
+            <input
+              type="file"
+              className="hidden"
+              onChange={handleFileUpload}
+              disabled={uploading}
+              accept=".pdf,.jpg,.png,.jpeg"
+            />
+          </label>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 px-6 py-8 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-100 opacity-60">
+            <div className="p-3 bg-white rounded-2xl border border-slate-100">
+              <CheckCircle2 className="w-5 h-5 text-teal-500" />
             </div>
-          ) : (
-            <>
-              <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
-                <UploadCloud className="w-5 h-5 text-slate-400 group-hover:text-teal-500" />
-              </div>
-              <div className="text-center">
-                <p className="text-xs font-black text-slate-600 uppercase tracking-widest">Upload Document</p>
-                <p className="text-[9px] text-slate-400 font-medium mt-1">PDF, JPG or PNG (Max 10MB)</p>
-              </div>
-            </>
-          )}
-          <input
-            type="file"
-            className="hidden"
-            onChange={handleFileUpload}
-            disabled={uploading}
-          />
-        </label>
+            <div className="text-center">
+              <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Limit Reached</p>
+              <p className="text-[9px] text-slate-500 font-medium mt-1">You can upload a maximum of 3 documents</p>
+            </div>
+          </div>
+        )}
 
         {/* Attachment List */}
+
         {appointment.attachments?.length > 0 ? (
           <div className="mt-6 space-y-3">
             {appointment.attachments.map((file: any) => (

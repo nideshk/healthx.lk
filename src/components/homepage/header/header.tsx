@@ -33,6 +33,7 @@ import { useModalStore } from "@/store/useModalStore";
 import Modal from "@/components/atom/Modal/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import LanguageToggle from "@/components/common/LanguageToggle";
+import CurrencyToggle from "@/components/common/CurrencyToggle";
 
 export default function Header() {
   const t = useTranslations("header"); // Initialize translations
@@ -59,7 +60,7 @@ export default function Header() {
   const notifMenuRef = useRef<HTMLDivElement>(null);
 
 
-  const checkUserStatus = async (session: any) => {
+  const checkUserStatus = async (session: any, target?: string | null) => {
     const { data } = await supabaseBrowser.from("profiles").select("*").eq("id", session.user.id).single();
     if (!data.is_active) {
       supabaseBrowser.auth.signOut();
@@ -67,7 +68,7 @@ export default function Header() {
       toast.error("Your account has been deactivated");
     }
     else {
-      router.push(redirectTo || "/dashboard")
+      router.push(target || "/dashboard")
     }
   }
 
@@ -109,9 +110,10 @@ export default function Header() {
   // --- Auth Logic ---
 
   async function finalizeLogin(session: any) {
+    const target = redirectTo;
     setMfa(null);
     setOtp("");
-    checkUserStatus(session)
+    await checkUserStatus(session, target)
     closeLoginModal();
   }
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -213,7 +215,8 @@ export default function Header() {
 
             {/* RIGHT SIDE: PROFILE / AUTH */}
             <div className="flex items-center gap-3">
-              <div className="hidden md:block mr-2">
+              <div className="hidden md:flex items-center gap-3 mr-2">
+                <CurrencyToggle />
                 <LanguageToggle />
               </div>
 
@@ -344,7 +347,8 @@ export default function Header() {
               </div>
             )}
 
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-4 border-t border-slate-100 flex flex-col gap-4">
+              <CurrencyToggle />
               <LanguageToggle />
             </div>
           </div>

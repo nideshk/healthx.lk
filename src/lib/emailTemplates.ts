@@ -273,3 +273,62 @@ export function generateGenericEmail({
 </html>
   `.trim();
 }
+
+export function welcomeTemplate(firstName: string) {
+  return `
+  <div style="font-family: Arial, Helvetica, sans-serif; background:#f3f4f6; padding:40px 20px;">
+    <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:10px; padding:32px; box-shadow:0 6px 18px rgba(0,0,0,0.06);">
+
+      <!-- Logo -->
+      <div style="text-align:center; margin-bottom:25px;">
+        <h1 style="margin:0; font-size:22px; color:#111827;">
+          Clinecxa
+        </h1>
+        <p style="margin:4px 0 0; font-size:13px; color:#6b7280;">
+          Smart & Secure Healthcare Management
+        </p>
+      </div>
+
+      <!-- Greeting -->
+      <h2 style="margin-bottom:12px; color:#111827;">
+        Welcome ${firstName} 👋
+      </h2>
+
+      <p style="color:#374151; line-height:1.6; margin-bottom:16px;">
+        Your account has been successfully created on <strong>Clinecxa</strong>.
+      </p>
+
+      <p style="color:#374151; line-height:1.6;">
+        You can now:
+      </p>
+
+      <ul style="color:#374151; line-height:1.8; padding-left:20px;">
+        <li>Book and manage appointments online</li>
+        <li>Access your healthcare information securely</li>
+        <li>Receive important medical updates and reminders</li>
+      </ul>
+
+      <!-- CTA Button -->
+      <div style="text-align:center; margin:30px 0;">
+        <a href="https://clinecxa.com"
+           style="display:inline-block; padding:12px 24px; background:#4f46e5; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:600;">
+           Go to Dashboard
+        </a>
+      </div>
+
+      <!-- Support -->
+      <p style="color:#6b7280; font-size:14px; line-height:1.6;">
+        If you have any questions or need assistance, our support team is here to help.
+      </p>
+
+      <hr style="margin:30px 0; border:none; border-top:1px solid #e5e7eb;" />
+
+      <!-- Footer -->
+      <p style="color:#9ca3af; font-size:12px; text-align:center;">
+        © ${new Date().getFullYear()} Clinecxa. All rights reserved.
+      </p>
+
+    </div>
+  </div>
+  `;
+}

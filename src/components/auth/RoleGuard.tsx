@@ -23,7 +23,7 @@ export function RoleGuard({
     useEffect(() => {
         if (loading) return;
 
-        if (!user || !allowed.includes(user.profile.role)) {
+        if (!user || !user.profile || !allowed.includes(user.profile.role)) {
             toast.error("You are not authorized to access this page", { toastId: "unauthorized" });
             router.replace(redirectTo);
         }
@@ -31,7 +31,7 @@ export function RoleGuard({
 
     if (loading) return null;
 
-    if (!user || !allowed.includes(user.profile.role)) {
+    if (!user || !user.profile || !allowed.includes(user.profile.role)) {
         return null;
     }
 

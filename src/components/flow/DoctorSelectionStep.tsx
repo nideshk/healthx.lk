@@ -20,6 +20,7 @@ import {
 import { AppointmentFormInputs, Doctor } from '@/types/FormType';
 import Loader from '@/components/atom/Loader/Loader';
 import { useTranslations } from 'next-intl';
+import Price from '@/components/common/Price';
 
 const DoctorSelectionStep = forwardRef(
   ({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
@@ -276,11 +277,13 @@ const DoctorSelectionStep = forwardRef(
                             {t('consultationFee')}
                           </p>
                           <p className={`text-xl font-black ${isSelected ? 'text-teal-700' : 'text-slate-900'}`}>
-                            {/* {doctor.currency} {doctor.fee.toLocaleString()} */}
-                            {doctor.currency}{' '}
-                            {doctor.startingPrice === doctor.endingPrice
-                              ? doctor.startingPrice?.toLocaleString()
-                              : `${doctor.startingPrice?.toLocaleString()} – ${doctor.endingPrice?.toLocaleString()}`}
+                            {doctor.startingPrice === doctor.endingPrice ? (
+                              <Price amount={doctor.startingPrice} />
+                            ) : (
+                              <>
+                                <Price amount={doctor.startingPrice} /> – <Price amount={doctor.endingPrice} />
+                              </>
+                            )}
                           </p>
                         </div>
 

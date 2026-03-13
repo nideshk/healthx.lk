@@ -2,13 +2,13 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
+import PrivacyModal from "./PrivacyModal";
 
 const mainLinks = [
-  { key: "about", href: "/about" },
+  { key: "about", href: "/about-us" }, // Fixed to /about-us based on previous context
   { key: "contact", href: "/contact" },
   { key: "help", href: "/help" },
-  { key: "terms", href: "/terms" },
-  { key: "privacy", href: "/privacy" },
 ];
 
 const companyName = "Clinecxa";
@@ -32,6 +32,7 @@ const ClincoLogo = () => (
 
 const Footer = () => {
   const t = useTranslations("footer");
+  const [isPrivacyOpen, setIsPrivacyOpen] = React.useState(false);
 
   return (
     <footer className="py-6 bg-gray-900 text-white border-t border-cyan-700">
@@ -42,14 +43,22 @@ const Footer = () => {
             <ul className="space-y-1 text-sm">
               {mainLinks.map((link) => (
                 <li key={link.key}>
-                  <a
+                  <Link
                     href={link.href}
                     className="text-gray-400 hover:text-cyan-500 transition duration-150"
                   >
                     {t(`links.${link.key}`)}
-                  </a>
+                  </Link>
                 </li>
               ))}
+              <li>
+                <button
+                  onClick={() => setIsPrivacyOpen(true)}
+                  className="text-gray-400 hover:text-cyan-500 transition duration-150 text-left"
+                >
+                  {t("links.privacy")}
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -88,6 +97,8 @@ const Footer = () => {
           </div>
         </div>
       </div>
+
+      <PrivacyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
     </footer>
   );
 };

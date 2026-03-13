@@ -35,7 +35,7 @@ export default function AppointmentBookingFlow() {
   const stepRef = useRef<{ validateStep?: () => boolean }>(null);
   const bookingControllerRef = useRef<{
     validateStep?: () => boolean;
-    getAttachment?: () => File | null;
+    getAttachments?: () => File[];
   }>({});
 
   const {

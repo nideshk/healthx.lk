@@ -10,7 +10,20 @@ type ModalProps = {
   children: ReactNode;
   footer?: ReactNode;
   theme?: "light" | "dark";
-  maxHeight?: string; // optional custom height limit
+  maxHeight?: string;
+  width?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full" | string;
+};
+
+const widthMap: Record<string, string> = {
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-lg",
+  xl: "sm:max-w-xl",
+  "2xl": "sm:max-w-2xl",
+  "3xl": "sm:max-w-3xl",
+  "4xl": "sm:max-w-4xl",
+  "5xl": "sm:max-w-5xl",
+  full: "sm:max-w-[95vw]",
 };
 
 export default function Modal({
@@ -20,9 +33,12 @@ export default function Modal({
   children,
   footer,
   theme = "light",
-  maxHeight = "80vh", // default height cap
+  maxHeight = "80vh",
+  width = "md",
 }: ModalProps) {
   if (!isOpen) return null;
+
+  const resolvedWidth = widthMap[width] || width;
 
   const containerStyles =
     theme === "dark" ? "bg-gray-900 text-gray-100" : "bg-white text-gray-900";
@@ -35,10 +51,11 @@ export default function Modal({
       {/* Outer container for centering */}
       <div
         className={cn(
-          "flex flex-col rounded-2xl shadow-lg w-full sm:max-w-md max-h-[90vh] overflow-hidden",
+          "flex flex-col rounded-2xl shadow-lg w-full max-h-[90vh] overflow-hidden",
+          resolvedWidth,
           containerStyles
         )}
-        style={{ maxHeight }} // ✅ dynamic cap (default 80vh)
+        style={{ maxHeight }}
       >
         {/* Header */}
         <div

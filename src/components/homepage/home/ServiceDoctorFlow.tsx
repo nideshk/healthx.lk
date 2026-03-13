@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import HomepageSlotPicker from "./HomepageSlotPicker";
 import { useTranslations, useLocale } from "next-intl";
+import Price from "@/components/common/Price";
 import {
   Stethoscope,
   User,
@@ -207,7 +208,7 @@ const ServicePicker = ({
         </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
         {sortedServices.map((s) => {
           const Icon = ICON_MAP[s.icon as string] || Stethoscope;
 
@@ -249,7 +250,7 @@ const ServicePicker = ({
                     </h3>
                   </div>
 
-                  <p className="text-[15px] text-slate-500 line-clamp-3 leading-relaxed group-hover:text-slate-600 transition-colors">
+                  <p className="text-[15px] text-slate-500 text-left group-hover:text-slate-600 transition-colors">
                     {locale === 'si' && s.sin_description ? s.sin_description : s.description}
                   </p>
                 </div>
@@ -386,8 +387,7 @@ const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
                         From
                       </span>
                       <span className="text-sm font-black">
-                        Rs.
-                        {(d.starting_price ?? 1500).toLocaleString()}
+                        <Price amount={d.starting_price ?? 1500} />
                       </span>
                     </div>
                   </div>

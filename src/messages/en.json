@@ -175,15 +175,10 @@
     "title": "Consent & Terms",
     "subtitle": "Please review and accept the following to proceed with your appointment.",
     "telehealthTitle": "Telehealth Consent",
-    "telehealthHeading": "Digital Healthcare Agreement",
-    "telehealthP1": "Telehealth involves electronic communication technologies to provide care when the provider and patient are not in the same location.",
-    "telehealthP2": "By checking the box, you acknowledge that you understand the limitations of virtual care, including technical risks and the lack of physical examination.",
-    "telehealthP3": "I understand I can withdraw consent at any time without affecting my right to future care or treatment.",
-    "termsTitle": "Terms & Conditions",
-    "termsHeading": "Service Agreement",
-    "termsP1": "Appointments must be cancelled 24 hours in advance to avoid a no-show fee. Payment is processed securely via our encrypted partner.",
-    "termsP2": "The platform acts as a facilitator and does not directly provide medical advice. All medical outcomes are the responsibility of the licensed practitioner.",
-    "termsP3": "By proceeding, you agree to abide by the platform's legal and ethical policies.",
+    "telehealthContent": "I. PLATFORM INFORMATION\n\n01. Clinecxa is a telehealth and patient health information management platform owned and operated by Square Coin Pty Ltd (‘Square Coin Australia’), a company duly registered and incorporated under the laws of Australia.\n\n02. Square Coin Lanka (Pvt) Ltd. (‘Square Coin Lanka’), a company duly registered and incorporated under the laws of the Socialist Democratic Republic of Sri Lanka, manages the operation of Clinecxa in the said republic.\n\n03. Any reference to Clinecxa’s responsibilities and/or liabilities herein and hereunder shall pertain solely to that of Square Coin Lanka, and not of Square Coin Australia. For all intents and purposes the former indemnifies the latter.\n\n04. Clinecxa’s legal responsibility is limited to the provision of the technology platform. Medical services are provided by independent, licensed healthcare practitioners and not employees, agents, or representatives of Clinecxa, Square Coin Pty Ltd, or Square Coin Lanka (Pvt) Ltd.\n\n05. Clinecxa does not provide medical advice and is not responsible for clinical decisions made by clinicians. All medical advice, diagnoses, treatment, and clinical decisions are the sole responsibility of the treating clinician. Clinecxa does not control or direct clinical practice and is not responsible for medical outcomes. Accordingly, Clinecxa disclaims liability for clinical decisions and treatment outcomes.\n\n06. Any/all users of Clinecxa agree to indemnify Clinecxa against claims arising from misuse of the platform or breach of these terms by other parties. For the avoidance of doubt, such indemnification applies to the benefit of both Square Coin Lanka, Square Coin Australia and its directors/shareholder/employees/agents.\n\nII. NATURE OF TELEHEALTH SERVICES\n\n07. Telehealth involves the use of electronic communications to enable healthcare providers to consult, assess, diagnose, treat, and educate patients using telecommunications technology, including video, audio, and secure digital messaging.\n\nIII. ELECTRONIC HEALTH RECORDS & DATA STORAGE\n\n08. By using Clinecxa, you hereby provide consent for:\n\na) Creation and maintenance of your personal and health data and information;\nb) Secure storage of your data and information in cloud infrastructure including Amazon S3 and Supabase, configured in a HIPAA-compliant manner;\nc) Access to your health data and information by your treating clinicians and authorised operational staff; and\nd) Use of your data and information for clinical care, care coordination, quality improvement, and continuity of treatment.\n\n09. All personal and health data and information is protected under the Personal Data Protection Act, No. 9 of 2022 (‘PDPA’). For further details, please refer to the Clinecxa Privacy Policy.\n\nIV. CARER / GUARDIAN CONSENT\n\n10. If you are making a booking on behalf of another person, you hereby confirm that:\n\na) You are legally authorised to act on behalf of the patient;\nb) You have authority to provide consent for telehealth services and data collection and processing;\nc) All information you provide is accurate and complete;\nd) You accept responsibility for the accuracy of the information submitted; and\ne) You provide consent on behalf of the patient for all terms outlined in this agreement.\n\nV. CLINICAL NOTES & RECORDINGS\n\n11. Telehealth sessions and consultation will not be recorded.\n\n12. Clinicians may take clinical notes as part of standard medical practice to support diagnosis, treatment, and continuity of care.\n\nVI. RISKS, LIMITATIONS & MEDICAL DISCLAIMER\n\n13. You hereby acknowledge and accept the following and any/all consequential risks and/or losses of the same:\n\na) Telehealth has inherent limitations and may not detect all medical conditions;\nb) A physical examination may be required for accurate diagnosis;\nc) No guarantee of diagnosis or treatment outcome can be provided;\nd) Clinical decisions are based on the information you provide and what can be reasonably assessed via telehealth;\ne) Miscommunication, technical issues, or incomplete information may affect care.\n\nVII. NOT AN EMERGENCY SERVICE\n\n14. Clinecxa and its clinicians do not provide emergency medical services.\n\n15. In case of a medical emergency, you must immediately contact local emergency services.\n\n16. Telehealth is not a replacement for ongoing in-person care by a general practitioner or specialist management.\n\nVIII. PRIVACY & SECURITY\n\n17. Reasonable technical and organisational safeguards are in place to protect your data and information. However, no system can be guaranteed to be completely secure. You acknowledge and accept the residual risk of unauthorised access.\n\nIX. COMMUNICATION CONSENT\n\n18. Subject to clause 19 below, you hereby consent to being contacted via: SMS, Email, Phone calls, and In-app notifications and messages.\n\n19. You hereby consent to be contacted for the purposes of: Appointment reminders, Clinical follow-ups, Care coordination, Service reviews and quality assurance, and Understanding and improving the performance of the platform and clinicians, and any other lawful purpose.\n\nX. PATIENT RESPONSIBILITIES\n\n20. You hereby agree to:\n\na) Provide accurate and complete medical information and data;\nb) Attend sessions from a private and safe location;\nc) Ensure adequate internet, camera, and audio;\nd) Test your technology prior to the appointment;\ne) Seek in-person or emergency care when advised.\n\nXI. PROVIDER RESPONSIBILITIES\n\n21. Clinicians and/or healthcare providers shall: Make reasonable attempts to verify patient identity and location, Maintain professional standards of care, Maintain confidentiality, Recommend in-person care when clinically required, and Discontinue telehealth if it is or becomes inappropriate for your condition.\n\n22. In the event a clinician or healthcare provider organizes a physical or in-person appointment with a patient and/or user upon the use of Clinecxa or in the absence of the use of Clinecxa, the legal responsibilities and liabilities associated with the care of the patient and medical services shall remain solely with the clinician or healthcare provider. Such providers shall indemnify Clinecxa against all losses, damages, claims and expenses arising from a breach of professional or legal responsibilities.\n\nXII. CANCELLATIONS, LATE ARRIVAL & REFUNDS\n\n23. Cancellation Window: Appointments must be cancelled at least 12 hours before the scheduled time for no fee. Cancellations within 12 hours may incur a cancellation fee.\n\n24. Late Arrival: A grace period of 5 minutes is allowed. Upon the lapse of 5 minutes, the appointment will be considered akin to being attended by the clinician and will be charged in full.\n\n25. No refund will be issued for late arrivals.\n\n26. If the clinician does not attend the appointment, you may contact Clinecxa to request a refund.\n\n27. For further details, please refer to the Refund Policy.\n\nXIII. CONSENT & WITHDRAWAL\n\n28. You may withdraw your consent at any time in writing. Withdrawal shall not affect care or actions already undertaken prior to withdrawal.\n\n29. By selecting “I Accept”, you confirm that:\n\na) You have read, understood, and voluntarily agreed to all terms and conditions above;\nb) You agree to indemnify and hold harmless Clinecxa, Square Coin Lanka and Square Coin Australia against all losses arising from your breach of terms;\nc) If you are outside Sri Lanka, you ensure that local laws permit the use of Clinecxa and you indemnify Clinecxa against any liability arising from your resident jurisdiction laws.\n\nXIV. GOVERNING LAW\n\n30. These Terms and Conditions are governed by and interpreted in accordance with the laws of the Democratic Socialist Republic of Sri Lanka.\n\nXV. AMENDMENTS\n\n31. Clinecxa reserves the right to modify these Terms and Conditions from time to time. Updated terms will be published on the platform and users will be prompted to peruse and accept or reject the same.",
+    "termsTitle": "Privacy Policy Agreement",
+    "termsHeading": "Privacy Policy",
+    "termsContent": "By ticking this box, you confirm that you have read and understood the CLINECXA PRIVACY POLICY. You agree to the collection, use, processing, and storage of your personal and health data as described in the policy, including the data sharing and retention periods specified. You acknowledge that your data will be handled in compliance with the Personal Data Protection Act, No. 9 of 2022 ('PDPA') and other applicable laws.",
     "scrollToRead": "Scroll to read",
     "agreeText": "I have read and agree to the {section}",
     "finalize": "Finalize Appointment",
@@ -230,6 +225,7 @@
     "customReferral": "Please specify source...",
     "attachments": "Document upload for the Doctor (Upload any relevant medical documents, test results, or reports)",
     "uploadHint": "Medical Records / Photos",
+    "uploadMoreHint": "Add more documents",
     "attendees": "Attendees",
     "attendeesSubtitle": "How many attendees to the appointment?\n\nWill you be joining the appointment alone, or will there be additional family members? You can add up to 1 additional member. *Pricing may differ)",
     "invitePlaceholder": "Invite via email",
@@ -237,7 +233,7 @@
     "continue": "Continue to Payment",
     "duration": "How long have you had this concern? (for example: 2 weeks, 3 months, 1 year)",
     "durationPlaceholder": "How long have you had this concern?",
-    "attendeeFeeNote": "Note: An additional fee of {currency} {fee} per attendee will be charged.",
+    "attendeeFeeNote": "Note: An additional fee of <price></price> per attendee will be charged.",
     "detailsHeader": "Consultation details",
     "attachmentsLabel": "Document upload for the Doctor\n(Upload any relevant medical documents, test results, or reports (maximum 3 documents)",
     "attendeesHeader": "Additional attendee information",
@@ -258,7 +254,8 @@
       "email": "Enter a valid email address.",
       "maxAttendees": "Maximum attendees allowed.",
       "duplicateEmail": "Email already added.",
-      "selfInvite": "You cannot add yourself as an attendee."
+      "selfInvite": "You cannot add yourself as an attendee.",
+      "maxThreeFiles": "You can only upload up to 3 documents"
     },
     "fileDeletionNote": "Note: Files uploaded will be deleted from the system after 3 months."
   },
@@ -578,38 +575,44 @@
     },
     "story": {
       "title": "The Founder’s Story",
-      "para1": "Our journey began with someone very close to our founder—his little sister. She is autistic, and for her, everyday environments can feel overwhelming. A trip to the doctor, which most of us take for granted, was a source of intense anxiety.",
-      "para2": "While living abroad, Nidesh watched his parents handle these exhausting appointments alone. He realized that telehealth should be a necessity for dignity and comfort, not just a video call.",
-      "quote": "I wondered why Sri Lanka didn’t have something like this. Existing attempts were technology-first, not people-first. They weren’t shaped by the realities of Sri Lankan families.",
-      "para3": "He returned to the drawing board and spent months speaking with doctors and patients. Built from personal savings, Clinecxa was created to provide a kinder way to access care for everyone."
+      "para1": "Our journey began with someone very close to the founder - his little sister. She is autistic, with heightened senses that make everyday environments feel overwhelming. A trip to the doctor, something most of us take for granted, can be incredibly stressful for her. The long queues, crowded waiting rooms, noise, and unpredictability often lead to anxiety and emotional overload.",
+      "para2": "As he moved further away from home, his parents became the ones responsible for taking her to appointments. Over time, it became harder: the travel, the waiting, the emotional toll, all of it felt exhausting and unfair, not just for his sister, but for thousands of families across Sri Lanka facing similar challenges.",
+      "para3": "During his time abroad, he saw how other countries had embraced telehealth, not as a luxury, but as a necessity. It wasn’t just a video call with a doctor; it was a system built around accessibility, dignity, and patient comfort.",
+      "para4": "He wondered why Sri Lanka didn’t have something like this. Yes, there had been attempts, but they were technology-first, not people-first. They weren’t shaped by clinicians or the realities of Sri Lankan families.",
+      "para5": "So he returned to the drawing board.",
+      "para6": "He spent months speaking with Sri Lankan doctors, specialists, patients, and caregivers to understand what actually mattered. He built the first version from his own savings. And at the heart of it was one simple goal: to create a system that makes healthcare easier for families like his, for people with disabilities, and for anyone who deserves a kinder way to access care."
     },
     "vision": {
-      "text": "To be Sri Lanka’s number-one telehealth service: where patients feel safe, care is stress-free, clinicians thrive, and privacy is uncompromised.",
-      "label": "Clinecxa Vision"
+      "label": "Our Vision",
+      "text": "To be Sri Lanka’s number-one telehealth service: where patients feel safe, care is stress-free, clinicians thrive, and privacy and data security are uncompromised."
     },
     "commitments": {
-      "heading": "Our Core Commitments",
+      "heading": "Clinecxa’s Core Commitments",
       "trust": {
-        "title": "Trust and Safety First",
-        "description": "Every decision, from clinical workflows to data security, is driven by an uncompromising commitment to ethics, privacy, and patient safety."
+        "title": "1. Trust and Safety First",
+        "description": "At Clinecxa, we work hard every day to ensure that patients feel safe, clinicians feel protected, and partners trust our platform. Every decision we make; from clinical workflows to data security and governance; is driven by an uncompromising commitment to ethics, privacy, and patient safety. Trust is not a slogan for us; it is the standard we operate by."
       },
       "quality": {
-        "title": "Medical Quality First",
-        "description": "Clinecxa is clinically led. Technology exists to support great medicine and enhance care, never to override professional clinical judgment."
+        "title": "2. Medical Quality Comes First. Technology Follows.",
+        "description": "Clinecxa is a clinically led platform. This system was not designed by technologists alone, it was built with and guided by practicing clinicians. Clinical standards, professional judgment, and patient outcomes lead to every design decision. Technology exists to support great medicine, remove friction, and enhance care, never to override or dilute clinical quality."
       },
       "equality": {
-        "title": "Equal Care for All",
-        "description": "We exist to remove barriers. We believe every patient and clinician deserves equal access to high-quality tools regardless of location."
+        "title": "3. Equal Care and Opportunity for Every Patient and Clinician",
+        "description": "Clinecxa exists to remove barriers. We believe every patient deserves the same standard of care, and every clinician deserves equal access to high-quality tools, reach, and opportunity; regardless of location, background, or size of practice. By building an inclusive and fair platform, we enable better outcomes for everyone."
       }
     },
     "founder": {
       "role": "Founder, Clinecxa",
       "noteTitle": "A Note from the Founder",
-      "greeting": "Hi friend, thank you for being here.",
-      "para1": "Clinecxa was born because I watched my sister struggle with appointments and wanted to support my family from afar. I realized healthcare shouldn't add to a family's burden.",
-      "para2": "I also saw the challenges clinicians face. By giving doctors better tools and a better work-life balance, we ensure they can provide even better care to their patients.",
-      "para3": "Our mission is to put people first—patients, caregivers, and clinicians alike. We are building something safer and more compassionate for everyone.",
-      "signoff": "Nidesh Kulatunga"
+      "greeting1": "Hi friend,",
+      "greeting2": "Thank you for being here.",
+      "para1": "Clinecxa was born from a simple but powerful idea: healthcare should be easier, kinder, and more accessible for everyone, especially for families like mine. Watching my little sister struggle with appointments, being overwhelmed by her environment, and knowing my parents had to handle them while I was far away, made me wish I could be there to support them too.",
+      "para2": "I also saw the challenges clinicians face in Sri Lanka. Unlike in some other countries, they often juggle long commutes, heavy patient loads, and endless queues, which adds stress and reduces the time they can give to each patient. I wanted to change that. A system that gives clinicians better work-life balance leads to happier, less stressed doctors...and that directly means better care for patients.",
+      "para3": "There are so many people in similar situations, living far from their parents and families back home, caring for someone with a disability, or juggling work, life, and financial pressures. Healthcare shouldn’t add to that burden.",
+      "para4": "Our mission is to change all of this. Clinecxa is built to put people first: patients, caregivers, and clinicians alike. Every feature, every process, every decision is guided by one goal: to make healthcare simpler, safer, and more compassionate for everyone, no matter where they are or what their circumstances.",
+      "para5": "Thank you for trusting us with your care.",
+      "signoff": "Nidesh Kulatunga",
+      "linkedin": "https://www.linkedin.com/in/nidesh-kulatunga/"
     }
   },
   "paymentUI": {
