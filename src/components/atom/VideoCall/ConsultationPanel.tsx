@@ -27,45 +27,47 @@ export default function ConsultationPanel({ appointmentId }: Props) {
   >([]);
 
   useEffect(() => {
-  const fetchConsultationDetails = async () => {
-    setConsultationLoading(true);
-    try {
-      const res = await authFetch(
-        `/api/booking/appointment/${appointmentId}/consultation`
-      );
-      if (!res.ok) return;
+    const fetchConsultationDetails = async () => {
+      setConsultationLoading(true);
+      try {
+        const res = await authFetch(
+          `/api/booking/appointment/${appointmentId}/consultation`
+        );
+        if (!res.ok) return;
 
-      const data = await res.json();
+        const data = await res.json();
 
-      setConsultationMeta({
-        mainConcern: data.preconsult?.raw_payload?.note?.concern || "",
-        goal: data.preconsult?.raw_payload?.note?.outcome || "",
-        duration: data.preconsult?.raw_payload?.note?.duration || ""
+        const raw = data.preconsult?.raw_payload;
+        const isString = typeof raw === "string";
 
-      });
+        setConsultationMeta({
+          mainConcern: isString ? raw : (raw?.note?.concern || ""),
+          goal: isString ? "" : (raw?.note?.outcome || ""),
+          duration: isString ? "" : (raw?.note?.duration || "")
+        });
 
-      setAttachments(
-        (data.attachments || []).map((a: any) => ({
-          url: a.view_url,
-          name: a.file_name,
-          document_type: a.file_type,
-        }))
-      );
+        setAttachments(
+          (data.attachments || []).map((a: any) => ({
+            url: a.view_url,
+            name: a.file_name,
+            document_type: a.file_type,
+          }))
+        );
 
-      // preload existing encounter values
-      setClinicianNotes(data.encounter?.clinician_notes || "");
-      setPrescriptions(data.encounter?.prescriptions || "");
-      setFollowUpNeeded(!!data.encounter?.follow_up_needed);
-      setFollowUpDate(
-        data.encounter?.follow_up_date?.slice(0, 10) || null
-      );
-    } finally {
-      setConsultationLoading(false);
-    }
-  };
+        // preload existing encounter values
+        setClinicianNotes(data.encounter?.clinician_notes || "");
+        setPrescriptions(data.encounter?.prescriptions || "");
+        setFollowUpNeeded(!!data.encounter?.follow_up_needed);
+        setFollowUpDate(
+          data.encounter?.follow_up_date?.slice(0, 10) || null
+        );
+      } finally {
+        setConsultationLoading(false);
+      }
+    };
 
-  fetchConsultationDetails();
-}, [appointmentId]);
+    fetchConsultationDetails();
+  }, [appointmentId]);
   /* ---------------------------------------------------------
      Save consultation (POST only)
   --------------------------------------------------------- */

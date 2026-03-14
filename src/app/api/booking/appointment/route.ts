@@ -46,6 +46,10 @@ export async function GET(req: NextRequest) {
         payment_status,
         expires_at,
         notes,
+        preconsult_responses (
+          id,
+          raw_payload
+        ),
         cancellation_reason,
         cancelled_at,
         telehealth_url,
@@ -147,7 +151,7 @@ export async function GET(req: NextRequest) {
         room_key: appt.room_key,
         payment_status: appt.payment_status,
         expires_at: appt.expires_at,
-        notes: appt.notes,
+        notes: appt.preconsult_responses?.[0]?.raw_payload || appt.notes,
         cancellation_reason: appt.cancellation_reason,
         telehealth_url: appt.telehealth_url,
         appointment_type: appt.appointment_type,

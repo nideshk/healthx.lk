@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
             appointment_type_id,
             date,        // YYYY-MM-DD
             start_time, // HH:mm
-            notes,
+            pre_consultation_data,
         } = body;
 
         if (
@@ -305,7 +305,6 @@ export async function POST(req: NextRequest) {
                     currency: "LKR",
                     pricing_version: "v1",
 
-                    notes: notes || null,
                     created_by_admin_id: user.admin?.id,
                     source: "admin",
                 })
@@ -346,6 +345,16 @@ export async function POST(req: NextRequest) {
                 currency: "LKR"
             }
         });
+
+        /* ---------------- PRE-CONSULTATION DATA ---------------- */
+
+        if (pre_consultation_data) {
+            await supabaseAdmin.from("preconsult_responses").insert({
+                appointment_id: appointment.id,
+                raw_payload: pre_consultation_data,
+                patient_id: patient_id,
+            });
+        }
 
         /* ---------------- FETCH DETAILS FOR NOTIFICATION ---------------- */
 

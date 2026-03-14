@@ -104,7 +104,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
 
   const handleSave = async () => {
     setIsSaving(true);
-    
+
     // Logic to split full_name into first and last name for the API
     const nameParts = formData.full_name.trim().split(/\s+/);
     const firstName = nameParts[0] || "";
@@ -216,9 +216,9 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
                 value={`${calculateAge(isEditing ? formData.dob : patient.dob)} years`}
               />
               <DetailLine label="Gender" value={(isEditing ? formData.gender : patient.gender) || "N/A"} />
-              <DetailLine 
-                label="Gov ID" 
-                value={isEditing ? `${formData.govIdType.toUpperCase()}: ${formData.govIdNumber}` : `${formData.govIdType.toUpperCase()}: ${maskGovId(formData.govIdNumber)}`} 
+              <DetailLine
+                label="Gov ID"
+                value={isEditing ? `${formData.govIdType.toUpperCase()}: ${formData.govIdNumber}` : `${formData.govIdType.toUpperCase()}: ${maskGovId(formData.govIdNumber)}`}
               />
               <DetailLine
                 label="Allergies"
@@ -263,11 +263,10 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
           setActiveTab(id);
           if (id !== "overview") setIsEditing(false);
         }}
-        className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center ${
-          active
+        className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center ${active
             ? "bg-white text-slate-900 shadow-sm"
             : "text-slate-500 hover:text-slate-900"
-        }`}
+          }`}
       >
         {label}
       </button>
@@ -329,9 +328,9 @@ const PatientOverviewTab: React.FC<{
             onChange={(val) => onChange("gender", val)}
           />
         </div>
-       
+
         <div className="grid grid-cols-2 gap-2">
-           <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <span className="text-[11px] text-slate-500">Age</span>
             <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-100 text-slate-500 cursor-not-allowed">
               {calculateAge(formData.dob)} years
@@ -352,7 +351,7 @@ const PatientOverviewTab: React.FC<{
           placeholder="e.g. Peanuts, Dust"
           onChange={(val) => onChange("allergies", val)}
         />
-      
+
       </CardBody>
     </Card>
 
@@ -489,7 +488,7 @@ const AppointmentList: React.FC<{
 const AppointmentRow: React.FC<{
   appointment: AdminAppointment;
 }> = ({ appointment }) => {
-  const canManage = appointment.category === "upcoming" || appointment.category === "ongoing";  
+  const canManage = appointment.category === "upcoming" || appointment.category === "ongoing";
   const [open, setOpen] = useState(false);
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
@@ -623,12 +622,15 @@ const AppointmentRow: React.FC<{
       }
       const data = await res.json();
 
+      const raw = data.preconsult?.raw_payload;
+      const isString = typeof raw === "string";
+
       // Store metadata
       setConsultationMeta({
         telehealthConsent: !!data.consent?.telehealth,
         termsAccepted: !!data.consent?.terms,
-        mainConcern: data.preconsult?.raw_payload?.note?.concern || "",
-        goal: data.preconsult?.raw_payload?.note?.outcome || "",
+        mainConcern: isString ? raw : (raw?.note?.concern || ""),
+        goal: isString ? "" : (raw?.note?.outcome || ""),
       });
 
       // Store attachments

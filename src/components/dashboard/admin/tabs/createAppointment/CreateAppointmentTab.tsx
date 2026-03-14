@@ -75,7 +75,7 @@ export default function CreateAppointmentTab() {
         patient_id: "",
         date: "",
         start_time: "",
-        notes: "",
+        pre_consultation_data: "",
     });
 
     /* ---------------- FETCH PRACTITIONERS ---------------- */
@@ -269,7 +269,7 @@ export default function CreateAppointmentTab() {
                 appointment_type_id: "",
                 date: "",
                 start_time: "",
-                notes: "",
+                pre_consultation_data: "",
             }));
 
             setAvailability(null);
@@ -390,10 +390,10 @@ export default function CreateAppointmentTab() {
                     </section>
 
                     <Textarea
-                        label="Internal Notes"
+                        label="Pre-Consultation Data"
                         placeholder="Add details about the visit..."
-                        value={form.notes}
-                        onChange={e => handleChange("notes", e.target.value)}
+                        value={form.pre_consultation_data}
+                        onChange={e => handleChange("pre_consultation_data", e.target.value)}
                     />
 
                     <button
