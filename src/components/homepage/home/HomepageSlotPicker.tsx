@@ -152,6 +152,17 @@ const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, sele
               </p>
             )}
 
+           {/* Experience */}
+          {practitioner.experience_years && (
+            <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
+              <span className="text-gray-500">Experience</span>
+
+              <span className="px-2 py-0.5 text-xs rounded-md bg-gray-100 text-gray-700 font-medium">
+                {practitioner.experience_years}+ Years
+              </span>
+            </p>
+          )}
+
             {/* Qualification */}
             {practitioner.qualifications && (
               <p className="text-sm text-gray-500 mt-1">
@@ -202,7 +213,7 @@ const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, sele
 
         {/* Bio */}
         {practitioner.profile_bio && (
-          <p className="text-sm text-gray-600 mt-4 leading-relaxed line-clamp-3">
+          <p className="text-sm text-gray-600 mt-4 leading-relaxed">
             {practitioner.profile_bio}
           </p>
         )}

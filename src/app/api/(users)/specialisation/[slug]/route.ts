@@ -72,6 +72,7 @@ export async function GET(
         fees,
         specialization,
         languages,
+        experience_years,
         profiles!practitioners_profiles_fkey (
           avatar_url
         )
@@ -107,6 +108,7 @@ export async function GET(
         ending_price,
         specialization: p.specialization,
         languages: p.languages ?? [],
+        experience_years: p.experience_years
       };
     });
 
