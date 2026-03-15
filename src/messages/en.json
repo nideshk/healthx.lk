@@ -352,7 +352,7 @@
           },
           {
             "q": "Can I reschedule or cancel an appointment?",
-            "a": "Yes, you can. If you cancel or reschedule at least 12 hours before your appointment, there’s no fee. Changes made within 12 hours may include a cancellation or rescheduling fee."
+            "a": "Yes, you can. For a full refund, you must cancel at least 24 hours before your appointment. Cancellations within 24 hours may be eligible for a partial refund (up to 50%). No refund will be available if you cancel within 5 hours. Please refer to our Refund Policy linked in the footer for full details."
           }
         ]
       },
@@ -403,6 +403,19 @@
           }
         ]
       },
+      "refunds": {
+        "title": "Refunds",
+        "items": [
+          {
+            "q": "What is your refund policy?",
+            "a": "Our refunds are based on the cancellation time and specific circumstances of the platform or clinician. You can find the complete rules in the Refund Policy link located in the footer."
+          },
+          {
+            "q": "How do I request a refund?",
+            "a": "Refund requests must be submitted through the Contact Us page within 48 hours of the appointment."
+          }
+        ]
+      },
       "technical": {
         "title": "Technical Help",
         "items": [
@@ -433,11 +446,18 @@
       "contact": "Contact Support",
       "help": "Help Center & FAQs",
       "terms": "Terms of Service",
-      "privacy": "Privacy Policy"
+      "privacy": "Privacy Policy",
+      "refund": "Refund Policy"
     },
     "secure": "Secure Platform",
     "disclaimerTitle": "Disclaimer",
     "disclaimerText": "Please do not use this service for emergencies or if you require medical certificates. For emergencies: Go to your nearest hospital or emergency service immediately, or call 110. For medical certificates or physical examinations: Please visit a doctor in person, as these services cannot be provided through telehealth. This platform is intended only for telehealth consultations that do not require in-person care.",
+    "contactInfo": {
+      "title": "Contact Us",
+      "address": "Nava City Building, No. 787/G Kaduwela Malabe Road, Malabe, Sri Lanka",
+      "phone": "+94 771 050 867",
+      "email": "support@clinecxa.lk"
+    },
     "rights": "All rights reserved."
   },
   "header": {
@@ -689,6 +709,13 @@
     "submitButton": "Send Message",
     "successMessage": "Message sent successfully! Our team will get in touch with you soon.",
     "errorMessage": "Failed to send message. Please try again later.",
-    "privacy": "Clinical Privacy"
+    "privacy": "Clinical Privacy",
+    "contactInfoTitle": "Our Contact Details",
+    "addressTitle": "Address",
+    "addressValue": "Nava City Building, No. 787/G Kaduwela Malabe Road, Malabe, Sri Lanka",
+    "phoneTitle": "Phone",
+    "phoneValue": "+94 771 050 867",
+    "emailTitle": "Email",
+    "emailValue": "support@clinecxa.lk"
   }
 }

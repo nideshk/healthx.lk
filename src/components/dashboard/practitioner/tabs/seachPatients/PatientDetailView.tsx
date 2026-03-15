@@ -88,11 +88,10 @@ const renderTab = (
       key={id}
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${
-        active
+      className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${active
           ? "bg-white text-slate-900 shadow-sm"
           : "text-slate-500 hover:text-slate-900"
-      }`}
+        }`}
     >
       {label}
     </button>
@@ -199,12 +198,12 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
             isEditing={false}
             onChange={(v) => handleChange("age", v)}
           />
-          
+
           <div className="flex flex-col gap-1 relative group">
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-slate-500">Allergies (Comma separated)</span>
               {!isEditingAllergies ? (
-                <button 
+                <button
                   onClick={() => setIsEditingAllergies(true)}
                   className="text-blue-600 hover:text-blue-800"
                 >
@@ -212,14 +211,14 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
                 </button>
               ) : (
                 <div className="flex gap-2">
-                   <button 
+                  <button
                     onClick={handleUpdateAllergies}
                     disabled={isUpdating}
                     className="text-green-600 hover:text-green-800"
                   >
                     {isUpdating ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       setIsEditingAllergies(false);
                       setFormData(prev => ({ ...prev, allergies: patient.allergies || "" }));
@@ -232,9 +231,9 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
               )}
             </div>
             {isEditingAllergies ? (
-              <Input 
-                value={formData.allergies} 
-                onChange={(e) => handleChange("allergies", e.target.value)} 
+              <Input
+                value={formData.allergies}
+                onChange={(e) => handleChange("allergies", e.target.value)}
                 placeholder="e.g. Peanuts, Penicillin"
                 disabled={isUpdating}
               />
@@ -347,11 +346,11 @@ const AppointmentsTab: React.FC<{
         </h3>
       </div>
 
-      <AppointmentSection 
-        appointments={upcoming} 
-        patient={patient} 
-        openId={openAppointmentId} 
-        onToggle={handleToggle} 
+      <AppointmentSection
+        appointments={upcoming}
+        patient={patient}
+        openId={openAppointmentId}
+        onToggle={handleToggle}
       />
 
       <div className="pt-4 border-t border-slate-200">
@@ -360,11 +359,11 @@ const AppointmentsTab: React.FC<{
         </h3>
       </div>
 
-      <AppointmentSection 
-        appointments={ongoing} 
-        patient={patient} 
-        openId={openAppointmentId} 
-        onToggle={handleToggle} 
+      <AppointmentSection
+        appointments={ongoing}
+        patient={patient}
+        openId={openAppointmentId}
+        onToggle={handleToggle}
       />
 
       <div className="pt-4 border-t border-slate-200">
@@ -373,11 +372,11 @@ const AppointmentsTab: React.FC<{
         </h3>
       </div>
 
-      <AppointmentSection 
-        appointments={previous} 
-        patient={patient} 
-        openId={openAppointmentId} 
-        onToggle={handleToggle} 
+      <AppointmentSection
+        appointments={previous}
+        patient={patient}
+        openId={openAppointmentId}
+        onToggle={handleToggle}
       />
 
       <CreateAppointmentModal
@@ -404,10 +403,10 @@ const AppointmentSection: React.FC<{
   return (
     <div className="space-y-3">
       {appointments.map((appt) => (
-        <AppointmentRow 
-          key={appt.id} 
-          appointment={appt} 
-          patient={patient} 
+        <AppointmentRow
+          key={appt.id}
+          appointment={appt}
+          patient={patient}
           isOpen={openId === appt.id}
           onToggle={() => onToggle(appt.id)}
         />
@@ -792,7 +791,7 @@ const AppointmentRow: React.FC<{
                 </div>
               )}
             </section>
-            
+
             {isEditingAppointment ? (
               <div className="space-y-1">
                 <div className="text-[11px] text-slate-500">
@@ -847,11 +846,10 @@ const AppointmentRow: React.FC<{
                   />
                 ) : (
                   <span
-                    className={`inline-flex h-3 w-3 rounded-full border-4 ${
-                      appointmentForm.followUpNeeded
+                    className={`inline-flex h-3 w-3 rounded-full border-4 ${appointmentForm.followUpNeeded
                         ? "border-blue-500"
                         : "border-slate-300"
-                    } bg-white`}
+                      } bg-white`}
                   />
                 )}
                 <span>Follow-up appointment needed</span>

@@ -13,6 +13,7 @@ export default function HowToFAQ() {
         "booking",
         "consultation",
         "payments",
+        "refunds",
         "technical",
         "clinicians"
     ];

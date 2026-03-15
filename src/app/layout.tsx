@@ -5,7 +5,7 @@ import Script from "next/script";
 import ToastProvider from "./toast-provider";
 import Header from "@/components/homepage/header/header";
 import { AuthProvider } from "@/contexts/AuthContext";
-
+import { Analytics } from "@vercel/analytics/next"
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { getLocaleFromCookie } from "@/utils/getLocale";
@@ -29,6 +29,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body>
+
         <NextIntlClientProvider
           locale={locale}
           timeZone="Asia/Colombo" // 👈 REQUIRED HERE
@@ -44,6 +45,7 @@ export default async function RootLayout({
                 />
                 <ToastProvider />
                 <Header />
+                <Analytics />
                 {children}
               </AuthProvider>
             </CurrencyProvider>
