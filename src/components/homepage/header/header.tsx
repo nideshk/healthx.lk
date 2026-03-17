@@ -40,7 +40,7 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
   const { isLoginModalOpen, openLoginModal, closeLoginModal, redirectTo } = useModalStore();
 
   // --- UI States ---
@@ -113,6 +113,11 @@ export default function Header() {
     const target = redirectTo;
     setMfa(null);
     setOtp("");
+    
+    // 🔥 Ensure AuthContext is synced before we navigate
+    // This prevents race conditions in RoleGuards on destination pages
+    if (refreshUser) await refreshUser();
+
     await checkUserStatus(session, target)
     closeLoginModal();
   }

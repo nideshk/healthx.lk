@@ -13,7 +13,7 @@ import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import IdleLogoutProvider from "@/components/providers/IdleLogoutProvider";
 
 export const metadata: Metadata = {
-  title: "clinecxa.com",
+  title: "clinecxa.lk",
   description: "ClinicaXa is a telehealth platform that provides remote medical consultations and virtual care services.",
 };
 

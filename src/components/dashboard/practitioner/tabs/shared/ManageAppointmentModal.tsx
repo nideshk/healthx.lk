@@ -95,7 +95,7 @@ const ManageAppointmentModal: React.FC<ManageAppointmentModalProps> = ({
       const apptDate = appointment.date || "N/A";
       const apptTime = appointment.time || "N/A";
       const roomKey = appointment.room_key || "";
-      const meetingUrl = `https://www.clinecxa.com/appointment/meeting?room=${roomKey}`;
+      const meetingUrl = `https://www.clinecxa.lk/appointment/meeting?room=${roomKey}`;
 
       const messageContent = `
 Hello ${patientName},

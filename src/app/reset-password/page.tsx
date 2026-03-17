@@ -78,7 +78,7 @@ export default function ResetPasswordPage() {
 
     // Security hardening
     await supabaseBrowser.auth.signOut({ scope: "others" });
-    router.push("/login?reset=success");
+    router.push("/");
   }
 
   /* ---------- Loading ---------- */

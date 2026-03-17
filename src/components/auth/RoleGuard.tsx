@@ -18,16 +18,27 @@ export function RoleGuard({
     redirectTo?: string;
 }) {
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, loading, refreshUser } = useAuth();
 
     useEffect(() => {
         if (loading) return;
 
-        if (!user || !user.profile || !allowed.includes(user.profile.role)) {
-            toast.error("You are not authorized to access this page", { toastId: "unauthorized" });
-            router.replace(redirectTo);
+        const check = async () => {
+            // If context says no user, try to double check once directly
+            if (!user) {
+                const refreshed = await refreshUser();
+                if (refreshed && refreshed.profile && allowed.includes(refreshed.profile.role)) {
+                    return;
+                }
+            }
+
+            if (!user || !user.profile || !allowed.includes(user.profile.role)) {
+                toast.error("You are not authorized to access this page", { toastId: "unauthorized" });
+                router.replace(redirectTo);
+            }
         }
-    }, [user, loading, allowed, redirectTo, router]);
+        check();
+    }, [user, loading, allowed, redirectTo, router, refreshUser]);
 
     if (loading) return null;
 

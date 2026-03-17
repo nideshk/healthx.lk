@@ -89,8 +89,8 @@ const renderTab = (
       type="button"
       onClick={() => setActiveTab(id)}
       className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center gap-2 ${active
-          ? "bg-white text-slate-900 shadow-sm"
-          : "text-slate-500 hover:text-slate-900"
+        ? "bg-white text-slate-900 shadow-sm"
+        : "text-slate-500 hover:text-slate-900"
         }`}
     >
       {label}
@@ -520,7 +520,7 @@ const AppointmentRow: React.FC<{
   const handleNotify = async (channels: Array<"email" | "sms" | "in_app">) => {
     setIsNotifying(true);
     try {
-      const meetingUrl = `https://www.clinecxa.com/appointment/meeting?room=${appointment.room_key}`;
+      const meetingUrl = `https://www.clinecxa.lk/appointment/meeting?room=${appointment.room_key}`;
 
       const htmlMessage = `
         <div style="font-family: Arial, sans-serif; color: #334155; line-height: 1.6; max-width: 600px;">
@@ -915,8 +915,8 @@ const AppointmentRow: React.FC<{
                 ) : (
                   <span
                     className={`inline-flex h-3 w-3 rounded-full border-4 ${appointmentForm.followUpNeeded
-                        ? "border-blue-500"
-                        : "border-slate-300"
+                      ? "border-blue-500"
+                      : "border-slate-300"
                       } bg-white`}
                   />
                 )}

@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
                     email: patientData.email,
                     recipientName: patientData.full_name,
                     subject: "Your appointment is confirmed",
-                    actionUrl: `https://Clinecxa.com/consultation/meeting?room=${appointment.room_key}`,
+                    actionUrl: `https://clinecxa.lk/consultation/meeting?room=${appointment.room_key}`,
                     actionText: "Join Meeting",
                     phone: patientData.contact_number,
                 },

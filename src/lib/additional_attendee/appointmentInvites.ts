@@ -27,7 +27,7 @@ export async function sendAppointmentInvites({
       room_key,
     });
 
-    const inviteLink = `https://www.clinecxa.com/meeting?token=${token}`;
+    const inviteLink = `https://www.clinecxa.lk/meeting?token=${token}`;
 
     await notify({
       userId: null, // guest identifier handled via payload.email
