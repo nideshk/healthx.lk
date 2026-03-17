@@ -86,12 +86,12 @@ export function generateAppointmentConfirmationEmail({
         <p style="margin: 5px 0;"><strong>Practitioner:</strong> ${appointment.practitionerName}</p>
         <p style="margin: 5px 0;"><strong>Date & Time:</strong> ${startTime} - ${endTime}</p>
         ${appointment.roomKey ? `<p style="margin: 5px 0;"><strong>Room Number:</strong> ${appointment.roomKey}</p>` : ''}
-        <p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${"https://clinecxa.com/appointment/meeting?room=" + appointment.roomKey}" style="color: #007bff; text-decoration: none;">Join Meeting</a></p>
+        <p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${"https://clinecxa.lk/appointment/meeting?room=" + appointment.roomKey}" style="color: #007bff; text-decoration: none;">Join Meeting</a></p>
       </div>
 
       <p>You can join the meeting using the link above at the scheduled time. If you need to reschedule or cancel, please contact us.</p>
 
-      ${`<a href="${"https://clinecxa.com/appointment/meeting?room=" + appointment.roomKey}" class="join-button">Join Meeting</a>`}
+      ${`<a href="${"https://clinecxa.lk/appointment/meeting?room=" + appointment.roomKey}" class="join-button">Join Meeting</a>`}
     </div>
     <div class="footer">
       <p>This email was sent by Clinecxa Telehealth Platform.</p>
@@ -310,7 +310,7 @@ export function welcomeTemplate(firstName: string) {
 
       <!-- CTA Button -->
       <div style="text-align:center; margin:30px 0;">
-        <a href="https://clinecxa.com"
+        <a href="https://clinecxa.lk"
            style="display:inline-block; padding:12px 24px; background:#4f46e5; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:600;">
            Go to Dashboard
         </a>
