@@ -203,13 +203,13 @@ export default function PractitionerRegisterPage() {
     file: File,
     documentType: "government_id" | "supporting_document"
   ) => {
-    if (documentType === "government_id" && governmentIdCount >= 1) {
-      setError("Only one Government ID document is allowed.");
+    if (documentType === "government_id" && governmentIdCount >= 2) {
+      setError("You can upload a maximum of 2 Government ID documents.");
       return;
     }
 
-    if (documentType === "supporting_document" && supportingDocCount >= 2) {
-      setError("You can upload a maximum of 2 supporting documents.");
+    if (documentType === "supporting_document" && supportingDocCount >= 1) {
+      setError("Only one supporting document is allowed.");
       return;
     }
 
@@ -229,12 +229,12 @@ export default function PractitionerRegisterPage() {
       f => f.document_type === "supporting_document"
     ).length;
 
-    if (governmentIdCount !== 1) {
-      throw new Error("Exactly one Government ID document is required.");
+    if (governmentIdCount !== 2) {
+      throw new Error("Exactly two Government ID documents are required.");
     }
 
-    if (supportingDocCount > 2) {
-      throw new Error("You can upload a maximum of 2 supporting documents.");
+    if (supportingDocCount !== 1) {
+      throw new Error("Exactly one supporting document is required.");
     }
 
     setUploadingDocs(true);
@@ -294,8 +294,14 @@ export default function PractitionerRegisterPage() {
 
   /* ---------------- SUBMIT ---------------- */
   const onSubmit = async (form: FormValues) => {
-    if (governmentIdCount !== 1) {
-      setError("Please upload exactly one Government ID document.");
+    if (governmentIdCount !== 2) {
+      setError("Please upload exactly two Government ID documents.");
+      setLoading(false);
+      return;
+    }
+
+    if (supportingDocCount !== 1) {
+      setError("Please upload one supporting document.");
       setLoading(false);
       return;
     }
@@ -306,6 +312,7 @@ export default function PractitionerRegisterPage() {
     try {
       const payload = {
         ...form,
+        contact_email: form.email,
         languages: form.languages.split(",").map(l => l.trim()).filter(l => l !== ""),
         experience_years: Number(form.experience_years),
         available_services: selectedAppointments.map(a => a.id),
@@ -675,7 +682,7 @@ export default function PractitionerRegisterPage() {
                 {/* Government ID */}
                 <div className="p-5 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
                   <p className="font-semibold text-gray-700 mb-1">
-                    Government Issued ID (Required)
+                    Government Issued IDs (Upload 2 Required)
                   </p>
                   <p className="text-xs text-gray-500 mb-4">
                     Passport, National ID, or Driver's License.
@@ -694,7 +701,7 @@ export default function PractitionerRegisterPage() {
                   <label
                     htmlFor="gov-id-upload"
                     className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${
-                      governmentIdCount >= 1 ? "opacity-50 pointer-events-none" : ""
+                      governmentIdCount >= 2 ? "opacity-50 pointer-events-none" : ""
                     }`}
                   >
                     Select File
@@ -704,7 +711,7 @@ export default function PractitionerRegisterPage() {
                 {/* Supporting Documents */}
                 <div className="p-5 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
                   <p className="font-semibold text-gray-700 mb-1">
-                    Supporting Documents (Max 2)
+                    Supporting Document (Upload 1 Required)
                   </p>
                   <p className="text-xs text-gray-500 mb-4">
                     Medical licenses, certificates, or letters of recommendation.
@@ -723,7 +730,7 @@ export default function PractitionerRegisterPage() {
                   <label
                     htmlFor="support-upload"
                     className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${
-                      supportingDocCount >= 2 ? "opacity-50 pointer-events-none" : ""
+                      supportingDocCount >= 1 ? "opacity-50 pointer-events-none" : ""
                     }`}
                   >
                     Select File

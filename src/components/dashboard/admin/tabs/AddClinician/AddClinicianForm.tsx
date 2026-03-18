@@ -173,12 +173,13 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
   };
 
   const handleFileSelect = (file: File, documentType: "government_id" | "supporting_document") => {
-    if (documentType === "government_id" && governmentIdCount >= 1) {
-      setError("Only one Government ID document is allowed.");
+    if (documentType === "government_id" && governmentIdCount >= 2) {
+      setError("You can upload a maximum of 2 Government ID documents.");
       return;
     }
-    if (documentType === "supporting_document" && supportingDocCount >= 2) {
-      setError("You can upload a maximum of 2 supporting documents.");
+
+    if (documentType === "supporting_document" && supportingDocCount >= 1) {
+      setError("Only one supporting document is allowed.");
       return;
     }
     setPendingFiles(prev => [...prev, { file, document_type: documentType }]);
@@ -192,8 +193,11 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
     const governmentIdCount = pendingFiles.filter(f => f.document_type === "government_id").length;
     const supportingDocCount = pendingFiles.filter(f => f.document_type === "supporting_document").length;
 
-    if (governmentIdCount !== 1) throw new Error("Exactly one Government ID document is required.");
-    if (supportingDocCount > 2) throw new Error("You can upload a maximum of 2 supporting documents.");
+    if (governmentIdCount !== 2)
+      throw new Error("Exactly two Government ID documents are required.");
+
+    if (supportingDocCount !== 1)
+      throw new Error("Exactly one supporting document is required.");
 
     setUploadingDocs(true);
     const uploadedDocs: any[] = [];
@@ -237,8 +241,13 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
   };
 
   const onSubmit = async (form: FormValues) => {
-    if (governmentIdCount !== 1) {
-      setError("Please upload exactly one Government ID document.");
+    if (governmentIdCount !== 2) {
+      setError("Please upload exactly two Government ID documents.");
+      return;
+    }
+
+    if (supportingDocCount !== 1) {
+      setError("Please upload one supporting document.");
       return;
     }
     setLoading(true);
@@ -248,6 +257,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
     try {
       const payload = {
         ...form,
+        contact_email: form.email,
         languages: form.languages.split(",").map(l => l.trim()).filter(l => l !== ""),
         experience_years: Number(form.experience_years),
         available_services: selectedAppointments.map(a => a.id),
@@ -387,14 +397,14 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
               <h3 className="font-semibold text-gray-700">Documents</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 border-2 border-dashed rounded-lg text-center">
-                  <p className="text-sm font-medium">Gov ID (Req)</p>
+                  <p className="text-sm font-medium">Gov ID (Required 2)</p>
                   <input type="file" className="hidden" id="gov-id" onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0], "government_id")} />
-                  <label htmlFor="gov-id" className={`cursor-pointer text-xs text-teal-600 ${governmentIdCount >= 1 ? "opacity-50" : ""}`}>Select File</label>
+                  <label htmlFor="gov-id" className={`cursor-pointer text-xs text-teal-600 ${governmentIdCount >= 2 ? "opacity-50" : ""}`}>Select File</label>
                 </div>
                 <div className="p-4 border-2 border-dashed rounded-lg text-center">
-                  <p className="text-sm font-medium">Support Doc (Max 2)</p>
+                  <p className="text-sm font-medium">Supporting Document (Required)</p>
                   <input type="file" className="hidden" id="sup-doc" onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0], "supporting_document")} />
-                  <label htmlFor="sup-doc" className={`cursor-pointer text-xs text-teal-600 ${supportingDocCount >= 2 ? "opacity-50" : ""}`}>Select File</label>
+                  <label htmlFor="sup-doc" className={`cursor-pointer text-xs text-teal-600 ${supportingDocCount >= 1 ? "opacity-50" : ""}`}>Select File</label>
                 </div>
               </div>
               <div className="space-y-1">
