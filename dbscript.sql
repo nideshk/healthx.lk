@@ -9,6 +9,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 ALTER TABLE hipaa_audit_log
 ADD COLUMN IF NOT EXISTS checksum text;
 
+
 -- 3️⃣ Drop existing checksum trigger/function if any
 DROP TRIGGER IF EXISTS hipaa_audit_checksum_trigger
 ON hipaa_audit_log;
