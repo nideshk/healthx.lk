@@ -92,7 +92,7 @@ export async function processNotifications() {
               email: n.payload.email,
               options: { redirectTo: meetingUrl }
             });
-
+            console.log("Magic link", meetingUrl)
             console.log("Magic Link Data:", linkData);
             console.log("Magic Link Error:", linkError);
 
