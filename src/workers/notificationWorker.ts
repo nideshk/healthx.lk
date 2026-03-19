@@ -86,12 +86,15 @@ export async function processNotifications() {
             // 🔐 Generate Magic Link for seamless login
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.clinecxa.lk";
             const meetingUrl = `${baseUrl}/appointment/meeting?room=${appointmentData.roomKey}`;
-            
+
             const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
               type: 'magiclink',
               email: n.payload.email,
               options: { redirectTo: meetingUrl }
             });
+
+            console.log("Magic Link Data:", linkData);
+            console.log("Magic Link Error:", linkError);
 
             const actionUrl = linkError ? meetingUrl : linkData.properties.action_link;
 
@@ -112,7 +115,7 @@ export async function processNotifications() {
             // 🔐 Generate Magic Link for seamless login
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.clinecxa.lk";
             const meetingUrl = `${baseUrl}/appointment/meeting?room=${appointmentData.roomKey}`;
-            
+
             const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
               type: 'magiclink',
               email: n.payload.email,
