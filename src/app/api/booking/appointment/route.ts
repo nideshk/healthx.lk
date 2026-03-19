@@ -23,7 +23,7 @@ function calculateAge(dob: string | Date | null | undefined): number | null {
 
 const sortByStartTime = (arr: any[]) =>
   arr.sort(
-    (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+    (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
   );
 /* -------------------------------------
    GET Appointments
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
         )
       `
       )
-      .order("starts_at", { ascending: true });
+      .order("starts_at", { ascending: false });
 
     // Role-based filtering
     if (role === "patient") {
