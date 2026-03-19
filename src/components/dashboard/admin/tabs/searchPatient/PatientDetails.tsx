@@ -19,7 +19,7 @@ export interface AdminAppointment {
   info: string;
   doctorName: string;
   appointmentType: string;
-  category: "upcoming" | "ongoing" | "previous";
+  category: "upcoming" | "ongoing" | "previous" | "cancelled";
   patient_id?: string;
   patientName?: string;
   email?: string;
@@ -451,6 +451,7 @@ const AppointmentsTab: React.FC<{
   const upcoming = appointments.filter((a) => a.category === "upcoming");
   const ongoing = appointments.filter((a) => a.category === "ongoing");
   const previous = appointments.filter((a) => a.category === "previous");
+  const cancelled = appointments.filter((a) => a.category === "cancelled");
 
   return (
     <div className="space-y-6">
@@ -472,6 +473,19 @@ const AppointmentsTab: React.FC<{
         </h3>
         {loading ? <LoadingText /> : previous.length ? <AppointmentList appointments={previous} /> : <EmptyText />}
       </div>
+      <div className="pt-4 border-t border-slate-200">
+        <h3 className="text-sm font-semibold text-slate-900 mb-2">
+          Cancelled Appointments
+        </h3>
+
+        {loading ? (
+          <LoadingText />
+        ) : cancelled.length ? (
+          <AppointmentList appointments={cancelled} />
+        ) : (
+          <EmptyText />
+        )}
+      </div>
     </div>
   );
 };
@@ -489,7 +503,10 @@ const AppointmentList: React.FC<{
 const AppointmentRow: React.FC<{
   appointment: AdminAppointment;
 }> = ({ appointment }) => {
-  const canManage = appointment.category === "upcoming" || appointment.category === "ongoing";  
+  const isCancelled = appointment.category === "cancelled";
+  const canManage =
+    (appointment.category === "upcoming" || appointment.category === "ongoing") &&
+    !isCancelled;
   const [open, setOpen] = useState(false);
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
@@ -744,7 +761,7 @@ const AppointmentRow: React.FC<{
               variant="danger"
               size="sm"
               onClick={() => setShowCancelModal(true)}
-              disabled={!canManage}
+              disabled={!canManage || isCancelled }
             >
               Cancel
             </Button>

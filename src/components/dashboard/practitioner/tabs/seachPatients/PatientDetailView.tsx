@@ -377,19 +377,6 @@ const AppointmentsTab: React.FC<{
         onToggle={handleToggle}
       />
 
-      <div>
-        <h3 className="text-sm font-semibold text-slate-900">
-          Pending Appointments
-        </h3>
-      </div>
-
-      <AppointmentSection
-        appointments={pending}
-        patient={patient}
-        openId={openAppointmentId}
-        onToggle={handleToggle}
-      />
-
       <div className="pt-4 border-t border-slate-200">
         <h3 className="text-sm font-semibold text-slate-900">
           Ongoing Appointments
@@ -398,6 +385,19 @@ const AppointmentsTab: React.FC<{
 
       <AppointmentSection
         appointments={ongoing}
+        patient={patient}
+        openId={openAppointmentId}
+        onToggle={handleToggle}
+      />
+
+      <div>
+        <h3 className="text-sm font-semibold text-slate-900">
+          Pending Appointments
+        </h3>
+      </div>
+
+      <AppointmentSection
+        appointments={pending}
         patient={patient}
         openId={openAppointmentId}
         onToggle={handleToggle}

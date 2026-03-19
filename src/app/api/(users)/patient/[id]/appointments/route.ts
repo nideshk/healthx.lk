@@ -58,7 +58,6 @@ export async function GET(
         )
       `)
       .eq("patient_id", patientId)
-      .in("status", ["scheduled", "confirmed", "completed", "pending"])
       .order("starts_at", { ascending: false });
 
     if (error) throw error;
@@ -66,7 +65,8 @@ export async function GET(
     const scheduled: any[] = [];
     const completed: any[] = [];
     const ongoing: any[] = [];
-
+    const cancelled: any[] = [];
+    
     const now = new Date();
     (data ?? []).forEach((appt: any) => {
       const startsAt = new Date(appt.starts_at);
@@ -74,6 +74,18 @@ export async function GET(
       const endsAt = appt.ends_at
         ? new Date(appt.ends_at)
         : new Date(startsAt.getTime() + 15 * 60000); // fallback 15 mins
+
+      if (
+        appt.status === "cancelled" ||
+        appt.status === "payment_failed" ||
+        appt.status === "payment_cancelled"
+      ) {
+        cancelled.push({
+          ...appt,
+          starts_at: appt.starts_at,
+        });
+        return; // 🚨 VERY IMPORTANT
+      }
 
       // Local date (YYYY-MM-DD)
       const appointment_date = new Date(
@@ -94,6 +106,7 @@ export async function GET(
         id: appt.id,
         patientId: patientId,
         appointment_date,
+        starts_at: appt.starts_at,
         start_time,
         room_key: appt.room_key,
         doctor: {
@@ -123,6 +136,14 @@ export async function GET(
       }
     });
 
+    const sortDesc = (a: any, b: any) =>
+      new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime();
+    
+    scheduled.sort(sortDesc);
+    ongoing.sort(sortDesc);
+    completed.sort(sortDesc);
+    cancelled.sort(sortDesc);
+
     const cnx = getAuditContext(request, user);
 
     await auditLog({
@@ -132,13 +153,14 @@ export async function GET(
       entityId: patientId,
       purpose: "operations",
       source: "user_portal",
-      metadata: { patientId, total_appointments: data.length, scheduled: scheduled.length, ongoing: ongoing.length, completed: completed.length }
+      metadata: { patientId, total_appointments: data.length, scheduled: scheduled.length, ongoing: ongoing.length, completed: completed.length, cancelled: cancelled.length }
     });
 
     return NextResponse.json({
       scheduled,
       ongoing,
       completed,
+      cancelled
     });
   } catch (err: any) {
     console.error("GET /patients/:id/appointments error:", err);

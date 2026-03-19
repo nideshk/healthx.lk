@@ -18,7 +18,7 @@ export interface AdminAppointment {
   info: string;
   doctorName: string;
   appointmentType: string;
-  category: "upcoming" | "previous";
+  category: "upcoming" | "ongoing" | "previous" | "cancelled";
 }
 
 interface SearchPatientTabProps {
@@ -203,24 +203,27 @@ useEffect(() => {
             room_key: a.room_key,
             date: a.appointment_date,
             time: a.start_time,
-            info: a.appointment_date + " at " + a.start_time,
+            info: `${a.appointment_date} at ${a.start_time}`,
             doctorName: a.doctor?.name || "Unknown",
             category: "upcoming",
-            appointmentType: a.appointment_type?.name|| "Unknown",
+            appointmentType: a.appointment_type?.name || "Unknown",
           })),
-            ...(data.ongoing ?? []).map((a: any) => ({
+
+          ...(data.ongoing ?? []).map((a: any) => ({
             id: a.id,
             patient_id: a.patientId,
             patientName: selectedPatient.full_name,
             email: a.patient?.email,
             contact_number: a.patient?.contact_number,
-            date: a.appointment_date,
             room_key: a.room_key,
+            date: a.appointment_date,
             time: a.start_time,
+            info: `${a.appointment_date} at ${a.start_time}`,
             doctorName: a.doctor?.name || "Unknown",
-            appointmentType: a.appointment_type?.name|| "Unknown",
+            appointmentType: a.appointment_type?.name || "Unknown",
             category: "ongoing",
           })),
+
           ...(data.completed ?? []).map((a: any) => ({
             id: a.id,
             patient_id: a.patientId,
@@ -230,11 +233,30 @@ useEffect(() => {
             room_key: a.room_key,
             date: a.appointment_date,
             time: a.start_time,
+            info: `${a.appointment_date} at ${a.start_time}`,
             doctorName: a.doctor?.name || "Unknown",
-            appointmentType: a.appointment_type?.name|| "Unknown",
+            appointmentType: a.appointment_type?.name || "Unknown",
             category: "previous",
           })),
-        ];
+
+          ...(data.cancelled ?? []).map((a: any) => ({
+            id: a.id,
+            patient_id: selectedPatient.id,
+            patientName: selectedPatient.full_name,
+            email: a.patient?.email,
+            contact_number: a.patient?.contact_number,
+            room_key: a.room_key,
+            date: new Date(a.starts_at).toISOString().split("T")[0],
+            time: new Date(a.starts_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            info: `${new Date(a.starts_at).toLocaleDateString()} at ${new Date(a.starts_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+            doctorName: a.practitioner?.full_name || "Unknown",
+            appointmentType: a.appointment_type?.name || "Unknown",
+            category: "cancelled",
+          })),
+];
         setAppointments(mapped);
       } catch (err) {
         console.error("Error fetching appointments", err);
