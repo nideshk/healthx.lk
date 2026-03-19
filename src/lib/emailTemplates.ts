@@ -86,12 +86,12 @@ export function generateAppointmentConfirmationEmail({
         <p style="margin: 5px 0;"><strong>Practitioner:</strong> ${appointment.practitionerName}</p>
         <p style="margin: 5px 0;"><strong>Date & Time:</strong> ${startTime} - ${endTime}</p>
         ${appointment.roomKey ? `<p style="margin: 5px 0;"><strong>Room Number:</strong> ${appointment.roomKey}</p>` : ''}
-        <p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${"https://clinecxa.lk/appointment/meeting?room=" + appointment.roomKey}" style="color: #007bff; text-decoration: none;">Join Meeting</a></p>
+        <p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${actionUrl || ("https://healthx.lk/appointment/meeting?room=" + appointment.roomKey)}" style="color: #007bff; text-decoration: none;">Join Meeting</a></p>
       </div>
 
       <p>You can join the meeting using the link above at the scheduled time. If you need to reschedule or cancel, please contact us.</p>
 
-      ${`<a href="${"https://clinecxa.lk/appointment/meeting?room=" + appointment.roomKey}" class="join-button">Join Meeting</a>`}
+      ${actionUrl ? `<a href="${actionUrl}" class="join-button">${actionText || 'Join Meeting'}</a>` : `<a href="${"https://healthx.lk/appointment/meeting?room=" + appointment.roomKey}" class="join-button">Join Meeting</a>`}
     </div>
     <div class="footer">
       <p>This email was sent by Clinecxa Telehealth Platform.</p>
@@ -149,12 +149,12 @@ export function generateAppointmentReminderEmail({
         <p style="margin: 5px 0;"><strong>Practitioner:</strong> ${appointment.practitionerName}</p>
         <p style="margin: 5px 0;"><strong>Time:</strong> ${startTime}</p>
         ${appointment.roomKey ? `<p style="margin: 5px 0;"><strong>Room Number:</strong> ${appointment.roomKey}</p>` : ''}
-        ${finalActionUrl ? `<p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${finalActionUrl}" style="color: #007bff; text-decoration: none;">${finalActionUrl}</a></p>` : ''}
+        <p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${actionUrl || finalActionUrl || ("https://healthx.lk/appointment/meeting?room=" + appointment.roomKey)}" style="color: #007bff; text-decoration: none;">Join Meeting</a></p>
       </div>
 
       <p>Please ensure you have a stable internet connection and are in a quiet environment for your appointment.</p>
 
-      ${finalActionUrl ? `<a href="${finalActionUrl}" class="join-button">${finalActionText}</a>` : ''}
+      ${(actionUrl || finalActionUrl) ? `<a href="${actionUrl || finalActionUrl}" class="join-button">${actionText || finalActionText}</a>` : ''}
     </div>
     <div class="footer">
       <p>This email was sent by Clinecxa Telehealth Platform.</p>

@@ -78,22 +78,49 @@ export async function processNotifications() {
 
         // Use specific templates based on event type
         switch (n.event_type) {
-          case "appointment_confirmed":
+          case "appointment_confirmed": {
             if (!appointmentData) {
               throw new Error("Appointment details required for appointment confirmation");
             }
+
+            // 🔐 Generate Magic Link for seamless login
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://healthx.lk";
+            const meetingUrl = `${baseUrl}/appointment/meeting?room=${appointmentData.roomKey}`;
+            
+            const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+              type: 'magiclink',
+              email: n.payload.email,
+              options: { redirectTo: meetingUrl }
+            });
+
+            const actionUrl = linkError ? meetingUrl : linkData.properties.action_link;
+
             html = generateAppointmentConfirmationEmail({
               recipientName: n.payload?.recipientName,
               appointment: appointmentData,
-              actionUrl: n.payload?.actionUrl,
-              actionText: n.payload?.actionText,
+              actionUrl: actionUrl,
+              actionText: "Join Meeting",
             });
             break;
+          }
 
-          case "appointment_reminder":
+          case "appointment_reminder": {
             if (!appointmentData) {
               throw new Error("Appointment details required for appointment reminder");
             }
+
+            // 🔐 Generate Magic Link for seamless login
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://healthx.lk";
+            const meetingUrl = `${baseUrl}/appointment/meeting?room=${appointmentData.roomKey}`;
+            
+            const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+              type: 'magiclink',
+              email: n.payload.email,
+              options: { redirectTo: meetingUrl }
+            });
+
+            const actionUrl = linkError ? meetingUrl : linkData.properties.action_link;
+
             html = generateAppointmentReminderEmail({
               recipientName: n.payload?.recipientName,
               appointment: {
@@ -103,10 +130,11 @@ export async function processNotifications() {
                 roomKey: appointmentData.roomKey,
                 meetingUrl: appointmentData.meetingUrl,
               },
-              actionUrl: n.payload?.actionUrl,
-              actionText: n.payload?.actionText,
+              actionUrl: actionUrl,
+              actionText: "Join Meeting",
             });
             break;
+          }
 
           case "payment_success":
             html = generatePaymentSuccessEmail({
