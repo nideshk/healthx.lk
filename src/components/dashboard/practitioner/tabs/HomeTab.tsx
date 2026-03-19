@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { DateTime } from "luxon";
 import { Calendar } from "lucide-react";
 
@@ -45,10 +45,10 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
 
   const today = new Date();
 
-  const [dateRange, setDateRange] = useState({
-    from: getWeekStartISO(today),
-    to: getWeekEndISO(today),
-  });
+  const [dateRange, setDateRange] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
 
   const [stats, setStats] = useState<DashboardStats>({
     todaysAppointments: 0,
@@ -58,6 +58,7 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const practitionerId = user?.practitioner_id;
 
@@ -69,9 +70,10 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
   /* ---------- Fetch appointments ---------- */
 
   useEffect(() => {
-    if (!practitionerId) return;
+if (!practitionerId || !dateRange) return;
 
     const fetchData = async () => {
+      const requestId = ++requestIdRef.current;
       setLoading(true);
       setError(null);
 
@@ -84,6 +86,8 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
 
         const res = await authFetch(url);
         const json = await res.json();
+
+        if (requestId !== requestIdRef.current) return;
 
         if (!res.ok || !json.success) {
           throw new Error("Failed to load appointments");
@@ -125,11 +129,14 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
 
         setAppointments(mapped);
       } catch (e: any) {
+        if (requestId !== requestIdRef.current) return;
         setError(e.message || "Failed to load appointments");
         setStats({ todaysAppointments: 0, completedAppointments: 0 });
         setAppointments([]);
       } finally {
-        setLoading(false);
+         if (requestId === requestIdRef.current) {
+            setLoading(false);
+          }
       }
     };
 
@@ -138,11 +145,11 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
 
   /* ---------- UI ---------- */
 
-  const isSingleDay = dateRange.from === dateRange.to;
+  const isSingleDay = dateRange?.from === dateRange?.to;
 
   const rangeLabel = isSingleDay
-    ? `Appointments on ${dateRange.from}`
-    : `Appointments (${dateRange.from} – ${dateRange.to})`;
+    ? `Appointments on ${dateRange?.from}`
+    : `Appointments (${dateRange?.from} – ${dateRange?.to})`;
 
   return (
     <div className="space-y-4">

@@ -328,9 +328,33 @@ const AppointmentsTab: React.FC<{
   // Accordion Logic: Keep track of only one open appointment ID
   const [openAppointmentId, setOpenAppointmentId] = useState<string | null>(null);
 
-  const upcoming = appointments.filter((a) => a.category === "upcoming");
+  const pending = appointments.filter(
+    (a) => a.status === "pending" || a.payment_status === "pending"
+  );
+
+  const cancelled = appointments.filter(
+    (a) =>
+      a.status === "cancelled" ||
+      a.status === "payment_cancelled" ||
+      a.status === "payment_failed"
+  );
+
+  const upcoming = appointments.filter(
+    (a) =>
+      a.category === "upcoming" &&
+      a.status !== "pending" &&
+      a.status !== "payment_cancelled" &&
+      a.status !== "payment_failed"
+  );
+
   const ongoing = appointments.filter((a) => a.category === "ongoing");
-  const previous = appointments.filter((a) => a.category === "previous");
+
+  const previous = appointments.filter(
+    (a) =>
+      a.category === "previous" &&
+      a.status !== "cancelled" &&
+      a.status !== "payment_cancelled"
+  );
   const [showCreateModal, setShowCreateModal] = React.useState(false);
 
   // Toggle function to ensure only one card stays open
@@ -366,6 +390,19 @@ const AppointmentsTab: React.FC<{
         onToggle={handleToggle}
       />
 
+      <div>
+        <h3 className="text-sm font-semibold text-slate-900">
+          Pending Appointments
+        </h3>
+      </div>
+
+      <AppointmentSection
+        appointments={pending}
+        patient={patient}
+        openId={openAppointmentId}
+        onToggle={handleToggle}
+      />
+
       <div className="pt-4 border-t border-slate-200">
         <h3 className="text-sm font-semibold text-slate-900">
           Previous Appointments
@@ -374,6 +411,19 @@ const AppointmentsTab: React.FC<{
 
       <AppointmentSection
         appointments={previous}
+        patient={patient}
+        openId={openAppointmentId}
+        onToggle={handleToggle}
+      />
+
+      <div className="pt-4 border-t border-slate-200">
+        <h3 className="text-sm font-semibold text-slate-900">
+          Cancelled Appointments
+        </h3>
+      </div>
+
+      <AppointmentSection
+        appointments={cancelled}
         patient={patient}
         openId={openAppointmentId}
         onToggle={handleToggle}
@@ -434,6 +484,11 @@ const AppointmentRow: React.FC<{
   const [isNotifying, setIsNotifying] = useState(false);
 
   const isPrevious = appointment.category === "previous";
+
+  const isPending =
+    appointment.status === "pending" || appointment.payment_status === "pending";
+
+  const disableActions = isPrevious || isPending;
 
   const [appointmentForm, setAppointmentForm] = React.useState(() => ({
     clinicianNotes: appointment.clinicianNotes || "",
@@ -559,19 +614,32 @@ const AppointmentRow: React.FC<{
     }
   };
 
+  const isCancelled =
+    appointment.status === "cancelled" ||
+    appointment.status === "payment_cancelled" ||
+    appointment.status === "payment_failed";
+
   const statusClasses =
     appointment.status === "confirmed"
       ? "bg-blue-50 text-blue-700"
       : appointment.status === "completed"
-        ? "bg-green-50 text-green-700"
-        : "bg-slate-100 text-slate-500";
+      ? "bg-green-50 text-green-700"
+      : appointment.status === "pending"
+      ? "bg-amber-50 text-amber-700"
+      : isCancelled
+      ? "bg-slate-100 text-slate-500"
+      : "bg-slate-100 text-slate-500";
 
   const statusLabel =
     appointment.status === "confirmed"
       ? "Confirmed"
       : appointment.status === "completed"
-        ? "Completed"
-        : "Cancelled";
+      ? "Completed"
+      : appointment.status === "pending"
+      ? "Pending"
+      : isCancelled
+      ? "Cancelled"
+      : "Unknown";
 
   const fetchConsultationDetails = async () => {
     setConsultationLoading(true);
@@ -634,7 +702,7 @@ const AppointmentRow: React.FC<{
               size="sm"
               className="text-xs"
               onClick={() => handleNotify(["email"])}
-              disabled={isNotifying || isPrevious}
+              disabled={isNotifying || disableActions}
             >
               Re-send appointment details
             </Button>
@@ -643,12 +711,12 @@ const AppointmentRow: React.FC<{
               variant="secondary"
               size="sm"
               onClick={() => handleNotify(["sms"])}
-              disabled={isNotifying || isPrevious}
+              disabled={isNotifying || disableActions}
             >
               SMS patient
             </Button>
 
-            {isPrevious ? (
+            {disableActions ? (
               <Button variant="primary" size="sm" className="text-xs" disabled>
                 Join meeting
               </Button>
@@ -688,7 +756,7 @@ const AppointmentRow: React.FC<{
                   size="sm"
                   className="text-xs px-3"
                   onClick={() => setIsEditingAppointment(true)}
-                  disabled={isPrevious}
+                  disabled={disableActions}
                 >
                   Edit
                 </Button>

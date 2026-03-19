@@ -32,8 +32,8 @@ export type PatientDetailTab =
   | "settings"
   | "audit";
 
-export type AppointmentCategory = "upcoming" | "ongoing" | "previous";
-export type AppointmentStatus = "confirmed" | "completed" | "cancelled";
+export type AppointmentCategory = "pending" | "upcoming" | "ongoing" | "previous" | "cancelled";
+export type AppointmentStatus = "scheduled" | "confirmed" | "completed" | "cancelled" | "pending" | "payment_failed" | "payment_cancelled";
 
 export type AppointmentDocument = {
   url?: string;
@@ -65,6 +65,7 @@ export type Appointment = {
   email? :string;
   contact_number? : string
   patient_id? : string
+  payment_status?: "pending" | "paid" | "failed";
 };
 
 // ---------------- Analytics ---------------- //

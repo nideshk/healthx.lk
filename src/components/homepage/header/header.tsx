@@ -74,12 +74,14 @@ export default function Header() {
 
   // --- Navigation Arrays ---
 
-  // Visible on both Desktop Header and Mobile Sidebar
   const publicLinks = [
-    { name: t("nav.dashboard"), href: "/dashboard", icon: Search },
     { name: t("nav.ourStory"), href: "/about-us", icon: ShieldCheck },
     { name: t("nav.help"), href: "/help", icon: Calendar },
     { name: t("nav.contactUs"), href: "/contact-us", icon: Phone },
+  ];
+
+  const privateLinks = [
+    { name: t("nav.dashboard"), href: "/dashboard", icon: Search },
   ];
 
   // Visible ONLY in the Mobile Sidebar (Left Drawer)
@@ -205,7 +207,7 @@ export default function Header() {
 
               {/* DESKTOP NAVIGATION (Public Only) */}
               <nav className="hidden md:flex items-center gap-1">
-                {publicLinks.map((link) => (
+                {[...(user ? privateLinks : []), ...publicLinks].map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
@@ -312,7 +314,7 @@ export default function Header() {
             <div>
               <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">{t("sidebar.explore")}</p>
               <div className="space-y-1">
-                {publicLinks.map((link) => (
+                {[...(user ? privateLinks : []), ...publicLinks].map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}

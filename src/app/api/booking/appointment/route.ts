@@ -21,6 +21,10 @@ function calculateAge(dob: string | Date | null | undefined): number | null {
   return age;
 }
 
+const sortByStartTime = (arr: any[]) =>
+  arr.sort(
+    (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
+  );
 /* -------------------------------------
    GET Appointments
 ------------------------------------- */
@@ -72,7 +76,7 @@ export async function GET(req: NextRequest) {
         )
       `
       )
-      .order("starts_at", { ascending: true });
+      .order("starts_at", { ascending: false });
 
     // Role-based filtering
     if (role === "patient") {
@@ -214,19 +218,19 @@ export async function GET(req: NextRequest) {
           (a.appointment_type?.duration_mins ?? 15) * 60000
         );
 
-      // 1️⃣ Cancelled (highest priority)
-      if (a.status === "cancelled" || a.cancellation_reason) {
-        cancelled.push(a);
-        continue;
-      }
-
-      // Cancelled
-      if (a.status === "cancelled" || a.cancellation_reason) {
+      // Cancelled or payment failure
+      if (
+        a.status === "cancelled" ||
+        a.status === "payment_failed" ||
+        a.status === "payment_cancelled" ||
+        a.cancellation_reason
+      ) {
         cancelled.push(a);
         continue;
       }
       // 2️⃣ Pending payment (admin or user created)
       if (
+        a.payment_status === "pending" &&
         a.payment_status === "pending" &&
         (!a.expires_at || new Date(a.expires_at) > now)
       ) {
@@ -253,6 +257,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    sortByStartTime(pending_payment);
+    sortByStartTime(ongoing);
+    sortByStartTime(upcoming);
+    sortByStartTime(past);
+    sortByStartTime(cancelled);
     /* -------------------------------------
        Final Response
     ------------------------------------- */
