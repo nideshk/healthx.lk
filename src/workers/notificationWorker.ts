@@ -84,7 +84,7 @@ export async function processNotifications() {
             }
 
             // 🔐 Generate Magic Link for seamless login
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://healthx.lk";
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.clinecxa.lk";
             const meetingUrl = `${baseUrl}/appointment/meeting?room=${appointmentData.roomKey}`;
             
             const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
@@ -110,7 +110,7 @@ export async function processNotifications() {
             }
 
             // 🔐 Generate Magic Link for seamless login
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://healthx.lk";
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.clinecxa.lk";
             const meetingUrl = `${baseUrl}/appointment/meeting?room=${appointmentData.roomKey}`;
             
             const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
