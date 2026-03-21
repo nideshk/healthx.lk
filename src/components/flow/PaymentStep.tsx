@@ -18,7 +18,6 @@ import { authFetch } from "@/lib/authFetch";
 import { useAuth } from "@/contexts/AuthContext";
 import PaymentStepUI from "../PaymentPageUI";
 import { useBookingDraftStore } from "@/stores/useBookingDraftStore";
-import JSEncrypt from "jsencrypt";
 
 interface StepRefHandle {
   validateStep?: () => boolean;
@@ -161,8 +160,6 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         }
       }
 
-
-
       updateData({
         payment_status: "completed",
         appointment_id: appointmentId,
@@ -251,60 +248,39 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           return;
         }
 
-        if (provider === "webxpay") {
-          // WebXPay
-          const { success } = await payRes.json();
-          const publicKey = `-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDMSizE2F37IEZBKuvrLbRBvFZ+
-mXNLUaJffFULGafAjDQNf08HvyoAPmVrLa2DRDawWu7jx8w8M/cQgQXlVJhtS68E
-fFtirXIyW8XCgo18G1e6cMsc3ePtKuPntOe1oKikUV2sWnqk25BLLCFpKpZaLvrH
-oBqI0TMoxwrVRVvvXQIDAQAB
------END PUBLIC KEY-----`;
+        if (provider === "webxpay") 
+        {
+          const responseData = await payRes.json();
 
-          const encrypt = new JSEncrypt();
-          encrypt.setPublicKey(publicKey);
-
-          const amount = payload?.final_amount || consultationFee;
-          const inputToEncrypt = `${amount}|${currentAppointmentId}`;
-          const encryptedPayment = encrypt.encrypt(inputToEncrypt);
-
-          if (!encryptedPayment) throw new Error("Encryption failed");
+          const { payment_fields } = responseData;
 
           const webxpayForm = document.createElement("form");
           webxpayForm.method = "POST";
-          webxpayForm.action = "https://webxpay.com/index.php?route=checkout/billing";
 
+          const isProd = process.env.NEXT_PUBLIC_ENVIRONMENT === "production";
+
+          webxpayForm.action = isProd ? "https://webxpay.com/index.php?route=checkout/billing" : "https://stagingxpay.info/index.php?route=checkout/billing";
+          
           const fields = {
-            first_name: user?.profile?.first_name || bookingData.fullName?.split(" ")[0] || "Customer",
-            last_name: user?.profile?.last_name || bookingData.fullName?.split(" ").slice(1).join(" ") || "Lastname",
-            email: user?.user?.email || bookingData.email || "",
-            contact_number: user?.phone || bookingData.phone || "",
-            address_line_one: bookingData.address || "No Address Provided",
-            address_line_two: "",
-            city: user?.profile?.city || "Colombo",
-            state: "Western",
-            postal_code: "10300",
-            country: user?.profile?.country || "Sri Lanka",
-            process_currency: "LKR",
-            cms: "PHP",
-            custom_fields: `${currentAppointmentId}`,
-            enc_method: "JCs3J+6oSz4V0LgE0zi/Bg==",
-            secret_key: "41e8b126-7368-4b28-9c2c-4db117a237ed",
-            payment: encryptedPayment.toString(),
+            ...payment_fields
           };
 
           Object.entries(fields).forEach(([name, value]) => {
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = name;
-            input.value = value;
-            webxpayForm.appendChild(input);
+            if (value !== undefined && value !== null) {
+              const input = document.createElement("input");
+              input.type = "hidden";
+              input.name = name;
+              input.value = value.toString();
+              webxpayForm.appendChild(input);
+            }
           });
 
           document.body.appendChild(webxpayForm);
           webxpayForm.submit();
           return;
-        } else {
+        } 
+        else 
+        {
           // PayHere
           const { payment } = await payRes.json();
           mainLayout?.classList.add("blur-md", "brightness-75", "pointer-events-none");

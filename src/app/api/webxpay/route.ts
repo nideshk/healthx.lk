@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/authGuard";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
     const { authorized, user } = await requireUser(request);
@@ -45,7 +46,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized: Ownership mismatch." }, { status: 403 });
         }
 
-        const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
+        // const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
+        const formattedAmount = "50.00"; // Changed this for testing as webxpay doesn't support large amounts during testing
         const orderID = appointment_id;
 
         // 2. Upsert Transaction
@@ -85,10 +87,44 @@ export async function POST(request: NextRequest) {
             metadata: { amount: formattedAmount, appointment_id, provider: 'webxpay' }
         });
 
+        const publicKey = process.env.WEBXPAY_PUBLIC_KEY;
+        
+        const cleanPublicKey = publicKey?.split('\n').map(line => line.trim()).join('\n');
+        const inputToEncrypt = `${orderID}|${formattedAmount}`;
+
+        const encryptedPayment = crypto.publicEncrypt(
+            {
+                key: cleanPublicKey!,
+                padding: crypto.constants.RSA_PKCS1_PADDING,
+            },
+            Buffer.from(inputToEncrypt)
+        ).toString('base64');
+
+        const cleanPhone = phone ? phone.replace(/[^\d+]/g, '') : "0000000000";
+
         return NextResponse.json({
             success: true,
             order_id: orderID,
-            amount: formattedAmount
+            total_amount: formattedAmount,
+            payment_fields: {
+                first_name,
+                last_name,
+                email,
+                contact_number: cleanPhone,
+                address_line_one: address || "Default Address",
+                city: city || "Colombo",
+                state: "Western",
+                postal_code: "10300",
+                country: country || "Sri Lanka",
+                process_currency: "LKR",
+                cms: "PHP",
+                custom_fields: appointment_id,
+                total_amount: formattedAmount,
+                payment: encryptedPayment,
+                api_user: process.env.WEBXPAY_API_KEY,
+                secret_key: process.env.WEBXPAY_SECRET_KEY,
+                enc_method: process.env.WEBXPAY_ENC_METHOD
+            }
         });
 
     } catch (err: any) {
