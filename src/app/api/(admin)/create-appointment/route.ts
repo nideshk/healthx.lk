@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
             date,        // YYYY-MM-DD
             start_time, // HH:mm
             notes,
+            pre_consultation,
         } = body;
 
         if (
@@ -346,6 +347,22 @@ export async function POST(req: NextRequest) {
                 currency: "LKR"
             }
         });
+
+        /* ---------------- PRE-CONSULTATION ---------------- */
+
+        if (pre_consultation) {
+            const { error: preConsultErr } = await supabaseAdmin
+                .from("preconsult_responses")
+                .insert({
+                    appointment_id: appointment.id,
+                    raw_payload: pre_consultation,
+                    patient_id: patient_id,
+                });
+            
+            if (preConsultErr) {
+                console.error("Failed to insert pre_consultation", preConsultErr);
+            }
+        }
 
         /* ---------------- FETCH DETAILS FOR NOTIFICATION ---------------- */
 

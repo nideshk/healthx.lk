@@ -75,7 +75,10 @@ export default function CreateAppointmentTab() {
         patient_id: "",
         date: "",
         start_time: "",
-        notes: "",
+        concern: "",
+        goal: "",
+        duration: "",
+        referral: "",
     });
 
     /* ---------------- FETCH PRACTITIONERS ---------------- */
@@ -243,11 +246,24 @@ export default function CreateAppointmentTab() {
 
         setLoading(true);
 
+        const compiledNotes = `Main Concern: ${form.concern || 'Not specified'}\nGoal: ${form.goal || 'Not specified'}\nDuration: ${form.duration || 'Not specified'}\nReferral: ${form.referral || 'Not specified'}`;
+
+        const payload = {
+            ...form,
+            notes: compiledNotes,
+            pre_consultation: {
+                concern: form.concern,
+                goal: form.goal,
+                duration: form.duration,
+                referral: form.referral
+            }
+        };
+
         try {
             const res = await authFetch("/api/create-appointment", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form),
+                body: JSON.stringify(payload),
             });
 
             let data: any = null;
@@ -269,7 +285,10 @@ export default function CreateAppointmentTab() {
                 appointment_type_id: "",
                 date: "",
                 start_time: "",
-                notes: "",
+                concern: "",
+                goal: "",
+                duration: "",
+                referral: "",
             }));
 
             setAvailability(null);
@@ -389,12 +408,52 @@ export default function CreateAppointmentTab() {
                         </div>
                     </section>
 
-                    <Textarea
-                        label="Internal Notes"
-                        placeholder="Add details about the visit..."
-                        value={form.notes}
-                        onChange={e => handleChange("notes", e.target.value)}
-                    />
+                    {/* Pre-Consultation Information Replacement */}
+                    <section className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                        <h3 className="font-semibold text-slate-800 text-lg mb-4">Pre-consultation information</h3>
+                        
+                        <div>
+                            <label className="text-sm font-semibold text-slate-700 block mb-2">What is your main concern today? *</label>
+                            <Textarea
+                                placeholder="Main concern..."
+                                value={form.concern}
+                                onChange={e => handleChange("concern", e.target.value)}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-semibold text-slate-700 block mb-2">What are you hoping to achieve from this consultation?</label>
+                            <Textarea
+                                placeholder="Diagnosis, treatment options, etc."
+                                value={form.goal}
+                                onChange={e => handleChange("goal", e.target.value)}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-semibold text-slate-700 block mb-2">How long have you had this concern?</label>
+                            <Textarea
+                                placeholder="For example: 2 weeks, 3 months, 1 year"
+                                value={form.duration}
+                                onChange={e => handleChange("duration", e.target.value)}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-semibold text-slate-700 block mb-2">How did you hear about this platform? *</label>
+                            <select
+                                className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 transition-all"
+                                value={form.referral}
+                                onChange={e => handleChange("referral", e.target.value)}
+                            >
+                                <option value="">Select an option...</option>
+                                <option value="Friend">Friend</option>
+                                <option value="Social Media">Social Media</option>
+                                <option value="Search Engine">Search Engine</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </section>
 
                     <button
                         onClick={handleSubmit}

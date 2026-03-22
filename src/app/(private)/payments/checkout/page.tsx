@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import PaymentStep from '@/components/flow/PaymentStep';
+import ConsentFormStep from '@/components/flow/ConsentFormStep';
 import { Loader2 } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 
@@ -13,6 +14,11 @@ function CheckoutContent() {
 
   const [bookingData, setBookingData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showConsent, setShowConsent] = useState(true);
+
+  const updateData = (newData: any) => {
+    setBookingData((prev: any) => ({ ...prev, ...newData }));
+  };
 
   useEffect(() => {
     async function fetchAppointmentDetails() {
@@ -62,17 +68,26 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="container mx-auto">
-      <PaymentStep
-        nextStep={() => router.push('/dashboard/appointment')}
-        bookingData={bookingData}
-        isManualCheckout={true}
-        preExistingId={appointmentId}
-        prevStep={() => router.back()}
-        updateData={() => { }}
-        goToStep={() => { }}
-        bookingControllerRef={{ current: {} } as any}
-      />
+    <div className="container mx-auto max-w-5xl py-8 px-4 sm:px-6 lg:px-8">
+      {showConsent ? (
+        <ConsentFormStep
+          nextStep={() => setShowConsent(false)}
+          prevStep={() => router.back()}
+          updateData={updateData}
+          bookingData={bookingData}
+        />
+      ) : (
+        <PaymentStep
+          nextStep={() => router.push('/dashboard/appointment')}
+          bookingData={bookingData}
+          isManualCheckout={true}
+          preExistingId={appointmentId}
+          prevStep={() => setShowConsent(true)}
+          updateData={updateData}
+          goToStep={() => { }}
+          bookingControllerRef={{ current: {} } as any}
+        />
+      )}
     </div>
   );
 }

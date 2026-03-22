@@ -14,6 +14,7 @@ export interface AppointmentFormInputs {
   }[]; // ✅ array of related patient IDs
   appointmentType: AppointmentType | null;
   consent: any;
+  consents?: any; // array form returned by /api/booking/details
   pre_consultation: any;
   payment_status: any;
   selectedService: any;
