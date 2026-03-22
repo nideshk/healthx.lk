@@ -11,7 +11,9 @@ import { toast } from "sonner";
 import { CheckCircle, XCircle, AlertCircle, ChevronDown } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 
 interface Props {
   nextStep: (opts?: { override?: Partial<AppointmentFormInputs> }) => void;
@@ -24,6 +26,33 @@ const ConsentFormStep = forwardRef(
   ({ nextStep, prevStep, updateData, bookingData }: Props, ref) => {
     const t = useTranslations("consentForm");
     const router = useRouter();
+    const locale = useLocale();
+    const isSi = locale === "si";
+
+    const [privacyContent, setPrivacyContent] = useState<string>("");
+    const [telehealthContent, setTelehealthContent] = useState<string>("");
+    const [refundContent, setRefundContent] = useState<string>("");
+
+    useEffect(() => {
+      const fetchContent = async () => {
+        try {
+            const [privacyRes, telehealthRes, refundRes] = await Promise.all([
+                fetch(isSi ? '/content/privacy-si.md' : '/content/privacy-en.md'),
+                fetch(isSi ? '/content/telehealth-si.md' : '/content/telehealth-en.md'),
+                fetch(isSi ? '/content/refund-si.md' : '/content/refund-en.md')
+            ]);
+            const privacyText = await privacyRes.text();
+            const telehealthText = await telehealthRes.text();
+            const refundText = await refundRes.text();
+            setPrivacyContent(privacyText);
+            setTelehealthContent(telehealthText);
+            setRefundContent(refundText);
+        } catch (error) {
+            console.error("Failed to load markdown policies:", error);
+        }
+      };
+      fetchContent();
+    }, [isSi]);
 
     const [consent, setConsent] = useState({
       telehealth: bookingData?.consent?.telehealth || false,
@@ -33,9 +62,11 @@ const ConsentFormStep = forwardRef(
     const [showDeclineModal, setShowDeclineModal] = useState(false);
     const [telehealthRead, setTelehealthRead] = useState(false);
     const [termsRead, setTermsRead] = useState(false);
+    const [refundRead, setRefundRead] = useState(false);
 
     const telehealthRef = useRef<HTMLDivElement>(null);
     const termsRef = useRef<HTMLDivElement>(null);
+    const refundRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
       const checkScrollable = (ref: React.RefObject<HTMLDivElement | null>, setter: (v: boolean) => void) => {
@@ -45,6 +76,7 @@ const ConsentFormStep = forwardRef(
       };
       checkScrollable(telehealthRef, setTelehealthRead);
       checkScrollable(termsRef, setTermsRead);
+      checkScrollable(refundRef, setRefundRead);
     }, []);
 
     useImperativeHandle(ref, () => ({
@@ -129,7 +161,8 @@ const ConsentFormStep = forwardRef(
                   read: telehealthRead,
                   setter: setTelehealthRead,
                   checked: consent.telehealth,
-                  content: t("telehealthContent"),
+                  content: "",
+                  noCheckbox: false,
                 },
                 {
                   id: "terms",
@@ -138,7 +171,18 @@ const ConsentFormStep = forwardRef(
                   read: termsRead,
                   setter: setTermsRead,
                   checked: consent.terms,
-                  content: t("termsContent"),
+                  content: "",
+                  noCheckbox: false,
+                },
+                {
+                  id: "refund",
+                  title: isSi ? "මුදල් ආපසු ගෙවීමේ ප්‍රතිපත්තිය" : "Refund Policy",
+                  ref: refundRef,
+                  read: refundRead,
+                  setter: setRefundRead,
+                  checked: false, // Visual default since there's no checkbox toggle
+                  content: "",
+                  noCheckbox: true,
                 },
               ].map((section) => (
                 <div key={section.id} className={`group bg-white border-2 rounded-2xl transition-all duration-300 ${section.checked ? 'border-blue-500 shadow-md' : 'border-slate-200'}`}>
@@ -161,9 +205,53 @@ const ConsentFormStep = forwardRef(
                         onScroll={() => handleScroll(section.ref, section.setter)}
                         className="h-80 overflow-y-auto bg-slate-50 rounded-xl p-5 text-sm leading-relaxed text-slate-600 border border-slate-100 scroll-smooth custom-scrollbar"
                       >
-                        <div className="whitespace-pre-wrap space-y-4">
-                          {section.content}
+                        <div className={section.id !== 'terms' && section.id !== 'telehealth' && section.id !== 'refund' ? 'whitespace-pre-wrap space-y-4' : ''}>
+                          {section.id === "terms" || section.id === "telehealth" || section.id === "refund" ? (
+                              (section.id === "terms" ? privacyContent : section.id === "telehealth" ? telehealthContent : refundContent) ? (
+                                  <ReactMarkdown
+                                      rehypePlugins={[rehypeRaw]}
+                                      components={{
+                                          h2: ({ node, id, children, ...props }: any) => {
+                                              const headingId = id || node?.properties?.id || props.id;
+                                              return (
+                                                  <h2 id={headingId} className="text-[15px] font-extrabold text-slate-900 mt-6 mb-3 uppercase tracking-tight">
+                                                      {children}
+                                                  </h2>
+                                              );
+                                          },
+                                          p: ({ node, children, ...props }: any) => {
+                                              return (
+                                                  <div className="mb-4 text-slate-600 leading-relaxed text-[13px]">
+                                                      {children}
+                                                  </div>
+                                              );
+                                          },
+                                          ul: ({ node, children, ...props }: any) => (
+                                              <ul className="pl-6 list-disc mb-4 space-y-1.5 text-slate-600 font-medium text-[13px]">
+                                                  {children}
+                                              </ul>
+                                          ),
+                                          strong: ({ node, children, ...props }: any) => (
+                                              <strong className="font-bold text-slate-900">
+                                                  {children}
+                                              </strong>
+                                          )
+                                      }}
+                                  >
+                                      {section.id === "terms" ? privacyContent : section.id === "telehealth" ? telehealthContent : refundContent}
+                                  </ReactMarkdown>
+                              ) : (
+                                  <div className="animate-pulse space-y-4">
+                                      <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                                      <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                                      <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                                  </div>
+                              )
+                          ) : (
+                              section.content
+                          )}
                         </div>
+
                       </div>
 
                       {!section.read && (
@@ -173,20 +261,22 @@ const ConsentFormStep = forwardRef(
                       )}
                     </div>
 
-                    <label className={`flex items-center gap-3 mt-5 p-3 rounded-lg cursor-pointer transition-colors ${!section.read ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50'}`}>
-                      <div className="relative flex items-center">
-                        <input
-                          type="checkbox"
-                          disabled={!section.read}
-                          checked={section.checked}
-                          onChange={(e) => setConsent(p => ({ ...p, [section.id]: e.target.checked }))}
-                          className="w-6 h-6 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer disabled:cursor-not-allowed"
-                        />
-                      </div>
-                      <span className={`text-sm font-semibold ${section.checked ? 'text-blue-700' : 'text-slate-600'}`}>
-                        {t("agreeText", { section: section.title })}
-                      </span>
-                    </label>
+                    {!section.noCheckbox && (
+                        <label className={`flex items-center gap-3 mt-5 p-3 rounded-lg cursor-pointer transition-colors ${!section.read ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50'}`}>
+                          <div className="relative flex items-center">
+                            <input
+                              type="checkbox"
+                              disabled={!section.read}
+                              checked={section.checked}
+                              onChange={(e) => setConsent(p => ({ ...p, [section.id]: e.target.checked }))}
+                              className="w-6 h-6 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer disabled:cursor-not-allowed"
+                            />
+                          </div>
+                          <span className={`text-sm font-semibold ${section.checked ? 'text-blue-700' : 'text-slate-600'}`}>
+                            {t("agreeText", { section: section.title })}
+                          </span>
+                        </label>
+                    )}
                   </div>
                 </div>
               ))}
