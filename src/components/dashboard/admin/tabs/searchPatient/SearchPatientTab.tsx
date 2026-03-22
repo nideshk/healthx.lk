@@ -21,15 +21,7 @@ export interface AdminAppointment {
   category: "upcoming" | "ongoing" | "previous" | "cancelled";
 }
 
-interface SearchPatientTabProps {
-  search: string;
-  onSearchChange: (v: string) => void;
-  patients?: Patient[];
-  loading?: boolean;
-  selectedPatient: Patient | null;
-  onSelectPatient: (p: Patient) => void;
-  onBackToDashboard: () => void;
-}
+interface SearchPatientTabProps {}
 
 // Global Time Formatter
 const formatGlobalTime = (timeStr: string) => {
@@ -48,21 +40,18 @@ const formatGlobalTime = (timeStr: string) => {
   }
 };
 
-const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
-  search,
-  onSearchChange,
-  patients: initialPatients = [],
-  loading: initialLoading = false,
-  selectedPatient,
-  onSelectPatient,
-  onBackToDashboard,
-}) => {
+const SearchPatientTab: React.FC<SearchPatientTabProps> = () => {
+  const [search, setSearch] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
 
   // Local state management
-  const [localPatients, setLocalPatients] = useState<any[]>([]);
-  const [localLoading, setLocalLoading] = useState(initialLoading);
+  const [localPatients, setLocalPatients] = useState<Patient[]>([]);
+  const [localLoading, setLocalLoading] = useState(false);
+
+  // Track last fetched params to avoid redundant calls
+  const lastParamsRef = useRef({ search: null as string | null, page: 1, limit: 10 });
 
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,13 +66,7 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync local state ONLY when initialPatients changes from parent and we are on page 1
-  useEffect(() => {
-    if (initialPatients.length > 0 && currentPage === 1 && !search) {
-      setLocalPatients(initialPatients);
-    }
-    setLocalLoading(initialLoading);
-}, [initialPatients, initialLoading, currentPage, search]);
+  // Sync local state logic removed (initialPatients etc. are gone)
 
 
   /* -------------------------------------------------------------------------- */
@@ -131,7 +114,12 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
     const result = await res.json();
 
     if (result.data) {
-      setLocalPatients(result.data);
+      const mapped: Patient[] = result.data.map((p: any) => ({
+        ...p,
+        full_name: p.full_name || p.name || "",
+        patientId: p.id?.slice(0, 6).toUpperCase() || "",
+      }));
+      setLocalPatients(mapped);
 
       const meta = result.meta || {};
       const totalCount = meta.total || 0;
@@ -155,30 +143,30 @@ const SearchPatientTab: React.FC<SearchPatientTabProps> = ({
 };
 
 useEffect(() => {
+  let isMounted = true;
   const runFetch = async () => {
-    // Case 1: empty search → normal listing
-    if (!debouncedSearch) {
-      await fetchPatientList(currentPage, "");
+    // Only search when length is 4 or more
+    const isSearchMode = debouncedSearch && debouncedSearch.length >= 4;
+    const searchToFetch = isSearchMode ? debouncedSearch : "";
+    const pageToFetch = isSearchMode ? 1 : currentPage;
+
+    // Avoid redundant fetch if same search & page/limit
+    if (
+      lastParamsRef.current.search === searchToFetch &&
+      lastParamsRef.current.page === pageToFetch &&
+      lastParamsRef.current.limit === limit
+    ) {
       return;
     }
 
-    // Case 2: search length less than 4 → do nothing
-    if (debouncedSearch.length < 4) {
-      setLocalPatients([]);
-      return;
+    if (isMounted) {
+      await fetchPatientList(pageToFetch, searchToFetch);
+      lastParamsRef.current = { search: searchToFetch, page: pageToFetch, limit };
     }
-
-    // Case 3: valid search
-    // Always force page = 1 for search
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-      return; // wait for next render
-    }
-
-    await fetchPatientList(1, debouncedSearch);
   };
 
   runFetch();
+  return () => { isMounted = false; };
 }, [debouncedSearch, currentPage, limit]);
 
   useEffect(() => {
@@ -335,7 +323,7 @@ useEffect(() => {
         patient={selectedPatient}
         appointments={appointments}
         loadingAppointments={loadingAppointments}
-        onBack={onBackToDashboard}
+        onBack={() => setSelectedPatient(null)}
       />
     );
   }
@@ -376,7 +364,7 @@ useEffect(() => {
               <Input
                 placeholder="Search by name, email, or phone"
                 value={search}
-                onChange={(e) => onSearchChange(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
           </div>
@@ -399,7 +387,7 @@ useEffect(() => {
                       <button
                         type="button"
                         className="text-blue-600 font-semibold text-left hover:underline"
-                        onClick={() => onSelectPatient(p)}
+                        onClick={() => setSelectedPatient(p)}
                       >
                         {p.full_name || p.name}
                       </button>

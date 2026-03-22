@@ -81,7 +81,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
 
   // Local state for all fields required by the API
   const [formData, setFormData] = useState({
-    full_name: patient.full_name || "",
+    full_name: patient.full_name || (patient as any).name || "",
     dob: patient.dob || "",
     gender: patient.gender || "",
     allergies: Array.isArray(patient.allergies)
@@ -206,7 +206,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
         <CardBody className="flex flex-col md:flex-row md:items-center md:justify-between bg-blue-50 rounded-xl">
           <div className="space-y-1">
             <div className="text-lg font-semibold text-slate-900">
-              {isEditing ? formData.full_name : patient.full_name}
+              {isEditing ? formData.full_name : (patient.full_name || (patient as any).name)}
             </div>
             <div className="flex flex-wrap gap-6 text-xs text-slate-700">
               <DetailLine label="Patient ID" value={patient.id} />
