@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
 const AuthContext = createContext<any>(null);
@@ -8,54 +8,68 @@ const AuthContext = createContext<any>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const fetchRef = useRef(false);
+    const fetchPromiseRef = useRef<Promise<any> | null>(null);
+    const userRef = useRef(user);
+    useEffect(() => {
+        userRef.current = user;
+    }, [user]);
 
-    const fetchMe = async (showLoader = true) => {
-        if (fetchRef.current) return;
-        fetchRef.current = true;
+    const fetchMe = useCallback(async (showLoader = true) => {
+        if (fetchPromiseRef.current) return fetchPromiseRef.current;
 
-        if (showLoader) setLoading(true);
+        const p = (async () => {
+            // Only show loader if we don't have a user yet to prevent flicker on refresh
+            if (showLoader && !userRef.current) setLoading(true);
 
-        try {
-            const { data } = await supabaseBrowser.auth.getSession();
-            const token = data.session?.access_token;
+            try {
+                const { data } = await supabaseBrowser.auth.getSession();
+                const session = data.session;
+                const token = session?.access_token;
 
-            if (!token) {
-                setUser(null);
-                setLoading(false);
+                if (!token) {
+                    setUser(null);
+                    setLoading(false);
+                    return null;
+                }
+
+                const res = await fetch('/api/auth/me', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (!res.ok) {
+                    setUser(null);
+                    setLoading(false);
+                    return null;
+                }
+
+                const json = await res.json();
+                setUser(json.user);
+                return json.user;
+            } catch (err) {
+                console.error("Auth fetch failed:", err);
                 return null;
-            }
-
-            const res = await fetch('/api/auth/me', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (!res.ok) {
-                setUser(null);
+            } finally {
                 setLoading(false);
-                return null;
+                fetchPromiseRef.current = null;
             }
+        })();
 
-            const json = await res.json();
-            setUser(json.user);
-            setLoading(false);
-            return json.user;
-        } finally {
-            fetchRef.current = false;
-        }
-    };
+        fetchPromiseRef.current = p;
+        return p;
+    }, []); // No dependencies
 
     useEffect(() => {
-        // initial load only
+        // initial load
         fetchMe(true);
 
         const {
             data: { subscription },
         } = supabaseBrowser.auth.onAuthStateChange((event) => {
             if (event === "SIGNED_IN") {
-                fetchMe(true);
+                // If we already have a user, do a silent refresh
+                fetchMe(false);
             } else if (event === "TOKEN_REFRESHED") {
                 fetchMe(false);
             }
@@ -67,10 +81,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [fetchMe]);
+
+    const contextValue = useMemo(() => ({
+        user,
+        loading,
+        refreshUser: fetchMe
+    }), [user, loading, fetchMe]);
 
     return (
-        <AuthContext.Provider value={{ user, loading, refreshUser: fetchMe }}>
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     );
