@@ -52,13 +52,39 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
 }) => {
   const t = useTranslations("paymentUI");
   console.log("booking data", bookingData);
-  const consent = bookingData?.consent ?? {
-    telehealth: false,
-    terms: false,
-  };
+  const consent = (() => {
+    const raw = bookingData?.consent ?? bookingData?.consents;
+    if (Array.isArray(raw)) {
+      // From /api/booking/details, consents is an array
+      const first = raw[0];
+      return { telehealth: first?.telehealth ?? false, terms: first?.terms ?? false };
+    }
+    return raw ?? { telehealth: false, terms: false };
+  })();
   const doctor = bookingData.selectedDoctor;
   const type = bookingData.appointmentType;
   const service = bookingData.selectedService;
+  
+  const normalizePre = (pre: any) => {
+    if (!pre) return { concern: null, outcome: null, duration: null, referral: null };
+    if (pre.note) {
+      // Patient flow structure
+      return {
+        concern: pre.note?.concern ?? null,
+        outcome: pre.note?.outcome ?? null,
+        duration: pre.note?.duration ?? null,
+        referral: pre.referral ?? null,
+      };
+    }
+    // Admin flow structure
+    return {
+      concern: pre.concern ?? null,
+      outcome: pre.goal ?? null,    
+      duration: pre.duration ?? null,
+      referral: pre.referral ?? null,
+    };
+  };
+  const preConsult = normalizePre(bookingData?.pre_consultation);
 
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
@@ -144,7 +170,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                   }
                   <div>
                     <p className="text-lg font-semibold">
-                      {doctor?.name}{" "}
+                      {doctor?.full_name || doctor?.name}{" "}
                       <span className="text-sm">
                         {doctor?.qualification}
                       </span>
@@ -260,7 +286,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                   <div>
                     <p className="text-xs font-bold text-gray-400 uppercase">Primary Concern / Symptoms</p>
                     <p className="text-gray-900 mt-1 font-medium leading-relaxed">
-                      {bookingData?.pre_consultation?.note?.concern || "No specific concern provided."}
+                      {preConsult.concern || "No specific concern provided."}
                     </p>
                   </div>
                 </div>
@@ -275,7 +301,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                   <div>
                     <p className="text-xs font-bold text-gray-400 uppercase">Desired Outcome</p>
                     <p className="text-gray-900 mt-1 font-medium leading-relaxed">
-                      {bookingData?.pre_consultation?.note?.outcome || "No specific outcome mentioned."}
+                      {preConsult.outcome || "No specific outcome mentioned."}
                     </p>
                   </div>
                 </div>
@@ -288,7 +314,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                   <div>
                     <p className="text-xs font-bold text-gray-400 uppercase">Desired Outcome</p>
                     <p className="text-gray-900 mt-1 font-medium leading-relaxed">
-                      {bookingData?.pre_consultation?.note?.duration || "No specific duration mentioned."}
+                      {preConsult.duration || "No specific duration mentioned."}
                     </p>
                   </div>
 
@@ -302,7 +328,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                       <span className="text-sm font-medium">How did you hear about us?</span>
                     </div>
                     <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
-                      {bookingData?.pre_consultation?.referral}
+                      {preConsult.referral}
                     </span>
                   </div>
                 </div>

@@ -36,11 +36,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch the related data separately
-    const [patientRes, practitionerRes, typeRes, consentsRes] = await Promise.all([
+    const [patientRes, practitionerRes, typeRes, consentsRes, preConsultRes] = await Promise.all([
       supabaseAdmin.from("patients").select("full_name, email, contact_number, address").eq("id", appt.patient_id).maybeSingle(),
-      supabaseAdmin.from("practitioners").select("id, full_name, profile_bio").eq("id", appt.practitioner_id).maybeSingle(),
+      supabaseAdmin.from("practitioners").select("id, full_name, profile_bio, specialization").eq("id", appt.practitioner_id).maybeSingle(),
       supabaseAdmin.from("appointment_type").select("id, name, base_fee, duration_mins").eq("id", appt.appointment_type_id).maybeSingle(),
-      supabaseAdmin.from("consents").select('telehealth, terms').eq('appointment_id', appt.id)
+      supabaseAdmin.from("consents").select('telehealth, terms').eq('appointment_id', appt.id),
+      supabaseAdmin.from("preconsult_responses").select('raw_payload').eq('appointment_id', appt.id).maybeSingle()
     ]);
 
     const formattedData = {
@@ -56,7 +57,8 @@ export async function GET(request: NextRequest) {
       consents: consentsRes.data,
       consultation_fee: appt?.consultation_fee,
       platform_fee: appt?.platform_fee,
-      selectedAttendees: []
+      selectedAttendees: [],
+      pre_consultation: preConsultRes.data?.raw_payload ?? null
     };
 
     await auditLog({
