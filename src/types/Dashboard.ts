@@ -24,6 +24,12 @@ export type Patient = {
   city?: string;
   country?: string;
   state?: string;
+  name?: string;
+  phone?: string;
+  government_id?: {
+    type: string;
+    number: string;
+  };
 };
 
 export type PatientDetailTab =
