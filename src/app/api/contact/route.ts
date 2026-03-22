@@ -1,29 +1,24 @@
-import nodemailer from "nodemailer";
+import { sendEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
     try {
         const { email, phone, concern } = await req.json();
 
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
-
-        await transporter.sendMail({
-            from: process.env.SMTP_FROM,
-            to: "anirudh.kulkarni.dev@gmail.com",
+        await sendEmail({
+            to: "noreply@clinecxa.lk",
             subject: "New Contact Us Message",
-            text: `
-Email: ${email}
-Phone: ${phone}
-
-Concern:
-${concern}
-      `,
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h2 style="color: #007bff;">New Contact Us Message</h2>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Phone:</strong> ${phone}</p>
+                    <p><strong>Concern:</strong></p>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        ${concern.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            `,
         });
 
         return NextResponse.json({ success: true });
