@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized: Ownership mismatch." }, { status: 403 });
         }
 
-        // const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
-        const formattedAmount = "50.00"; // Changed this for testing as webxpay doesn't support large amounts during testing
+        const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
+        // const formattedAmount = "50.00"; // Changed this for testing as webxpay doesn't support large amounts during testing
         const orderID = appointment_id;
 
         // 2. Upsert Transaction
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         });
 
         const publicKey = process.env.WEBXPAY_PUBLIC_KEY;
-        
+
         const cleanPublicKey = publicKey?.split('\n').map(line => line.trim()).join('\n');
         const inputToEncrypt = `${orderID}|${formattedAmount}`;
 
