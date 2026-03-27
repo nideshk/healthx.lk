@@ -183,7 +183,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         selectedCurrency,
         setCurrency,
         currencies,
-        sortedCurrencies, // Exposed for convenience
+        sortedCurrencies,
         convert,
         format,
         isLoading,

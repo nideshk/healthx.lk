@@ -44,10 +44,7 @@ const AdminDashboard: React.FC = () => {
   const [profileRole, setProfileRole] = useState("Administrator");
   const [profileEmail, setProfileEmail] = useState("");
 
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [search, setSearch] = useState("");
-  const [loadingPatients, setLoadingPatients] = useState(false); // ✅ Added loading state
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
 
   // Fetch Admin Profile
   useEffect(() => {
@@ -69,62 +66,9 @@ const AdminDashboard: React.FC = () => {
     fetchMe();
   }, []);
 
-  // Fetch Patients Logic
-  useEffect(() => {
-    if (activeMenu !== "searchPatient") return;
+  // Patient logic moved to SearchPatientTab
 
-    const fetchPatients = async () => {
-      // Trigger fetch if search is empty (initial load) OR >= 3 characters
-      if (search.length > 0 && search.length < 3) return;
 
-      setLoadingPatients(true);
-      try {
-        const params = new URLSearchParams();
-        params.set("page", "1");
-        params.set("limit", "20");
-
-        if (search.trim().length >= 3) {
-          params.set("q", search.trim());
-        }
-
-        const res = await authFetch(`/api/patient?${params.toString()}`, { credentials: "include" });
-        if (!res.ok) throw new Error("Failed to fetch patients");
-
-        const json = await res.json();
-        const mapped: Patient[] = (json.data || []).map((p: any) => ({
-          id: p.id,
-          patientId: p.id.slice(0, 6).toUpperCase(),
-          name: p.full_name,
-          dob: p.dob ?? "-",
-          age: calculateAgeFromDob(p.dob),
-          gender: p.gender ?? "-",
-          email: p.email,
-          phone: p.contact_number,
-          addressLine1: p.address ?? "",
-          city: p.city ?? "",
-          country: p.country ?? "",
-          consentGiven: false,
-        }));
-
-        setPatients(mapped);
-      } catch (err) {
-        console.error(err);
-        setPatients([]);
-      } finally {
-        setLoadingPatients(false);
-      }
-    };
-
-    fetchPatients();
-  }, [search, activeMenu]);
-
-  // Reset state on tab switch
-  useEffect(() => {
-    if (activeMenu === "searchPatient") {
-      setSearch("");
-      setSelectedPatient(null);
-    }
-  }, [activeMenu]);
 
   const menuComponent = (
     <DashboardMenuCard
@@ -154,15 +98,7 @@ const AdminDashboard: React.FC = () => {
           {activeMenu === "home" && <HomeTab />}
           {activeMenu === "searchClinician" && <SearchClinicianTab />}
           {activeMenu === "searchPatient" && (
-            <SearchPatientTab
-              search={search}
-              onSearchChange={setSearch}
-              patients={patients}
-              loading={loadingPatients}
-              selectedPatient={selectedPatient}
-              onSelectPatient={setSelectedPatient}
-              onBackToDashboard={() => setSelectedPatient(null)}
-            />
+            <SearchPatientTab />
           )}
           {activeMenu === "addClinician" && <AddClinicianTab />}
           {activeMenu === "manageAdmins" && <ManageAdminsTab />}
