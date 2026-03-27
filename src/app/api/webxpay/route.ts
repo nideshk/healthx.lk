@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
         });
 
         const publicKey = process.env.WEBXPAY_PUBLIC_KEY;
-
-        const cleanPublicKey = publicKey?.split('\n').map(line => line.trim()).join('\n');
+        const formattedKey = publicKey?.replace(/\\n/g, '\n');
+        const cleanPublicKey = formattedKey?.split('\n').map(line => line.trim()).filter(line => line).join('\n');
         const inputToEncrypt = `${orderID}|${formattedAmount}`;
 
         const encryptedPayment = crypto.publicEncrypt(
