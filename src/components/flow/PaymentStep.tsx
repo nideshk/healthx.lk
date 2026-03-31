@@ -162,8 +162,6 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         }
       }
 
-
-
       updateData({
         payment_status: "completed",
         appointment_id: appointmentId,
@@ -180,7 +178,9 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
     const handlePayment = async (payload: any) => {
       if (isPaymentProcessing || isVerifying) return;
 
-      if (typeof window === "undefined" || !window.payhere) {
+      const provider = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER || "webxpay";
+
+      if (provider === "payhere" && (typeof window === "undefined" || !window.payhere)) {
         toast.error(t("errors.paymentLoading"));
         return;
       }
@@ -223,14 +223,14 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
         appointmentIdRef.current = currentAppointmentId;
 
-        const payRes = await authFetch("/api/payhere", {
+        const payRes = await authFetch(provider === "payhere" ? "/api/payhere" : "/api/webxpay", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             first_name:
               user?.profile?.first_name || bookingData.fullName?.split(" ")[0],
             last_name:
-              user?.profile?.last_name || bookingData.fullName?.split(" ")[1],
+              user?.profile?.last_name || bookingData.fullName?.split(" ").slice(1).join(" ") || "Lastname",
             email: user?.user?.email || bookingData.email,
             phone: user?.phone || bookingData.phone,
             address: bookingData.address || "Default",
@@ -250,78 +250,89 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           return;
         }
 
-        const { payment } = await payRes.json();
-        mainLayout?.classList.add(
-          "blur-md",
-          "brightness-75",
-          "pointer-events-none",
-        );
+        if (provider === "webxpay") 
+        {
+          const responseData = await payRes.json();
 
-        // Payment verification logic
-        const verifyPayment = async () => {
-          try {
-            const res = await authFetch(`/api/booking/check-status?appointmentId=${currentAppointmentId}`);
-            if (!res.ok) return false;
-            const data = await res.json();
-            if (data.status === 'confirmed' && data.payment_status === 'paid') {
-              return true;
+          const { payment_fields } = responseData;
+
+          const webxpayForm = document.createElement("form");
+          webxpayForm.method = "POST";
+
+          const isProd = process.env.NEXT_PUBLIC_ENVIRONMENT === "production";
+
+          webxpayForm.action = isProd ? "https://webxpay.com/index.php?route=checkout/billing" : "https://stagingxpay.info/index.php?route=checkout/billing";
+          
+          const fields = {
+            ...payment_fields
+          };
+
+          Object.entries(fields).forEach(([name, value]) => {
+            if (value !== undefined && value !== null) {
+              const input = document.createElement("input");
+              input.type = "hidden";
+              input.name = name;
+              input.value = value.toString();
+              webxpayForm.appendChild(input);
             }
-            return false;
-          } catch (err) {
-            console.error("Polling error:", err);
-            return false;
-          }
-        }
+          });
 
-        window.payhere.onCompleted = async () => {
+          document.body.appendChild(webxpayForm);
+          webxpayForm.submit();
+          return;
+        } 
+        else 
+        {
+          // PayHere
+          const { payment } = await payRes.json();
+          mainLayout?.classList.add("blur-md", "brightness-75", "pointer-events-none");
 
-          setIsPaymentProcessing(false);
-          mainLayout?.classList.remove(
-            "blur-md",
-            "brightness-75",
-            "pointer-events-none",
-          );
-          setIsVerifying(true);
-
-          let attempts = 0;
-          let maxAttempts = 15;
-
-          const checkInterval = setInterval(async () => {
-            attempts++;
-
-            const isVerified = await verifyPayment();
-
-            if (isVerified) {
-              clearInterval(checkInterval);
-              await handlePostBookingActions(currentAppointmentId!);
-              setIsVerifying(false);
-              setPaymentDone(true);
-              toast.success("Payment verified! Your appointment is successfully booked.");
-            }
-            else if (attempts >= maxAttempts) {
+          const verifyPayment = async () => {
+            try {
               const res = await authFetch(`/api/booking/check-status?appointmentId=${currentAppointmentId}`);
+              if (!res.ok) return false;
               const data = await res.json();
-              releaseAppointmentSlot(currentAppointmentId, "PAYMENT_FAILED");
-              clearInterval(checkInterval);
-              setIsVerifying(false);
-              toast.error("Booking cancelled, Payment could not be verified.");
-              router.push("/dashboard/appointment");
+              return data.status === 'confirmed' && data.payment_status === 'paid';
+            } catch (err) {
+              console.error("Polling error:", err);
+              return false;
             }
-          }, 2000);
-        };
+          };
 
-        window.payhere.onDismissed = () => {
-          mainLayout?.classList.remove(
-            "blur-md",
-            "brightness-75",
-            "pointer-events-none",
-          );
-          setIsPaymentProcessing(false);
-          releaseAppointmentSlot(currentAppointmentId, "PAYMENT_DISMISSED");
-          toast.error(t("errors.cancelled"));
-        };
+          window.payhere.onCompleted = async () => {
+            setIsPaymentProcessing(false);
+            mainLayout?.classList.remove("blur-md", "brightness-75", "pointer-events-none");
+            setIsVerifying(true);
 
-        window.payhere.startPayment(payment);
+            let attempts = 0;
+            let maxAttempts = 15;
+            const checkInterval = setInterval(async () => {
+              attempts++;
+              const isVerified = await verifyPayment();
+              if (isVerified) {
+                clearInterval(checkInterval);
+                await handlePostBookingActions(currentAppointmentId!);
+                setIsVerifying(false);
+                setPaymentDone(true);
+                toast.success("Payment verified! Your appointment is successfully booked.");
+              } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                setIsVerifying(false);
+                toast.error("Booking cancelled, Payment could not be verified.");
+                router.push("/dashboard/appointment");
+              }
+            }, 2000);
+          };
+
+          window.payhere.onDismissed = () => {
+            mainLayout?.classList.remove("blur-md", "brightness-75", "pointer-events-none");
+            setIsPaymentProcessing(false);
+            releaseAppointmentSlot(currentAppointmentId, "PAYMENT_DISMISSED");
+            toast.error(t("errors.cancelled"));
+          };
+
+          window.payhere.startPayment(payment);
+        }
       } catch {
         setIsPaymentProcessing(false);
         mainLayout?.classList.remove(
