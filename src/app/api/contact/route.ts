@@ -1,11 +1,11 @@
-import { sendEmail } from "@/lib/email";
+import { sendSupportEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
     try {
         const { email, phone, concern } = await req.json();
 
-        await sendEmail({
+        await sendSupportEmail({
             to: "noreply@clinecxa.lk",
             subject: "New Contact Us Message",
             html: `
