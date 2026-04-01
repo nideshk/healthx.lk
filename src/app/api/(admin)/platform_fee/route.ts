@@ -262,7 +262,7 @@ export async function PUT(req: NextRequest) {
   const results = [];
 
   for (const item of updatesArray) {
-    const { id, name, base_fee, max_attendee, extra_fee_per_attendee, platform_fee } =
+    const { id, name, description, duration_mins, base_fee, max_attendee, extra_fee_per_attendee, platform_fee } =
       item;
 
     if (!id) {
@@ -308,6 +308,8 @@ export async function PUT(req: NextRequest) {
       updateData.name = name.trim();
     }
 
+    if (description !== undefined) updateData.description = description;
+    if (duration_mins !== undefined) updateData.duration_mins = duration_mins;
     if (base_fee !== undefined) updateData.base_fee = base_fee;
     if (max_attendee !== undefined) updateData.max_attendee = max_attendee;
     if (extra_fee_per_attendee !== undefined)
