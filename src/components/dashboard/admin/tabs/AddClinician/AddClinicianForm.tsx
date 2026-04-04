@@ -262,7 +262,14 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
         experience_years: Number(form.experience_years),
         available_services: selectedAppointments.map(a => a.id),
         fees: selectedAppointments.reduce((acc: any, appt) => {
-          acc[appt.id] = { type: appt.name, fee: Number(appt.base_fee || 0) };
+          acc[appt.id] = {
+            type: appt.name,
+            fee: Number(appt.base_fee || 0),
+            platform_fee: Number(appt.platform_fee || 0),
+            duration_mins: Number(appt.duration_mins || 0),
+            max_attendee: Number(appt.max_attendee || 0),
+            extra_fee_per_attendee: Number(appt.extra_fee_per_attendee || 0),
+          };
           return acc;
         }, {}),
       };

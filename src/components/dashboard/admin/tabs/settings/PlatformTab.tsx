@@ -186,7 +186,6 @@ const PlatformTab: React.FC = () => {
               <th className="p-4 font-bold text-slate-700 border-b min-w-[200px]">Type Name</th>
               <th className="p-4 font-bold text-slate-700 border-b">Base Fee (LKR)</th>
               <th className="p-4 font-bold text-slate-700 border-b">Platform Fee (LKR)</th>
-              <th className="p-4 font-bold text-slate-700 border-b">Extra Fee/Atnd.</th>
               <th className="p-4 font-bold text-slate-700 border-b">Max Attendees</th>
               <th className="p-4 font-bold text-slate-700 border-b">Duration (min)</th>
               <th className="p-4 font-bold text-slate-700 border-b min-w-[250px]">Description</th>
@@ -204,23 +203,6 @@ const PlatformTab: React.FC = () => {
                 </td>
                 <td className="p-4 border-b">
                   <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 text-blue-700 font-bold" value={fee.platform_fee} onChange={(e) => updateFeeField(fee.id, "platform_fee", e.target.value === "" ? "" : Number(e.target.value))} />
-                </td>
-                <td className="p-4 border-b">
-                  {/* <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.extra_fee_per_attendee ?? 0} onChange={(e) => updateFeeField(fee.id, "extra_fee_per_attendee", e.target.value === "" ? "" : Number(e.target.value))} /> */}
-                  <input
-                    type="number"
-                    className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 disabled:bg-slate-100 disabled:text-slate-400"
-                    value={fee.max_attendee === 1 ? "" : fee.extra_fee_per_attendee ?? ""}
-                    disabled={fee.max_attendee === 1}
-                    onChange={(e) =>
-                      updateFeeField(
-                        fee.id,
-                        "extra_fee_per_attendee",
-                        e.target.value === "" ? "" : Number(e.target.value)
-                      )
-                    }
-                  />
-
                 </td>
                 <td className="p-4 border-b">
                   <input type="number" className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.max_attendee} onChange={(e) => updateFeeField(fee.id, "max_attendee", e.target.value === "" ? "" : Number(e.target.value))} />
@@ -255,8 +237,7 @@ const PlatformTab: React.FC = () => {
               <Input label="Base Fee" type="number" value={newType.base_fee?.toString()} onChange={(e) => setNewType({...newType, base_fee: Number(e.target.value)})} />
               <Input label="Platform Fee" type="number" value={newType.platform_fee?.toString()} onChange={(e) => setNewType({...newType, platform_fee: Number(e.target.value)})} />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <Input label="Extra Fee / Attendee" type="number" value={newType.extra_fee_per_attendee?.toString()} onChange={(e) => setNewType({...newType, extra_fee_per_attendee: Number(e.target.value)})} />
+            <div className="grid grid-cols-2 gap-4">
               <Input label="Max Attendees" type="number" value={newType.max_attendee?.toString()} onChange={(e) => setNewType({...newType, max_attendee: Number(e.target.value)})} />
               <Input label="Duration (mins)" type="number" value={newType.duration_mins?.toString()} onChange={(e) => setNewType({...newType, duration_mins: Number(e.target.value)})} />
             </div>

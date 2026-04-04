@@ -346,13 +346,16 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // 🔄 Sync name to all practitioners who use this appointment type
-    if (name !== undefined) {
-      await supabaseAdmin.rpc("sync_appointment_type_name_to_practitioners", {
-        target_type_id: id,
-        new_name: name.trim(),
-      });
-    }
+    // 🔄 Sync all metadata to practitioners who use this appointment type
+    await supabaseAdmin.rpc("sync_appointment_type_metadata_to_practitioners", {
+      target_type_id: id,
+      new_name: name !== undefined ? name.trim() : null,
+      new_platform_fee: platform_fee !== undefined ? platform_fee : null,
+      new_max_attendee: max_attendee !== undefined ? max_attendee : null,
+      new_duration_mins: duration_mins !== undefined ? duration_mins : null,
+      new_extra_fee:
+        extra_fee_per_attendee !== undefined ? extra_fee_per_attendee : null,
+    });
 
     results.push(data);
   }
