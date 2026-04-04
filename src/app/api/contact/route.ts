@@ -6,7 +6,7 @@ export async function POST(req: Request) {
         const { email, phone, concern } = await req.json();
 
         await sendSupportEmail({
-            to: "noreply@clinecxa.lk",
+            to: "support@clinecxa.lk",
             subject: "New Contact Us Message",
             html: `
                 <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">

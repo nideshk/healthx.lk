@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
   } = body;
 
   if (!name) {
-     await auditLog({
+    await auditLog({
       ...cnx,
       action: "FAILED",
       entityType: "ADMIN_USER",
@@ -243,16 +243,16 @@ export async function PUT(req: NextRequest) {
   const updatesArray = body?.updates;
 
   if (!Array.isArray(updatesArray) || updatesArray.length === 0) {
-      await auditLog({
-        ...cnx,
-        action: "FAILED",
-        entityType: "ADMIN_USER",
-        purpose: "operations",
-        source: "dashboard",
-        metadata: {
-          reason: "invalid_updates_array",
-        },
-      });
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "invalid_updates_array",
+      },
+    });
     return NextResponse.json(
       { success: false, message: "updates array is required" },
       { status: 400 }
@@ -346,6 +346,14 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    // 🔄 Sync name to all practitioners who use this appointment type
+    if (name !== undefined) {
+      await supabaseAdmin.rpc("sync_appointment_type_name_to_practitioners", {
+        target_type_id: id,
+        new_name: name.trim(),
+      });
+    }
+
     results.push(data);
   }
 
@@ -434,21 +442,20 @@ export async function DELETE(req: NextRequest) {
       })
       .eq("id", appointmentTypeId);
 
-    if (typeError) 
-      {
-        await auditLog({
-          ...cnx,
-          action: "FAILED",
-          entityType: "ADMIN_USER",
-          entityId: appointmentTypeId,
-          purpose: "operations",
-          source: "dashboard",
-          metadata: {
-            reason: "soft_delete_failed",
-          },
-        });
-        throw typeError;
-      }
+    if (typeError) {
+      await auditLog({
+        ...cnx,
+        action: "FAILED",
+        entityType: "ADMIN_USER",
+        entityId: appointmentTypeId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: {
+          reason: "soft_delete_failed",
+        },
+      });
+      throw typeError;
+    }
 
     // 2️⃣ Remove from practitioners (services + fees)
     await supabaseAdmin.rpc(
