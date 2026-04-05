@@ -713,7 +713,7 @@ export default function PractitionerRegisterPage() {
                     Supporting Document (Upload 1 Required)
                   </p>
                   <p className="text-xs text-gray-500 mb-4">
-                    To be updated to : Sri Lanka Medical Council Registration Certificate (Reflecting current registration)
+                    Sri Lanka Medical Council Registration Certificate (Reflecting current registration)
                   </p>
                   <input
                     type="file"
