@@ -23,6 +23,8 @@
     "form-data": "^4.0.4",
     "jsencrypt": "^3.5.4",
     "jsonwebtoken": "^9.0.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "localforage": "^1.10.0",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.544.0",
