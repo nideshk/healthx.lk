@@ -146,7 +146,7 @@ const ConsultationStep = forwardRef(
                   </div>
 
                   <h3 className={`text-xl font-bold mb-3 tracking-tight ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                    {locale === 'si' && service.sin_name ? (service.sin_name as string) : service.name}
+                    {locale === 'si' && service.sin_slug ? (service.sin_slug as string) : service.name}
                   </h3>
 
                   <p className={`text-sm font-medium leading-relaxed mb-8 line-clamp-3 ${isSelected ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -182,7 +182,7 @@ const ConsultationStep = forwardRef(
                   ? (() => {
                     const sel = services.find(s => s.id === selectedServiceId);
                     if (!sel) return t("selectServicePrompt");
-                    return locale === 'si' && sel.sin_name ? (sel.sin_name as string) : sel.name;
+                    return locale === 'si' && sel.sin_slug ? (sel.sin_slug as string) : sel.name;
                   })()
                   : t("selectServicePrompt")}
               </p>

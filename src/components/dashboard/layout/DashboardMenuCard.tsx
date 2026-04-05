@@ -13,7 +13,8 @@ export type DashboardMenuItemId =
   | "analytics"
   | "settings"
   | "coupons"
-  | "createAppointment";
+  | "createAppointment"
+  | "specialisations";
 
 export interface DashboardMenuItem {
   id: DashboardMenuItemId;

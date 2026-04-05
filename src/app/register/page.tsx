@@ -700,9 +700,8 @@ export default function PractitionerRegisterPage() {
                   />
                   <label
                     htmlFor="gov-id-upload"
-                    className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${
-                      governmentIdCount >= 2 ? "opacity-50 pointer-events-none" : ""
-                    }`}
+                    className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${governmentIdCount >= 2 ? "opacity-50 pointer-events-none" : ""
+                      }`}
                   >
                     Select File
                   </label>
@@ -714,7 +713,7 @@ export default function PractitionerRegisterPage() {
                     Supporting Document (Upload 1 Required)
                   </p>
                   <p className="text-xs text-gray-500 mb-4">
-                    Medical licenses, certificates, or letters of recommendation.
+                    To be updated to : Sri Lanka Medical Council Registration Certificate (Reflecting current registration)
                   </p>
                   <input
                     type="file"
@@ -729,9 +728,8 @@ export default function PractitionerRegisterPage() {
                   />
                   <label
                     htmlFor="support-upload"
-                    className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${
-                      supportingDocCount >= 1 ? "opacity-50 pointer-events-none" : ""
-                    }`}
+                    className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${supportingDocCount >= 1 ? "opacity-50 pointer-events-none" : ""
+                      }`}
                   >
                     Select File
                   </label>

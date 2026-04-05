@@ -10,12 +10,13 @@ import AddClinicianTab from "./tabs/AddClinician/AddClinician";
 import ManageAdminsTab from "./tabs/manageAdmin/ManageAdminsTab";
 import AnalyticsTab from "./tabs/analytics/AnalyticsTab";
 import SettingsTab from "./tabs/settings/SettingsTab";
+import SpecializationsTab from "./tabs/specializations/SpecializationsTab";
 import { Patient } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import CouponsTab from "./tabs/coupons/CouponsTab";
 import CreateAppointmentTab from "./tabs/createAppointment/CreateAppointmentTab";
 
-type AdminMenuId = "home" | "searchClinician" | "searchPatient" | "addClinician" | "manageAdmins" | "analytics" | "settings" | "coupons" | "createAppointment";
+type AdminMenuId = "home" | "searchClinician" | "searchPatient" | "addClinician" | "manageAdmins" | "analytics" | "settings" | "coupons" | "createAppointment" | "specialisations";
 
 const menuItems: DashboardMenuItem[] = [
   { id: "home", label: "Home" },
@@ -26,7 +27,8 @@ const menuItems: DashboardMenuItem[] = [
   { id: "analytics", label: "Analytics" },
   { id: "settings", label: "Settings" },
   { id: "coupons", label: "Coupons" },
-  { id: "createAppointment", label: "Create Appointment" }
+  { id: "createAppointment", label: "Create Appointment" },
+  { id: "specialisations", label: "Specializations" }
 ];
 
 const calculateAgeFromDob = (dob?: string | null): number => {
@@ -106,6 +108,7 @@ const AdminDashboard: React.FC = () => {
           {activeMenu === "settings" && <SettingsTab email={profileEmail} />}
           {activeMenu === "coupons" && <CouponsTab />}
           {activeMenu === "createAppointment" && <CreateAppointmentTab />}
+          {activeMenu === "specialisations" && <SpecializationsTab />}
         </div>
       </div>
     </DashboardShell>

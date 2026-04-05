@@ -246,7 +246,7 @@ const ServicePicker = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold text-slate-900 tracking-tight">
-                      {locale === 'si' ? s.sin_slug : s.name}
+                      {locale === 'si' && s.sin_slug ? s.sin_slug : s.name}
                     </h3>
                   </div>
 

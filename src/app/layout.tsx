@@ -14,7 +14,7 @@ import IdleLogoutProvider from "@/components/providers/IdleLogoutProvider";
 
 export const metadata: Metadata = {
   title: "clinecxa.lk",
-  description: "ClinicaXa is a telehealth platform that provides remote medical consultations and virtual care services.",
+  description: "Clinicxa is a telehealth platform that provides remote medical consultations and virtual care services.",
 };
 
 export default async function RootLayout({

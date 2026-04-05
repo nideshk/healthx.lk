@@ -19,12 +19,13 @@ import {
 } from 'lucide-react';
 import { AppointmentFormInputs, Doctor } from '@/types/FormType';
 import Loader from '@/components/atom/Loader/Loader';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import Price from '@/components/common/Price';
 
 const DoctorSelectionStep = forwardRef(
   ({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
     const t = useTranslations('doctorSelection');
+    const locale = useLocale();
 
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -139,7 +140,9 @@ const DoctorSelectionStep = forwardRef(
               <p className="text-sm text-slate-500 font-medium mt-1">
                 {t('subtitle')}{' '}
                 <span className="text-teal-600 font-bold">
-                  {bookingData.selectedService?.name}
+                  {locale === 'si' && bookingData.selectedService?.sin_slug 
+                    ? bookingData.selectedService.sin_slug 
+                    : bookingData.selectedService?.name}
                 </span>
               </p>
             </div>
