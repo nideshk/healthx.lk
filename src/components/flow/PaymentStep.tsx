@@ -250,8 +250,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           return;
         }
 
-        if (provider === "webxpay") 
-        {
+        if (provider === "webxpay") {
           const responseData = await payRes.json();
 
           const { payment_fields } = responseData;
@@ -259,10 +258,8 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           const webxpayForm = document.createElement("form");
           webxpayForm.method = "POST";
 
-          const isProd = process.env.NEXT_PUBLIC_ENVIRONMENT === "production";
+          webxpayForm.action = "https://webxpay.com/index.php?route=checkout/billing";
 
-          webxpayForm.action = isProd ? "https://webxpay.com/index.php?route=checkout/billing" : "https://stagingxpay.info/index.php?route=checkout/billing";
-          
           const fields = {
             ...payment_fields
           };
@@ -280,9 +277,8 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
           document.body.appendChild(webxpayForm);
           webxpayForm.submit();
           return;
-        } 
-        else 
-        {
+        }
+        else {
           // PayHere
           const { payment } = await payRes.json();
           mainLayout?.classList.add("blur-md", "brightness-75", "pointer-events-none");

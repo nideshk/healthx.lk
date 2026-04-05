@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         const publicDomain = NEXT_PUBLIC_BASE_URL || NGROK_URL || BASE_URL;
         const notifyUrl = `${publicDomain}${PAYHERE_NOTIFY_PATH}`;
         const payHerePayload = {
-            sandbox: process.env.NODE_ENV !== 'production',
+            sandbox: false,
             merchant_id: MERCHANT_ID,
             return_url: `${BASE_URL}${PAYHERE_RETURN_PATH}`,
             cancel_url: `${BASE_URL}${PAYHERE_CANCEL_PATH}`,
