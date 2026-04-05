@@ -12,6 +12,10 @@ import { Trash2 } from "lucide-react";
 interface FeeDetails {
   fee: number;
   type: string;
+  platform_fee?: number;
+  duration_mins?: number;
+  max_attendee?: number;
+  extra_fee_per_attendee?: number | null;
 }
 
 interface AvailablePricingType {
@@ -95,24 +99,24 @@ const PricingSettings: React.FC = () => {
       const updatedFees = { ...prev.fees };
       const removedService = updatedFees[feeId];
       if (!removedService) return prev;
-      
+
       delete updatedFees[feeId];
 
       // Note: We don't have full metadata for removed active fees in this simple response, 
       // but we add it to available types with default values if not already present.
       const alreadyAvailable = prev.available_pricing_types.find(a => a.appointment_type_id === feeId);
-      
+
       const newAvailablePricingTypes = [...prev.available_pricing_types];
       if (!alreadyAvailable) {
-          newAvailablePricingTypes.push({
-            appointment_type_id: feeId,
-            name: removedService.type,
-            base_fee: removedService.fee,
-            platform_fee: 0, 
-            duration_mins: 0,
-            max_attendee: 1,
-            extra_fee_per_attendee: null,
-          });
+        newAvailablePricingTypes.push({
+          appointment_type_id: feeId,
+          name: removedService.type,
+          base_fee: removedService.fee,
+          platform_fee: 0,
+          duration_mins: removedService.duration_mins || 0,
+          max_attendee: removedService.max_attendee || 1,
+          extra_fee_per_attendee: removedService.extra_fee_per_attendee || null,
+        });
       }
 
       return {
@@ -134,6 +138,10 @@ const PricingSettings: React.FC = () => {
         [service.appointment_type_id]: {
           fee: service.base_fee,
           type: service.name,
+          platform_fee: service.platform_fee,
+          duration_mins: service.duration_mins,
+          max_attendee: service.max_attendee,
+          extra_fee_per_attendee: service.extra_fee_per_attendee,
         },
       };
 
@@ -159,8 +167,12 @@ const PricingSettings: React.FC = () => {
       const cleanedFees = Object.entries(pricingData.fees).reduce(
         (acc, [key, value]) => {
           acc[key] = {
-              fee: value.fee,
-              type: value.type
+            fee: value.fee,
+            type: value.type,
+            platform_fee: value.platform_fee,
+            duration_mins: value.duration_mins,
+            max_attendee: value.max_attendee,
+            extra_fee_per_attendee: value.extra_fee_per_attendee,
           };
           return acc;
         },
@@ -223,12 +235,15 @@ const PricingSettings: React.FC = () => {
             <div className="overflow-x-auto">
               <div className="min-w-[600px]">
                 {/* Header */}
-                <div className="grid grid-cols-[2fr_1.5fr_0.5fr] gap-6 pb-3 border-b border-slate-200 mb-6 items-center px-2">
+                <div className="grid grid-cols-4 gap-6 pb-3 border-b border-slate-200 mb-6 items-center px-2">
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                     Appointment Type
                   </div>
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest text-left">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                     Base Fee (LKR)
+                  </div>
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                    Info
                   </div>
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">
                     Action
@@ -240,7 +255,7 @@ const PricingSettings: React.FC = () => {
                   {Object.entries(pricingData.fees).map(([feeId, details]) => (
                     <div
                       key={feeId}
-                      className="grid grid-cols-[2fr_1.5fr_0.5fr] gap-6 items-center py-4 px-2 hover:bg-slate-50 rounded-lg transition-colors group"
+                      className="grid grid-cols-4 gap-6 items-center py-4 px-2 hover:bg-slate-50 rounded-lg transition-colors group text-sm"
                     >
                       <div className="text-sm font-semibold text-slate-700">
                         {details.type}
@@ -256,7 +271,12 @@ const PricingSettings: React.FC = () => {
                           className="max-w-[160px] h-11 border-slate-200 focus:border-blue-400 focus:ring-blue-100"
                         />
                       </div>
-                      
+
+                      <div className="flex flex-col gap-1 text-[10px] text-slate-400 font-medium">
+                        <span className="bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{details.duration_mins} mins</span>
+                        <span className="bg-slate-50 px-2 py-0.5 rounded border border-slate-100">Max {details.max_attendee} Attendees</span>
+                      </div>
+
                       <div className="flex justify-center">
                         <button
                           onClick={() => removeFee(feeId)}

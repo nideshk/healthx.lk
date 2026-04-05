@@ -13,7 +13,7 @@ interface PlatformFee {
   duration_mins: number | "";
   base_fee: number | "";
   max_attendee: number | "";
-  extra_fee_per_attendee: number | "" ;
+  extra_fee_per_attendee: number | "";
   platform_fee: number | "";
 }
 
@@ -21,7 +21,7 @@ const PlatformTab: React.FC = () => {
   const [fees, setFees] = useState<PlatformFee[]>([]);
   const [platformLoading, setPlatformLoading] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
-  
+
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; typeId: string; typeName: string }>({
     isOpen: false,
     typeId: "",
@@ -46,7 +46,7 @@ const PlatformTab: React.FC = () => {
     try {
       const res = await authFetch("/api/platform_fee");
       if (!res.ok) {
-          throw new Error(`Failed to fetch platform fee: ${res.status}`);
+        throw new Error(`Failed to fetch platform fee: ${res.status}`);
       }
       const json = await res.json();
       if (json.success) setFees(json.data);
@@ -71,11 +71,11 @@ const PlatformTab: React.FC = () => {
         duration_mins: Number(f.duration_mins) || 0,
         max_attendee: Number(f.max_attendee) || 1,
         extra_fee_per_attendee:
-            f.max_attendee === 1 ||
+          f.max_attendee === 1 ||
             f.extra_fee_per_attendee === "" ||
             f.extra_fee_per_attendee === 0
-              ? null
-              : Number(f.extra_fee_per_attendee),      
+            ? null
+            : Number(f.extra_fee_per_attendee),
       }));
       const res = await authFetch("/api/platform_fee", {
         method: "PUT",
@@ -103,7 +103,7 @@ const PlatformTab: React.FC = () => {
     try {
       const payload = { ...newType };
       if (payload.extra_fee_per_attendee === 0) delete payload.extra_fee_per_attendee;
-      
+
       const res = await authFetch("/api/platform_fee", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -156,17 +156,17 @@ const PlatformTab: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-slate-900 mb-2">Confirm Deactivation</h3>
             <p className="text-sm text-slate-500 mb-6">
-              Are you sure you want to deactivate <span className="font-bold">"{deleteModal.typeName}"</span>? 
+              Are you sure you want to deactivate <span className="font-bold">"{deleteModal.typeName}"</span>?
               This appointment type will no longer be available for booking.
             </p>
             <div className="flex gap-3">
-              <button 
+              <button
                 onClick={() => setDeleteModal({ isOpen: false, typeId: "", typeName: "" })}
                 className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={confirmDelete}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition"
               >
@@ -178,7 +178,7 @@ const PlatformTab: React.FC = () => {
       )}
 
       <div className="text-sm font-semibold text-slate-900">Appointment Fees Configuration</div>
-      
+
       <div className="overflow-auto border border-slate-200 rounded-xl max-h-[550px] shadow-inner bg-slate-50/30">
         <table className="min-w-[1400px] w-full text-left text-sm border-collapse">
           <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
@@ -233,15 +233,15 @@ const PlatformTab: React.FC = () => {
         {isAddingNew && (
           <div className="bg-slate-50 p-6 rounded-xl space-y-4 mb-4 border border-slate-200 shadow-sm animate-in fade-in duration-300">
             <div className="grid grid-cols-3 gap-4">
-              <Input label="Name" placeholder="e.g. Specialists Consultation" value={newType.name} onChange={(e) => setNewType({...newType, name: e.target.value})} />
-              <Input label="Base Fee" type="number" value={newType.base_fee?.toString()} onChange={(e) => setNewType({...newType, base_fee: Number(e.target.value)})} />
-              <Input label="Platform Fee" type="number" value={newType.platform_fee?.toString()} onChange={(e) => setNewType({...newType, platform_fee: Number(e.target.value)})} />
+              <Input label="Name" placeholder="e.g. Specialists Consultation" value={newType.name} onChange={(e) => setNewType({ ...newType, name: e.target.value })} />
+              <Input label="Base Fee" type="number" value={newType.base_fee?.toString()} onChange={(e) => setNewType({ ...newType, base_fee: Number(e.target.value) })} />
+              <Input label="Platform Fee" type="number" value={newType.platform_fee?.toString()} onChange={(e) => setNewType({ ...newType, platform_fee: Number(e.target.value) })} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Max Attendees" type="number" value={newType.max_attendee?.toString()} onChange={(e) => setNewType({...newType, max_attendee: Number(e.target.value)})} />
-              <Input label="Duration (mins)" type="number" value={newType.duration_mins?.toString()} onChange={(e) => setNewType({...newType, duration_mins: Number(e.target.value)})} />
+              <Input label="Max Attendees" type="number" value={newType.max_attendee?.toString()} onChange={(e) => setNewType({ ...newType, max_attendee: Number(e.target.value) })} />
+              <Input label="Duration (mins)" type="number" value={newType.duration_mins?.toString()} onChange={(e) => setNewType({ ...newType, duration_mins: Number(e.target.value) })} />
             </div>
-            <Input label="Description" placeholder="Provide a brief overview..." value={newType.description} onChange={(e) => setNewType({...newType, description: e.target.value})} />
+            <Input label="Description" placeholder="Provide a brief overview..." value={newType.description} onChange={(e) => setNewType({ ...newType, description: e.target.value })} />
             <div className="flex justify-end gap-3 pt-2">
               <Button onClick={handleCreateNewType} className="px-10">Create Appointment Type</Button>
             </div>

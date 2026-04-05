@@ -55,16 +55,16 @@ export async function GET(req: NextRequest) {
   // 2️⃣ Must be superadmin
   if (!user?.admin || !["admin", "superadmin"].includes(user.admin.role)) {
     await auditLog({
-    ...cnx,
-    action: "FAILED_ACCESS",
-    entityType: "ADMIN_USER",
-    purpose: "operations",
-    source: "dashboard",
-    metadata: {
-      reason: "insufficient_role_fetch_admins",
-      role: user?.admin?.role,
-    },
-  });
+      ...cnx,
+      action: "FAILED_ACCESS",
+      entityType: "ADMIN_USER",
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "insufficient_role_fetch_admins",
+        role: user?.admin?.role,
+      },
+    });
 
     return NextResponse.json(
       { success: false, message: "Forbidden" },
