@@ -257,6 +257,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
           const webxpayForm = document.createElement("form");
           webxpayForm.method = "POST";
+          webxpayForm.setAttribute("referrerpolicy", "no-referrer-when-downgrade");
 
           webxpayForm.action = "https://webxpay.com/index.php?route=checkout/billing";
 
