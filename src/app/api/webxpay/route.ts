@@ -88,13 +88,17 @@ export async function POST(request: NextRequest) {
         });
 
         const publicKey = process.env.WEBXPAY_PUBLIC_KEY;
-        const formattedKey = publicKey?.replace(/\\n/g, '\n');
-        const cleanPublicKey = formattedKey?.split('\n').map(line => line.trim()).filter(line => line).join('\n');
+        if (!publicKey) throw new Error("WEBXPAY_PUBLIC_KEY is not defined");
+
+        // More robust key reconstruction
+        const pemKey = publicKey.replace(/\\n/g, '\n').trim();
+
         const inputToEncrypt = `${orderID}|${formattedAmount}`;
 
+        // Using createPublicKey allows OpenSSL 3 to handle the decoding more intelligently
         const encryptedPayment = crypto.publicEncrypt(
             {
-                key: cleanPublicKey!,
+                key: crypto.createPublicKey(pemKey),
                 padding: crypto.constants.RSA_PKCS1_PADDING,
             },
             Buffer.from(inputToEncrypt)
