@@ -231,7 +231,10 @@ export async function POST(
     specialization: body?.specialization ?? app.specialization,
 
     license_number: body?.license_number ?? app.license_number,
-    experience_years: body?.experience_years ?? app.experience_years,
+    experience_years:
+      body?.experience_years === "" || app.experience_years === ""
+        ? null
+        : body?.experience_years ?? app.experience_years,
 
     contact_email: body?.email ?? body?.contact_email ?? app.contact_email,
     contact_number: body?.contact_number ?? app.contact_number,
@@ -244,27 +247,27 @@ export async function POST(
       body?.bank_details ??
       (body?.bank_name || body?.account_name || body?.account_number
         ? {
-            bank_name: body?.bank_name,
-            account_name: body?.account_name,
-            account_number: body?.account_number,
-            branch_location: body?.branch_location ?? null,
-            branch_address: body?.branch_address ?? null,
-            ifsc_code: body?.ifsc_code ?? null,
-            swift_code: body?.swift_code ?? null,
-          }
+          bank_name: body?.bank_name,
+          account_name: body?.account_name,
+          account_number: body?.account_number,
+          branch_location: body?.branch_location ?? null,
+          branch_address: body?.branch_address ?? null,
+          ifsc_code: body?.ifsc_code ?? null,
+          swift_code: body?.swift_code ?? null,
+        }
         : app.bank_details),
-        
+
     documents: Array.isArray(body?.documents)
       ? body.documents
       : Array.isArray(app.documents)
-      ? app.documents
-      : [],
+        ? app.documents
+        : [],
 
     languages: Array.isArray(body?.languages)
       ? body.languages
       : Array.isArray(app.languages)
-      ? app.languages
-      : [],
+        ? app.languages
+        : [],
   };
 
 
@@ -274,18 +277,18 @@ export async function POST(
   const result = await createPractitioner(practitionerPayload);
 
   if (!result.success) {
-     await auditLog({
-        ...cnx,
-        action: "FAILED",
-        entityType: "ADMIN_USER",
-        entityId: applicationId,
-        purpose: "operations",
-        source: "dashboard",
-        metadata: {
-          reason: "create_practitioner_failed",
-          message: result.message,
-        },
-      });
+    await auditLog({
+      ...cnx,
+      action: "FAILED",
+      entityType: "ADMIN_USER",
+      entityId: applicationId,
+      purpose: "operations",
+      source: "dashboard",
+      metadata: {
+        reason: "create_practitioner_failed",
+        message: result.message,
+      },
+    });
 
     return NextResponse.json(
       {

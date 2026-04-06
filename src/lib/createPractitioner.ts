@@ -47,27 +47,26 @@ import { notify } from "@/lib/notify";
  */
 
 type CreatePractitionerInput = {
-  practitioner_id?: string; // NEW (optional)
+  practitioner_id?: string | null;
   email: string;
   password: string;
 
   first_name: string;
-  last_name?: string;
-  state?: string;
-  city?: string;
-  qualification?: string;
-  specialization?: string[];
-  license_number?: string;
-  experience_years?: number;
-  contact_email?: string;
-  contact_number?: string;
-  profile_bio?: string;
+  last_name?: string | null;
+  state?: string | null;
+  city?: string | null;
+  qualification?: string | null;
+  specialization?: string[] | null;
+  license_number?: string | null;
+  experience_years?: number | null;
+  contact_email?: string | null;
+  contact_number?: string | null;
+  profile_bio?: string | null;
   fees?: any;
-  available_services?: string[];
-  // availability?: any;
+  available_services?: string[] | null;
   bank_details?: any;
-  documents?: any[]; // 👈 optional, safe
-  languages?: string[]; 
+  documents?: any[] | null;
+  languages?: string[] | null;
 };
 
 export async function createPractitioner(
@@ -151,7 +150,11 @@ export async function createPractitioner(
       qualification,
       specialization,
       license_number,
-      experience_years,
+      experience_years: (typeof (experience_years as any) === 'string' && (experience_years as any).trim() === "")
+        ? null
+        : (experience_years !== null && experience_years !== undefined)
+          ? Number(experience_years)
+          : null,
       contact_email,
       contact_number,
       profile_bio,
