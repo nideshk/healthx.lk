@@ -90,21 +90,23 @@ export async function POST(request: NextRequest) {
         const publicKey = process.env.WEBXPAY_PUBLIC_KEY;
         if (!publicKey) throw new Error("WEBXPAY_PUBLIC_KEY is not defined");
 
-        // More robust key reconstruction
         const pemKey = publicKey.replace(/\\n/g, '\n').trim();
-
         const inputToEncrypt = `${orderID}|${formattedAmount}`;
 
-        // Using createPublicKey allows OpenSSL 3 to handle the decoding more intelligently
+        // Use crypto.publicEncrypt directly with the PEM key string as requested
         const encryptedPayment = crypto.publicEncrypt(
             {
-                key: crypto.createPublicKey(pemKey),
+                key: pemKey,
                 padding: crypto.constants.RSA_PKCS1_PADDING,
             },
             Buffer.from(inputToEncrypt)
         ).toString('base64');
 
+        // Clean phone: Remove all characters except digits and +
         const cleanPhone = phone ? phone.replace(/[^\d+]/g, '') : "0000000000";
+
+        // Base64 encode the custom fields
+        const encodedCustomFields = Buffer.from(appointment_id).toString("base64");
 
         return NextResponse.json({
             success: true,
@@ -117,12 +119,11 @@ export async function POST(request: NextRequest) {
                 contact_number: cleanPhone,
                 address_line_one: address || "Default Address",
                 city: city || "Colombo",
-                state: "Western",
-                postal_code: "10300",
                 country: country || "Sri Lanka",
                 process_currency: "LKR",
                 cms: "PHP",
-                custom_fields: appointment_id,
+                custom_fields: encodedCustomFields,
+                custom_feilds: encodedCustomFields, // Intentional typo fallback for WebXPay
                 total_amount: formattedAmount,
                 payment: encryptedPayment,
                 api_user: process.env.WEBXPAY_API_KEY,
