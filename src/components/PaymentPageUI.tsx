@@ -312,7 +312,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase">Desired Outcome</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase">Concern Duration</p>
                     <p className="text-gray-900 mt-1 font-medium leading-relaxed">
                       {preConsult.duration || "No specific duration mentioned."}
                     </p>
