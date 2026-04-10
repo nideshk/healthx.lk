@@ -40,18 +40,11 @@ type FormValues = {
   profile_bio: string;
   available_services: string;
   fees: string;
-  profile_picture_url: string;
   bank_details: {
     bank_name: string;
     account_name: string;
     branch_location: string;
     account_number: string;
-  };
-  availability: {
-    start_time: string;
-    end_time: string;
-    days_unavailable: string[];
-    timezone: string;
   };
 };
 
@@ -99,24 +92,16 @@ export default function PractitionerRegisterPage() {
       profile_bio: "",
       available_services: "",
       fees: "",
-      profile_picture_url: "",
       bank_details: {
         bank_name: "",
         account_name: "",
         branch_location: "",
         account_number: "",
       },
-      availability: {
-        start_time: "09:00",
-        end_time: "18:00",
-        days_unavailable: ["Sunday"],
-        timezone: "Asia/Colombo",
-      },
     },
   });
 
   const specialization = watch("specialization");
-  const daysUnavailable = watch("availability.days_unavailable");
 
   const governmentIdCount = pendingFiles.filter(
     f => f.document_type === "government_id"
@@ -168,15 +153,6 @@ export default function PractitionerRegisterPage() {
   };
 
   /* ---------------- AVAILABILITY ---------------- */
-
-  const toggleDayUnavailable = (day: string) => {
-    setValue(
-      "availability.days_unavailable",
-      daysUnavailable.includes(day)
-        ? daysUnavailable.filter(d => d !== day)
-        : [...daysUnavailable, day]
-    );
-  };
 
   /* ---------------- APPOINTMENTS ---------------- */
   const handleAppointmentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -294,6 +270,18 @@ export default function PractitionerRegisterPage() {
 
   /* ---------------- SUBMIT ---------------- */
   const onSubmit = async (form: FormValues) => {
+    if (specialization.length === 0) {
+      setError("Please select at least one specialization.");
+      setLoading(false);
+      return;
+    }
+
+    if (selectedAppointments.length === 0) {
+      setError("Please select at least one appointment type.");
+      setLoading(false);
+      return;
+    }
+
     if (governmentIdCount !== 2) {
       setError("Please upload exactly two Government ID documents.");
       setLoading(false);
@@ -314,7 +302,7 @@ export default function PractitionerRegisterPage() {
         ...form,
         contact_email: form.email,
         languages: form.languages.split(",").map(l => l.trim()).filter(l => l !== ""),
-        experience_years: Number(form.experience_years),
+        experience_years: Math.round(Number(form.experience_years) || 0),
         available_services: selectedAppointments.map(a => a.id),
         fees: selectedAppointments.reduce((acc: any, appt) => {
           acc[appt.id] = {
@@ -446,10 +434,17 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="email"
                   control={control}
-                  rules={{ required: "Email is required" }}
+                  rules={{ 
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: "Invalid email address"
+                    }
+                  }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Email Address"
+                      type="email"
                       required
                       value={field.value || ""}
                       onChange={field.onChange}
@@ -461,7 +456,13 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="password"
                   control={control}
-                  rules={{ required: "Password is required" }}
+                  rules={{ 
+                    required: "Password is required",
+                    minLength: {
+                      value: 8,
+                      message: "Password must be at least 8 characters"
+                    }
+                  }}
                   render={({ field, fieldState }) => (
                     <Input
                       type="password"
@@ -502,22 +503,30 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="qualification"
                   control={control}
-                  render={({ field }) => (
+                  rules={{ required: "Qualification is required" }}
+                  render={({ field, fieldState }) => (
                     <Input
                       placeholder="Qualification"
+                      required
                       value={field.value || ""}
                       onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
                     />
                   )}
                 />
                 <Controller
                   name="license_number"
                   control={control}
-                  render={({ field }) => (
+                  rules={{ required: "License Number is required" }}
+                  render={({ field, fieldState }) => (
                     <Input
                       placeholder="License Number"
+                      required
                       value={field.value || ""}
                       onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
                     />
                   )}
                 />
@@ -576,29 +585,53 @@ export default function PractitionerRegisterPage() {
                       ))}
                   </div>
                 )}
+                {error && error.includes("specialization") && (
+                  <p className="text-red-500 text-xs mt-1">{error}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                 <Controller
                   name="experience_years"
                   control={control}
-                  render={({ field }) => (
+                  rules={{ 
+                    required: "Years of experience is required",
+                    min: { value: 0, message: "Experience cannot be negative" }
+                  }}
+                  render={({ field, fieldState }) => (
                     <Input
                       type="number"
                       placeholder="Years of Experience"
+                      required
                       value={field.value || ""}
-                      onChange={field.onChange}
+                      onChange={(e) => {
+                        // Local filter: Allow only digits, prevent negative and decimals
+                        const cleanValue = e.target.value.replace(/[^0-9]/g, "");
+                        field.onChange(cleanValue);
+                      }}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
                     />
                   )}
                 />
                 <Controller
                   name="contact_number"
                   control={control}
-                  render={({ field }) => (
+                  rules={{ 
+                    required: "Contact number is required",
+                    pattern: {
+                      value: /^\+?[0-9]{10,15}$/,
+                      message: "Invalid contact number"
+                    }
+                  }}
+                  render={({ field, fieldState }) => (
                     <Input
                       placeholder="Contact Number"
+                      required
                       value={field.value || ""}
                       onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
                     />
                   )}
                 />
@@ -608,11 +641,14 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="profile_bio"
                   control={control}
-                  render={({ field }) => (
+                  rules={{ required: "Profile bio is required" }}
+                  render={({ field, fieldState }) => (
                     <Textarea
                       placeholder="Profile Bio (brief description of your expertise)"
+                      required
                       value={field.value || ""}
                       onChange={field.onChange}
+                      error={fieldState.error?.message}
                     />
                   )}
                 />
@@ -638,6 +674,9 @@ export default function PractitionerRegisterPage() {
                     </option>
                   ))}
                 </select>
+                {error && error.includes("appointment type") && (
+                  <p className="text-red-500 text-xs mt-1">{error}</p>
+                )}
 
                 <div className="mt-4 space-y-3">
                   {selectedAppointments.map(appt => (
@@ -807,11 +846,15 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="bank_details.branch_location"
                   control={control}
-                  render={({ field }) => (
+                  rules={{ required: "Branch Location is required" }}
+                  render={({ field, fieldState }) => (
                     <Input
                       placeholder="Branch Location"
+                      required
                       value={field.value || ""}
                       onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      errorStatus={!!fieldState.error}
                     />
                   )}
                 />
