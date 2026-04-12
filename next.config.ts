@@ -6,7 +6,7 @@ const withNextIntl = nextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   typedRoutes: false,
-
+  serverExternalPackages: ["pdfkit"],
   output: "standalone", // ✅ important for Vercel tracing
 };
 

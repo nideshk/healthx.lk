@@ -13,7 +13,34 @@ export async function processPrescriptionIssuance(params: {
 }) {
   const { appointmentId, patientEmail, patientName, prescriptionData } = params;
 
-  // 0. Fetch Diagnosis Details for the PDF
+  // 0. Fetch Appointment, Patient, and Practitioner Details
+  const { data: appt } = await supabaseAdmin
+    .from("appointments")
+    .select(`
+      date, 
+      practitioner_id, 
+      patients ( date_of_birth, gender ),
+      practitioners ( full_name, title, qualifications, registration_number )
+    `)
+    .eq("id", appointmentId)
+    .single();
+
+  const doctorName = appt?.practitioners?.full_name || "Clinician";
+  const doctorTitle = appt?.practitioners?.title || "Dr.";
+  const doctorQuals = appt?.practitioners?.qualifications || "";
+  const doctorReg = appt?.practitioners?.registration_number || "";
+  
+  // Calculate patient age
+  let patientAge = "N/A";
+  if (appt?.patients?.date_of_birth) {
+    const diff = Date.now() - new Date(appt.patients.date_of_birth).getTime();
+    const ageDate = new Date(diff); 
+    patientAge = Math.abs(ageDate.getUTCFullYear() - 1970).toString();
+  }
+  const patientGender = appt?.patients?.gender || "Unknown";
+  const appointmentDate = appt?.date || new Date().toISOString().split('T')[0];
+
+  // 1. Fetch Diagnosis Details for the PDF
   let diagnosisDisplay = "N/A";
   if (prescriptionData.diagnosis_id) {
     const { data: diag } = await supabaseAdmin
@@ -27,9 +54,17 @@ export async function processPrescriptionIssuance(params: {
     }
   }
 
-  // 1. Generate PDF
+  // 2. Generate PDF
   const pdfBuffer = await generatePrescriptionPDF({
     appointmentId,
+    appointmentDate,
+    patientName,
+    patientAge,
+    patientGender,
+    doctorName,
+    doctorTitle,
+    doctorQuals,
+    doctorReg,
     diagnosis: diagnosisDisplay,
     items: prescriptionData.items,
     special_notes: prescriptionData.special_notes
