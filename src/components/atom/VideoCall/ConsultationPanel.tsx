@@ -1,7 +1,7 @@
 "use client";
 
 import { authFetch } from "@/lib/authFetch";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   ExternalLink,
   ClipboardList,
@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Calendar,
   FileText,
+  Search,
 } from "lucide-react";
 
 type Props = {
@@ -37,6 +38,63 @@ export default function ConsultationPanel({ appointmentId }: Props) {
   const [diagCode, setDiagCode] = useState("");
   const [diagName, setDiagName] = useState("");
   const [diagDescription, setDiagDescription] = useState("");
+
+  /* ---------- Diagnosis Search ---------- */
+  const [diagSearchText, setDiagSearchText] = useState("");
+  const [diagSearchResults, setDiagSearchResults] = useState<any[]>([]);
+  const [isSearchingDiag, setIsSearchingDiag] = useState(false);
+  const [showDiagDropdown, setShowDiagDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown if click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowDiagDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Diagnosis search effect
+  useEffect(() => {
+    if (!diagSearchText || diagSearchText.length < 2) {
+      setDiagSearchResults([]);
+      setShowDiagDropdown(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingDiag(true);
+      try {
+        const res = await authFetch(
+          `/api/diagnoses/search?q=${encodeURIComponent(diagSearchText)}`
+        );
+        if (res.ok) {
+          const json = await res.json();
+          setDiagSearchResults(json.data || []);
+          setShowDiagDropdown(true);
+        } else {
+          setDiagSearchResults([]);
+        }
+      } catch (err) {
+        console.error("Diagnosis search error", err);
+      } finally {
+        setIsSearchingDiag(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [diagSearchText]);
+
+  const selectDiagnosis = (diag: any) => {
+    setDiagId(diag.id);
+    setDiagCode(diag.code || "");
+    setDiagName(diag.name || "");
+    setDiagDescription(diag.description || "");
+    setDiagSearchText("");
+    setShowDiagDropdown(false);
+  };
 
   /* ---------- Clinician Notes ---------- */
   const [clinicianNotes, setClinicianNotes] = useState("");
@@ -390,6 +448,60 @@ export default function ConsultationPanel({ appointmentId }: Props) {
                 <h3 className="text-xs font-semibold text-black uppercase tracking-wider">
                   Diagnosis
                 </h3>
+
+                {/* Search Field */}
+                {!isLocked && (
+                  <div className="relative" ref={searchRef}>
+                    <div className="relative">
+                      <Search
+                        size={14}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
+                      <input
+                        type="text"
+                        value={diagSearchText}
+                        onChange={(e) => setDiagSearchText(e.target.value)}
+                        onFocus={() => {
+                          if (diagSearchResults.length > 0) setShowDiagDropdown(true);
+                        }}
+                        placeholder="Search diagnosis by code or name..."
+                        className="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                      />
+                      {isSearchingDiag && (
+                        <Loader2
+                          size={14}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin"
+                        />
+                      )}
+                    </div>
+
+                    {showDiagDropdown && (
+                      <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-60 overflow-auto">
+                        {diagSearchResults.length === 0 && !isSearchingDiag ? (
+                          <li className="px-4 py-3 text-sm text-gray-500">No results found</li>
+                        ) : (
+                          diagSearchResults.map((result) => (
+                            <li
+                              key={result.id}
+                              onClick={() => selectDiagnosis(result)}
+                              className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-0"
+                            >
+                              <div className="text-sm font-medium text-black">
+                                {result.code} - {result.name}
+                              </div>
+                              {result.description && (
+                                <div className="text-xs text-gray-500 truncate mt-0.5">
+                                  {result.description}
+                                </div>
+                              )}
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-black mb-1">
@@ -401,7 +513,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
                       onChange={(e) => setDiagCode(e.target.value)}
                       disabled={isLocked}
                       placeholder="e.g. J06.9"
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black text-black"
                     />
                   </div>
                   <div>
@@ -414,7 +526,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
                       onChange={(e) => setDiagName(e.target.value)}
                       disabled={isLocked}
                       placeholder="Diagnosis name"
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black text-black"
                     />
                   </div>
                 </div>
@@ -428,9 +540,24 @@ export default function ConsultationPanel({ appointmentId }: Props) {
                     disabled={isLocked}
                     rows={2}
                     placeholder="Optional description"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black text-black"
                   />
                 </div>
+                {!isLocked && (diagCode || diagName) && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => {
+                        setDiagId(null);
+                        setDiagCode("");
+                        setDiagName("");
+                        setDiagDescription("");
+                      }}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      Clear Diagnosis
+                    </button>
+                  </div>
+                )}
               </section>
 
               {/* Follow-up */}
