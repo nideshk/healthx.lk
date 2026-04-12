@@ -39,12 +39,13 @@ type PostBody = {
   diagnosis_code?: string | null; // Code from diagnoses table
   diagnosis?: string | null;      // Generic name/string
   diagnosis_description?: string | null; // Description for master table
-  
+
   prescription_items?: PrescriptionItem[];
   special_notes?: string | null;
   status?: 'draft' | 'ready_to_issue' | 'issued';
 
-  // Encounter related (Follow-up only)
+  // Encounter related
+  clinician_notes?: string | null;
   follow_up_needed?: boolean;
   follow_up_date?: string | null;
   followup_notes?: string | null;
@@ -106,18 +107,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     }
 
     // 2. Fetch Encounter (Follow-up only)
-    const { data: encounter } = await supabaseClient.from("encounters").select("id, follow_up_needed, follow_up_date, follow_up_comments, created_at").eq("appointment_id", appointmentId).maybeSingle();
-    
+    const { data: encounter } = await supabaseClient.from("encounters").select("id, clinician_notes, follow_up_needed, follow_up_date, follow_up_comments, created_at").eq("appointment_id", appointmentId).maybeSingle();
+
     // 3. Fetch Prescription & Items (Directly via appointment_id)
     const { data: prescData } = await supabaseClient
       .from("prescriptions")
       .select("*, diagnoses(*)")
       .eq("appointment_id", appointmentId)
       .maybeSingle();
-    
+
     const prescription = prescData;
     let prescriptionItems = [];
-    
+
     if (prescription && (isPractitioner || isAdmin)) {
       const { data: items } = await supabaseClient.from("prescription_items").select("*").eq("prescription_id", prescription.id);
       prescriptionItems = items || [];
@@ -196,12 +197,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const patientData: any = appointment.patients;
     const patientName = patientData?.full_name || "Patient";
 
-    // 2. Resolve or Create Diagnosis in Master Table
+    // 2. Resolve or Create Diagnosis
     let resolvedDiagnosisId = body.diagnosis_id;
-    
+
     if (!resolvedDiagnosisId && (body.diagnosis_code && body.diagnosis)) {
-      // Upsert the diagnosis into the master table if we have both code and name
-      const { data: upsertedDiag, error: diagErr } = await supabaseAdmin
+      const { data: upsertedDiag } = await supabaseAdmin
         .from("diagnoses")
         .upsert({
           code: body.diagnosis_code,
@@ -211,97 +211,136 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         }, { onConflict: "code" })
         .select("id")
         .single();
-      
-      if (diagErr) {
-        console.error("DEBUG: Diagnosis upsert failed:", diagErr);
-        // We continue anyway but without a resolved ID, or we could throw. 
-        // For clinical safety, let's just log it and proceed.
-      } else {
-        resolvedDiagnosisId = upsertedDiag.id;
-      }
+
+      resolvedDiagnosisId = upsertedDiag?.id;
     } else if (!resolvedDiagnosisId && body.diagnosis_code) {
-      // Just lookup by code if only code is provided
-      const { data: found } = await supabaseAdmin.from("diagnoses").select("id").eq("code", body.diagnosis_code).maybeSingle();
+      const { data: found } = await supabaseAdmin
+        .from("diagnoses")
+        .select("id")
+        .eq("code", body.diagnosis_code)
+        .maybeSingle();
       resolvedDiagnosisId = found?.id;
     } else if (!resolvedDiagnosisId && body.diagnosis) {
-      // Just lookup by name if only name is provided
-      const { data: found } = await supabaseAdmin.from("diagnoses").select("id").ilike("name", body.diagnosis).maybeSingle();
+      const { data: found } = await supabaseAdmin
+        .from("diagnoses")
+        .select("id")
+        .ilike("name", body.diagnosis)
+        .maybeSingle();
       resolvedDiagnosisId = found?.id;
     }
 
-    // 3. Update Encounter (Follow-up only)
+    // 3. Create / Update Encounter
     const encounterRow: any = {
       appointment_id: appointmentId,
       patient_id: appointment.patient_id,
+      clinician_notes: body.clinician_notes ?? null,
       follow_up_needed: body.follow_up_needed ?? false,
       follow_up_date: body.follow_up_date ? new Date(body.follow_up_date).toISOString() : null,
       follow_up_comments: body.followup_notes ?? null,
       updated_at: new Date().toISOString()
     };
 
-    const { data: existingEnc, error: encFetchErr } = await supabaseClient.from("encounters").select("id").eq("appointment_id", appointmentId).maybeSingle();
-    if (encFetchErr) throw encFetchErr;
+    const { data: existingEnc } = await supabaseClient
+      .from("encounters")
+      .select("id")
+      .eq("appointment_id", appointmentId)
+      .maybeSingle();
 
     let encounterId;
+
     if (existingEnc) {
-      const { error: encUpdErr } = await supabaseClient.from("encounters").update(encounterRow).eq("id", existingEnc.id);
-      if (encUpdErr) throw encUpdErr;
+      await supabaseClient
+        .from("encounters")
+        .update(encounterRow)
+        .eq("id", existingEnc.id);
+
       encounterId = existingEnc.id;
     } else {
-      const { data: newEnc, error: encInsErr } = await supabaseClient.from("encounters").insert([{ ...encounterRow, created_at: new Date().toISOString() }]).select("id").single();
-      if (encInsErr) throw encInsErr;
+      const { data: newEnc } = await supabaseClient
+        .from("encounters")
+        .insert([{ ...encounterRow, created_at: new Date().toISOString() }])
+        .select("id")
+        .single();
+
       encounterId = newEnc?.id;
     }
 
-    // 4. Update Prescription (Linked via appointment_id)
+    // ✅ NEW: store diagnosis in mapping table (source of truth)
+    if (resolvedDiagnosisId && encounterId) {
+      await supabaseAdmin
+        .from("consultation_diagnoses")
+        .upsert(
+          {
+            encounter_id: encounterId,
+            diagnosis_id: resolvedDiagnosisId,
+          },
+          { onConflict: "encounter_id,diagnosis_id" }
+        );
+    }
+
+    // 4. Prescription
     const validStatuses = ['draft', 'ready_to_issue', 'issued'];
-    const validStatus = (validStatuses.includes(body.status || '')) ? body.status : 'draft';
-    
+    const validStatus = validStatuses.includes(body.status || '') ? body.status : 'draft';
+
     const prescriptionRow: any = {
       appointment_id: appointmentId,
       patient_id: appointment.patient_id,
       practitioner_id: appointment.practitioner_id,
-      diagnosis_id: resolvedDiagnosisId ?? null,
+      diagnosis_id: resolvedDiagnosisId ?? null, // KEEP (for now)
+      encounter_id: encounterId, // NEW LINK
       special_notes: body.special_notes ?? null,
       status: validStatus,
       updated_at: new Date().toISOString()
     };
 
+    // ✅ NEW: snapshot on issue
     if (validStatus === 'issued') {
       prescriptionRow.issued_at = new Date().toISOString();
+      prescriptionRow.diagnosis_snapshot = {
+        code: body.diagnosis_code ?? null,
+        name: body.diagnosis ?? null
+      };
     }
 
-    // Check if prescription exists and verify its status before updating
-    const { data: existingPresc, error: prescFetchErr } = await supabaseClient
+    const { data: existingPresc } = await supabaseClient
       .from("prescriptions")
       .select("id, status")
       .eq("appointment_id", appointmentId)
       .maybeSingle();
-      
-    if (prescFetchErr) throw prescFetchErr;
 
-    // IMMUTABILITY LOCK: Once past 'draft', no further edits allowed
     if (existingPresc && existingPresc.status !== 'draft') {
-      return NextResponse.json({ 
-        error: `Prescription is already '${existingPresc.status}' and cannot be modified.` 
+      return NextResponse.json({
+        error: `Prescription is already '${existingPresc.status}' and cannot be modified.`
       }, { status: 400 });
     }
 
     let prescriptionId;
+
     if (existingPresc) {
-      const { data: updated, error: updErr } = await supabaseClient.from("prescriptions").update(prescriptionRow).eq("id", existingPresc.id).select("id").single();
-      if (updErr) throw updErr;
+      const { data: updated } = await supabaseClient
+        .from("prescriptions")
+        .update(prescriptionRow)
+        .eq("id", existingPresc.id)
+        .select("id")
+        .single();
+
       prescriptionId = updated?.id;
     } else {
-      const { data: inserted, error: insErr } = await supabaseClient.from("prescriptions").insert([{ ...prescriptionRow, created_at: new Date().toISOString() }]).select("id").single();
-      if (insErr) throw insErr;
+      const { data: inserted } = await supabaseClient
+        .from("prescriptions")
+        .insert([{ ...prescriptionRow, created_at: new Date().toISOString() }])
+        .select("id")
+        .single();
+
       prescriptionId = inserted?.id;
     }
 
-    // 5. Sync Prescription Items
+    // 5. Prescription Items
     if (body.prescription_items) {
-      const { error: delErr } = await supabaseClient.from("prescription_items").delete().eq("prescription_id", prescriptionId);
-      if (delErr) throw delErr;
+      await supabaseClient
+        .from("prescription_items")
+        .delete()
+        .eq("prescription_id", prescriptionId);
 
       if (body.prescription_items.length > 0) {
         const itemsToInsert = body.prescription_items.map(item => ({
@@ -312,12 +351,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           duration: item.duration,
           notes: item.notes
         }));
-        const { error: insItemsErr } = await supabaseClient.from("prescription_items").insert(itemsToInsert);
-        if (insItemsErr) throw insItemsErr;
+
+        await supabaseClient
+          .from("prescription_items")
+          .insert(itemsToInsert);
       }
     }
 
-    // 6. Handle Issuance Logic
+    // 6. Issue Workflow
     if (body.status === 'issued') {
       await processPrescriptionIssuance({
         appointmentId,
@@ -331,22 +372,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       });
     }
 
-    // Audit Log
-    const cnx = getAuditContext(request, user);
-    await auditLog({
-      ...cnx,
-      action: "UPDATED",
-      entityType: "PRESCRIPTION",
-      entityId: prescriptionId,
-      metadata: { status: body.status }
-    });
-
     return NextResponse.json({ success: true, prescriptionId }, { status: 200 });
+
   } catch (err: any) {
     console.error("POST /consultation error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+
 
 // DELETE: remove prescription (Only for drafts and only by the assigned practitioner)
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -384,8 +418,8 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
 
     // Status check
     if (prescription.status !== 'draft') {
-      return NextResponse.json({ 
-        error: `Cannot delete prescription with status '${prescription.status}'. Only 'draft' prescriptions can be removed.` 
+      return NextResponse.json({
+        error: `Cannot delete prescription with status '${prescription.status}'. Only 'draft' prescriptions can be removed.`
       }, { status: 400 });
     }
 
