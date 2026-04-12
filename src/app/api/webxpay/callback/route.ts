@@ -141,7 +141,6 @@ export async function POST(request: NextRequest) {
                         room_key: appointment.room_key,
                     });
                 } catch (attendeeInviteError) {
-                    console.log("Attendee invites failed:", attendeeInviteError);
                 }
             }
 

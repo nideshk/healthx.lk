@@ -16,6 +16,7 @@ import {
   SettingsTabId,
 } from "@/types/Dashboard";
 
+import { toast } from "react-toastify";
 
 import HomeTab from "../practitioner/tabs/HomeTab";
 import SearchPatientsTab from "./tabs/seachPatients/SearchPatientsTab";
@@ -59,7 +60,7 @@ const PractitionerDashboard: React.FC = () => {
         if (displayName) setProfileName(displayName);
         if (id) setPractitionerId(id);
       } catch (err) {
-        console.error("Failed to fetch current user for dashboard header", err);
+        toast.error("Failed to fetch current user for dashboard header");
       }
     };
 

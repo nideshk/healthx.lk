@@ -142,7 +142,6 @@ export async function POST(request: NextRequest) {
                         room_key: appointment.room_key,
                     });
                 } catch (attendeeInviteError) {
-                    console.log("Attendee invites failed:", attendeeInviteError);
                 }
             }
 
@@ -152,7 +151,6 @@ export async function POST(request: NextRequest) {
     }
     else if (status_code === '0') {
         // This means payment is pending so don't mark it as failed, just log it.
-        console.log(`Order ${order_id} is pending bank approval`);
     }
     else {
         // This handles cancelled, failed.

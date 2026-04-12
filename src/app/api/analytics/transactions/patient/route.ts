@@ -37,7 +37,6 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Patient ID not found for the user" }, { status: 403 });
     }
 
-    console.log(`🔍 Fetching transactions for patient ID: ${patientId} (User: ${user?.auth_user_id}, Role: ${user?.role})`);
 
     try {
         // Fetch all transactions for the patient using their patient ID

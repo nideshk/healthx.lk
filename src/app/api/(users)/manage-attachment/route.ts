@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   try {
     const { user } = await requireUser(req);
-    console.log(user?.patient_id)
 
     /* user.patientId is trusted */
     const { data: files, error } = await supabaseClient

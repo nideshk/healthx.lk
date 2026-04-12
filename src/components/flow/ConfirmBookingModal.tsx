@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { toast } from "react-toastify";
 import Modal from '../atom/Modal/Modal';
 import {
   CheckCircle,
@@ -57,7 +58,7 @@ export default function ConfirmBookingModal({
       // ➡️ Redirect to confirmation page
       router.push(`/appointment/confirmation`);
     } catch (err) {
-      console.error("❌ Failed to save draft:", err);
+      toast.error("Failed to save draft: " + (err as any).message);
     } finally {
       setLoading(false);
     }

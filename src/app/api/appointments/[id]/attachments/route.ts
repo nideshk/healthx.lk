@@ -11,8 +11,6 @@ export async function POST(
   const requestId = crypto.randomUUID();
 
   try {
-    console.log("🔹 [ATTACHMENT_META] Request start", { requestId });
-
     /* ------------------------------------------------
      * AUTH
      * ------------------------------------------------ */

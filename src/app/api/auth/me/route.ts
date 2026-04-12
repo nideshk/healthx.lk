@@ -33,7 +33,6 @@ export async function PATCH(req: Request) {
     admin,
   } = body;
 
-  console.log(patient)
 
   const {
     auth_user_id,
