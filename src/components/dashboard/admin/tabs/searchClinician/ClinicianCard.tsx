@@ -19,6 +19,12 @@ interface ClinicianCardProps {
     fees: Fee[];
     experience: number;
     tags: string[];
+    email?: string;
+    phone?: string;
+    gender?: string;
+    rating?: number;
+    totalReviews?: number;
+    languages?: string[];
   };
   onViewProfile: (id: string) => Promise<void> | void;
 }
@@ -75,11 +81,48 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
         </Button>
       </div>
 
-      {/* REGISTRATION */}
-      <div className="mt-3 text-xs text-slate-600">
-        Registration:{" "}
-        <span className="text-slate-900">{clinician.registration}</span>
+      {/* REGISTRATION & EXP */}
+      <div className="mt-3 flex flex-wrap justify-between items-center gap-2">
+        <div className="text-xs text-slate-600">
+          Registration:{" "}
+          <span className="text-slate-900">{clinician.registration || "N/A"}</span>
+        </div>
+        {(clinician.experience || clinician.experience === 0) && (
+          <div className="text-xs text-slate-600">
+            Experience:{" "}
+            <span className="text-slate-900">{clinician.experience} yrs</span>
+          </div>
+        )}
       </div>
+
+      {/* CONTACT */}
+      <div className="mt-1 flex flex-wrap justify-between items-center gap-2 text-xs text-slate-600">
+        <div>
+          {clinician.email && <span className="mr-3">Email: <span className="text-slate-900">{clinician.email}</span></span>}
+          {clinician.phone && <span>Phone: <span className="text-slate-900">{clinician.phone}</span></span>}
+        </div>
+        {clinician.gender && (
+          <div className="capitalize">
+            <span className="text-slate-900">{clinician.gender}</span>
+          </div>
+        )}
+      </div>
+
+      {/* RATING */}
+      {(clinician.rating || clinician.totalReviews) ? (
+        <div className="mt-1 text-xs text-slate-600">
+          Rating: {" "}
+          <span className="text-slate-900 font-medium">{clinician.rating || 0}</span> {" "}
+          <span className="text-slate-500">({clinician.totalReviews || 0} reviews)</span>
+        </div>
+      ) : null}
+
+      {/* LANGUAGES */}
+      {clinician.languages && clinician.languages.length > 0 && (
+        <div className="mt-1 text-xs text-slate-600">
+          Languages: <span className="text-slate-900">{clinician.languages.join(", ")}</span>
+        </div>
+      )}
 
       {/* FEES */}
       <div className="mt-1 text-xs text-slate-600">

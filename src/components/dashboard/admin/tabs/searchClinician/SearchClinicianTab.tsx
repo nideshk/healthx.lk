@@ -117,7 +117,10 @@ const SearchClinicianTab: React.FC = () => {
           branch: bank.branch_name ?? "",
           accountNumber: bank.account_number ?? "",
         },
-        fees: p.fees || [],
+        fees: p.appointment_types?.map((a: any) => ({
+          label: a.name,
+          amount: a.fee,
+        })) || [],
         ratings: { overall: 0, advice: 0, punctuality: 0 },
         tags: p.specialization ?? [],
       });
@@ -202,9 +205,15 @@ const SearchClinicianTab: React.FC = () => {
                           name: c.full_name,
                           specialty: c.qualification,
                           registration: c.license_number,
-                          tags: c.specialization,
+                          tags: c.specialization ?? [],
                           experience: c.experience_years,
                           fees: c.fees ?? [],
+                          email: c.contact_email,
+                          phone: c.contact_number,
+                          gender: c.gender,
+                          rating: c.avg_rating,
+                          totalReviews: c.total_reviews,
+                          languages: c.languages ?? [],
                         }}
                         onViewProfile={handleViewProfile}
                       />
