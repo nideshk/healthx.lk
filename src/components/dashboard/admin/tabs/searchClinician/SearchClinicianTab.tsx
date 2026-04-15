@@ -41,10 +41,12 @@ const SearchClinicianTab: React.FC = () => {
         credentials: "include",
       });
 
+
       if (!res.ok) throw new Error("Failed to fetch clinicians");
 
       const data = await res.json();
-      setClinicians(data.practitioners || []);
+      console.log(data)
+      setClinicians(data.data || []);
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -189,6 +191,7 @@ const SearchClinicianTab: React.FC = () => {
               </div>
             ) : (
               <>
+                {console.log("clinician", clinicians)}
                 {clinicians.length > 0 ? (
                   <>
                     {clinicians.map((c) => (

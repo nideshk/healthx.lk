@@ -184,22 +184,16 @@ export async function GET(req: NextRequest) {
         profile_picture_url,
         avg_rating,
         review_count,
-        city,
-        consultation_modes,
         languages
       `)
       .eq("is_active", true)
-      .eq("is_verified", true)
-      .gte("avg_rating", 3.8)
-      .order("avg_rating", { ascending: false })
-      .range(offset, offset + limit - 1);
 
     if (specialization) {
-      query = query.ilike("specialization", `%${specialization}%`);
+      query = query.contains("specialization", [specialization]);
     }
 
     const { data, error } = await query;
-
+    console.log(data)
     if (error) {
       console.error("❌ Supabase Fetch Error:", error);
       return NextResponse.json(
