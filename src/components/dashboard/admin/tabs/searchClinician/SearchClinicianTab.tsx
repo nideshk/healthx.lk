@@ -41,10 +41,12 @@ const SearchClinicianTab: React.FC = () => {
         credentials: "include",
       });
 
+
       if (!res.ok) throw new Error("Failed to fetch clinicians");
 
       const data = await res.json();
-      setClinicians(data.practitioners || []);
+      console.log(data)
+      setClinicians(data.data || []);
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -115,7 +117,10 @@ const SearchClinicianTab: React.FC = () => {
           branch: bank.branch_name ?? "",
           accountNumber: bank.account_number ?? "",
         },
-        fees: p.fees || [],
+        fees: p.appointment_types?.map((a: any) => ({
+          label: a.name,
+          amount: a.fee,
+        })) || [],
         ratings: { overall: 0, advice: 0, punctuality: 0 },
         tags: p.specialization ?? [],
       });
@@ -189,6 +194,7 @@ const SearchClinicianTab: React.FC = () => {
               </div>
             ) : (
               <>
+                {console.log("clinician", clinicians)}
                 {clinicians.length > 0 ? (
                   <>
                     {clinicians.map((c) => (
@@ -199,9 +205,15 @@ const SearchClinicianTab: React.FC = () => {
                           name: c.full_name,
                           specialty: c.qualification,
                           registration: c.license_number,
-                          tags: c.specialization,
+                          tags: c.specialization ?? [],
                           experience: c.experience_years,
                           fees: c.fees ?? [],
+                          email: c.contact_email,
+                          phone: c.contact_number,
+                          gender: c.gender,
+                          rating: c.avg_rating,
+                          totalReviews: c.total_reviews,
+                          languages: c.languages ?? [],
                         }}
                         onViewProfile={handleViewProfile}
                       />
