@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import path from "path";
+import axios from "axios";
 
 export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -24,101 +25,125 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
       const rxLogoPath = path.join(process.cwd(), "public", "assets", "rx_logo_transparent_v2.png");
       const rxWhiteLogoPath = path.join(process.cwd(), "public", "assets", "rx_logo_white.png");
 
-      // Content area starts below header
-      let y = 125;
+      // ---------------- SIGNATURE BUFFER ----------------
+      let signatureBuffer: Buffer | null = null;
+      if (data.practitioner?.signatureUrl) {
+        fetchImageBuffer(data.practitioner.signatureUrl)
+          .then(buf => {
+            signatureBuffer = buf;
+            console.log(`Signature image fetched: ${buf.length} bytes`);
+          })
+          .catch(err => console.error("Failed to fetch signature image:", err))
+          .finally(async () => {
+            try {
+              // Continue PDF generation after attempt to fetch signature
+              await startDrawing();
+            } catch (err) {
+              reject(err);
+            }
+          });
+      } else {
+        startDrawing().catch(reject);
+      }
 
-      // ---------------- PATIENT INFO ----------------
-      drawSectionHeader(doc, "Patient Information:", y, 25);
-      y += 30;
+      async function startDrawing() {
+        console.log("Patient for drawing:", data.patient?.name);
+        console.log("Practitioner for drawing:", data.practitioner?.name);
+        let y = 125;
 
-      y = drawStyledField(doc, "Full Name:", data.patient?.name, y);
-      y = drawStyledFieldRow(doc, "Date Of birth:", data.patient?.dob || "DD/MM/YYYY", "Age:", data.patient?.age || "XX years and XX months", y);
-      y = drawStyledField(doc, "Address:", data.patient?.address, y);
-      y = drawStyledFieldRow(doc, "E-mail:", data.patient?.email, "Phone:", data.patient?.phone, y);
-      y = drawStyledField(doc, "Allergies:", data.patient?.allergies, y);
+        // ---------------- PATIENT INFO ----------------
+        drawSectionHeader(doc, "Patient Information:", y, 25);
+        y += 30;
 
-      // ---------------- DIAGNOSIS ----------------
-      y += 2;
-      drawSectionHeader(doc, "Diagnosis", y, 25);
-      doc.roundedRect(142, y + 3.5, pageWidth - 142 - 45, 18, 2).fill("#fff");
-      doc.fontSize(10).font("Helvetica").fillColor("#000").text(data.diagnosis || "", 150, y + 8.5);
-      y += 30;
+        y = drawStyledField(doc, "Full Name:", data.patient?.name, y);
+        y = drawStyledFieldRow(doc, "Date Of birth:", data.patient?.dob || "DD/MM/YYYY", "Age:", data.patient?.age || "XX years and XX months", y);
+        y = drawStyledField(doc, "Address:", data.patient?.address, y);
+        y = drawStyledFieldRow(doc, "E-mail:", data.patient?.email, "Phone:", data.patient?.phone, y);
+        y = drawStyledField(doc, "Allergies:", data.patient?.allergies, y);
 
-      // ---------------- MEDICINES TABLE ----------------
-      drawSectionHeader(doc, "", y, 25, rxWhiteLogoPath);
-      y += 30;
+        // ---------------- DIAGNOSIS ----------------
+        y += 2;
+        drawSectionHeader(doc, "Diagnosis", y, 25);
+        doc.roundedRect(142, y + 3.5, pageWidth - 142 - 45, 18, 2).fill("#fff");
+        doc.fontSize(10).font("Helvetica").fillColor("#000").text(data.diagnosis || "", 150, y + 8.5);
+        y += 30;
 
-      const colX = [40, 195, 295, 420];
-      const colWidths = [155, 100, 125, 115];
-      const tableWidth = pageWidth - 80;
+        // ---------------- MEDICINES TABLE ----------------
+        drawSectionHeader(doc, "", y, 25, rxWhiteLogoPath);
+        y += 30;
 
-      const headerHeight = 25;
-      doc.rect(40, y, tableWidth, headerHeight).fill("#D1E9FF");
-      doc.rect(40, y, tableWidth, headerHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
-      
-      [195, 295, 420].forEach(x => {
-        doc.moveTo(x, y).lineTo(x, y + headerHeight).stroke();
-      });
+        const colX = [40, 195, 295, 420];
+        const colWidths = [155, 100, 125, 115];
+        const tableWidth = pageWidth - 80;
 
-      doc.fontSize(10).font("Helvetica-Bold").fillColor("#000");
-      doc.text("Drug name", colX[0], y + 8, { width: colWidths[0], align: "center" });
-      doc.text("Route", colX[1], y + 8, { width: colWidths[1], align: "center" });
-      doc.text("Strength", colX[2], y + 8, { width: colWidths[2], align: "center" });
-      doc.text("Duration", colX[3], y + 8, { width: colWidths[3], align: "center" });
+        const headerHeight = 25;
+        doc.rect(40, y, tableWidth, headerHeight).fill("#D1E9FF");
+        doc.rect(40, y, tableWidth, headerHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
 
-      y += headerHeight;
+        [195, 295, 420].forEach(x => {
+          doc.moveTo(x, y).lineTo(x, y + headerHeight).stroke();
+        });
 
-      const items = data.items || [];
-      const rowCount = Math.max(3, items.length);
-      const rowHeight = 25;
-      
-      for (let i = 0; i < rowCount; i++) {
-        const item = items[i];
-        
-        if (y + rowHeight > doc.page.height - 100) {
+        doc.fontSize(10).font("Helvetica-Bold").fillColor("#000");
+        doc.text("Drug name", colX[0], y + 8, { width: colWidths[0], align: "center" });
+        doc.text("Route", colX[1], y + 8, { width: colWidths[1], align: "center" });
+        doc.text("Strength", colX[2], y + 8, { width: colWidths[2], align: "center" });
+        doc.text("Duration", colX[3], y + 8, { width: colWidths[3], align: "center" });
+
+        y += headerHeight;
+
+        const items = data.items || [];
+        const rowCount = Math.max(3, items.length);
+        const rowHeight = 25;
+
+        for (let i = 0; i < rowCount; i++) {
+          const item = items[i];
+
+          if (y + rowHeight > doc.page.height - 100) {
+            doc.addPage();
+            y = 135;
+          }
+
+          doc.rect(40, y, tableWidth, rowHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
+          [195, 295, 420].forEach(x => {
+            doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
+          });
+
+          if (item) {
+            doc.fontSize(9).font("Helvetica").fillColor("#000");
+            doc.text(item.medicine_name || "", colX[0] + 5, y + 8, { width: colWidths[0] - 10, align: "center" });
+            doc.text(item.route || "", colX[1] + 5, y + 8, { width: colWidths[1] - 10, align: "center" });
+            doc.text(item.strength || "", colX[2] + 5, y + 8, { width: colWidths[2] - 10, align: "center" });
+            doc.text(item.duration || "", colX[3] + 5, y + 8, { width: colWidths[3] - 10, align: "center" });
+          }
+          y += rowHeight;
+        }
+
+        y += 8;
+
+        // ---------------- DOCTOR NOTES ----------------
+        if (y + 50 > doc.page.height - 100) {
           doc.addPage();
           y = 135;
         }
+        doc.fontSize(10).font("Helvetica").fillColor("#000").text("Doctor Notes:", 40, y + 8);
+        doc.rect(142, y, pageWidth - 142 - 40, 35).fillAndStroke("#FFFFFF", "#aaa");
+        doc.fillColor("#000").fontSize(9).text(data.special_notes || "", 150, y + 10, { width: pageWidth - 142 - 50 });
+        y += 80;
 
-        doc.rect(40, y, tableWidth, rowHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
-        [195, 295, 420].forEach(x => {
-          doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
-        });
+        // ---------------- DOCTOR DETAILS & SIGNATURE (END OF CONTENT) ----------------
+        y = drawDoctorSignatureBlock(doc, data, y, signatureBuffer);
 
-        if (item) {
-          doc.fontSize(9).font("Helvetica").fillColor("#000");
-          doc.text(item.medicine_name || "", colX[0] + 5, y + 8, { width: colWidths[0] - 10, align: "center" });
-          doc.text(item.route || "", colX[1] + 5, y + 8, { width: colWidths[1] - 10, align: "center" });
-          doc.text(item.strength || "", colX[2] + 5, y + 8, { width: colWidths[2] - 10, align: "center" });
-          doc.text(item.duration || "", colX[3] + 5, y + 8, { width: colWidths[3] - 10, align: "center" });
+        // ---------------- POST-PROCESS: STAMP HEADERS & FOOTERS ----------------
+        const range = doc.bufferedPageRange();
+        for (let i = 0; i < range.count; i++) {
+          doc.switchToPage(i);
+          drawFixedHeader(doc, logoPath, rxLogoPath);
+          drawFixedFooter(doc, i + 1, range.count);
         }
-        y += rowHeight;
+
+        doc.end();
       }
-
-      y += 8;
-
-      // ---------------- DOCTOR NOTES ----------------
-      if (y + 50 > doc.page.height - 100) {
-        doc.addPage();
-        y = 135;
-      }
-      doc.fontSize(10).font("Helvetica").fillColor("#000").text("Doctor Notes:", 40, y + 8);
-      doc.rect(142, y, pageWidth - 142 - 40, 35).fillAndStroke("#FFFFFF", "#aaa");
-      doc.fillColor("#000").fontSize(9).text(data.special_notes || "", 150, y + 10, { width: pageWidth - 142 - 50 });
-      y += 80;
-
-      // ---------------- DOCTOR DETAILS & SIGNATURE (END OF CONTENT) ----------------
-      y = drawDoctorSignatureBlock(doc, data, y);
-
-      // ---------------- POST-PROCESS: STAMP HEADERS & FOOTERS ----------------
-      const range = doc.bufferedPageRange();
-      for (let i = 0; i < range.count; i++) {
-        doc.switchToPage(i);
-        drawFixedHeader(doc, logoPath, rxLogoPath);
-        drawFixedFooter(doc, i + 1, range.count);
-      }
-
-      doc.end();
     } catch (err) {
       reject(err);
     }
@@ -156,9 +181,9 @@ function drawFixedHeader(doc: any, logoPath: string, rxLogoPath: string) {
   doc.fontSize(16).font("Helvetica-Bold").fillColor("#000").text("e-Prescription", (pageWidth / 2) - 25, titleY);
 }
 
-function drawDoctorSignatureBlock(doc: any, data: any, y: number) {
+function drawDoctorSignatureBlock(doc: any, data: any, y: number, signatureBuffer: Buffer | null = null) {
   const pageHeight = doc.page.height;
-  
+
   // Check for overflow - block height approx 130
   if (y + 130 > pageHeight - 60) {
     doc.addPage();
@@ -169,15 +194,25 @@ function drawDoctorSignatureBlock(doc: any, data: any, y: number) {
 
   drawSectionHeader(doc, "Doctor details:", y, 25);
   y += 30;
-  
+
   y = drawStyledField(doc, "Full Name:", data.practitioner?.name, y);
   y = drawStyledField(doc, "Credentials:", data.practitioner?.credentials, y);
   y = drawStyledField(doc, "SLMC Registration number:", data.practitioner?.licenseNumber, y, 165);
-  
+
   const sigY = y + 5;
-  doc.rect(40, sigY, 200, 30).fillAndStroke("#FFFFFF", "#aaa");
-  doc.fillColor("#000").fontSize(12).font("Times-Italic").text("Signature", 60, sigY + 10, { lineBreak: false });
-  
+
+  if (signatureBuffer) {
+    try {
+      doc.image(signatureBuffer, 40, sigY, { height: 40 });
+    } catch (e) {
+      doc.rect(40, sigY, 200, 30).fillAndStroke("#FFFFFF", "#aaa");
+      doc.fillColor("#000").fontSize(12).font("Times-Italic").text("Signature", 60, sigY + 10, { lineBreak: false });
+    }
+  } else {
+    doc.rect(40, sigY, 200, 30).fillAndStroke("#FFFFFF", "#aaa");
+    doc.fillColor("#000").fontSize(12).font("Times-Italic").text("Signature", 60, sigY + 10, { lineBreak: false });
+  }
+
   const timestamp = new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo", hour12: true });
   doc.fontSize(8).font("Helvetica").fillColor("#444").text(`Signed on ${timestamp} Sri Lanka time`, 40, sigY + 38, { lineBreak: false });
 
@@ -187,7 +222,7 @@ function drawDoctorSignatureBlock(doc: any, data: any, y: number) {
 function drawFixedFooter(doc: any, pageNum: number, totalPages: number) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
-  
+
   const bottomY = pageHeight - 40;
   doc.rect(40, bottomY, 350, 16).strokeColor("#aaa").lineWidth(0.5).stroke();
 
@@ -221,10 +256,13 @@ function drawStyledField(doc: any, label: string, value: string | undefined, y: 
   const boxWidth = doc.page.width - boxX - 40;
   const boxHeight = 20;
   doc.rect(boxX, y, boxWidth, boxHeight).fillAndStroke("#FFFFFF", "#aaa");
-  if (value) {
-    doc.fillColor("#000").font("Helvetica").text(value, boxX + 8, y + 6, { lineBreak: false });
-  }
+  doc.fillColor("#000").font("Helvetica").text(value, boxX + 8, y + 6, { lineBreak: false });
   return y + boxHeight + 4;
+}
+
+async function fetchImageBuffer(url: string): Promise<Buffer> {
+  const response = await axios.get(url, { responseType: "arraybuffer" });
+  return Buffer.from(response.data, "binary");
 }
 
 function drawStyledFieldRow(doc: any, label1: string, val1: string | undefined, label2: string, val2: string | undefined, y: number) {

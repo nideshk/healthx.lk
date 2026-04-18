@@ -4,6 +4,8 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { sendEmail } from "../email";
 import { generatePrescriptionPDF } from "./pdf";
 import { supabaseAdmin } from "../supabaseAdmin";
+import fs from "fs";
+import path from "path";
 
 export async function processPrescriptionIssuance(params: {
   appointmentId: string;
@@ -14,31 +16,59 @@ export async function processPrescriptionIssuance(params: {
   const { appointmentId, patientEmail, patientName, prescriptionData } = params;
 
   // 0. Fetch Appointment, Patient, and Practitioner Details
-  const { data: appt } = await supabaseAdmin
+  const { data: appt, error } = await supabaseAdmin
     .from("appointments")
     .select(`
-      date, 
-      practitioner_id, 
-      patients ( date_of_birth, gender ),
-      practitioners ( full_name, title, qualifications, registration_number )
-    `)
+    starts_at,
+    patients!fk_appointments_patient (
+      id,
+      full_name,
+      dob,
+      gender,
+      address,
+      allergies,
+      email,
+      contact_number
+    ),
+    practitioners!fk_appointments_practitioner (
+      id,
+      full_name,
+      qualification,
+      specialization,
+      license_number,
+      experience_years,
+      contact_email,
+      contact_number,
+      signature_url
+    )
+  `)
     .eq("id", appointmentId)
     .single();
 
-  const doctorName = appt?.practitioners?.full_name || "Clinician";
-  const doctorTitle = appt?.practitioners?.title || "Dr.";
-  const doctorQuals = appt?.practitioners?.qualifications || "";
-  const doctorReg = appt?.practitioners?.registration_number || "";
-  
+  if (error) {
+    console.error("❌ Supabase fetch error:", error);
+    throw error;
+  }
+
+  const patient = (Array.isArray(appt?.patients) ? appt.patients[0] : appt?.patients) as any;
+  const practitioner = (Array.isArray(appt?.practitioners) ? appt.practitioners[0] : appt?.practitioners) as any;
+
+  if (!patient) throw new Error("❌ Patient NOT fetched");
+  if (!practitioner) throw new Error("❌ Practitioner NOT fetched");
+
+  const allergies = patient?.allergies?.length
+    ? patient.allergies.join(", ")
+    : "None";
+
   // Calculate patient age
   let patientAge = "N/A";
-  if (appt?.patients?.date_of_birth) {
-    const diff = Date.now() - new Date(appt.patients.date_of_birth).getTime();
-    const ageDate = new Date(diff); 
+  if (patient?.dob) {
+    const diff = Date.now() - new Date(patient.dob).getTime();
+    const ageDate = new Date(diff);
     patientAge = Math.abs(ageDate.getUTCFullYear() - 1970).toString();
   }
-  const patientGender = appt?.patients?.gender || "Unknown";
-  const appointmentDate = appt?.date || new Date().toISOString().split('T')[0];
+  const patientGender = patient?.gender || "Unknown";
+  const appointmentDate = appt?.starts_at || new Date().toISOString().split('T')[0];
 
   // 1. Fetch Diagnosis Details for the PDF
   let diagnosisDisplay = "N/A";
@@ -48,23 +78,46 @@ export async function processPrescriptionIssuance(params: {
       .select("name, code")
       .eq("id", prescriptionData.diagnosis_id)
       .maybeSingle();
-    
+
     if (diag) {
       diagnosisDisplay = `${diag.name} (${diag.code})`;
     }
   }
 
-  // 2. Generate PDF
+  // 2. Handle Practitioner Signature
+  let signedSignatureUrl = null;
+  if (practitioner?.signature_url) {
+    try {
+      signedSignatureUrl = await getSignedUrl(s3, new GetObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET!,
+        Key: practitioner.signature_url,
+      }), { expiresIn: 60 * 10 }); // 10 minutes
+    } catch (e) {
+      console.error("Failed to sign signature URL", e);
+    }
+  }
+
+  // 3. Generate PDF
   const pdfBuffer = await generatePrescriptionPDF({
     appointmentId,
     appointmentDate,
-    patientName,
-    patientAge,
-    patientGender,
-    doctorName,
-    doctorTitle,
-    doctorQuals,
-    doctorReg,
+    patient: {
+      name: patientName,
+      age: patientAge,
+      gender: patientGender,
+      address: patient?.address || "",
+      email: patient?.email || patientEmail,
+      phone: patient?.contact_number || "",
+      allergies: allergies,
+      dob: patient?.dob || "N/A"
+    },
+    practitioner: {
+      name: practitioner?.full_name || "Clinician",
+      title: practitioner?.title || "Dr.",
+      credentials: practitioner?.qualification || "",
+      licenseNumber: practitioner?.license_number || "",
+      signatureUrl: signedSignatureUrl
+    },
     diagnosis: diagnosisDisplay,
     items: prescriptionData.items,
     special_notes: prescriptionData.special_notes
@@ -119,10 +172,10 @@ export async function processPrescriptionIssuance(params: {
   // Following the same pattern as attachments - store the key, sign on read
   await supabaseAdmin
     .from("prescriptions")
-    .update({ 
-      pdf_url: fileKey, 
-      status: 'issued', 
-      issued_at: new Date().toISOString() 
+    .update({
+      pdf_url: fileKey,
+      status: 'issued',
+      issued_at: new Date().toISOString()
     })
     .eq("appointment_id", appointmentId);
 
