@@ -8,6 +8,7 @@ import PricingTab from "./subtabs/PricingTab";
 import EarningsTab from "./subtabs/EarningsTab";
 import { Settings } from "lucide-react";
 import SettingsTab from "./subtabs/SettingsTab";
+import PrescriptionsTab from "./subtabs/PrescriptionsTab";
 
 interface ClinicianProfileModalProps {
   open: boolean;
@@ -15,7 +16,7 @@ interface ClinicianProfileModalProps {
   clinician: any; // Replace with your Clinician type later
 }
 
-const TABS = ["Details", "Availability", "Pricing", "Earnings", "Settings"];
+const TABS = ["Details", "Availability", "Pricing", "Earnings", "Prescriptions", "Settings"];
 
 const ClinicianProfileModal: React.FC<ClinicianProfileModalProps> = ({
   open,
@@ -84,6 +85,10 @@ const ClinicianProfileModal: React.FC<ClinicianProfileModalProps> = ({
     <div className="text-sm text-slate-400">
       <EarningsTab clinicianId={clinician.id} />
     </div>
+  )}
+
+  {activeTab === "Prescriptions" && (
+    <PrescriptionsTab clinicianId={clinician.id} />
   )}
 
  {activeTab === "Settings" && (

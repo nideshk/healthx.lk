@@ -26,6 +26,8 @@ async function signPrescriptionUrl(s3KeyOrUrl: string) {
 
 export async function GET(request: NextRequest) {
   const { authorized, user, role } = await requireUser(request);
+  console.log("data", authorized, user, role)
+  console.log("authorized", authorized)
   if (!authorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -68,7 +70,7 @@ export async function GET(request: NextRequest) {
         .range(offset, offset + limit - 1);
 
       if (error) throw error;
-      
+
       // Formatting admin response
       items = (data || []).map((p: any) => ({
         id: p.id,
@@ -105,7 +107,7 @@ export async function GET(request: NextRequest) {
         .range(offset, offset + limit - 1);
 
       if (error) throw error;
-      
+
       // Sign pdf_url for practitioner view
       items = await Promise.all((data || []).map(async (p: any) => ({
         ...p,

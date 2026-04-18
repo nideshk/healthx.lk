@@ -248,17 +248,52 @@ export default function ConsultationPanel({ appointmentId }: Props) {
     }
   };
 
+  /* ==================== DELETE PRESCRIPTION (Cleanup) ==================== */
+  const deletePrescription = async () => {
+    if (!window.confirm("Are you sure you want to delete this draft? This cannot be undone.")) return;
+
+    setError(null);
+    setSuccess(null);
+    setSaving(true);
+
+    try {
+      const res = await authFetch(
+        `/api/booking/appointment/${appointmentId}/consultation`,
+        { method: "DELETE" }
+      );
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.error || "Failed to delete draft");
+      }
+
+      setPrescriptionStatus("draft");
+      setPrescriptionItems([]);
+      setSpecialNotes("");
+      setDiagId(null);
+      setDiagCode("");
+      setDiagName("");
+      setDiagDescription("");
+      setSuccess("Draft deleted successfully.");
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   /* ==================== SAVE PRESCRIPTION (prescription tab) ==================== */
   const savePrescription = async (
-    status: "draft" | "issued" = "draft"
+    status: "draft" | "ready_to_issue" | "issued" = "draft"
   ) => {
     setError(null);
     setSuccess(null);
 
-    if (status === "issued") {
+    if (status === "issued" || status === "ready_to_issue") {
       const hasItems = prescriptionItems.some((i) => i.medicine_name.trim());
       if (!hasItems) {
-        setError("Add at least one medicine before issuing.");
+        setError("Add at least one medicine before moving past draft.");
         return;
       }
     }
@@ -294,6 +329,8 @@ export default function ConsultationPanel({ appointmentId }: Props) {
       setSuccess(
         status === "issued"
           ? "Prescription issued successfully!"
+          : status === "ready_to_issue"
+          ? "Ready to Issue."
           : "Prescription draft saved."
       );
 
@@ -327,7 +364,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
     setPrescriptionItems(newItems);
   };
 
-  const isLocked = prescriptionStatus !== "draft";
+  const isLocked = prescriptionStatus === "issued" || prescriptionStatus === "ready_to_issue";
 
   /* ============================== UI ============================== */
   return (
@@ -789,31 +826,59 @@ export default function ConsultationPanel({ appointmentId }: Props) {
 
               {/* Action Buttons */}
               {!isLocked && (
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => savePrescription("draft")}
-                    disabled={saving}
-                    className="flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-black font-medium rounded-lg py-2.5 text-sm transition-colors disabled:opacity-50"
-                  >
-                    {saving ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Save size={16} />
+                <div className="space-y-3 pt-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => savePrescription("draft")}
+                      disabled={saving}
+                      className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-slate-700 font-semibold rounded-xl py-3 text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {saving ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Save size={16} />
+                      )}
+                      Draft
+                    </button>
+
+                    <button
+                      onClick={() => savePrescription("ready_to_issue")}
+                      disabled={saving}
+                      className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl py-3 text-sm transition-all border border-indigo-200 active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {saving ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <CheckCircle2 size={16} />
+                      )}
+                      Ready
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {prescriptionStatus === "draft" && (
+                      <button
+                        onClick={deletePrescription}
+                        disabled={saving}
+                        className="p-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all border border-red-100 active:scale-[0.95] disabled:opacity-50"
+                        title="Delete Draft"
+                      >
+                        <X size={18} />
+                      </button>
                     )}
-                    Save Draft
-                  </button>
-                  <button
-                    onClick={() => savePrescription("issued")}
-                    disabled={saving}
-                    className="flex-1 text-black flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 font-medium rounded-lg py-2.5 text-sm transition-colors disabled:opacity-50"
-                  >
-                    {saving ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Send size={16} />
-                    )}
-                    Issue
-                  </button>
+                    <button
+                      onClick={() => savePrescription("issued")}
+                      disabled={saving}
+                      className="flex-1 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl py-3 text-sm shadow-lg shadow-slate-200 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {saving ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Send size={16} />
+                      )}
+                      Final Issue
+                    </button>
+                  </div>
                 </div>
               )}
             </>
