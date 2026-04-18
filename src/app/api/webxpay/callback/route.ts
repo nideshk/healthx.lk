@@ -19,24 +19,55 @@ export async function POST(request: NextRequest) {
         
         const rawPaymentData = Buffer.from(paymentBase64, 'base64').toString('utf8');
         const publicKey = process.env.WEBXPAY_PUBLIC_KEY;
-        const cleanPublicKey = publicKey?.split('\n').map(line => line.trim()).filter(line => line).join('\n');
+
+        if(!publicKey) {
+            console.error("Public key not configured in environment variables.");
+            return NextResponse.json({ error: "Verification failed" }, { status: 500 });
+        }
+
+        let pemKey = publicKey?.replace(/\\n/g, '\n').replace(/"/g, '').trim();
+
+        if (!pemKey.includes('-----BEGIN PUBLIC KEY-----')) {
+            console.error("Public key is missing headers. Attempting to fix...");
+            pemKey = `-----BEGIN PUBLIC KEY-----\n${pemKey}\n-----END PUBLIC KEY-----`;
+        }
 
         let decryptedSignature = "";
-        try
-        {
+
+        // Adding debug logs to identify potential formatting issues with the key or signature
+        console.log("=== PRE-DECRYPTION DEBUG ===");
+        console.log("Signature Length:", signature?.length);
+        console.log("Public Key Prefix:", pemKey.substring(0, 30)); 
+        console.log("Public Key Suffix:", pemKey.substring(pemKey.length - 30));
+        console.log("Public Key Newline Count:", (pemKey.match(/\n/g) || []).length);
+        console.log("============================");
+        
+        try {
+            const keyObject = crypto.createPublicKey({
+                key: pemKey,
+                format: 'pem',
+            });
+
             decryptedSignature = crypto.publicDecrypt(
                 {
-                    key: cleanPublicKey!,
+                    key: keyObject,
                     padding: crypto.constants.RSA_PKCS1_PADDING,
                 },
                 Buffer.from(signature, 'base64')
             ).toString('utf8').replace(/\0/g, '');
-        } 
-        catch (decryptionError)
-        {
-            console.error("Signature Decryption Failed:", decryptionError);
+        } catch (decryptionError) {
+            console.error("Signature Decryption Failed. Key length:", pemKey.length);
+            console.error("Error Detail:", decryptionError);
             return NextResponse.json({ error: "Verification failed" }, { status: 403 });
         }
+
+        // Adding these logs to verify if there are hidden formatting issues
+        console.log("=== VERIFICATION DEBUG START ===");
+        console.log("Status Code:", formData.get('status_code'));
+        console.log("Order ID:", order_id);
+        console.log("Raw Payment Data:", `|${rawPaymentData}|`);
+        console.log("Decrypted Signature:", `|${decryptedSignature}|`);
+        console.log("=== VERIFICATION DEBUG END ===");
 
         if (rawPaymentData.trim() !== decryptedSignature.trim()) {
             console.error("SECURITY ALERT: Signature Mismatch!");
