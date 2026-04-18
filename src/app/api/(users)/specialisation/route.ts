@@ -24,7 +24,6 @@ export async function GET(req: Request) {
         { status: 500 }
       );
     }
-    console.log(data)
     return NextResponse.json({
       success: true,
       count: data?.length || 0,

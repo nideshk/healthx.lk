@@ -98,10 +98,6 @@ export async function POST(
 
     const s3Key = `appointments/${id}/attachments/${fileId}.${extension}`;
 
-    console.log("🔹 [UPLOAD_URL] S3 key generated", {
-      requestId,
-      s3Key,
-    });
 
     /* ------------------------------------------------
      * CREATE PRESIGNED URL

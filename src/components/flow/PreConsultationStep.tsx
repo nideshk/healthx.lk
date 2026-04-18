@@ -60,7 +60,6 @@ export default function PreConsultationStep({
     relationship: "",
   });
 
-  console.log("booking", bookingData)
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const isCustomReferral =

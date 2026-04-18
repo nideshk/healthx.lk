@@ -100,8 +100,8 @@ const DoctorSelectionStep = forwardRef(
           await nextStep({
             override: { selectedDoctor: doctor },
           });
-        } catch (err) {
-          console.error('Navigation error:', err);
+        } catch (err: any) {
+          toast.error('Navigation error: ' + err.message);
           setIsSaving(false);
         }
       }, 300);
@@ -140,8 +140,8 @@ const DoctorSelectionStep = forwardRef(
               <p className="text-sm text-slate-500 font-medium mt-1">
                 {t('subtitle')}{' '}
                 <span className="text-teal-600 font-bold">
-                  {locale === 'si' && bookingData.selectedService?.sin_slug 
-                    ? bookingData.selectedService.sin_slug 
+                  {locale === 'si' && bookingData.selectedService?.sin_slug
+                    ? bookingData.selectedService.sin_slug
                     : bookingData.selectedService?.name}
                 </span>
               </p>

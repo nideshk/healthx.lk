@@ -8,7 +8,6 @@ export async function POST(req: Request) {
     const { token, appointmentId, eventType, metadata = {} } = await req.json();
 
     if (!appointmentId || !eventType) {
-      console.log("Missing appointmentId or eventType")
       return NextResponse.json(
         { error: "Missing appointmentId or eventType" },
         { status: 400 }
@@ -33,7 +32,6 @@ export async function POST(req: Request) {
     // ---------------------------------------------------------
     if (!actorUserId) {
       if (!token) {
-        console.log("Not eligible")
         return NextResponse.json(
           { error: "User not authenticated and no guest token provided" },
           { status: 401 }
@@ -43,7 +41,6 @@ export async function POST(req: Request) {
       const decoded: any = verifyTelehealthToken(token);
 
       if (!decoded) {
-        console.log("Invalid telehealth token")
         return NextResponse.json(
           { error: "Invalid telehealth token" },
           { status: 403 }
@@ -52,7 +49,6 @@ export async function POST(req: Request) {
 
       // 🔐 HARD SAFETY CHECK
       if (decoded.appointmentId !== appointmentId) {
-        console.log("Token does not match appointment")
         return NextResponse.json(
           { error: "Token does not match appointment" },
           { status: 403 }
@@ -67,7 +63,6 @@ export async function POST(req: Request) {
     // 3️⃣ FINAL SAFETY CHECK
     // ---------------------------------------------------------
     if (!actorUserId) {
-      console.log("Unable to determine user identity")
       return NextResponse.json(
         { error: "Unable to determine user identity" },
         { status: 403 }
@@ -78,7 +73,6 @@ export async function POST(req: Request) {
     // 4️⃣ WRITE TO AUDIT LOG
     // ---------------------------------------------------------
 
-    console.log(`Logging telehealth event: appointmentId=${appointmentId}, eventType=${eventType}, actorUserId=${actorUserId}, actorRole=${actorRole}`);
     await supabaseAdmin.from("consultation_audit_log").insert({
       appointment_id: appointmentId,
       user_id: actorUserId,

@@ -104,7 +104,7 @@ export default function SignupForm() {
         router.push(callbackUrl || "/appointment");
       }, 1200);
     } catch (err: any) {
-      console.error(err);
+      toast.error(err.message || t("messages.unexpectedError"));
       setError(err.message || t("messages.unexpectedError"));
     } finally {
       setLoading(false);

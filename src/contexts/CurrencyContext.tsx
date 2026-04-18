@@ -77,12 +77,10 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const detectCurrencyClient = useCallback(async () => {
         try {
-            console.log('[Currency] Detecting location on client...');
             const res = await fetch('https://ipapi.co/json/');
             const data = await res.json();
             if (data.country_code) {
                 const detected = COUNTRY_TO_CURRENCY[data.country_code] || 'LKR';
-                console.log(`[Currency] Detected Country: ${data.country_code}, Mapping to: ${detected}`);
                 setSelectedCurrency(detected);
             }
         } catch (e) {

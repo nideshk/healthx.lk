@@ -102,7 +102,15 @@ export async function GET(req: NextRequest) {
             experience_years,
             is_active,
             fees,
-            languages
+            languages,
+            contact_email,
+            contact_number,
+            gender,
+            avg_rating,
+            total_reviews,
+            review_count,
+            available_services,
+            profile_bio
             `,
             { count: "exact" }
           )
@@ -133,6 +141,14 @@ export async function GET(req: NextRequest) {
         experience_years: p.experience_years,
         is_active: p.is_active,
         languages: p.languages ?? [],
+        contact_email: p.contact_email,
+        contact_number: p.contact_number,
+        gender: p.gender,
+        avg_rating: p.avg_rating,
+        total_reviews: p.total_reviews ?? 0,
+        review_count: p.review_count ?? 0,
+        available_services: p.available_services ?? [],
+        profile_bio: p.profile_bio,
         // ✅ OPTION 1 FEES STRUCTURE
         fees: normalizeFeesToArray(p.fees),
       }));
@@ -180,26 +196,30 @@ export async function GET(req: NextRequest) {
       .select(`
         id,
         full_name,
+        qualification,
         specialization,
+        license_number,
         profile_picture_url,
+        experience_years,
+        contact_email,
+        contact_number,
+        gender,
         avg_rating,
+        total_reviews,
         review_count,
-        city,
-        consultation_modes,
-        languages
+        languages,
+        available_services,
+        profile_bio,
+        fees
       `)
       .eq("is_active", true)
-      .eq("is_verified", true)
-      .gte("avg_rating", 3.8)
-      .order("avg_rating", { ascending: false })
-      .range(offset, offset + limit - 1);
 
     if (specialization) {
-      query = query.ilike("specialization", `%${specialization}%`);
+      query = query.contains("specialization", [specialization]);
     }
 
     const { data, error } = await query;
-
+    console.log(data)
     if (error) {
       console.error("❌ Supabase Fetch Error:", error);
       return NextResponse.json(
@@ -207,6 +227,16 @@ export async function GET(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    const publicPractitioners = (data ?? []).map((p: any) => ({
+      ...p,
+      total_reviews: p.total_reviews ?? 0,
+      review_count: p.review_count ?? 0,
+      available_services: p.available_services ?? [],
+      languages: p.languages ?? [],
+      fees: normalizeFeesToArray(p.fees),
+    }));
+
     await auditLog({
       ...cnx,
       action: "VIEWED",
@@ -215,8 +245,8 @@ export async function GET(req: NextRequest) {
       metadata: {
         success: true,
         role: "guest",
-        count: data?.length ?? 0,
-        data: data ?? [],
+        count: publicPractitioners.length,
+        data: publicPractitioners,
       }
     })
 
@@ -224,8 +254,8 @@ export async function GET(req: NextRequest) {
       {
         success: true,
         role: "guest",
-        count: data?.length ?? 0,
-        data: data ?? [],
+        count: publicPractitioners.length,
+        data: publicPractitioners,
       },
       { status: 200 }
     );

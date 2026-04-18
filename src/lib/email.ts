@@ -26,7 +26,6 @@ if (process.env.NODE_ENV === "development") {
     if (err) {
       console.error("❌ SMTP connection failed:", err);
     } else {
-      console.log("📨 SMTP server is ready to send emails");
     }
   });
 
@@ -34,7 +33,6 @@ if (process.env.NODE_ENV === "development") {
     if (err) {
       console.error("❌ Support SMTP connection failed:", err);
     } else {
-      console.log("📨 Support SMTP server is ready to send emails");
     }
   });
 }

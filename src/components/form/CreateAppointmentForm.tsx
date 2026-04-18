@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "react-toastify";
 
 export default function CreateAppointmentForm() {
   const [form, setForm] = useState({
@@ -58,12 +59,12 @@ export default function CreateAppointmentForm() {
 
       if (!res.ok) {
         setError(data.error || "Failed to create appointment");
-        console.error("❌ API Error:", data);
+        toast.error(data.error || "Failed to create appointment");
       } else {
         setSuccess("✅ Appointment created successfully!");
       }
     } catch (err: any) {
-      console.error("❌ Unexpected error:", err);
+      toast.error("Unexpected error occurred");
       setError("Unexpected error occurred");
     } finally {
       setLoading(false);

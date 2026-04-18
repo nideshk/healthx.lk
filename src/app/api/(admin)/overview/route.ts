@@ -13,9 +13,7 @@ export async function GET(req: NextRequest) {
   try {
     const { authorized, role, user } = await requireUser(req);
     const cnx = getAuditContext(req, user);
-
-    if (!authorized || role !== "admin") {
-
+    if (!authorized || (role !== "admin" && role !== "superadmin")) {
       await auditLog({
         ...cnx,
         action: "FAILED_ACCESS",

@@ -60,7 +60,6 @@ const ConsultationStep = forwardRef(
           const res = await axios.get('/api/specialisation');
           setServices((res.data.services as Service[]) || []);
         } catch (err) {
-          console.error('Failed to fetch services:', err);
           toast.error(t("failedToLoadServices"));
         } finally {
           setLoading(false);

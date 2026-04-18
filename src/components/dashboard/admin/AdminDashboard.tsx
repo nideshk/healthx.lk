@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import DashboardShell from "@/components/dashboard/layout/DashboardShell";
 import DashboardMenuCard, { DashboardMenuItem } from "@/components/dashboard/layout/DashboardMenuCard";
+import { toast } from "react-toastify";
 import HomeTab from "./tabs/HomeTab";
 import SearchClinicianTab from "./tabs/searchClinician/SearchClinicianTab";
 import SearchPatientTab from "./tabs/searchPatient/SearchPatientTab";
@@ -62,7 +63,7 @@ const AdminDashboard: React.FC = () => {
         setProfileRole(json?.user?.role ?? "Administrator");
         setProfileEmail(json?.user?.user?.email ?? "");
       } catch (err) {
-        console.error("Failed to fetch admin profile", err);
+        toast.error("Failed to fetch admin profile");
       }
     };
     fetchMe();
@@ -88,7 +89,7 @@ const AdminDashboard: React.FC = () => {
       subtitle="Manage clinicians and patients"
       profileName={profileName}
       profileRole={profileRole}
-      onLogout={() => console.log("admin logout")}
+      onLogout={() => {}}
       sidebar={menuComponent}
     >
       <div className="flex flex-col md:flex-row gap-6">

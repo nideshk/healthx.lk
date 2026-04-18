@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { authFetch } from "@/lib/authFetch";
+import { toast } from "react-toastify";
 
 export default function FileUpload() {
   const [file, setFile] = useState<File | null>(null);
@@ -36,7 +37,7 @@ export default function FileUpload() {
 
       setMessage("✅ File uploaded successfully!");
     } catch (err: any) {
-      console.error("File upload failed:", err);
+      toast.error("File upload failed: " + err.message);
       setMessage("❌ Error: " + err.message);
     } finally {
       setUploading(false);
