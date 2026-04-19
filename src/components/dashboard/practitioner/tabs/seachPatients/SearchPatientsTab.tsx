@@ -79,11 +79,11 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
       const mergedAppointments = Array.isArray(json)
         ? json
         : [
-            ...appointmentsByCategory.ongoing,
-            ...appointmentsByCategory.upcoming,
-            ...appointmentsByCategory.past,
-            ...appointmentsByCategory.cancelled,
-          ];
+          ...appointmentsByCategory.ongoing,
+          ...appointmentsByCategory.upcoming,
+          ...appointmentsByCategory.past,
+          ...appointmentsByCategory.cancelled,
+        ];
 
       setAllAppointments(mergedAppointments);
 

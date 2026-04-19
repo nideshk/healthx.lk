@@ -10,8 +10,8 @@ import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import Link from "next/link";
 import { toast } from "react-toastify";
-import { ExternalLink, FileText, Edit2, Save, X, Loader2 } from "lucide-react";
-import PrescriptionTab from "./PrescriptionTab";
+import { ExternalLink, FileText, Edit2, Save, X, Loader2, Pill } from "lucide-react";
+import PrescriptionTab, { PrescriptionDetails } from "./PrescriptionTab";
 
 interface PatientDetailViewProps {
   patient: Patient;
@@ -71,7 +71,7 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
         <AppointmentsTab appointments={appointments} patient={patient} />
       )}
       {activeTab === "prescription" && (
-        <PrescriptionTab appointments={appointments} patient={patient} />
+        <PrescriptionTab appointments={appointments} patient={patient} viewMode="builder" />
       )}
     </div>
   );
@@ -484,6 +484,7 @@ const AppointmentRow: React.FC<{
     goal: "",
     duration: ""
   });
+  const [structuredPrescription, setStructuredPrescription] = useState<PrescriptionDetails | null>(null);
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationFetched, setConsultationFetched] = useState(false);
   const [isNotifying, setIsNotifying] = useState(false);
@@ -676,6 +677,19 @@ const AppointmentRow: React.FC<{
         })),
       }));
 
+      if (data.prescription) {
+        setStructuredPrescription({
+          id: data.prescription.id,
+          diagnosis: data.prescription.diagnosis_snapshot?.name || data.prescription.diagnosis || "No diagnosis provided",
+          items: data.prescription.items || [],
+          notes: data.prescription.notes || "",
+          status: data.prescription.status || "draft",
+          created_at: data.prescription.created_at,
+          appointment_date: appointment.date,
+          practitioner_name: appointment.doctorName || "Clinician",
+        });
+      }
+
       if (data.encounter?.follow_up_date?.includes("T")) {
         setAppointmentForm((prev) => ({
           ...prev,
@@ -807,6 +821,21 @@ const AppointmentRow: React.FC<{
                 </div>
               </div>
             </div>
+
+            {structuredPrescription && (
+                <section className="pt-4 border-t border-slate-100">
+                    <h3 className="font-semibold text-slate-900 pb-3 flex items-center gap-2">
+                        <Pill size={16} className="text-blue-500" />
+                        Prescription
+                    </h3>
+                    <PrescriptionTab 
+                        appointments={[]} 
+                        patient={patient} 
+                        viewMode="standalone" 
+                        standalonePrescription={structuredPrescription} 
+                    />
+                </section>
+            )}
 
             <InfoRow
               label="What is your main concern today?"
