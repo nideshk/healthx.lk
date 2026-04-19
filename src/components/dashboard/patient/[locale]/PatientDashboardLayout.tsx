@@ -8,14 +8,12 @@ import {
   Plus,
   ShieldCheck,
   MessageCircleCodeIcon,
-  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { PatientTab } from "./patientTabs";
 import AppointmentTab from "./tabs/AppointmentTab";
 import RescheduleTab from "./tabs/RescheduleTab";
 import FileManagerTab from "./tabs/FileManagerTab";
-import PrescriptionsTab from "./tabs/PrescriptionsTab";
 import FollowUpRequest from "./FollowUpRequest";
 import { ReviewModal } from "@/components/atom/Modal/ReviewModal";
 import { authFetch } from "@/lib/authFetch";
@@ -91,12 +89,6 @@ export default function PatientDashboardLayout({
                     label={t("medicalRecords")}
                   />
                   <SidebarLink
-                    href="/dashboard?tab=prescriptions"
-                    active={activeTab === "prescriptions"}
-                    icon={<FileText size={20} />}
-                    label={t("prescriptions")}
-                  />
-                  <SidebarLink
                     href="/dashboard?tab=follow-up"
                     active={activeTab === "follow-up"}
                     icon={<MessageCircleCodeIcon size={20} />}
@@ -157,7 +149,6 @@ export default function PatientDashboardLayout({
               {activeTab === "appointment" && <AppointmentTab />}
               {activeTab === "reschedule" && <RescheduleTab />}
               {activeTab === "file-manager" && <FileManagerTab />}
-              {activeTab === "prescriptions" && <PrescriptionsTab />}
               {activeTab === "follow-up" && <FollowUpRequest />}
             </div>
           </main>

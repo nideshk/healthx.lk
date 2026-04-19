@@ -257,17 +257,11 @@ export async function POST(
         }
         : app.bank_details),
 
-    documents: (Array.isArray(body?.documents)
+    documents: Array.isArray(body?.documents)
       ? body.documents
       : Array.isArray(app.documents)
         ? app.documents
-        : []).filter((d: any) => d.document_type !== "signature"),
-
-    signature_url: (Array.isArray(body?.documents)
-      ? body.documents
-      : Array.isArray(app.documents)
-        ? app.documents
-        : []).find((d: any) => d.document_type === "signature")?.file_url ?? null,
+        : [],
 
     languages: Array.isArray(body?.languages)
       ? body.languages

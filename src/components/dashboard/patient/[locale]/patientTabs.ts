@@ -2,7 +2,6 @@
 export type PatientTab =
   | "appointment"
   | "reschedule"
-  | "prescriptions"
   | "file-manager"
   | "follow-up";
 

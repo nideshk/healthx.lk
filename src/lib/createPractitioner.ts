@@ -67,7 +67,6 @@ type CreatePractitionerInput = {
   bank_details?: any;
   documents?: any[] | null;
   languages?: string[] | null;
-  signature_url?: string | null;
 };
 
 export async function createPractitioner(
@@ -93,8 +92,7 @@ export async function createPractitioner(
     // availability,
     bank_details,
     documents,
-    languages,
-    signature_url
+    languages
   } = input;
 
   const full_name = [first_name, last_name].filter(Boolean).join(" ");
@@ -164,9 +162,7 @@ export async function createPractitioner(
       fees,
       is_active: true,
       documents: documents ?? [],
-      languages,
-      signature_url,
-      signature_uploaded_at: signature_url ? new Date().toISOString() : null,
+      languages
     })
     .select("id")
     .single();

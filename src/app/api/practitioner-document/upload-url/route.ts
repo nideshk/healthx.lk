@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!["government_id", "supporting_document", "signature"].includes(documentType)) {
+    if (!["government_id", "supporting_document"].includes(documentType)) {
       return NextResponse.json(
         { error: "Invalid documentType" },
         { status: 400 }
@@ -59,9 +59,8 @@ export async function POST(req: NextRequest) {
     const fileId = uuidv4();
 
     const s3Key =
-      documentType === "signature"
-        ? `practitioner-supporting-document-upload/${application_id}/signature/${fileName}`
-        : `practitioner-supporting-document-upload/${application_id}/${fileId}.${ext}`;
+      `practitioner-supporting-document-upload/` +
+      `${application_id}/${fileId}.${ext}`;
 
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,

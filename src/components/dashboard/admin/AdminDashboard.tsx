@@ -16,9 +16,8 @@ import { Patient } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import CouponsTab from "./tabs/coupons/CouponsTab";
 import CreateAppointmentTab from "./tabs/createAppointment/CreateAppointmentTab";
-import PrescriptionsTab from "./tabs/PrescriptionsTab";
 
-type AdminMenuId = "home" | "searchClinician" | "searchPatient" | "addClinician" | "manageAdmins" | "analytics" | "settings" | "coupons" | "createAppointment" | "specialisations" | "prescriptions";
+type AdminMenuId = "home" | "searchClinician" | "searchPatient" | "addClinician" | "manageAdmins" | "analytics" | "settings" | "coupons" | "createAppointment" | "specialisations";
 
 const menuItems: DashboardMenuItem[] = [
   { id: "home", label: "Home" },
@@ -30,8 +29,7 @@ const menuItems: DashboardMenuItem[] = [
   { id: "settings", label: "Settings" },
   { id: "coupons", label: "Coupons" },
   { id: "createAppointment", label: "Create Appointment" },
-  { id: "specialisations", label: "Specializations" },
-  { id: "prescriptions", label: "Prescriptions" }
+  { id: "specialisations", label: "Specializations" }
 ];
 
 const calculateAgeFromDob = (dob?: string | null): number => {
@@ -112,7 +110,6 @@ const AdminDashboard: React.FC = () => {
           {activeMenu === "coupons" && <CouponsTab />}
           {activeMenu === "createAppointment" && <CreateAppointmentTab />}
           {activeMenu === "specialisations" && <SpecializationsTab />}
-          {activeMenu === "prescriptions" && <PrescriptionsTab />}
         </div>
       </div>
     </DashboardShell>

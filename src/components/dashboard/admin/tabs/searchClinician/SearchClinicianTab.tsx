@@ -31,7 +31,7 @@ const SearchClinicianTab: React.FC = () => {
 
     try {
       const params = new URLSearchParams();
-      if (search.length >= 4) {
+      if (search.length >= 3) {
         params.append("q", search);
       }
       params.append("limit", limit.toString());
@@ -45,11 +45,8 @@ const SearchClinicianTab: React.FC = () => {
       if (!res.ok) throw new Error("Failed to fetch clinicians");
 
       const data = await res.json();
-      console.log("Admin Clinician Search Response:", data);
-      
-      // For Admin API, data is in 'practitioners', for Guest API it is in 'data'
-      const results = data.practitioners || data.data || [];
-      setClinicians(results);
+      console.log(data)
+      setClinicians(data.data || []);
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -191,15 +188,13 @@ const SearchClinicianTab: React.FC = () => {
           )}
 
           <div className="space-y-3 min-h-[100px] relative">
-
             {loading ? (
               <div className="flex justify-center py-10">
                 <Loader />
               </div>
             ) : (
               <>
-                {console.log("clinician data", clinicians)}
-
+                {console.log("clinician", clinicians)}
                 {clinicians.length > 0 ? (
                   <>
                     {clinicians.map((c) => (

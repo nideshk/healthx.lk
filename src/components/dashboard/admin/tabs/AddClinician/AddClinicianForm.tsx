@@ -75,7 +75,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
   const [isSpecOpen, setIsSpecOpen] = useState(false);
 
   const [pendingFiles, setPendingFiles] = useState<
-    { file: File; document_type: "government_id" | "supporting_document" | "signature" }[]
+    { file: File; document_type: "government_id" | "supporting_document" }[]
   >([]);
 
   const [uploadingDocs, setUploadingDocs] = useState(false);
@@ -129,7 +129,6 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
 
   const governmentIdCount = pendingFiles.filter(f => f.document_type === "government_id").length;
   const supportingDocCount = pendingFiles.filter(f => f.document_type === "supporting_document").length;
-  const signatureCount = pendingFiles.filter(f => f.document_type === "signature").length;
 
   useEffect(() => {
     const fetchFormConfig = async () => {
@@ -173,7 +172,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
     setSelectedAppointments(prev => prev.map(a => (a.id === id ? { ...a, base_fee: value } : a)));
   };
 
-  const handleFileSelect = (file: File, documentType: "government_id" | "supporting_document" | "signature") => {
+  const handleFileSelect = (file: File, documentType: "government_id" | "supporting_document") => {
     if (documentType === "government_id" && governmentIdCount >= 2) {
       setError("You can upload a maximum of 2 Government ID documents.");
       return;
@@ -181,11 +180,6 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
 
     if (documentType === "supporting_document" && supportingDocCount >= 1) {
       setError("Only one supporting document is allowed.");
-      return;
-    }
-
-    if (documentType === "signature" && signatureCount >= 1) {
-      setError("Only one signature document is allowed.");
       return;
     }
     setPendingFiles(prev => [...prev, { file, document_type: documentType }]);
@@ -204,9 +198,6 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
 
     if (supportingDocCount !== 1)
       throw new Error("Exactly one supporting document is required.");
-
-    if (signatureCount !== 1)
-      throw new Error("Exactly one signature document is required.");
 
     setUploadingDocs(true);
     const uploadedDocs: any[] = [];
@@ -257,11 +248,6 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
 
     if (supportingDocCount !== 1) {
       setError("Please upload one supporting document.");
-      return;
-    }
-
-    if (signatureCount !== 1) {
-      setError("Please upload a signature document.");
       return;
     }
     setLoading(true);
@@ -426,11 +412,6 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                   <p className="text-sm font-medium">Supporting Document (Required)</p>
                   <input type="file" className="hidden" id="sup-doc" onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0], "supporting_document")} />
                   <label htmlFor="sup-doc" className={`cursor-pointer text-xs text-teal-600 ${supportingDocCount >= 1 ? "opacity-50" : ""}`}>Select File</label>
-                </div>
-                <div className="p-4 border-2 border-dashed rounded-lg text-center">
-                  <p className="text-sm font-medium">Signature Document (Required)</p>
-                  <input type="file" className="hidden" id="sig-upload" accept=".jpg,.jpeg,.png" onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0], "signature")} />
-                  <label htmlFor="sig-upload" className={`cursor-pointer text-xs text-teal-600 ${signatureCount >= 1 ? "opacity-50" : ""}`}>Select File</label>
                 </div>
               </div>
               <div className="space-y-1">

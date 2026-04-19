@@ -14,7 +14,7 @@ export default function PatientDashboard() {
     DEFAULT_PATIENT_TAB;
 
   useEffect(() => {
-    const validTabs = ["appointment", "reschedule", "prescriptions", "file-manager", "follow-up"];
+    const validTabs = ["appointment", "reschedule", "file-manager", "follow-up"];
     if (!validTabs.includes(tab)) {
       router.replace(`/dashboard?tab=${DEFAULT_PATIENT_TAB}`);
     }

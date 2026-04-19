@@ -59,7 +59,7 @@ export default function PractitionerRegisterPage() {
   const [isSpecOpen, setIsSpecOpen] = useState(false);
 
   const [pendingFiles, setPendingFiles] = useState<
-    { file: File; document_type: "government_id" | "supporting_document" | "signature" }[]
+    { file: File; document_type: "government_id" | "supporting_document" }[]
   >([]);
 
   const [uploadingDocs, setUploadingDocs] = useState(false);
@@ -109,10 +109,6 @@ export default function PractitionerRegisterPage() {
 
   const supportingDocCount = pendingFiles.filter(
     f => f.document_type === "supporting_document"
-  ).length;
-
-  const signatureCount = pendingFiles.filter(
-    f => f.document_type === "signature"
   ).length;
 
   /* ---------------- EFFECTS ---------------- */
@@ -181,7 +177,7 @@ export default function PractitionerRegisterPage() {
 
   const handleFileSelect = (
     file: File,
-    documentType: "government_id" | "supporting_document" | "signature"
+    documentType: "government_id" | "supporting_document"
   ) => {
     if (documentType === "government_id" && governmentIdCount >= 2) {
       setError("You can upload a maximum of 2 Government ID documents.");
@@ -190,11 +186,6 @@ export default function PractitionerRegisterPage() {
 
     if (documentType === "supporting_document" && supportingDocCount >= 1) {
       setError("Only one supporting document is allowed.");
-      return;
-    }
-
-    if (documentType === "signature" && signatureCount >= 1) {
-      setError("Only one signature document is allowed.");
       return;
     }
 
@@ -220,10 +211,6 @@ export default function PractitionerRegisterPage() {
 
     if (supportingDocCount !== 1) {
       throw new Error("Exactly one supporting document is required.");
-    }
-
-    if (signatureCount !== 1) {
-      throw new Error("Exactly one signature document is required.");
     }
 
     setUploadingDocs(true);
@@ -303,12 +290,6 @@ export default function PractitionerRegisterPage() {
 
     if (supportingDocCount !== 1) {
       setError("Please upload one supporting document.");
-      setLoading(false);
-      return;
-    }
-
-    if (signatureCount !== 1) {
-      setError("Please upload your signature document.");
       setLoading(false);
       return;
     }
@@ -787,34 +768,6 @@ export default function PractitionerRegisterPage() {
                   <label
                     htmlFor="support-upload"
                     className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${supportingDocCount >= 1 ? "opacity-50 pointer-events-none" : ""
-                      }`}
-                  >
-                    Select File
-                  </label>
-                </div>
-
-                {/* Signature Document */}
-                <div className="p-5 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
-                  <p className="font-semibold text-gray-700 mb-1">
-                    Signature Document (Upload 1 Required)
-                  </p>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Please upload a clear image of your signature on a white background. This will be used for digital prescriptions.
-                  </p>
-                  <input
-                    type="file"
-                    className="hidden"
-                    id="signature-upload"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={e => {
-                      if (e.target.files?.[0]) {
-                        handleFileSelect(e.target.files[0], "signature");
-                      }
-                    }}
-                  />
-                  <label
-                    htmlFor="signature-upload"
-                    className={`inline-block px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 transition ${signatureCount >= 1 ? "opacity-50 pointer-events-none" : ""
                       }`}
                   >
                     Select File

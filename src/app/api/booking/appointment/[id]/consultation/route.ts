@@ -5,53 +5,15 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { signViewUrl } from "../route";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
-import { processPrescriptionIssuance } from "@/lib/prescription/issueWorkflow";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { s3 } from "@/lib/s3/s3";
-
-const PRESCRIPTION_BUCKET = "clinecxa-prescription-bucket-prod";
-
-async function signPrescriptionUrl(s3KeyOrUrl: string) {
-  // Handle old records that stored the full URL instead of just the key
-  let s3Key = s3KeyOrUrl;
-  if (s3Key.startsWith("https://")) {
-    const url = new URL(s3Key);
-    s3Key = url.pathname.substring(1); // Remove leading "/"
-  }
-  const command = new GetObjectCommand({
-    Bucket: PRESCRIPTION_BUCKET,
-    Key: s3Key,
-  });
-  return getSignedUrl(s3, command, { expiresIn: 60 * 60 }); // 60 minutes
-}
-
-type PrescriptionItem = {
-  medicine_name: string;
-  strength?: string;
-  route?: 'Oral' | 'IV' | 'Local' | 'Suppository' | 'Other';
-  duration?: string;
-  notes?: string;
-};
 
 type PostBody = {
-  diagnosis_id?: string | null;   // UUID from diagnoses table
-  diagnosis_code?: string | null; // Code from diagnoses table
-  diagnosis?: string | null;      // Generic name/string
-  diagnosis_description?: string | null; // Description for master table
-
-  prescription_items?: PrescriptionItem[];
-  special_notes?: string | null;
-  status?: 'draft' | 'ready_to_issue' | 'issued';
-
-  // Encounter related
   clinician_notes?: string | null;
+  prescriptions?: string | object | null; // will be stored as text; objects will be JSON.stringified
   follow_up_needed?: boolean;
-  follow_up_date?: string | null;
-  followup_notes?: string | null;
+  follow_up_date?: string | null; // ISO date string or null
 };
 
-// GET: return preconsult + encounter + prescription for an appointment
+// GET: return preconsult + encounter for an appointment
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id: appointmentId } = await context.params;
 
@@ -60,12 +22,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   }
   const { authorized, user, role } = await requireUser(request);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   try {
-    // Fetch appointment basics
+    // Fetch appointment (minimal)
     const { data: appointment, error: apptErr } = await supabaseClient
       .from("appointments")
-      .select("id, patient_id, practitioner_id, created_at")
+      .select("id, patient_id, practitioner_id")
       .eq("id", appointmentId)
       .limit(1)
       .maybeSingle();
@@ -73,81 +34,71 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     if (apptErr) throw apptErr;
     if (!appointment) return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
 
-    // Authorization check
+    // Authorization: patient, assigned practitioner, or admin/support
     const isPatient = user?.patient_id === appointment.patient_id;
     const isPractitioner = user?.practitioner_id === appointment.practitioner_id;
     const isAdmin = role === "admin" || role === "superadmin";
-
     if (!isPatient && !isPractitioner && !isAdmin) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Role-based Masking Logic
-    const responseData: any = {};
-
-    // 1. Fetch Consent & Pre-consult
-    const { data: consent } = await supabaseClient.from("consents").select("*").eq("appointment_id", appointmentId).maybeSingle();
-    responseData.consent = consent;
-
-    if (!isAdmin) {
-      const { data: preconsult } = await supabaseClient.from("preconsult_responses").select("*").eq("appointment_id", appointmentId).maybeSingle();
-      responseData.preconsult = preconsult;
-
-      if (isPractitioner) {
-        const { data: attachments } = await supabaseAdmin.from("attachments").select("*").eq("appointment_id", appointmentId).eq("practitioner_id", user?.practitioner_id);
-        if (attachments) {
-          responseData.attachments = await Promise.all(attachments.map(async (atc) => ({
-            id: atc.id,
-            file_name: atc.file_name,
-            file_type: atc.file_type,
-            view_url: await signViewUrl(atc.file_url),
-          })));
-        }
-      }
-    }
-
-    // 2. Fetch Encounter (Follow-up only)
-    const { data: encounter } = await supabaseClient.from("encounters").select("id, clinician_notes, follow_up_needed, follow_up_date, follow_up_comments, created_at").eq("appointment_id", appointmentId).maybeSingle();
-
-    // 3. Fetch Prescription & Items (Directly via appointment_id)
-    const { data: prescData } = await supabaseClient
-      .from("prescriptions")
-      .select("*, diagnoses(*)")
+    const { data: consent, error: conErr } = await supabaseClient
+      .from("consents")
+      .select("id, telehealth, terms, accepted_at")
       .eq("appointment_id", appointmentId)
+      .limit(1)
       .maybeSingle();
+    if (conErr) throw conErr;
 
-    const prescription = prescData;
-    let prescriptionItems = [];
-
-    if (prescription && (isPractitioner || isAdmin)) {
-      const { data: items } = await supabaseClient.from("prescription_items").select("*").eq("prescription_id", prescription.id);
-      prescriptionItems = items || [];
-    }
-
-    // Build masked response
     if (isAdmin) {
-      responseData.appointment = {
-        id: appointment.id,
-        created_at: appointment.created_at,
-        status: prescription?.status || 'none'
-      };
-    } else if (isPractitioner) {
-      responseData.encounter = encounter;
-      responseData.prescription = {
-        ...prescription,
-        items: prescriptionItems
-      };
-      if (responseData.prescription) delete responseData.prescription.pdf_url;
-    } else if (isPatient) {
-      responseData.appointment = {
-        id: appointment.id,
-        created_at: appointment.created_at,
-        issued_at: prescription?.issued_at,
-        pdf_url: prescription?.pdf_url ? await signPrescriptionUrl(prescription.pdf_url) : null
-      };
+      return NextResponse.json({ consent: consent ?? null }, { status: 200 });
     }
+    // Fetch preconsult_responses (one row per appointment)
+    const { data: preconsult, error: preErr } = await supabaseClient
+      .from("preconsult_responses")
+      .select("id, patient_id, raw_payload, created_at, updated_at")
+      .eq("appointment_id", appointmentId)
+      .limit(1)
+      .maybeSingle();
+    if (preErr) throw preErr;
+
+
+    let attachments: any[] = [];
+
+    const { data, error } = await supabaseAdmin
+      .from("attachments")
+      .select(
+        `
+          *
+        `
+      )
+      .eq("appointment_id", appointmentId)
+      .eq("practitioner_id", user?.practitioner_id);
+    attachments = data ?? [];
+
+    const signedAttachments = await Promise.all(
+      attachments.map(async (atc) => ({
+        id: atc.id,
+        file_name: atc.file_name,
+        file_type: atc.file_type,
+        file_size: atc.file_size,
+        created_at: atc.created_at,
+        view_url: await signViewUrl(atc.file_url),
+      }))
+    );
+
+    // Fetch encounter (assumes one encounter per appointment)
+    const { data: encounter, error: encErr } = await supabaseClient
+      .from("encounters")
+      .select("id, clinician_notes, prescriptions, follow_up_needed, follow_up_date, created_at, updated_at")
+      .eq("appointment_id", appointmentId)
+      .limit(1)
+      .maybeSingle();
+    if (encErr) throw encErr;
+
 
     const cnx = getAuditContext(request, user);
+
     await auditLog({
       ...cnx,
       action: "VIEWED",
@@ -155,305 +106,125 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       entityId: appointmentId,
       purpose: "treatment",
       source: isPatient ? "user_portal" : "dashboard",
-      metadata: { role }
-    });
+      metadata: { appointment_id: appointmentId }
+    })
 
-    return NextResponse.json(responseData, { status: 200 });
+    return NextResponse.json({ consent: consent ?? null, preconsult: preconsult ?? null, encounter: encounter ?? null, attachments: signedAttachments ?? [] }, { status: 200 });
   } catch (err: any) {
     console.error("GET /consultation error:", err);
     return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });
   }
 }
 
-// POST: create or update consultation/prescription
+// POST: create or update encounter for the appointment
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  //   const appointmentId = params?.id;
+  //   if (!appointmentId) return NextResponse.json({ error: "Missing appointment id" }, { status: 400 });
+
   const { id: appointmentId } = await context.params;
-  const { authorized, user } = await requireUser(request);
+
+  if (!appointmentId) {
+    return NextResponse.json({ error: 'Missing appointment id' }, { status: 400 });
+  }
+
+
+  const { authorized, user, role } = await requireUser(request);
+  const cnx = getAuditContext(request, user);
+
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: PostBody;
   try {
-    body = await request.json();
+    body = (await request.json()) as PostBody;
   } catch (e) {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   try {
-    // 1. Verify Appointment & Practitioner permission
-    const { data: appointment, error: apptErr } = await supabaseAdmin
-      .from("appointments")
-      .select("id, patient_id, practitioner_id, patients(email, full_name)")
-      .eq("id", appointmentId)
-      .maybeSingle();
-
-    if (apptErr || !appointment) {
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
-    }
-
-    if (user?.practitioner_id !== appointment.practitioner_id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const patientData: any = appointment.patients;
-    const patientName = patientData?.full_name || "Patient";
-
-    // 2. Resolve or Create Diagnosis
-    let resolvedDiagnosisId = body.diagnosis_id;
-
-    if (!resolvedDiagnosisId && (body.diagnosis_code && body.diagnosis)) {
-      const { data: upsertedDiag } = await supabaseAdmin
-        .from("diagnoses")
-        .upsert({
-          code: body.diagnosis_code,
-          name: body.diagnosis,
-          description: body.diagnosis_description ?? null,
-          updated_at: new Date().toISOString()
-        }, { onConflict: "code" })
-        .select("id")
-        .single();
-
-      resolvedDiagnosisId = upsertedDiag?.id;
-    } else if (!resolvedDiagnosisId && body.diagnosis_code) {
-      const { data: found } = await supabaseAdmin
-        .from("diagnoses")
-        .select("id")
-        .eq("code", body.diagnosis_code)
-        .maybeSingle();
-      resolvedDiagnosisId = found?.id;
-    } else if (!resolvedDiagnosisId && body.diagnosis) {
-      const { data: found } = await supabaseAdmin
-        .from("diagnoses")
-        .select("id")
-        .ilike("name", body.diagnosis)
-        .maybeSingle();
-      resolvedDiagnosisId = found?.id;
-    }
-
-    // 3. Create / Update Encounter
-    const encounterRow: any = {
-      appointment_id: appointmentId,
-      patient_id: appointment.patient_id,
-      clinician_notes: body.clinician_notes ?? null,
-      follow_up_needed: body.follow_up_needed ?? false,
-      follow_up_date: body.follow_up_date ? new Date(body.follow_up_date).toISOString() : null,
-      follow_up_comments: body.followup_notes ?? null,
-      updated_at: new Date().toISOString()
-    };
-
-    const { data: existingEnc } = await supabaseClient
-      .from("encounters")
-      .select("id")
-      .eq("appointment_id", appointmentId)
-      .maybeSingle();
-
-    let encounterId;
-
-    if (existingEnc) {
-      await supabaseClient
-        .from("encounters")
-        .update(encounterRow)
-        .eq("id", existingEnc.id);
-
-      encounterId = existingEnc.id;
-    } else {
-      const { data: newEnc } = await supabaseClient
-        .from("encounters")
-        .insert([{ ...encounterRow, created_at: new Date().toISOString() }])
-        .select("id")
-        .single();
-
-      encounterId = newEnc?.id;
-    }
-
-    // ✅ NEW: store diagnosis in mapping table (source of truth)
-    if (resolvedDiagnosisId && encounterId) {
-      await supabaseAdmin
-        .from("consultation_diagnoses")
-        .upsert(
-          {
-            encounter_id: encounterId,
-            diagnosis_id: resolvedDiagnosisId,
-          },
-          { onConflict: "encounter_id,diagnosis_id" }
-        );
-    }
-
-    // 4. Prescription
-    const validStatuses = ['draft', 'ready_to_issue', 'issued'];
-    const validStatus = validStatuses.includes(body.status || '') ? body.status : 'draft';
-
-    const prescriptionRow: any = {
-      appointment_id: appointmentId,
-      patient_id: appointment.patient_id,
-      practitioner_id: appointment.practitioner_id,
-      diagnosis_id: resolvedDiagnosisId ?? null, // KEEP (for now)
-      encounter_id: encounterId, // NEW LINK
-      special_notes: body.special_notes ?? null,
-      status: validStatus,
-      updated_at: new Date().toISOString()
-    };
-
-    // ✅ NEW: snapshot on issue
-    if (validStatus === 'issued') {
-      prescriptionRow.issued_at = new Date().toISOString();
-      prescriptionRow.diagnosis_snapshot = {
-        code: body.diagnosis_code ?? null,
-        name: body.diagnosis ?? null
-      };
-    }
-
-    const { data: existingPresc } = await supabaseClient
-      .from("prescriptions")
-      .select("id, status")
-      .eq("appointment_id", appointmentId)
-      .maybeSingle();
-
-    if (existingPresc && existingPresc.status !== 'draft') {
-      return NextResponse.json({
-        error: `Prescription is already '${existingPresc.status}' and cannot be modified.`
-      }, { status: 400 });
-    }
-
-    let prescriptionId;
-
-    if (existingPresc) {
-      const { data: updated } = await supabaseClient
-        .from("prescriptions")
-        .update(prescriptionRow)
-        .eq("id", existingPresc.id)
-        .select("id")
-        .single();
-
-      prescriptionId = updated?.id;
-    } else {
-      const { data: inserted } = await supabaseClient
-        .from("prescriptions")
-        .insert([{ ...prescriptionRow, created_at: new Date().toISOString() }])
-        .select("id")
-        .single();
-
-      prescriptionId = inserted?.id;
-    }
-
-    // 5. Prescription Items
-    if (body.prescription_items) {
-      await supabaseClient
-        .from("prescription_items")
-        .delete()
-        .eq("prescription_id", prescriptionId);
-
-      if (body.prescription_items.length > 0) {
-        const itemsToInsert = body.prescription_items.map(item => ({
-          prescription_id: prescriptionId,
-          medicine_name: item.medicine_name,
-          strength: item.strength,
-          route: item.route,
-          duration: item.duration,
-          notes: item.notes
-        }));
-
-        await supabaseClient
-          .from("prescription_items")
-          .insert(itemsToInsert);
-      }
-    }
-
-    // 6. Issue Workflow
-    if (body.status === 'issued') {
-      await processPrescriptionIssuance({
-        appointmentId,
-        patientEmail: patientData?.email,
-        patientName: patientName,
-        prescriptionData: {
-          diagnosis_id: resolvedDiagnosisId,
-          items: body.prescription_items,
-          special_notes: body.special_notes
-        }
-      });
-    }
-
-    return NextResponse.json({ success: true, prescriptionId }, { status: 200 });
-
-  } catch (err: any) {
-    console.error("POST /consultation error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
-
-
-
-// DELETE: remove prescription (Only for drafts and only by the assigned practitioner)
-export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id: appointmentId } = await context.params;
-  const { authorized, user, role } = await requireUser(request);
-  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  try {
-    // 1. Verify Appointment & Practitioner permission
-    const { data: appointment, error: apptErr } = await supabaseAdmin
+    // verify appointment and writer permission
+    const { data: appointment, error: apptErr } = await supabaseClient
       .from("appointments")
       .select("id, practitioner_id")
       .eq("id", appointmentId)
+      .limit(1)
       .maybeSingle();
 
-    if (apptErr || !appointment) {
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
+    if (apptErr) throw apptErr;
+    if (!appointment) return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
+
+    const isPractitioner = user?.practitioner_id === appointment.practitioner_id;
+    // IMPORTANT: admins are NOT allowed to write as per requirement
+    if (!isPractitioner) {
+      return NextResponse.json({ error: "Forbidden: only the appointment practitioner can save consultation" }, { status: 403 });
     }
 
-    // Role check and ownership check
-    if (role !== "practitioner" || user?.practitioner_id !== appointment.practitioner_id) {
-      return NextResponse.json({ error: "Forbidden: Only the assigned practitioner can delete prescriptions" }, { status: 403 });
+    // prepare values; store prescriptions as text:
+    let prescriptionsText: string | null = null;
+    if (body.prescriptions == null) {
+      prescriptionsText = null;
+    } else if (typeof body.prescriptions === "string") {
+      prescriptionsText = body.prescriptions;
+    } else {
+      // object/array — stringify for text column
+      prescriptionsText = JSON.stringify(body.prescriptions);
     }
 
-    // 2. Fetch the prescription to check its status
-    const { data: prescription, error: prescErr } = await supabaseAdmin
-      .from("prescriptions")
-      .select("id, status")
+    const followUpTimestamp =
+      body.follow_up_date ? new Date(body.follow_up_date).toISOString() : null;
+
+    const row = {
+      appointment_id: appointmentId,
+      clinician_notes: body.clinician_notes ?? null,
+      prescriptions: prescriptionsText,
+      follow_up_needed: body.follow_up_needed ?? false,
+      follow_up_date: followUpTimestamp,
+      updated_at: new Date().toISOString()
+    };
+
+    // check existing encounter
+    const { data: existing, error: exErr } = await supabaseClient
+      .from("encounters")
+      .select("id")
       .eq("appointment_id", appointmentId)
+      .limit(1)
       .maybeSingle();
+    if (exErr) throw exErr;
 
-    if (prescErr || !prescription) {
-      return NextResponse.json({ error: "Prescription not found" }, { status: 404 });
+    if (!existing) {
+      // insert
+      const { data: inserted, error: insertErr } = await supabaseClient
+        .from("encounters")
+        .insert([{ ...row, created_at: new Date().toISOString() }])
+        .select()
+        .single();
+      if (insertErr) throw insertErr;
+      return NextResponse.json({ encounter: inserted }, { status: 201 });
+    } else {
+      // update
+      const { data: updated, error: updErr } = await supabaseClient
+        .from("encounters")
+        .update(row)
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (updErr) throw updErr;
+
+      await auditLog({
+        ...cnx,
+        action: "UPDATED",
+        source: "dashboard",
+        entityType: "USER",
+        entityId: user.auth_user_id,
+        metadata: {
+          "user_id": user.auth_user_id,
+        },
+        purpose: "operations",
+      })
+
+      return NextResponse.json({ encounter: updated }, { status: 200 });
     }
-
-    // Status check
-    if (prescription.status !== 'draft') {
-      return NextResponse.json({
-        error: `Cannot delete prescription with status '${prescription.status}'. Only 'draft' prescriptions can be removed.`
-      }, { status: 400 });
-    }
-
-    // 3. Delete items first (just to be safe, depending on DB cascade settings)
-    const { error: itemsDelErr } = await supabaseAdmin
-      .from("prescription_items")
-      .delete()
-      .eq("prescription_id", prescription.id);
-
-    if (itemsDelErr) throw itemsDelErr;
-
-    // 4. Delete the prescription
-    const { error: finalDelErr } = await supabaseAdmin
-      .from("prescriptions")
-      .delete()
-      .eq("id", prescription.id);
-
-    if (finalDelErr) throw finalDelErr;
-
-    // Audit Log
-    const cnx = getAuditContext(request, user);
-    await auditLog({
-      ...cnx,
-      action: "DELETED",
-      entityType: "PRESCRIPTION",
-      entityId: prescription.id,
-      purpose: "treatment",
-      source: "dashboard",
-      metadata: { appointment_id: appointmentId, original_status: prescription.status }
-    });
-
-    return NextResponse.json({ success: true, message: "Draft prescription deleted successfully" }, { status: 200 });
   } catch (err: any) {
-    console.error("DELETE /consultation error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("POST /consultation error:", err);
+    return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });
   }
 }

@@ -58,7 +58,7 @@ export default function SearchClinician() {
     <>
       <h2 className="text-xl font-semibold mb-1">Search Clinicians</h2>
       <p className="text-gray-500 mb-4 text-xs">
-        Find clinicians and view quick details....
+        Find clinicians and view quick details.
       </p>
 
       <div className="relative mb-4">
@@ -106,11 +106,9 @@ export default function SearchClinician() {
               />
             ))
           ) : (
-            <>
-              <p className="text-center text-gray-400 text-sm">
-                No clinicians found....
-              </p>
-            </>
+            <p className="text-center text-gray-400 text-sm">
+              No clinicians found.
+            </p>
           )}
         </div>
       )}

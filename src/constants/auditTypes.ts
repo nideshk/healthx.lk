@@ -57,7 +57,6 @@ export type EntityType =
   | "OTHER"
   | "FOLLOW_UP_ENCOUNTERS"
   | "ENCOUNTER"
-  | "PRESCRIPTION"
   | "HIPAA_AUDIT_LOG"
   | "ADMIN_USER"
   | "TRANSACTION";

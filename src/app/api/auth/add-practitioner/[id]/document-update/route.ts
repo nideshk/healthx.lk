@@ -56,22 +56,12 @@ export async function PUT(
       );
     }
 
-    const signatureDoc = documents.find((d: any) => d.document_type === "signature");
-    const filteredDocuments = documents.filter((d: any) => d.document_type !== "signature");
-
-    const updatePayload: any = {
-      documents: filteredDocuments,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (signatureDoc) {
-      updatePayload.signature_url = signatureDoc.file_url;
-      updatePayload.signature_uploaded_at = new Date().toISOString();
-    }
-
     const { error } = await supabaseAdmin
       .from("practitioners")
-      .update(updatePayload)
+      .update({
+        documents,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", practitioner_id);
 
     if (error) {

@@ -41,10 +41,9 @@ type SendEmailParams = {
   to: string;
   subject: string;
   html: string;
-  attachments?: any[];
 };
 
-export async function sendEmail({ to, subject, html, attachments }: SendEmailParams) {
+export async function sendEmail({ to, subject, html }: SendEmailParams) {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     throw new Error("SMTP credentials are missing");
   }
@@ -54,11 +53,10 @@ export async function sendEmail({ to, subject, html, attachments }: SendEmailPar
     to,
     subject,
     html,
-    attachments,
   });
 }
 
-export async function sendSupportEmail({ to, subject, html, attachments }: SendEmailParams) {
+export async function sendSupportEmail({ to, subject, html }: SendEmailParams) {
   if (!process.env.SUPPORT_USER || !process.env.SUPPORT_PASS) {
     throw new Error("Support SMTP credentials are missing");
   }
@@ -68,6 +66,5 @@ export async function sendSupportEmail({ to, subject, html, attachments }: SendE
     to,
     subject,
     html,
-    attachments,
   });
 }

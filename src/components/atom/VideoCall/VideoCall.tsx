@@ -33,44 +33,6 @@ export default function VideoCallContainer({
     localStream,
   } = useVideoCall({ token: token! });
 
-  /* ---------------- RESIZING LOGIC ---------------- */
-
-  const [panelWidth, setPanelWidth] = React.useState(380);
-  const [isResizing, setIsResizing] = React.useState(false);
-
-  const startResizing = React.useCallback(() => {
-    setIsResizing(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      // Calculate new width by subtracting mouse X position from window width
-      const newWidth = window.innerWidth - e.clientX;
-      // Constraints: 300px min, up to almost full width
-      if (newWidth >= 300 && newWidth <= window.innerWidth - 50) {
-        setPanelWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "default";
-      document.body.style.userSelect = "auto";
-    };
-  }, [isResizing]);
-
   /* ---------------- EVENT HANDLERS ---------------- */
 
   const handleJoin = async () => {
@@ -121,12 +83,9 @@ export default function VideoCallContainer({
   /* ---------------- UI ---------------- */
 
   return (
-    <div className={`h-screen w-screen bg-[#0f1113] text-zinc-100 flex overflow-hidden ${isResizing ? "cursor-col-resize" : ""}`}>
+    <div className="h-screen w-screen bg-[#0f1113] text-zinc-100 flex overflow-hidden">
       {/* 🟢 LEFT SIDE: VIDEO SECTION */}
-      <div
-        className={`flex flex-col h-full relative ${!isResizing ? "transition-[width] duration-300" : ""}`}
-        style={{ width: isPractitioner ? `calc(100% - ${panelWidth}px)` : "100%" }}
-      >
+      <div className={`flex flex-col h-full transition-all duration-500 relative ${isPractitioner ? "w-[65%] lg:w-[70%]" : "w-full"}`}>
 
         {!joined ? (
           // --- STYLISH PRE-JOIN SCREEN ---
@@ -184,19 +143,8 @@ export default function VideoCallContainer({
 
       {/* 🔵 RIGHT SIDE: PRACTITIONER PANEL */}
       {isPractitioner && (
-        <div
-          className="relative border-l border-white/5 bg-zinc-900/30 backdrop-blur-sm h-full flex flex-col"
-          style={{ width: `${panelWidth}px` }}
-        >
-          {/* DRAG HANDLE */}
-          <div
-            onMouseDown={startResizing}
-            className={`absolute top-0 left-0 w-1.5 h-full cursor-col-resize z-50 transition-colors ${isResizing ? "bg-blue-600" : "hover:bg-blue-600/50"
-              }`}
-          />
-          <div className="flex-1 overflow-y-auto">
-            <ConsultationPanel appointmentId={appointmentId} />
-          </div>
+        <div className="absolute right-0 border-l border-white/5 bg-zinc-900/30 backdrop-blur-sm h-full overflow-y-auto">
+          <ConsultationPanel appointmentId={appointmentId} />
         </div>
       )}
     </div>

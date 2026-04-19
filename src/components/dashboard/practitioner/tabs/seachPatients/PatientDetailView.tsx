@@ -11,7 +11,6 @@ import { authFetch } from "@/lib/authFetch";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import { ExternalLink, FileText, Edit2, Save, X, Loader2 } from "lucide-react";
-import PrescriptionTab from "./PrescriptionTab";
 
 interface PatientDetailViewProps {
   patient: Patient;
@@ -62,16 +61,12 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
       <div className="flex gap-2 text-xs bg-slate-50 rounded-full p-1 border border-slate-200">
         {renderTab("overview", "Overview", activeTab, setActiveTab)}
         {renderTab("appointments", "Appointments", activeTab, setActiveTab)}
-        {renderTab("prescription", "Prescription", activeTab, setActiveTab)}
       </div>
 
       {/* 4. Tab content */}
       {activeTab === "overview" && <PatientOverviewTab patient={patient} />}
       {activeTab === "appointments" && (
         <AppointmentsTab appointments={appointments} patient={patient} />
-      )}
-      {activeTab === "prescription" && (
-        <PrescriptionTab appointments={appointments} patient={patient} />
       )}
     </div>
   );
@@ -628,23 +623,23 @@ const AppointmentRow: React.FC<{
     appointment.status === "confirmed"
       ? "bg-blue-50 text-blue-700"
       : appointment.status === "completed"
-        ? "bg-green-50 text-green-700"
-        : appointment.status === "pending"
-          ? "bg-amber-50 text-amber-700"
-          : isCancelled
-            ? "bg-slate-100 text-slate-500"
-            : "bg-slate-100 text-slate-500";
+      ? "bg-green-50 text-green-700"
+      : appointment.status === "pending"
+      ? "bg-amber-50 text-amber-700"
+      : isCancelled
+      ? "bg-slate-100 text-slate-500"
+      : "bg-slate-100 text-slate-500";
 
   const statusLabel =
     appointment.status === "confirmed"
       ? "Confirmed"
       : appointment.status === "completed"
-        ? "Completed"
-        : appointment.status === "pending"
-          ? "Pending"
-          : isCancelled
-            ? "Cancelled"
-            : "Unknown";
+      ? "Completed"
+      : appointment.status === "pending"
+      ? "Pending"
+      : isCancelled
+      ? "Cancelled"
+      : "Unknown";
 
   const fetchConsultationDetails = async () => {
     setConsultationLoading(true);
@@ -864,6 +859,47 @@ const AppointmentRow: React.FC<{
                 </div>
               )}
             </section>
+
+            {isEditingAppointment ? (
+              <div className="space-y-1">
+                <div className="text-[11px] text-slate-500">
+                  Clinician Notes
+                </div>
+                <textarea
+                  value={appointmentForm.clinicianNotes}
+                  onChange={(e) =>
+                    updateAppointmentField("clinicianNotes", e.target.value)
+                  }
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                />
+              </div>
+            ) : (
+              <InfoRow
+                label="Clinician Notes"
+                value={appointmentForm.clinicianNotes || "-"}
+              />
+            )}
+
+            {isEditingAppointment ? (
+              <div className="space-y-1">
+                <div className="text-[11px] text-slate-500">
+                  Prescriptions
+                </div>
+                <textarea
+                  value={appointmentForm.prescriptions}
+                  onChange={(e) =>
+                    updateAppointmentField("prescriptions", e.target.value)
+                  }
+                  placeholder="e.g. Paracetamol 500mg twice daily for 5 days"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                />
+              </div>
+            ) : (
+              <InfoRow
+                label="Prescriptions"
+                value={appointmentForm.prescriptions || "-"}
+              />
+            )}
 
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-[11px] text-slate-600">
