@@ -14,7 +14,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     if (!authorized) return NextResponse.json({ error: "You are not authorized." }, { status: 401 });
 
     // permissions: practitioner self OR admin OR patient can view
-    const canView = (user?.practitioner_id === practitionerId) || role === "admin" || role === "patient";
+    const canView = (user?.practitioner_id === practitionerId) || role === "admin" || role === "patient" || role === "superadmin";
     if (!canView) {
       return NextResponse.json({ error: "You do not have permission to view this practitioner's pricing." }, { status: 403 });
     }
@@ -96,7 +96,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     if (!authorized) return NextResponse.json({ error: "You are not authorized." }, { status: 401 });
 
     // Only the practitioner (own profile) may update pricing
-    if (user?.practitioner_id !== practitionerId) {
+    if (user?.practitioner_id !== practitionerId || user.role === "superadmin" || user.role === "admin") {
       return NextResponse.json({ error: "You are not permitted to update this practitioner's pricing." }, { status: 403 });
     }
 
