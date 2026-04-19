@@ -12,6 +12,7 @@ export type DashboardMenuItemId =
   | "manageAdmins"
   | "analytics"
   | "settings"
+  | "prescriptions"
   | "coupons"
   | "createAppointment"
   | "specialisations";

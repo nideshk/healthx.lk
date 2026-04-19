@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardBody } from "@/components/atom/Card/Card";
 import Button from "@/components/atom/Button/Button";
 import { Patient, PatientDetailTab } from "@/types/Dashboard";
@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { authFetch } from "@/lib/authFetch";
 import Link from "next/link";
 import Loader from "@/components/atom/Loader/Loader";
+import { Calendar, FileText } from "lucide-react";
 
 /* ----------------------------------
    Admin-only lean appointment type
@@ -104,7 +105,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
 
   const handleSave = async () => {
     setIsSaving(true);
-    
+
     // Logic to split full_name into first and last name for the API
     const nameParts = formData.full_name.trim().split(/\s+/);
     const firstName = nameParts[0] || "";
@@ -216,9 +217,9 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
                 value={`${calculateAge(isEditing ? formData.dob : patient.dob)} years`}
               />
               <DetailLine label="Gender" value={(isEditing ? formData.gender : patient.gender) || "N/A"} />
-              <DetailLine 
-                label="Gov ID" 
-                value={isEditing ? `${formData.govIdType.toUpperCase()}: ${formData.govIdNumber}` : `${formData.govIdType.toUpperCase()}: ${maskGovId(formData.govIdNumber)}`} 
+              <DetailLine
+                label="Gov ID"
+                value={isEditing ? `${formData.govIdType.toUpperCase()}: ${formData.govIdNumber}` : `${formData.govIdType.toUpperCase()}: ${maskGovId(formData.govIdNumber)}`}
               />
               <DetailLine
                 label="Allergies"
@@ -233,6 +234,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
       <div className="flex gap-2 text-xs bg-slate-50 rounded-full p-1 border border-slate-200">
         {renderTab("overview", "Overview")}
         {renderTab("appointments", "Appointments")}
+        {renderTab("prescription", "Prescriptions")}
       </div>
 
       {/* Tab Content */}
@@ -250,6 +252,10 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
           loading={loadingAppointments}
         />
       )}
+
+      {activeTab === "prescription" && (
+        <PatientPrescriptionsTab patientId={patient.id} />
+      )}
     </div>
   );
 
@@ -263,11 +269,10 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
           setActiveTab(id);
           if (id !== "overview") setIsEditing(false);
         }}
-        className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center ${
-          active
+        className={`flex-1 rounded-full px-3 py-2 flex items-center justify-center ${active
             ? "bg-white text-slate-900 shadow-sm"
             : "text-slate-500 hover:text-slate-900"
-        }`}
+          }`}
       >
         {label}
       </button>
@@ -329,9 +334,9 @@ const PatientOverviewTab: React.FC<{
             onChange={(val) => onChange("gender", val)}
           />
         </div>
-       
+
         <div className="grid grid-cols-2 gap-2">
-           <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <span className="text-[11px] text-slate-500">Age</span>
             <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-100 text-slate-500 cursor-not-allowed">
               {calculateAge(formData.dob)} years
@@ -352,7 +357,7 @@ const PatientOverviewTab: React.FC<{
           placeholder="e.g. Peanuts, Dust"
           onChange={(val) => onChange("allergies", val)}
         />
-      
+
       </CardBody>
     </Card>
 
@@ -761,7 +766,7 @@ const AppointmentRow: React.FC<{
               variant="danger"
               size="sm"
               onClick={() => setShowCancelModal(true)}
-              disabled={!canManage || isCancelled }
+              disabled={!canManage || isCancelled}
             >
               Cancel
             </Button>
@@ -896,3 +901,122 @@ const ConsultationInfoRow: React.FC<{ label: string; value: string }> = ({
     </div>
   </div>
 );
+
+/* ----------------------------------
+   Prescriptions Tab (Patient View)
+----------------------------------- */
+
+const PatientPrescriptionsTab: React.FC<{ patientId: string }> = ({ patientId }) => {
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPatientPrescriptions = async () => {
+      try {
+        setLoading(true);
+        const res = await authFetch(`/api/booking/prescriptions?patient_id=${patientId}`, {
+          credentials: "include",
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch prescriptions");
+
+        const json = await res.json();
+        setPrescriptions(json.data || []);
+      } catch (err: any) {
+        console.error("Patient Prescriptions fetch error:", err);
+        setError(err.message || "Failed to load prescriptions");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (patientId) {
+      fetchPatientPrescriptions();
+    }
+  }, [patientId]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-3">
+        <Loader size="sm" />
+        <p className="text-xs text-slate-500 italic">Fetching patient records...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center bg-red-50 rounded-xl border border-red-100">
+        <p className="text-xs text-red-600 font-medium">{error}</p>
+      </div>
+    );
+  }
+
+  if (prescriptions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center">
+        <FileText className="w-12 h-12 text-slate-200 mb-4" />
+        <p className="text-xs text-slate-500">No prescriptions found for this patient.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">Issued Prescriptions</div>
+
+      <div className="grid gap-3">
+        {prescriptions.map((px) => (
+          <div key={px.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-900">Dr. {px.practitioner?.name || "Unknown"}</span>
+                <StatusBadge status={px.status} />
+              </div>
+              <div className="text-xs text-slate-500 flex items-center gap-4">
+                <span className="flex items-center gap-1">
+                  <Calendar size={12} className="text-slate-400" />
+                  {new Date(px.issued_at || px.created_at).toLocaleDateString()}
+                </span>
+                <span className="font-mono text-[10px] text-slate-400">ID: #{px.id.split('-')[0]}</span>
+              </div>
+              <div className="text-xs text-slate-600 pt-1">
+                {px.diagnoses ? (
+                  <span className="bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                    {px.diagnoses.code} - {px.diagnoses.name}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 italic">No diagnosis recorded</span>
+                )}
+              </div>
+            </div>
+
+            <div className="text-right">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter block mb-1 text-right">Status</span>
+              <span className="text-xs font-semibold text-slate-900 truncate block">
+                {px.status.replace(/_/g, " ").toUpperCase()}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const StatusBadge = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
+    issued: "bg-green-50 text-green-700 border-green-200",
+    ready_to_issue: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    draft: "bg-slate-100 text-slate-600 border-slate-200",
+  };
+
+  const style = styles[status] || styles.draft;
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-tight ${style}`}>
+      {status.replace(/_/g, " ")}
+    </span>
+  );
+};

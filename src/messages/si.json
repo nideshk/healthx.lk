@@ -3,6 +3,7 @@
     "menu": "මෙනුව",
     "appointments": "නියමිත හමුවීම්",
     "reschedule": "නැවත සැලසුම් කරන්න",
+    "prescriptions": "බෙහෙත් වට්ටෝරු",
     "medicalRecords": "වෛද්‍ය වාර්තා",
     "followUps": "පසු විමසුම්",
     "newBooking": "නව වෙන්කිරීම",
@@ -12,6 +13,7 @@
     "tabs": {
       "appointments": "නියමිත හමුවීම්",
       "appointment": "නියමිත හමුවීම්",
+      "prescriptions": "බෙහෙත් වට්ටෝරු",
       "reschedule": "නැවත සැලසුම් කිරීම",
       "file-manager": "වෛද්‍ය වාර්තා",
       "follow-up": "පසු විමසුම්"
@@ -19,6 +21,16 @@
   },
   "patientCard": {
     "deletePermanent": "ස්ථිරව මකන්න"
+  },
+  "prescriptionsTab": {
+    "title": "ඔබේ බෙහෙත් වට්ටෝරු",
+    "subtitle": "ඔබේ වෛද්‍යවරුන් විසින් නිකුත් කරන ලද බෙහෙත් වට්ටෝරු බලන්න සහ කළමනාකරණය කරන්න",
+    "emptyTitle": "තවම බෙහෙත් වට්ටෝරු නැත",
+    "emptyDescription": "ඔබේ උපදේශනවලින් පසු නිකුත් කරන ලද බෙහෙත් වට්ටෝරු මෙහි දිස්වනු ඇත.",
+    "viewPdf": "PDF බලන්න",
+    "issuedOn": "නිකුත් කළ දිනය",
+    "practitioner": "වෛද්‍යවරයා",
+    "status": "තත්ත්වය"
   },
   "appointmentTab": {
     "syncing": "හමුවීම් සමකාලීන කරමින්…",

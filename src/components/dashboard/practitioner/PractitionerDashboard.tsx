@@ -21,6 +21,7 @@ import { toast } from "react-toastify";
 import HomeTab from "../practitioner/tabs/HomeTab";
 import SearchPatientsTab from "./tabs/seachPatients/SearchPatientsTab";
 import AnalyticsTab from "./tabs/analyticsTab/AnalyticsTab";
+import PrescriptionsTab from "./tabs/PrescriptionsTab";
 import SettingsTab from "../practitioner/tabs/settings/SettingsTab";
 import { authFetch } from "@/lib/authFetch";
 
@@ -29,6 +30,7 @@ import { authFetch } from "@/lib/authFetch";
 const menuItems: DashboardMenuItem[] = [
   { id: "home", label: "Dashboard Home" },
   { id: "searchPatient", label: "Search Patient" },
+  { id: "prescriptions", label: "Prescriptions" },
   { id: "analytics", label: "Analytics" },
   { id: "settings", label: "Settings" },
 ];
@@ -119,6 +121,8 @@ const PractitionerDashboard: React.FC = () => {
           )}
 
           {activeMenu === "analytics" && <AnalyticsTab />}
+
+          {activeMenu === "prescriptions" && <PrescriptionsTab />}
 
           {activeMenu === "settings" && (
             <SettingsTab />

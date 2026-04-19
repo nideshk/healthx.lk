@@ -3,6 +3,7 @@
     "menu": "Menu",
     "appointments": "Appointments",
     "reschedule": "Reschedule",
+    "prescriptions": "Prescriptions",
     "medicalRecords": "Medical Records",
     "followUps": "Follow-Ups",
     "newBooking": "New Booking",
@@ -12,6 +13,7 @@
     "tabs": {
       "appointments": "Appointments",
       "appointment": "Appointments",
+      "prescriptions": "Prescriptions",
       "reschedule": "Reschedule",
       "file-manager": "Medical Records",
       "follow-up": "Follow-Ups"
@@ -19,6 +21,16 @@
   },
   "patientCard": {
     "deletePermanent": "Delete Permanent"
+  },
+  "prescriptionsTab": {
+    "title": "Your Prescriptions",
+    "subtitle": "View and manage prescriptions issued by your doctors",
+    "emptyTitle": "No prescriptions yet",
+    "emptyDescription": "Prescriptions issued after your consultations will appear here.",
+    "viewPdf": "View PDF",
+    "issuedOn": "Issued on",
+    "practitioner": "Practitioner",
+    "status": "Status"
   },
   "appointmentTab": {
     "syncing": "Syncing your appointments…",
