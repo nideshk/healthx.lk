@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
                 key: pemKey,
                 padding: crypto.constants.RSA_PKCS1_PADDING,
             },
-            Buffer.from(inputToEncrypt, 'utf8')
+            Buffer.from(inputToEncrypt)
         ).toString('base64');
 
         // Clean phone: Remove all characters except digits and +
