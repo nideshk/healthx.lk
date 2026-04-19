@@ -104,7 +104,6 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     const { authorized, user } = await requireUser(request);
     if (!authorized) return NextResponse.json({ error: "You are not authorized." }, { status: 401 });
-
     // PERMISSIONS: Only the practitioner (own profile) OR admin/superadmin may update pricing
     const isOwner = user?.practitioner_id === practitionerId;
     const isAdmin = user.role === "admin" || user.role === "superadmin";
@@ -120,6 +119,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         source: "dashboard",
         metadata: { role: user.role, practitionerId }
       });
+
       return NextResponse.json({ error: "You are not permitted to update this practitioner's pricing." }, { status: 403 });
     }
 

@@ -1,4 +1,3 @@
-// healthx.lk\src\components\dashboard\practitioner\tabs\shared\AppointmentCalendar.tsx
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -8,24 +7,22 @@ import { Appointment } from "@/types/Dashboard";
 import ManageAppointmentModal from "./ManageAppointmentModal";
 import PatientDetailsModal from "./PatientDetailsModal";
 import Link from "next/link";
+import { LayoutGrid, List, Stethoscope, CalendarDays } from "lucide-react";
 
-type ViewMode = "weekly" | "daily";
+type ViewMode = "grid" | "list";
 
 interface AppointmentCalendarProps {
   appointments: Appointment[];
   onCompleteAppointment?: (id: string) => void;
-  onRangeChange?: (from: string, to: string) => void;
   userRole?: "admin" | "superadmin" | "practitioner";
 }
 
 const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   appointments,
   onCompleteAppointment,
-  onRangeChange,
   userRole = "practitioner",
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>("weekly");
-  const [anchorDate, setAnchorDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [selectedAppt, setSelectedAppt] = useState<CalendarAppointment | null>(
     null,
   );
@@ -47,41 +44,6 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     }));
   }, [appointments]);
 
-  const weekStart = getWeekStart(anchorDate);
-
-  const daysInView: Date[] =
-    viewMode === "weekly"
-      ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-      : [startOfDay(anchorDate)];
-
-  // Robust Range Syncing for Parent API calls
-  useEffect(() => {
-    if (onRangeChange && daysInView.length > 0) {
-      const fromDate = daysInView[0];
-      const toDate = daysInView[daysInView.length - 1];
-
-      const formatLocal = (d: Date) => {
-        const offset = d.getTimezoneOffset();
-        const local = new Date(d.getTime() - offset * 60 * 1000);
-        return local.toISOString().split("T")[0];
-      };
-
-      onRangeChange(formatLocal(fromDate), formatLocal(toDate));
-    }
-  }, [anchorDate, viewMode]);
-
-  const timeSlots = generateHourSlots(0, 24); // 00:00 – 24:00
-
-  const headerLabel =
-    viewMode === "weekly"
-      ? `Week of ${formatDate(weekStart)}`
-      : formatDate(anchorDate);
-
-  const changePeriod = (direction: -1 | 1) => {
-    const delta = viewMode === "weekly" ? 7 : 1;
-    setAnchorDate((d) => addDays(d, delta * direction));
-  };
-
   return (
     <>
       <Card>
@@ -92,142 +54,139 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => setViewMode("weekly")}
-              className={`rounded-full px-3 py-1 border text-xs ${
-                viewMode === "weekly"
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-slate-600 border-slate-200"
-              }`}
-            >
-              Weekly
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("daily")}
-              className={`rounded-full px-3 py-1 border text-xs ${
-                viewMode === "daily"
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-slate-600 border-slate-200"
-              }`}
-            >
-              Daily
-            </button>
+          <div className="flex items-center gap-4">
+            {/* View Mode Toggle */}
+            <div className="flex bg-slate-100 p-1 rounded-lg">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "grid"
+                    ? "bg-white shadow-sm text-blue-600"
+                    : "text-slate-400 hover:text-slate-600"
+                  }`}
+                title="Grid View"
+              >
+                <LayoutGrid size={18} />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "list"
+                    ? "bg-white shadow-sm text-blue-600"
+                    : "text-slate-400 hover:text-slate-600"
+                  }`}
+                title="List View"
+              >
+                <List size={18} />
+              </button>
+            </div>
+
           </div>
         </CardHeader>
 
-        <CardBody className="space-y-3">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="px-2"
-                onClick={() => changePeriod(-1)}
-              >
-                ←
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="px-2"
-                onClick={() => setAnchorDate(new Date())}
-              >
-                Today
-              </Button>
+        <CardBody className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
+              Active Schedule • Today + 7 Days
             </div>
-            <div className="font-medium text-slate-900">{headerLabel}</div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="px-2"
-              onClick={() => changePeriod(1)}
-            >
-              →
-            </Button>
           </div>
 
-          <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
-            <div className="grid grid-cols-[60px_repeat(7,1fr)] bg-slate-50 border-b border-slate-200">
-              <div className="px-2 py-2" />
-              {daysInView.map((day) => (
-                <div
-                  key={day.toISOString()}
-                  className="px-2 py-2 text-center border-l border-slate-200"
-                >
-                  <div className="font-medium text-slate-900">
-                    {formatDayName(day)}
-                  </div>
-                  <div className="text-[11px] text-slate-500">
-                    {formatDayMonth(day)}
-                  </div>
-                </div>
-              ))}
-              {viewMode === "daily" &&
-                Array.from({ length: 6 }).map((_, i) => (
-                  <div
-                    key={`empty-${i}`}
-                    className="border-l border-slate-200"
-                  />
-                ))}
+          {parsedAppointments.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                <CalendarDays className="text-slate-400" size={24} />
+              </div>
+              <div className="text-sm font-medium text-slate-900">No upcoming appointments</div>
+              <div className="text-xs text-slate-500 mt-1">There are no appointments scheduled for the next 8 days</div>
             </div>
-
-            <div className="max-h-[360px] overflow-y-auto">
-              {timeSlots.map((slot) => (
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {parsedAppointments.map((appt) => (
                 <div
-                  key={slot.hour}
-                  className="grid grid-cols-[60px_repeat(7,1fr)]"
+                  key={appt.id}
+                  onClick={() => setSelectedAppt(appt)}
+                  className="group relative bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all cursor-pointer overflow-hidden"
                 >
-                  <div className="px-2 py-3 border-t border-slate-100 text-[11px] text-slate-500">
-                    {slot.label}
-                  </div>
+                  <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity ${appt.status === "completed" ? "bg-slate-500" : "bg-blue-500"
+                    }`} />
 
-                  {daysInView.map((day, dayIndex) => {
-                    const cellAppointments = parsedAppointments.filter((a) => {
-                      if (!a.start) return false;
-                      if (!isSameDay(a.start, day)) return false;
-                      return a.start.getHours() === slot.hour;
-                    });
-
-                    return (
-                      <div
-                        key={dayIndex}
-                        className="border-t border-l border-slate-100 h-12 relative px-1"
-                      >
-                        {cellAppointments.map((appt) => {
-                          const isCompleted = appt.status === "completed";
-                          const colorClasses = isCompleted
-                            ? "bg-slate-200 text-slate-600"
-                            : "bg-blue-500 text-white";
-
-                          return (
-                            <button
-                              key={appt.id}
-                              type="button"
-                              className={`w-full h-[22px] rounded-md text-[11px] px-2 truncate ${colorClasses}`}
-                              onClick={() => setSelectedAppt(appt)}
-                            >
-                              {appt.patient || "Patient"} • {appt.time}
-                            </button>
-                          );
-                        })}
+                  <div className="flex justify-between items-start mb-3 relative">
+                    <div className="space-y-0.5">
+                      <div className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">
+                        {appt.time}
                       </div>
-                    );
-                  })}
+                      <div className="font-bold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                        {appt.patient || "Guest Patient"}
+                      </div>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter self-start ${appt.status === "completed"
+                        ? "bg-slate-100 text-slate-600 border border-slate-200"
+                        : "bg-blue-50 text-blue-700 border border-blue-100"
+                      }`}>
+                      {appt.status}
+                    </span>
+                  </div>
 
-                  {viewMode === "daily" &&
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <div
-                        key={`row-empty-${slot.hour}-${i}`}
-                        className="border-t border-l border-slate-100 h-12"
-                      />
-                    ))}
+                  <div className="space-y-2 relative">
+                    <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
+                      <Stethoscope size={14} className="text-slate-400" />
+                      <span className="truncate">{appt.appointmentType || "General Consultation"}</span>
+                    </div>
+                    {appt.reason && (
+                      <p className="text-[11px] text-slate-400 line-clamp-2 italic leading-relaxed">
+                        "{appt.reason}"
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm font-sans">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50/80 border-b border-slate-200">
+                  <tr>
+                    <th className="px-5 py-3.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Time</th>
+                    <th className="px-5 py-3.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Patient</th>
+                    <th className="px-5 py-3.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Type</th>
+                    <th className="px-5 py-3.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {parsedAppointments.map((appt) => (
+                    <tr
+                      key={appt.id}
+                      onClick={() => setSelectedAppt(appt)}
+                      className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
+                    >
+                      <td className="px-5 py-4">
+                        <span className="text-xs font-bold text-blue-600 tabular-nums">
+                          {appt.time}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="font-semibold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
+                          {appt.patient}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2 text-xs text-slate-600">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                          {appt.appointmentType}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border transition-colors ${appt.status === "completed"
+                            ? "bg-slate-100 text-slate-500 border-slate-200"
+                            : "bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-100"
+                          }`}>
+                          {appt.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardBody>
       </Card>
 
@@ -279,21 +238,6 @@ export default AppointmentCalendar;
 /* ---------- Helpers ---------- */
 
 type CalendarAppointment = Appointment & { start: Date | null };
-
-const generateHourSlots = (startHour: number, endHour: number) => {
-  const slots: { hour: number; label: string }[] = [];
-  for (let h = startHour; h < endHour; h++) {
-    slots.push({ hour: h, label: formatHour(h) });
-  }
-  return slots;
-};
-
-const formatHour = (hour24: number) => {
-  const ampm = hour24 >= 12 ? "PM" : "AM";
-  let h = hour24 % 12;
-  if (h === 0) h = 12;
-  return `${String(h).padStart(2, "0")}:00 ${ampm}`;
-};
 
 const parseAppointmentDateTime = (appt: Appointment): Date | null => {
   if (!appt.date || !appt.time) return null;
@@ -422,8 +366,8 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
           />
           <DetailRow label="Participants" value="1" />
           <DetailRow label="Reason" value={appointment.reason || "-"} />
-          <DetailRow label="email" value={appointment.email || "-"}/>
-          <DetailRow label="contact_number" value={appointment.contact_number || "-"}/>
+          <DetailRow label="email" value={appointment.email || "-"} />
+          <DetailRow label="contact_number" value={appointment.contact_number || "-"} />
 
           <DetailRow
             label="Status"

@@ -10,8 +10,9 @@ import { Patient, PatientDetailTab, Appointment } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import Link from "next/link";
 import { toast } from "react-toastify";
-import PrescriptionTab, { PrescriptionDetails } from "./PrescriptionTab";
+
 import { ExternalLink, FileText, Edit2, Save, X, Loader2, Pill } from "lucide-react";
+import PrescriptionTab, { PrescriptionDetails } from "./PrescriptionTab";
 
 interface PatientDetailViewProps {
   patient: Patient;
