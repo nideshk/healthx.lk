@@ -14,8 +14,18 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     if (!authorized) return NextResponse.json({ error: "You are not authorized." }, { status: 401 });
 
     // permissions: practitioner self OR admin OR patient can view
-    const canView = (user?.practitioner_id === practitionerId) || role === "admin" || role === "patient";
+    const canView = (user?.practitioner_id === practitionerId) || role === "admin" || role === "patient" || role === "superadmin";
     if (!canView) {
+      const cnx = getAuditContext(request, user);
+      await auditLog({
+        ...cnx,
+        action: "UNAUTHORIZED_ATTEMPT",
+        entityType: "PRACTITIONER",
+        entityId: practitionerId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: { role, practitionerId }
+      });
       return NextResponse.json({ error: "You do not have permission to view this practitioner's pricing." }, { status: 403 });
     }
 
@@ -95,8 +105,21 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     const { authorized, user } = await requireUser(request);
     if (!authorized) return NextResponse.json({ error: "You are not authorized." }, { status: 401 });
 
-    // Only the practitioner (own profile) may update pricing
-    if (user?.practitioner_id !== practitionerId) {
+    // PERMISSIONS: Only the practitioner (own profile) OR admin/superadmin may update pricing
+    const isOwner = user?.practitioner_id === practitionerId;
+    const isAdmin = user.role === "admin" || user.role === "superadmin";
+
+    if (!isOwner && !isAdmin) {
+      const cnx = getAuditContext(request, user);
+      await auditLog({
+        ...cnx,
+        action: "FORBIDDEN_ACCESS_ATTEMPT",
+        entityType: "PRACTITIONER",
+        entityId: practitionerId,
+        purpose: "operations",
+        source: "dashboard",
+        metadata: { role: user.role, practitionerId }
+      });
       return NextResponse.json({ error: "You are not permitted to update this practitioner's pricing." }, { status: 403 });
     }
 
@@ -154,7 +177,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     await auditLog({
       ...cnx,
-      action: "VIEWED",
+      action: "UPDATED",
       entityType: "PRACTITIONER",
       entityId: practitionerId,
       purpose: "operations",
