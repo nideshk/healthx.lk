@@ -62,10 +62,12 @@ export async function GET(
     (view === "daily" && !date) ||
     (view === "weekly" && !weekStart)
   ) {
-    return NextResponse.json(
-      { success: false, message: "Invalid query parameters" },
-      { status: 400 }
-    );
+    if (view !== "upcoming_8_days") {
+      return NextResponse.json(
+        { success: false, message: "Invalid query parameters" },
+        { status: 400 }
+      );
+    }
   }
 
   // 📡 SUPABASE ADMIN CALL (SAME PATTERN AS YOUR EXAMPLE)
@@ -96,13 +98,26 @@ export async function GET(
     .in("status", ["confirmed", "completed"])
     .gte(
       "starts_at",
-      view === "daily"
+      view === "upcoming_8_days"
+        ? (() => {
+            const start = new Date();
+            start.setHours(0, 0, 0, 0);
+            return start.toISOString();
+          })()
+        : view === "daily"
         ? `${date}T00:00:00`
         : `${weekStart}T00:00:00`
     )
     .lte(
       "starts_at",
-      view === "daily"
+      view === "upcoming_8_days"
+        ? (() => {
+            const end = new Date();
+            end.setDate(end.getDate() + 8); // Start of day 8 means end of day 7
+            end.setHours(0, 0, 0, 0);
+            return end.toISOString();
+          })()
+        : view === "daily"
         ? `${date}T23:59:59`
         : (() => {
           const end = new Date(weekStart!);

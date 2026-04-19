@@ -38,17 +38,8 @@ interface Props {
   clinicianName: string;
 }
 
-/* ---------- Component ---------- */
-
 const HomeTab: React.FC<Props> = ({ clinicianName }) => {
   const { user } = useAuth();
-
-  const today = new Date();
-
-  const [dateRange, setDateRange] = useState<{
-    from: string;
-    to: string;
-  } | null>(null);
 
   const [stats, setStats] = useState<DashboardStats>({
     todaysAppointments: 0,
@@ -70,7 +61,7 @@ const HomeTab: React.FC<Props> = ({ clinicianName }) => {
   /* ---------- Fetch appointments ---------- */
 
   useEffect(() => {
-if (!practitionerId || !dateRange) return;
+    if (!practitionerId) return;
 
     const fetchData = async () => {
       const requestId = ++requestIdRef.current;
@@ -78,11 +69,7 @@ if (!practitionerId || !dateRange) return;
       setError(null);
 
       try {
-        const view = dateRange.from === dateRange.to ? "daily" : "weekly";
-        const url =
-          view === "weekly"
-            ? `/api/practitioner/${practitionerId}/appointments?view=weekly&week_start=${dateRange.from}`
-            : `/api/practitioner/${practitionerId}/appointments?view=daily&date=${dateRange.from}`;
+        const url = `/api/practitioner/${practitionerId}/appointments?view=upcoming_8_days`;
 
         const res = await authFetch(url);
         const json = await res.json();
@@ -141,15 +128,11 @@ if (!practitionerId || !dateRange) return;
     };
 
     fetchData();
-  }, [dateRange, practitionerId]);
+  }, [practitionerId]);
 
   /* ---------- UI ---------- */
 
-  const isSingleDay = dateRange?.from === dateRange?.to;
-
-  const rangeLabel = isSingleDay
-    ? `Appointments on ${dateRange?.from}`
-    : `Appointments (${dateRange?.from} – ${dateRange?.to})`;
+  const rangeLabel = "Upcoming Schedule";
 
   return (
     <div className="space-y-4">
@@ -165,23 +148,15 @@ if (!practitionerId || !dateRange) return;
 
         <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatBox
-            label={rangeLabel}
+            label="Schedule Overview"
             value={loading ? <Loader size="sm" /> : stats.todaysAppointments}
-            helper={
-              isSingleDay
-                ? "Scheduled for selected day"
-                : "Scheduled in selected range"
-            }
+            helper="All active appointments for Today + 7 Days"
           />
 
           <StatBox
-            label="Completed Appointments"
+            label="Completed Recently"
             value={loading ? <Loader size="sm" /> : stats.completedAppointments}
-            helper={
-              isSingleDay
-                ? "Completed on selected day"
-                : "Completed in selected range"
-            }
+            helper="Total completed in this period"
           />
         </CardBody>
       </Card>
@@ -190,7 +165,6 @@ if (!practitionerId || !dateRange) return;
 
       <AppointmentCalendar
         appointments={appointments}
-        onRangeChange={(from, to) => setDateRange({ from, to })}
       />
     </div>
   );
