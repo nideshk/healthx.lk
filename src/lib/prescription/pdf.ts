@@ -92,22 +92,35 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
 
         const items = data.items || [];
         const rowCount = Math.max(3, items.length);
-        const rowHeight = 25;
 
         for (let i = 0; i < rowCount; i++) {
           const item = items[i];
+          
+          // Calculate dynamic row height based on content
+          let dynamicRowHeight = 25;
+          if (item?.notes) {
+            doc.fontSize(9).font("Helvetica");
+            const notesHeight = doc.heightOfString(item.notes, { width: colWidths[4] - 10, align: "center" }) + 16;
+            dynamicRowHeight = Math.max(dynamicRowHeight, notesHeight);
+          }
+          if (item?.medicine_name) {
+            doc.fontSize(9).font("Helvetica");
+            const nameHeight = doc.heightOfString(item.medicine_name, { width: colWidths[0] - 10, align: "center" }) + 16;
+            dynamicRowHeight = Math.max(dynamicRowHeight, nameHeight);
+          }
 
-          if (y + rowHeight > doc.page.height - 100) {
+          if (y + dynamicRowHeight > doc.page.height - 100) {
             doc.addPage();
             y = 135;
           }
 
-          doc.rect(40, y, tableWidth, rowHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
+          doc.rect(40, y, tableWidth, dynamicRowHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
           [165, 235, 315, 395].forEach(x => {
-            doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
+            doc.moveTo(x, y).lineTo(x, y + dynamicRowHeight).stroke();
           });
 
           if (item) {
+            const verticalOffset = (dynamicRowHeight / 2) - 4.5; // Center text roughly
             doc.fontSize(9).font("Helvetica").fillColor("#000");
             doc.text(item.medicine_name || "", colX[0] + 5, y + 8, { width: colWidths[0] - 10, align: "center" });
             doc.text(item.route || "", colX[1] + 5, y + 8, { width: colWidths[1] - 10, align: "center" });
@@ -115,7 +128,7 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
             doc.text(item.duration || "", colX[3] + 5, y + 8, { width: colWidths[3] - 10, align: "center" });
             doc.text(item.notes || "", colX[4] + 5, y + 8, { width: colWidths[4] - 10, align: "center" });
           }
-          y += rowHeight;
+          y += dynamicRowHeight;
         }
 
         y += 8;

@@ -13,6 +13,7 @@ export interface MedicineItem {
     strength: string;
     route: string;
     duration: string;
+    notes: string;
 }
 
 export interface PrescriptionDetails {
@@ -130,7 +131,7 @@ export default function PrescriptionTab({
     const addMedicine = () => {
         setBuilderData(prev => ({
             ...prev,
-            items: [...prev.items, { medicine_name: "", strength: "", route: "Oral", duration: "" }]
+            items: [...prev.items, { medicine_name: "", strength: "", route: "Oral", duration: "", notes: "" }]
         }));
     };
 
@@ -171,12 +172,19 @@ export default function PrescriptionTab({
                 <div className="mt-4 space-y-2">
                     <p className="text-[10px] uppercase font-bold text-gray-400">Medicines</p>
                     {px.items.map((med, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
-                            <Pill size={12} className="text-blue-500" />
-                            <span className="font-semibold text-slate-800">{med.medicine_name}</span>
-                            <span className="text-slate-500">• {med.strength}</span>
-                            <span className="text-slate-500">• {med.route}</span>
-                            <span className="text-slate-500">• {med.duration}</span>
+                        <div key={i} className="space-y-1">
+                            <div className="flex items-center gap-2 text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <Pill size={12} className="text-blue-500" />
+                                <span className="font-semibold text-slate-800">{med.medicine_name}</span>
+                                <span className="text-slate-500">• {med.strength}</span>
+                                <span className="text-slate-500">• {med.route}</span>
+                                <span className="text-slate-500">• {med.duration}</span>
+                            </div>
+                            {med.notes && (
+                                <p className="text-[10px] text-slate-500 italic ml-6 border-l-2 border-slate-100 pl-2">
+                                    Note: {med.notes}
+                                </p>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -529,6 +537,17 @@ export default function PrescriptionTab({
                                                         onChange={e => updateMedicine(idx, 'duration', e.target.value)} 
                                                         className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300" 
                                                         placeholder="e.g. 5 days" 
+                                                    />
+                                                </div>
+
+                                                <div className="lg:col-span-12 space-y-2 mt-2">
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Medication Notes / Instructions</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={item.notes} 
+                                                        onChange={e => updateMedicine(idx, 'notes', e.target.value)} 
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 italic" 
+                                                        placeholder="e.g. 'Take after food', 'Avoid driving'..." 
                                                     />
                                                 </div>
                                             </div>
