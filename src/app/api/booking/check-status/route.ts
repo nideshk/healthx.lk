@@ -3,11 +3,13 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
+import { getCleanUUID } from "@/utils/uuidUtils";
 
 export async function GET(req: NextRequest) {
     const requestId = crypto.randomUUID();
     const { searchParams } = new URL(req.url);
-    const appointmentId = searchParams.get('appointmentId');
+    const rawId = searchParams.get('appointmentId');
+    const appointmentId = getCleanUUID(rawId || "");
 
     console.log("[API][REQUEST]", {
         requestId,
@@ -18,8 +20,9 @@ export async function GET(req: NextRequest) {
 
     console.log("[API][PARAMS]", {
         requestId,
+        rawId,
         appointmentId,
-        type: typeof appointmentId
+        type: typeof rawId
     });
 
     const { authorized, user } = await requireUser(req);
@@ -29,7 +32,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!appointmentId) {
+    if (!rawId) {
         console.log("[API][VALIDATION_ERROR]", { requestId, error: "Appointment ID is required" });
         return NextResponse.json({ error: 'Appointment ID is required' }, { status: 400 });
     }
@@ -91,4 +94,4 @@ export async function GET(req: NextRequest) {
         });
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
-}
+}

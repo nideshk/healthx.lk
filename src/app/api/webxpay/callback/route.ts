@@ -3,14 +3,14 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import crypto from 'crypto';
 import { notify } from "@/lib/notify";
 import { sendAppointmentInvites } from '@/lib/additional_attendee/appointmentInvites';
+import { getCleanUUID } from "@/utils/uuidUtils";
 
 export async function POST(request: NextRequest) {
     const requestId = crypto.randomUUID();
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     let appointment_id = "";
 
-    try 
-    {
+    try {
         const formData = await request.formData();
         const searchParams = request.nextUrl.searchParams;
         const getParam = (key: string) => formData.get(key) || searchParams.get(key);
@@ -18,6 +18,9 @@ export async function POST(request: NextRequest) {
         const status_code = formData.get('status_code');
         const order_id = formData.get('order_id');
         appointment_id = (formData.get('custom_fields') as string) || "";
+
+        // Decode the appointment_id if it's in base64 format
+        appointment_id = getCleanUUID(appointment_id);
 
         console.log("[WEBX][WEBHOOK_RECEIVED]", {
             requestId,
@@ -40,11 +43,11 @@ export async function POST(request: NextRequest) {
             });
             return NextResponse.json({ error: "Data missing" }, { status: 400 });
         }
-        
+
         const rawPaymentData = Buffer.from(paymentBase64, 'base64').toString('utf8');
         const publicKey = process.env.WEBXPAY_PUBLIC_KEY;
 
-        if(!publicKey) {
+        if (!publicKey) {
             console.error("[WEBX][WEBHOOK_ERROR]", {
                 requestId,
                 error: "Public key not configured"
@@ -93,9 +96,8 @@ export async function POST(request: NextRequest) {
         }
 
         const supabase = await supabaseAdmin;
-        
-        if (status_code === '0' || status_code === '00') 
-        {
+
+        if (status_code === '0' || status_code === '00') {
             // Check if Appointment is already confirmed (Idempotency)
             console.log("[DB][QUERY_START]", {
                 requestId,
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
                 .select('status, payment_status')
                 .eq('id', order_id)
                 .single();
-            
+
             console.log("[DB][QUERY_RESULT]", {
                 requestId,
                 data: currentApp,
@@ -282,8 +284,7 @@ export async function POST(request: NextRequest) {
 
             return NextResponse.redirect(`${baseUrl}/dashboard/appointment/status?appointmentId=${appointment_id}&payment=success`, 303);
         }
-        else 
-        {
+        else {
             console.log("[DB][QUERY_START]", {
                 requestId,
                 action: "batch_update_failed_status",
@@ -335,9 +336,8 @@ export async function POST(request: NextRequest) {
 
             return NextResponse.redirect(`${baseUrl}/dashboard/appointment/status?appointmentId=${appointment_id}&payment=failed`, 303);
         }
-    } 
-    catch (error)
-    {
+    }
+    catch (error) {
         console.error("[API][FATAL_ERROR]", {
             requestId,
             error: error,
@@ -347,4 +347,4 @@ export async function POST(request: NextRequest) {
         const redirectPath = appointment_id ? `/dashboard/appointment/status?appointmentId=${appointment_id}&payment=error` : '/dashboard/appointment';
         return NextResponse.redirect(`${baseUrl}${redirectPath}`, 303);
     }
-}
+}
