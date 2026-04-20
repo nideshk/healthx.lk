@@ -11,14 +11,33 @@ export async function POST(request: NextRequest) {
     try 
     {
         const formData = await request.formData();
+        const searchParams = request.nextUrl.searchParams;
+        const getParam = (key: string) => formData.get(key) || searchParams.get(key);
+
         const status_code = formData.get('status_code');
         const order_id = formData.get('order_id');
         appointment_id = (formData.get('custom_fields') as string) || "";
-        const signature = formData.get('signature') as string;
-        const paymentBase64 = formData.get('payment') as string;
+
+        let signature = getParam('signature') as string;
+        let paymentBase64 = getParam('payment') as string;
+
+        if (signature) signature = signature.replace(/ /g, '+');
+        if (paymentBase64) paymentBase64 = paymentBase64.replace(/ /g, '+');
+
+        if (!signature || !paymentBase64) {
+            console.error("Missing critical payment data from WebXPay callback.");
+            console.log("Form Data Keys:", Array.from(formData.keys()));
+            return NextResponse.json({ error: "Data missing" }, { status: 400 });
+        }
         
         const rawPaymentData = Buffer.from(paymentBase64, 'base64').toString('utf8');
         const publicKey = process.env.WEBXPAY_PUBLIC_KEY;
+
+        console.log("\n*****************************************\n")
+
+        console.log("Form Data : ", formData);
+
+        console.log("\n*****************************************\n")
 
         if(!publicKey) {
             console.error("Public key not configured in environment variables.");
