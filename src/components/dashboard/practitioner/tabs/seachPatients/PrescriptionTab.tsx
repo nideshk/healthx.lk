@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Appointment, Patient } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import { Card, CardBody } from "@/components/atom/Card/Card";
-import { FileText, ExternalLink, Pill, Calendar, User, Plus, ArrowLeft, Trash2, Save, Send, Loader2, Search } from "lucide-react";
+import { FileText, ExternalLink, Pill, Calendar, User, Plus, ArrowLeft, Trash2, Save, Send, Loader2, Search, Eye, X } from "lucide-react";
 import Loader from "@/components/atom/Loader/Loader";
 import { toast } from "react-toastify";
 
@@ -120,7 +120,10 @@ export default function PrescriptionTab({
        Builder State & Logic
     --------------------------------------------------------- */
     const [saving, setSaving] = useState(false);
-    const [builderData, setBuilderData] = useState({
+    const [isPreviewing, setIsPreviewing] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    const [builderData, setBuilderData] = useState<DraftPrescription>({
         appointmentId: "",
         diagnosis: "",
         diagnosis_code: "",
@@ -250,6 +253,55 @@ export default function PrescriptionTab({
         }));
         setDiagSearchText("");
         setShowDiagDropdown(false);
+    };
+
+    const handlePreview = async () => {
+        if (!builderData.appointmentId) {
+            toast.error("Please select an appointment.");
+            return;
+        }
+        if (!builderData.items.some(i => i.medicine_name.trim())) {
+            toast.warning("Please add at least one medication to preview.");
+            return;
+        }
+
+        setIsPreviewing(true);
+        try {
+            const res = await authFetch(
+                `/api/booking/appointment/${builderData.appointmentId}/prescription/preview`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        diagnosis_code: builderData.diagnosis_code || null,
+                        diagnosis: builderData.diagnosis || null,
+                        prescription_items: builderData.items.filter((i) => i.medicine_name.trim()),
+                        special_notes: builderData.notes || null,
+                    }),
+                }
+            );
+
+            if (!res.ok) {
+                const json = await res.json();
+                throw new Error(json?.error || "Failed to generate preview");
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            setPreviewUrl(url);
+        } catch (err: any) {
+            console.error("Preview error", err);
+            toast.error(err.message || "Failed to generate preview");
+        } finally {
+            setIsPreviewing(false);
+        }
+    };
+
+    const closePreview = () => {
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+        }
+        setPreviewUrl(null);
     };
 
     const handleIssue = async (shouldIssue: boolean) => {
@@ -582,14 +634,67 @@ export default function PrescriptionTab({
                             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Save as Draft
                         </button>
                         <button 
+                            onClick={handlePreview} 
+                            disabled={saving || isPreviewing} 
+                            className="px-6 py-3 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95 shadow-sm"
+                        >
+                            {isPreviewing ? <Loader2 size={18} className="animate-spin" /> : <Eye size={18} />} Preview PDF
+                        </button>
+                        <button 
                             onClick={() => handleIssue(true)} 
-                            disabled={saving} 
+                            disabled={saving || isPreviewing} 
                             className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95 shadow-lg shadow-blue-500/20"
                         >
                             {saving ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="shrink-0" />} 
                             <span className="leading-none">Issue Prescription</span>
                         </button>
                     </div>
+
+                    {/* PDF Preview Modal Overlay */}
+                    {previewUrl && (
+                        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
+                            <div className="bg-white w-full max-w-5xl h-full max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300">
+                                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white z-10">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-blue-50 rounded-xl">
+                                            <FileText size={20} className="text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-900 leading-none">Prescription Preview</h3>
+                                            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-semibold">Review before issuing to patient</p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={closePreview}
+                                        className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400 hover:text-slate-900 active:scale-95"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <div className="flex-grow bg-slate-100 p-4 overflow-hidden relative">
+                                    <iframe 
+                                        src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`} 
+                                        className="w-full h-full rounded-xl border-none shadow-inner bg-white"
+                                        title="Prescription PDF Preview"
+                                    />
+                                </div>
+                                <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+                                    <button 
+                                        onClick={closePreview}
+                                        className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"
+                                    >
+                                        Close Preview
+                                    </button>
+                                    <button 
+                                        onClick={() => { closePreview(); handleIssue(true); }}
+                                        className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+                                    >
+                                        Everything looks good, Issue Now
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );
