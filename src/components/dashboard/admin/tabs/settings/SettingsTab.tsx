@@ -4,12 +4,13 @@ import React, { useState } from "react";
 import SecurityTab from "../settings/SecurityTab";
 import AccountTab from "../settings/AccountTab";
 import PlatformTab from "../settings/PlatformTab";
+import OrganizationTab from "../settings/OrganizationTab";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                                                      */
 /* -------------------------------------------------------------------------- */
 
-type SettingsTabType = "Security" | "Account" | "Platform";
+type SettingsTabType = "Security" | "Account" | "Platform" | "Organization";
 
 interface SettingsTabProps {
   email: string;
@@ -27,12 +28,12 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
       {/* HEADER */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-md">
         <div className="text-lg font-semibold">Settings</div>
-        <div className="text-xs opacity-90">Security, account preferences, and platform charges</div>
+        <div className="text-xs opacity-90">Security, account preferences, platform charges and organization details</div>
       </div>
 
       {/* SUB TABS NAVIGATION */}
       <div className="bg-slate-100 rounded-lg p-1 flex gap-1">
-        {(["Security", "Account", "Platform"] as SettingsTabType[]).map((tab) => (
+        {(["Security", "Account", "Platform", "Organization"] as SettingsTabType[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -52,6 +53,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
         {activeTab === "Security" && <SecurityTab />}
         {activeTab === "Account" && <AccountTab email={email} />}
         {activeTab === "Platform" && <PlatformTab />}
+        {activeTab === "Organization" && <OrganizationTab />}
       </div>
     </div>
   );

@@ -97,10 +97,21 @@ export async function processPrescriptionIssuance(params: {
     }
   }
 
-  // 3. Generate PDF
+  // 3. Fetch Platform Settings for PDF Header
+  const { data: settingsData } = await supabaseAdmin
+    .from("platform_settings")
+    .select("key, value");
+
+  const settings = settingsData?.reduce((acc: any, curr: any) => {
+    acc[curr.key] = curr.value;
+    return acc;
+  }, {}) || {};
+
+  // 4. Generate PDF
   const pdfBuffer = await generatePrescriptionPDF({
     appointmentId,
     appointmentDate,
+    settings,
     patient: {
       name: patientName,
       age: patientAge,

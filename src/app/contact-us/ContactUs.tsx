@@ -21,6 +21,22 @@ export default function ContactUs() {
         concern: "",
     });
     const [loading, setLoading] = useState(false);
+    const [dynSettings, setDynSettings] = useState<any>(null);
+
+    React.useEffect(() => {
+        fetch("/api/platform_settings")
+            .then(res => res.json())
+            .then(json => {
+                if (json.success) {
+                    const mapped = json.data.reduce((acc: any, curr: any) => {
+                        acc[curr.key] = curr.value;
+                        return acc;
+                    }, {});
+                    setDynSettings(mapped);
+                }
+            })
+            .catch(err => console.error("Failed to fetch contact settings", err));
+    }, []);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -160,7 +176,7 @@ export default function ContactUs() {
                                     </div>
                                     <div>
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{t("addressTitle")}</h4>
-                                        <p className="text-slate-600 font-semibold text-sm leading-relaxed">{t("addressValue")}</p>
+                                        <p className="text-slate-600 font-semibold text-sm leading-relaxed">{dynSettings?.org_address || t("addressValue")}</p>
                                     </div>
                                 </div>
 
@@ -171,7 +187,7 @@ export default function ContactUs() {
                                     <div>
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{t("phoneTitle")}</h4>
                                         <p className="text-slate-600 font-semibold text-sm">
-                                            <a href="tel:+94771050867" className="hover:text-teal-600 transition-colors">{t("phoneValue")}</a>
+                                            <a href={`tel:${dynSettings?.org_phone || "+94771050867"}`} className="hover:text-teal-600 transition-colors">{dynSettings?.org_phone || t("phoneValue")}</a>
                                         </p>
                                     </div>
                                 </div>
@@ -183,7 +199,7 @@ export default function ContactUs() {
                                     <div>
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{t("emailTitle")}</h4>
                                         <p className="text-slate-600 font-semibold text-sm">
-                                            <a href="mailto:support@clinecxa.lk" className="hover:text-teal-600 transition-colors">{t("emailValue")}</a>
+                                            <a href={`mailto:${dynSettings?.org_email || "support@clinecxa.lk"}`} className="hover:text-teal-600 transition-colors">{dynSettings?.org_email || t("emailValue")}</a>
                                         </p>
                                     </div>
                                 </div>

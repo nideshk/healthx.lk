@@ -137,8 +137,8 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
           doc.switchToPage(i);
-          drawFixedHeader(doc, logoPath, rxLogoPath);
-          drawFixedFooter(doc, i + 1, range.count);
+          drawFixedHeader(doc, logoPath, rxLogoPath, data.settings);
+          drawFixedFooter(doc, i + 1, range.count, data.settings);
         }
 
         doc.end();
@@ -157,18 +157,24 @@ function drawBackground(doc: any) {
   doc.rect(0, 0, pageWidth, pageHeight).fill("#EEF6FF");
 }
 
-function drawFixedHeader(doc: any, logoPath: string, rxLogoPath: string) {
+function drawFixedHeader(doc: any, logoPath: string, rxLogoPath: string, settings?: any) {
   const pageWidth = doc.page.width;
   const headerY = 30;
 
   try {
     doc.image(logoPath, 40, headerY, { width: 140 });
   } catch (e) {
-    doc.fontSize(20).font("Helvetica-Bold").fillColor("#000").text("CLINECXA", 40, headerY);
+    const orgName = settings?.org_name || "CLINECXA";
+    doc.fontSize(20).font("Helvetica-Bold").fillColor("#000").text(orgName, 40, headerY);
   }
 
   doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#333");
-  const addressText = "Nava City Building,\nNo. 787/G, Kaduwela Malabe Road, Malabe, Sri Lanka\nT: +94 771 050 867   E: support@clinecxa.lk";
+
+  const address = settings?.org_address || "Nava City Building,\nNo. 787/G, Kaduwela Malabe Road, Malabe, Sri Lanka";
+  const phone = settings?.org_phone || "+94 771 050 867";
+  const email = settings?.org_email || "support@clinecxa.lk";
+
+  const addressText = `${address}\nT: ${phone}   E: ${email}`;
   doc.text(addressText, pageWidth - 320, headerY + 10, { align: "right", width: 280, lineGap: 2 });
 
   const titleY = headerY + 60;
@@ -213,12 +219,17 @@ function drawDoctorSignatureBlock(doc: any, data: any, y: number, signatureBuffe
   return y + 60;
 }
 
-function drawFixedFooter(doc: any, pageNum: number, totalPages: number) {
+function drawFixedFooter(doc: any, pageNum: number, totalPages: number, settings?: any) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
 
   const bottomY = pageHeight - 40;
-  doc.rect(40, bottomY, 350, 16).strokeColor("#aaa").lineWidth(0.5).stroke();
+
+  // Disclaimer
+  if (settings?.disclaimer) {
+    doc.fontSize(7).font("Helvetica-Oblique").fillColor("#666")
+      .text(settings.disclaimer, 40, bottomY - 15, { width: pageWidth - 80, align: "center", lineGap: 1 });
+  }
 
   doc.fillColor("#000").fontSize(9).font("Helvetica")
     .text(`Page ${pageNum} out of ${totalPages}`, pageWidth - 120, bottomY + 3, { align: "right", lineBreak: false });
