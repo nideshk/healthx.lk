@@ -10,9 +10,11 @@ export async function POST(
   req: NextRequest,
   context: { params: Promise<{ practitionerId: string }> }
 ) {
+  const requestId = crypto.randomUUID();
   try {
     const { practitionerId } = await context.params;
 
+    const body = await req.json();
     const {
       appointment_type_id,
       attendeeList = [], // now array of objects
@@ -21,22 +23,38 @@ export async function POST(
       ends_at,
       pre_consultation,
       consent,
-    } = await req.json();
+    } = body;
+
+    console.log("[API][REQUEST]", {
+      requestId,
+      method: req.method,
+      url: req.url,
+      timestamp: new Date().toISOString()
+    });
+
+    console.log("[API][PARAMS]", {
+      requestId,
+      practitionerId,
+      appointment_type_id,
+      starts_at,
+      ends_at,
+      coupon_code
+    });
 
     // ---------------------------
     // 1️⃣ Auth
     // ---------------------------
     const { authorized, user }: any = await requireUser(req);
     if (!authorized) {
+      console.log("[AUTH][FAILURE]", { requestId, timestamp: new Date().toISOString() });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const cnx = getAuditContext(req, user);
 
-
-
     const patient_id = user?.patient_id;
     if (!patient_id) {
+      console.log("[API][ERROR]", { requestId, message: "Patient profile missing", userId: user.id });
       await auditLog({
         ...cnx,
         action: "FAILED",
@@ -55,6 +73,7 @@ export async function POST(
     }
 
     if (!starts_at || !ends_at || !appointment_type_id || !practitionerId) {
+      console.log("[API][VALIDATION_ERROR]", { requestId, missingFields: true });
       await auditLog({
         ...cnx,
         action: "FAILED",
@@ -85,6 +104,12 @@ export async function POST(
     // ---------------------------
     // 3️⃣ Fetch Appointment Type
     // ---------------------------
+    console.log("[DB][QUERY_START]", {
+      requestId,
+      table: "appointment_type",
+      filter: { id: appointment_type_id }
+    });
+
     const { data: appointmentType, error: typeErr } =
       await supabaseClient
         .from("appointment_type")
@@ -101,8 +126,20 @@ export async function POST(
         .eq("is_active", true)
         .is("deleted_at", null)
         .single();
+    
+    console.log("[DB][QUERY_RESULT]", {
+      requestId,
+      data: appointmentType,
+      error: typeErr
+    });
 
     if (typeErr || !appointmentType) {
+      console.error("[DB][ERROR]", {
+        requestId,
+        code: typeErr?.code,
+        message: typeErr?.message,
+        appointment_type_id
+      });
       await auditLog({
         ...cnx,
         action: "FAILED",
@@ -123,7 +160,15 @@ export async function POST(
     // ---------------------------
     // 4️⃣ Slot conflict check
     // ---------------------------
-    const { data: existing } = await supabaseClient
+    console.log("[DB][QUERY_START]", {
+      requestId,
+      table: "appointments",
+      action: "conflict_check",
+      practitioner_id: practitionerId,
+      starts_at
+    });
+
+    const { data: existing, error: existError } = await supabaseClient
       .from("appointments")
       .select("id")
       .eq("practitioner_id", practitionerId)
@@ -131,8 +176,15 @@ export async function POST(
       .neq("status", "cancelled")
       .neq("status", "payment_cancelled")
       .maybeSingle();
+    
+    console.log("[DB][QUERY_RESULT]", {
+      requestId,
+      data: existing,
+      error: existError
+    });
 
     if (existing) {
+      console.log("[API][CONFLICT]", { requestId, message: "Time slot already booked", practitionerId, starts_at });
       await auditLog({
         ...cnx,
         action: "FAILED",
@@ -151,13 +203,31 @@ export async function POST(
       );
     }
 
-    const { data: practitioner } = await supabaseAdmin
+    console.log("[DB][QUERY_START]", {
+      requestId,
+      table: "practitioners",
+      filter: { id: practitionerId }
+    });
+
+    const { data: practitioner, error: practError } = await supabaseAdmin
       .from("practitioners")
       .select("*")
       .eq("id", practitionerId)
       .single();
 
+    console.log("[DB][QUERY_RESULT]", {
+      requestId,
+      data: practitioner,
+      error: practError
+    });
+
     if (!practitioner) {
+      console.error("[DB][ERROR]", {
+        requestId,
+        code: practError?.code,
+        message: practError?.message || "Practitioner not found",
+        practitionerId
+      });
       await auditLog({
         ...cnx,
         action: "FAILED",
@@ -191,14 +261,27 @@ export async function POST(
     let discount_total = 0;
 
     if (coupon_code) {
-      const { data: coupon } = await supabaseAdmin
+      console.log("[DB][QUERY_START]", {
+        requestId,
+        table: "discount_coupons",
+        filter: { code: coupon_code }
+      });
+
+      const { data: coupon, error: couponError } = await supabaseAdmin
         .from("discount_coupons")
         .select("*")
         .eq("code", coupon_code)
         .eq("is_active", true)
         .single();
+      
+      console.log("[DB][QUERY_RESULT]", {
+        requestId,
+        data: coupon,
+        error: couponError
+      });
 
       if (!coupon) {
+        console.log("[API][ERROR]", { requestId, message: "Invalid coupon", coupon_code });
         return NextResponse.json(
           { error: "Invalid coupon" },
           { status: 400 }
@@ -233,6 +316,12 @@ export async function POST(
     // ---------------------------
     // 7️⃣ Create Appointment
     // ---------------------------
+    console.log("[DB][QUERY_START]", {
+      requestId,
+      table: "appointments",
+      action: "insert"
+    });
+
     const { data: appointment, error: insertError } =
       await supabaseClient
         .from("appointments")
@@ -259,8 +348,20 @@ export async function POST(
         })
         .select()
         .single();
+    
+    console.log("[DB][QUERY_RESULT]", {
+      requestId,
+      data: appointment,
+      error: insertError
+    });
 
     if (insertError || !appointment) {
+      console.error("[DB][ERROR]", {
+        requestId,
+        code: insertError?.code,
+        message: insertError?.message,
+        details: insertError?.details
+      });
       await auditLog({
         ...cnx,
         action: "FAILED",
@@ -283,6 +384,12 @@ export async function POST(
     // Consent
     // ---------------------------
     if (consent) {
+      console.log("[DB][QUERY_START]", {
+        requestId,
+        table: "consents",
+        action: "insert",
+        appointment_id: appointment.id
+      });
       await supabaseClient.from("consents").insert({
         appointment_id: appointment.id,
         telehealth: consent.telehealth ?? false,
@@ -296,6 +403,12 @@ export async function POST(
     // Pre-consultation
     // ---------------------------
     if (pre_consultation) {
+      console.log("[DB][QUERY_START]", {
+        requestId,
+        table: "preconsult_responses",
+        action: "insert",
+        appointment_id: appointment.id
+      });
       await supabaseClient.from("preconsult_responses").insert({
         appointment_id: appointment.id,
         raw_payload: pre_consultation,
@@ -303,6 +416,12 @@ export async function POST(
       });
     }
 
+    console.log("[DB][QUERY_START]", {
+      requestId,
+      table: "appointment_draft",
+      action: "delete",
+      patient_id
+    });
     await supabaseAdmin
       .from("appointment_draft")
       .delete()
@@ -320,6 +439,12 @@ export async function POST(
       purpose: "operations",
     })
 
+    console.log("[API][RESPONSE]", {
+      requestId,
+      status: 200,
+      appointment_id: appointment.id
+    });
+
     return NextResponse.json({
       success: true,
       appointment,
@@ -332,6 +457,12 @@ export async function POST(
       },
     });
   } catch (err: any) {
+    console.error("[API][FATAL_ERROR]", {
+      requestId,
+      error: err,
+      message: err.message || "Internal server error",
+      stack: err.stack
+    });
     return NextResponse.json(
       { error: err.message || "Internal server error" },
       { status: 500 }
