@@ -194,6 +194,12 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         const appointment_type_id = bookingData.appointmentType?.id;
 
         if (!isManualCheckout || !currentAppointmentId) {
+          console.log("[WEBX][FRONTEND_REQUEST]", {
+            action: "book_appointment",
+            practitionerId,
+            appointment_type_id,
+            timestamp: new Date().toISOString()
+          });
           const res = await authFetch(
             `/api/booking/${practitionerId}/book-appointment`,
             {
@@ -222,6 +228,14 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
         }
 
         appointmentIdRef.current = currentAppointmentId;
+
+        console.log("[WEBX][FRONTEND_REQUEST]", {
+          action: "initiate_payment",
+          provider,
+          appointmentId: currentAppointmentId,
+          encodedAppointmentId: currentAppointmentId ? btoa(currentAppointmentId) : null,
+          timestamp: new Date().toISOString()
+        });
 
         const payRes = await authFetch(provider === "payhere" ? "/api/payhere" : "/api/webxpay", {
           method: "POST",

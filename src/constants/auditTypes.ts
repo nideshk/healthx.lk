@@ -34,6 +34,7 @@ export type AuditPurpose =
 
 
 export type EntityType =
+  | "CONSULTATION"
   | "PRACTITIONER_AVAILABILITY"
   | "PATIENT"
   | "PENDING_REVIEW"

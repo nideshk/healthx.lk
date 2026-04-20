@@ -26,6 +26,7 @@ export interface PrescriptionDetails {
     practitioner_name: string;
 }
 
+/* -------------------- COMPONENT -------------------- */
 export default function PrescriptionTab({
     appointments,
     patient,
@@ -38,7 +39,8 @@ export default function PrescriptionTab({
     standalonePrescription?: PrescriptionDetails;
 }) {
     const [prescriptions, setPrescriptions] = useState<PrescriptionDetails[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(viewMode !== "standalone");
+    const [showBuilder, setShowBuilder] = useState(viewMode === "builder");
 
     const validAppointments = useMemo(() => {
         return appointments
@@ -49,14 +51,19 @@ export default function PrescriptionTab({
     }, [appointments]);
 
     /* ---------------------------------------------------------
-       History Fetching (UPDATED)
+       History Fetching
     --------------------------------------------------------- */
     const fetchHistory = async () => {
+        if (viewMode === "standalone" || viewMode === "builder") {
+            setLoading(false);
+            return;
+        }
+        
         setLoading(true);
         const history: PrescriptionDetails[] = [];
 
         const completedAppointments = appointments.filter(
-            (a) => a.status === "completed" || a.status === "confirmed"
+            (a) => a.status === "completed" || a.status === "confirmed" || a.status === "scheduled" || a.status === "ongoing"
         );
 
         try {
@@ -71,12 +78,11 @@ export default function PrescriptionTab({
                         const data = await res.json();
 
                         if (data.prescription) {
-                            // ✅ NEW LOGIC (priority-based)
                             const diagnosisText =
-                                data.diagnoses?.map((d: any) => d.diagnoses?.name).join(", ") || // NEW
-                                data.prescription?.diagnosis_snapshot?.name ||                  // SNAPSHOT
-                                data.prescription?.diagnosis ||                                 // OLD
-                                data.encounter?.diagnosis ||                                    // VERY OLD
+                                data.diagnoses?.map((d: any) => d.diagnoses?.name).join(", ") || 
+                                data.prescription?.diagnosis_snapshot?.name ||                  
+                                data.prescription?.diagnosis ||                                 
+                                data.encounter?.diagnosis ||                                    
                                 "No diagnosis provided";
 
                             history.push({
@@ -104,17 +110,14 @@ export default function PrescriptionTab({
     };
 
     useEffect(() => {
-        if (appointments.length > 0) {
+        if (viewMode !== "standalone") {
             fetchHistory();
-        } else {
-            setLoading(false);
         }
-    }, [appointments]);
+    }, [appointments, viewMode]);
 
     /* ---------------------------------------------------------
-       Builder State (UPDATED)
+       Builder State & Logic
     --------------------------------------------------------- */
-    const [showBuilder, setShowBuilder] = useState(false);
     const [saving, setSaving] = useState(false);
     const [builderData, setBuilderData] = useState({
         appointmentId: "",
@@ -189,7 +192,7 @@ export default function PrescriptionTab({
     );
 
     /* ---------------------------------------------------------
-       Diagnosis Search (NEW)
+       Diagnosis Search
     --------------------------------------------------------- */
     const [diagSearchText, setDiagSearchText] = useState("");
     const [diagSearchResults, setDiagSearchResults] = useState<any[]>([]);
@@ -221,8 +224,6 @@ export default function PrescriptionTab({
                     const json = await res.json();
                     setDiagSearchResults(json.data || []);
                     setShowDiagDropdown(true);
-                } else {
-                    setDiagSearchResults([]);
                 }
             } catch (err) {
                 console.error("Search error", err);
@@ -248,11 +249,6 @@ export default function PrescriptionTab({
             toast.error("Please select an appointment.");
             return;
         }
-        if (shouldIssue && builderData.items.length === 0) {
-            toast.error("Add at least one medicine before issuing.");
-            return;
-        }
-
         setSaving(true);
         try {
             const status = shouldIssue ? "issued" : "draft";
@@ -264,9 +260,7 @@ export default function PrescriptionTab({
                     body: JSON.stringify({
                         diagnosis_code: builderData.diagnosis_code || null,
                         diagnosis: builderData.diagnosis || null,
-                        prescription_items: builderData.items.filter(
-                            (i) => i.medicine_name.trim()
-                        ),
+                        prescription_items: builderData.items.filter((i) => i.medicine_name.trim()),
                         special_notes: builderData.notes || null,
                         status,
                     }),
@@ -274,16 +268,12 @@ export default function PrescriptionTab({
             );
 
             const json = await res.json();
-            if (!res.ok) {
-                throw new Error(json?.error || "Failed to save prescription");
-            }
+            if (!res.ok) throw new Error(json?.error || "Failed to save prescription");
 
             toast.success(shouldIssue ? "Prescription issued successfully" : "Draft saved");
-
             setShowBuilder(false);
             setBuilderData({ appointmentId: "", diagnosis: "", diagnosis_code: "", notes: "", items: [] });
             fetchHistory();
-
         } catch (err: any) {
             toast.error(err.message || "Something went wrong");
         } finally {
@@ -291,15 +281,55 @@ export default function PrescriptionTab({
         }
     };
 
-    /* ---------------------------------------------------------
-       UI (unchanged mostly)
-    --------------------------------------------------------- */
+    /* -------------------- RENDER MODES -------------------- */
 
-    if (loading && prescriptions.length === 0) {
+    // 1. STANDALONE MODE
+    if (viewMode === "standalone" && standalonePrescription) {
+        const px = standalonePrescription;
         return (
-            <div className="flex flex-col items-center justify-center p-12 space-y-4">
-                <Loader size="lg" />
-                <p className="text-sm text-slate-500">Loading prescription history...</p>
+            <div className="space-y-4 animate-in fade-in duration-500">
+                <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-start gap-3">
+                    <div className="bg-white p-2 rounded-xl shadow-sm border border-blue-50">
+                        <FileText size={20} className="text-blue-600" />
+                    </div>
+                    <div className="flex-grow">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-widest leading-none">Diagnosis</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${px.status === "issued" ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"}`}>
+                                {px.status}
+                            </span>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800">{px.diagnosis}</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                    {px.items.map((m, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:border-slate-200 transition-colors">
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-slate-50 rounded-lg">
+                                    <Pill size={14} className="text-slate-400" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-800">{m.medicine_name} <span className="text-slate-400 font-medium">— {m.strength}</span></p>
+                                    <div className="flex gap-2 text-[10px] text-slate-500 font-medium">
+                                        <span className="capitalize">{m.route}</span>
+                                        <span>•</span>
+                                        <span>{m.duration}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {px.items.length === 0 && <p className="text-xs text-slate-400 italic text-center py-2">No medicines listed</p>}
+                </div>
+                
+                {px.notes && (
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 leading-none">Special Instructions</p>
+                        <p className="text-xs text-slate-600 leading-relaxed">{px.notes}</p>
+                    </div>
+                )}
             </div>
         );
     }
@@ -546,6 +576,7 @@ export default function PrescriptionTab({
         );
     }
 
+    // 3. HISTORY MODE
     return (
         <div className="space-y-6">
             {/* Header */}

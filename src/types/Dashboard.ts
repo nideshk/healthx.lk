@@ -40,7 +40,7 @@ export type PatientDetailTab =
   | "prescription";
 
 export type AppointmentCategory = "pending" | "upcoming" | "ongoing" | "previous" | "cancelled";
-export type AppointmentStatus = "scheduled" | "confirmed" | "completed" | "cancelled" | "pending" | "payment_failed" | "payment_cancelled";
+export type AppointmentStatus = "scheduled" | "confirmed" | "completed" | "cancelled" | "pending" | "payment_failed" | "payment_cancelled" | "ongoing";
 
 export type AppointmentDocument = {
   url?: string;

@@ -4,9 +4,6 @@ Clinco is a secure, HIPAA-aligned telehealth backend powering appointment manage
 
 This repository contains the **API layer and backend services** built with **Next.js App Router**, **Supabase**, and **AWS S3**.
 
-
-
-
 ---
 
 ## 🚀 Features
@@ -17,6 +14,8 @@ This repository contains the **API layer and backend services** built with **Nex
 * Role-based access control (Patient, Practitioner, Admin, Superadmin)
 * Secure session handling
 * Admin-assisted user creation
+
+
 
 ### 📅 Appointments
 
