@@ -31,7 +31,6 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
         fetchImageBuffer(data.practitioner.signatureUrl)
           .then(buf => {
             signatureBuffer = buf;
-            console.log(`Signature image fetched: ${buf.length} bytes`);
           })
           .catch(err => console.error("Failed to fetch signature image:", err))
           .finally(async () => {
@@ -47,8 +46,6 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
       }
 
       async function startDrawing() {
-        console.log("Patient for drawing:", data.patient?.name);
-        console.log("Practitioner for drawing:", data.practitioner?.name);
         let y = 125;
 
         // ---------------- PATIENT INFO ----------------
@@ -72,15 +69,15 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
         drawSectionHeader(doc, "", y, 25, rxWhiteLogoPath);
         y += 30;
 
-        const colX = [40, 195, 295, 420];
-        const colWidths = [155, 100, 125, 115];
+        const colX = [40, 165, 235, 315, 395];
+        const colWidths = [125, 70, 80, 80, 160];
         const tableWidth = pageWidth - 80;
 
         const headerHeight = 25;
         doc.rect(40, y, tableWidth, headerHeight).fill("#D1E9FF");
         doc.rect(40, y, tableWidth, headerHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
 
-        [195, 295, 420].forEach(x => {
+        [165, 235, 315, 395].forEach(x => {
           doc.moveTo(x, y).lineTo(x, y + headerHeight).stroke();
         });
 
@@ -89,6 +86,7 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
         doc.text("Route", colX[1], y + 8, { width: colWidths[1], align: "center" });
         doc.text("Strength", colX[2], y + 8, { width: colWidths[2], align: "center" });
         doc.text("Duration", colX[3], y + 8, { width: colWidths[3], align: "center" });
+        doc.text("Notes", colX[4], y + 8, { width: colWidths[4], align: "center" });
 
         y += headerHeight;
 
@@ -105,7 +103,7 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
           }
 
           doc.rect(40, y, tableWidth, rowHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
-          [195, 295, 420].forEach(x => {
+          [165, 235, 315, 395].forEach(x => {
             doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
           });
 
@@ -115,6 +113,7 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
             doc.text(item.route || "", colX[1] + 5, y + 8, { width: colWidths[1] - 10, align: "center" });
             doc.text(item.strength || "", colX[2] + 5, y + 8, { width: colWidths[2] - 10, align: "center" });
             doc.text(item.duration || "", colX[3] + 5, y + 8, { width: colWidths[3] - 10, align: "center" });
+            doc.text(item.notes || "", colX[4] + 5, y + 8, { width: colWidths[4] - 10, align: "center" });
           }
           y += rowHeight;
         }
@@ -173,12 +172,7 @@ function drawFixedHeader(doc: any, logoPath: string, rxLogoPath: string) {
   doc.text(addressText, pageWidth - 320, headerY + 10, { align: "right", width: 280, lineGap: 2 });
 
   const titleY = headerY + 60;
-  try {
-    doc.image(rxLogoPath, (pageWidth / 2) - 65, titleY - 5, { width: 35 });
-  } catch (e) {
-    doc.fontSize(24).font("Helvetica-Bold").fillColor("#000").text("Rx", (pageWidth / 2) - 60, titleY - 5);
-  }
-  doc.fontSize(16).font("Helvetica-Bold").fillColor("#000").text("e-Prescription", (pageWidth / 2) - 25, titleY);
+  doc.fontSize(16).font("Helvetica-Bold").fillColor("#000").text("e-Prescription", 0, titleY, { align: "center", width: pageWidth });
 }
 
 function drawDoctorSignatureBlock(doc: any, data: any, y: number, signatureBuffer: Buffer | null = null) {
