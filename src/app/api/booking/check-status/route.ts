@@ -3,19 +3,22 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
+import { getCleanUUID } from "@/utils/uuidUtils";
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
-    const appointmentId = searchParams.get('appointmentId');
+    const rawId = searchParams.get('appointmentId');
     const { authorized, user } = await requireUser(req);
     const cnx = getAuditContext(req, user);
     if (!authorized) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!appointmentId) {
+    if (!rawId) {
         return NextResponse.json({ error: 'Appointment ID is required' }, { status: 400 });
     }
+
+    const appointmentId = getCleanUUID(rawId);
 
     try {
         const { data: appointment, error } = await supabaseAdmin

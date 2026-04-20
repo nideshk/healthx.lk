@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import crypto from 'crypto';
 import { notify } from "@/lib/notify";
 import { sendAppointmentInvites } from '@/lib/additional_attendee/appointmentInvites';
+import { getCleanUUID } from "@/utils/uuidUtils";
 
 export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -16,7 +17,10 @@ export async function POST(request: NextRequest) {
 
         const status_code = formData.get('status_code');
         const order_id = formData.get('order_id');
-        appointment_id = (formData.get('custom_fields') as string) || "";
+        appointment_id = (formData.get('custom_fields') as string) || "";        
+
+        // Decode the appointment_id if it's in base64 format
+        appointment_id = getCleanUUID(appointment_id);
 
         let signature = getParam('signature') as string;
         let paymentBase64 = getParam('payment') as string;
