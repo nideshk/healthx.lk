@@ -6,14 +6,25 @@ import { auditLog } from "@/lib/audit/auditLog";
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
+    const requestId = crypto.randomUUID();
+
+    console.log("[API][REQUEST]", {
+        requestId,
+        method: request.method,
+        url: request.url,
+        timestamp: new Date().toISOString()
+    });
+
     const { authorized, user } = await requireUser(request);
     if (!authorized || !user) {
+        console.log("[AUTH][FAILURE]", { requestId, timestamp: new Date().toISOString() });
         return NextResponse.json({ error: "User not authenticated." }, { status: 401 });
     }
 
     const patient_id = user.patient_id;
 
     if (!patient_id) {
+        console.log("[API][ERROR]", { requestId, message: "User profile incomplete", userId: user.auth_user_id });
         return NextResponse.json({ error: "User profile incomplete for payment processing." }, { status: 400 });
     }
 
@@ -24,33 +35,73 @@ export async function POST(request: NextRequest) {
             appointment_id, practitioner_id, consultation_fee, platform_fee
         } = body;
 
+        console.log("[API][PARAMS]", {
+            requestId,
+            appointment_id,
+            practitioner_id,
+            patient_id,
+            timestamp: new Date().toISOString()
+        });
+
         // Validation
         if (!first_name || !last_name || !email || !appointment_id || !practitioner_id) {
+            console.log("[API][VALIDATION_ERROR]", { requestId, missingFields: true });
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
         }
 
         const supabase = await supabaseServer();
 
         // 1. Fetch Appointment from DB
+        console.log("[DB][QUERY_START]", {
+            requestId,
+            table: "appointments",
+            filter: { id: appointment_id }
+        });
+
         const { data: appt, error: apptError } = await supabase
             .from('appointments')
             .select('patient_id, fee_charged')
             .eq('id', appointment_id)
             .single();
 
-        if (!appt || apptError) {
+        console.log("[DB][QUERY_RESULT]", {
+            requestId,
+            data: appt,
+            error: apptError
+        });
+
+        if (apptError) {
+            console.error("[DB][ERROR]", {
+                requestId,
+                code: apptError.code,
+                message: apptError.message,
+                details: apptError.details,
+                hint: apptError.hint,
+                appointment_id
+            });
+            return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+        }
+
+        if (!appt) {
             return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
         }
 
         if (appt.patient_id !== patient_id) {
+            console.log("[API][AUTH_ERROR]", { requestId, message: "Ownership mismatch", apptPatientId: appt.patient_id, sessionPatientId: patient_id });
             return NextResponse.json({ error: "Unauthorized: Ownership mismatch." }, { status: 403 });
         }
 
         const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
-        // const formattedAmount = "50.00"; // Changed this for testing as webxpay doesn't support large amounts during testing
         const orderID = appointment_id;
 
         // 2. Upsert Transaction
+        console.log("[DB][QUERY_START]", {
+            requestId,
+            table: "transactions",
+            action: "upsert",
+            order_id: orderID
+        });
+
         const { error: dbError } = await supabase.from('transactions').upsert({
             order_id: orderID,
             status: 'pending',
@@ -70,8 +121,20 @@ export async function POST(request: NextRequest) {
             updated_at: new Date().toISOString()
         }, { onConflict: 'order_id' });
 
+        console.log("[DB][QUERY_RESULT]", {
+            requestId,
+            error: dbError
+        });
+
         if (dbError) {
-            console.error("DB Error:", dbError);
+            console.error("[DB][ERROR]", {
+                requestId,
+                code: dbError.code,
+                message: dbError.message,
+                details: dbError.details,
+                hint: dbError.hint,
+                order_id: orderID
+            });
             return NextResponse.json({ error: "Database transaction failed." }, { status: 500 });
         }
 
@@ -108,7 +171,7 @@ export async function POST(request: NextRequest) {
         // Base64 encode the custom fields
         const encodedCustomFields = Buffer.from(appointment_id).toString("base64");
 
-        return NextResponse.json({
+        const responseData = {
             success: true,
             order_id: orderID,
             total_amount: formattedAmount,
@@ -130,10 +193,23 @@ export async function POST(request: NextRequest) {
                 secret_key: process.env.WEBXPAY_SECRET_KEY,
                 enc_method: process.env.WEBXPAY_ENC_METHOD
             }
+        };
+
+        console.log("[API][RESPONSE]", {
+            requestId,
+            status: 200,
+            appointment_id: orderID
         });
 
+        return NextResponse.json(responseData);
+
     } catch (err: any) {
-        console.error("Critical Error in /api/webxpay:", err);
+        console.error("[API][FATAL_ERROR]", {
+            requestId,
+            error: err,
+            message: err?.message,
+            stack: err?.stack
+        });
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
