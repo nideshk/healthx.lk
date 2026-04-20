@@ -79,6 +79,16 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const isAdmin = role === "admin" || role === "superadmin";
 
     if (!isPatient && !isPractitioner && !isAdmin) {
+      const cnx = getAuditContext(request, user);
+      await auditLog({
+        ...cnx,
+        action: "UNAUTHORIZED_ATTEMPT",
+        entityType: "CONSULTATION",
+        entityId: appointmentId,
+        purpose: "treatment",
+        source: isPatient ? "user_portal" : "dashboard",
+        metadata: { role, appointmentId }
+      });
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
@@ -191,6 +201,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     }
 
     if (user?.practitioner_id !== appointment.practitioner_id) {
+      const cnx = getAuditContext(request, user);
+      await auditLog({
+        ...cnx,
+        action: "FORBIDDEN_ACCESS_ATTEMPT",
+        entityType: "CONSULTATION",
+        entityId: appointmentId,
+        purpose: "treatment",
+        source: "dashboard",
+        metadata: { role: user.role, appointmentId, practitionerId: appointment.practitioner_id }
+      });
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -372,6 +392,23 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       });
     }
 
+    // Audit Log
+    const cnx = getAuditContext(request, user);
+    await auditLog({
+      ...cnx,
+      action: existingPresc ? "UPDATED" : "CREATED",
+      entityType: "CONSULTATION",
+      entityId: appointmentId,
+      purpose: "treatment",
+      source: "dashboard",
+      metadata: {
+        appointment_id: appointmentId,
+        prescription_id: prescriptionId,
+        status: body.status,
+        role: user.role
+      }
+    });
+
     return NextResponse.json({ success: true, prescriptionId }, { status: 200 });
 
   } catch (err: any) {
@@ -402,6 +439,16 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
 
     // Role check and ownership check
     if (role !== "practitioner" || user?.practitioner_id !== appointment.practitioner_id) {
+      const cnx = getAuditContext(request, user);
+      await auditLog({
+        ...cnx,
+        action: "FORBIDDEN_ACCESS_ATTEMPT",
+        entityType: "PRESCRIPTION",
+        entityId: appointmentId,
+        purpose: "treatment",
+        source: "dashboard",
+        metadata: { role, appointmentId, ownerPractitionerId: appointment.practitioner_id }
+      });
       return NextResponse.json({ error: "Forbidden: Only the assigned practitioner can delete prescriptions" }, { status: 403 });
     }
 
