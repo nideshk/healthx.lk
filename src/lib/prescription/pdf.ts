@@ -92,22 +92,35 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
 
         const items = data.items || [];
         const rowCount = Math.max(3, items.length);
-        const rowHeight = 25;
 
         for (let i = 0; i < rowCount; i++) {
           const item = items[i];
+          
+          // Calculate dynamic row height based on content
+          let dynamicRowHeight = 25;
+          if (item?.notes) {
+            doc.fontSize(9).font("Helvetica");
+            const notesHeight = doc.heightOfString(item.notes, { width: colWidths[4] - 10, align: "center" }) + 16;
+            dynamicRowHeight = Math.max(dynamicRowHeight, notesHeight);
+          }
+          if (item?.medicine_name) {
+            doc.fontSize(9).font("Helvetica");
+            const nameHeight = doc.heightOfString(item.medicine_name, { width: colWidths[0] - 10, align: "center" }) + 16;
+            dynamicRowHeight = Math.max(dynamicRowHeight, nameHeight);
+          }
 
-          if (y + rowHeight > doc.page.height - 100) {
+          if (y + dynamicRowHeight > doc.page.height - 100) {
             doc.addPage();
             y = 135;
           }
 
-          doc.rect(40, y, tableWidth, rowHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
+          doc.rect(40, y, tableWidth, dynamicRowHeight).strokeColor("#82B1FF").lineWidth(0.5).stroke();
           [165, 235, 315, 395].forEach(x => {
-            doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
+            doc.moveTo(x, y).lineTo(x, y + dynamicRowHeight).stroke();
           });
 
           if (item) {
+            const verticalOffset = (dynamicRowHeight / 2) - 4.5; // Center text roughly
             doc.fontSize(9).font("Helvetica").fillColor("#000");
             doc.text(item.medicine_name || "", colX[0] + 5, y + 8, { width: colWidths[0] - 10, align: "center" });
             doc.text(item.route || "", colX[1] + 5, y + 8, { width: colWidths[1] - 10, align: "center" });
@@ -115,7 +128,7 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
             doc.text(item.duration || "", colX[3] + 5, y + 8, { width: colWidths[3] - 10, align: "center" });
             doc.text(item.notes || "", colX[4] + 5, y + 8, { width: colWidths[4] - 10, align: "center" });
           }
-          y += rowHeight;
+          y += dynamicRowHeight;
         }
 
         y += 8;
@@ -137,8 +150,8 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
           doc.switchToPage(i);
-          drawFixedHeader(doc, logoPath, rxLogoPath);
-          drawFixedFooter(doc, i + 1, range.count);
+          drawFixedHeader(doc, logoPath, rxLogoPath, data.settings);
+          drawFixedFooter(doc, i + 1, range.count, data.settings);
         }
 
         doc.end();
@@ -157,18 +170,24 @@ function drawBackground(doc: any) {
   doc.rect(0, 0, pageWidth, pageHeight).fill("#EEF6FF");
 }
 
-function drawFixedHeader(doc: any, logoPath: string, rxLogoPath: string) {
+function drawFixedHeader(doc: any, logoPath: string, rxLogoPath: string, settings?: any) {
   const pageWidth = doc.page.width;
   const headerY = 30;
 
   try {
     doc.image(logoPath, 40, headerY, { width: 140 });
   } catch (e) {
-    doc.fontSize(20).font("Helvetica-Bold").fillColor("#000").text("CLINECXA", 40, headerY);
+    const orgName = settings?.org_name || "CLINECXA";
+    doc.fontSize(20).font("Helvetica-Bold").fillColor("#000").text(orgName, 40, headerY);
   }
 
   doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#333");
-  const addressText = "Nava City Building,\nNo. 787/G, Kaduwela Malabe Road, Malabe, Sri Lanka\nT: +94 771 050 867   E: support@clinecxa.lk";
+
+  const address = settings?.org_address || "Nava City Building,\nNo. 787/G, Kaduwela Malabe Road, Malabe, Sri Lanka";
+  const phone = settings?.org_phone || "+94 771 050 867";
+  const email = settings?.org_email || "support@clinecxa.lk";
+
+  const addressText = `${address}\nT: ${phone}   E: ${email}`;
   doc.text(addressText, pageWidth - 320, headerY + 10, { align: "right", width: 280, lineGap: 2 });
 
   const titleY = headerY + 60;
@@ -213,12 +232,17 @@ function drawDoctorSignatureBlock(doc: any, data: any, y: number, signatureBuffe
   return y + 60;
 }
 
-function drawFixedFooter(doc: any, pageNum: number, totalPages: number) {
+function drawFixedFooter(doc: any, pageNum: number, totalPages: number, settings?: any) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
 
   const bottomY = pageHeight - 40;
-  doc.rect(40, bottomY, 350, 16).strokeColor("#aaa").lineWidth(0.5).stroke();
+
+  // Disclaimer
+  if (settings?.disclaimer) {
+    doc.fontSize(7).font("Helvetica-Oblique").fillColor("#666")
+      .text(settings.disclaimer, 40, bottomY - 15, { width: pageWidth - 80, align: "center", lineGap: 1 });
+  }
 
   doc.fillColor("#000").fontSize(9).font("Helvetica")
     .text(`Page ${pageNum} out of ${totalPages}`, pageWidth - 120, bottomY + 3, { align: "right", lineBreak: false });

@@ -12,7 +12,7 @@ import Link from "next/link";
 import { toast } from "react-toastify";
 
 import { ExternalLink, FileText, Edit2, Save, X, Loader2, Pill } from "lucide-react";
-import PrescriptionTab, { PrescriptionDetails } from "./PrescriptionTab";
+import PrescriptionTab, { PrescriptionDetails } from "@/components/dashboard/practitioner/tabs/seachPatients/PrescriptionTab";
 
 interface PatientDetailViewProps {
   patient: Patient;
