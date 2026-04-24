@@ -15,11 +15,13 @@ import {
   AlertCircle,
   Calendar,
   FileText,
+  Eye,
   Search,
 } from "lucide-react";
 
 type Props = {
   appointmentId: string;
+  readOnly?: boolean;
 };
 
 interface MedicineItem {
@@ -32,7 +34,7 @@ interface MedicineItem {
 
 const ROUTE_OPTIONS = ["Oral", "IV", "Local", "Suppository", "Other"] as const;
 
-export default function ConsultationPanel({ appointmentId }: Props) {
+export default function ConsultationPanel({ appointmentId, readOnly = false }: Props) {
   /* ---------- Diagnosis ---------- */
   const [diagId, setDiagId] = useState<string | null>(null);
   const [diagCode, setDiagCode] = useState("");
@@ -127,11 +129,46 @@ export default function ConsultationPanel({ appointmentId }: Props) {
     mainConcern: "",
     goal: "",
     duration: "",
+    referral: "",
   });
+
+  const [attendees, setAttendees] = useState<
+    Array<{ email: string; relationship: string }>
+  >([]);
 
   const [attachments, setAttachments] = useState<
     Array<{ name?: string; document_type?: string; url: string }>
   >([]);
+
+  /* ---------- PDF Preview ---------- */
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfPreviewName, setPdfPreviewName] = useState<string | null>(null);
+  const [pdfPreviewIsObjectUrl, setPdfPreviewIsObjectUrl] = useState(false);
+  const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false);
+
+  const openPdfPreview = (att: { url: string; name?: string }) => {
+    // external/signed URLs are not object URLs
+    if (pdfPreviewIsObjectUrl && pdfPreviewUrl) {
+      try {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      } catch {}
+      setPdfPreviewIsObjectUrl(false);
+    }
+
+    setPdfPreviewUrl(att.url);
+    setPdfPreviewName(att.name || "Attachment");
+  };
+
+  const closePdfPreview = () => {
+    if (pdfPreviewIsObjectUrl && pdfPreviewUrl) {
+      try {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      } catch {}
+      setPdfPreviewIsObjectUrl(false);
+    }
+    setPdfPreviewUrl(null);
+    setPdfPreviewName(null);
+  };
 
   /* ============================== LOAD ============================== */
   useEffect(() => {
@@ -145,12 +182,27 @@ export default function ConsultationPanel({ appointmentId }: Props) {
 
         const data = await res.json();
 
+        let rawPayload = data.preconsult?.raw_payload;
+        if (typeof rawPayload === 'string') {
+          try {
+            rawPayload = JSON.parse(rawPayload);
+          } catch (e) {
+            console.error("Failed to parse raw_payload", e);
+            rawPayload = {};
+          }
+        }
+
         // Pre-consult meta
         setConsultationMeta({
-          mainConcern: data.preconsult?.raw_payload?.note?.concern || "",
-          goal: data.preconsult?.raw_payload?.note?.outcome || "",
-          duration: data.preconsult?.raw_payload?.note?.duration || "",
+          mainConcern: rawPayload?.note?.concern || "",
+          goal: rawPayload?.note?.outcome || "",
+          duration: rawPayload?.note?.duration || "",
+          referral: rawPayload?.referral || "",
         });
+
+        if (data.attendees) {
+          setAttendees(data.attendees);
+        }
 
         // Attachments
         setAttachments(
@@ -201,6 +253,132 @@ export default function ConsultationPanel({ appointmentId }: Props) {
 
     fetchConsultationDetails();
   }, [appointmentId]);
+
+  // If this panel is being used in read-only mode (for patients / guests),
+  // render a simplified view showing only pre-consultation and attachments.
+  if (readOnly) {
+    return (
+      <aside className="w-full bg-[#f9fafb] h-full flex flex-col border-l border-gray-200 shadow-xl text-black">
+        <div className="flex items-center justify-between p-4 border-b bg-white">
+          <h3 className="text-sm font-semibold">Pre-consultation</h3>
+        </div>
+
+        {consultationLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="animate-spin text-black" size={28} />
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            {(consultationMeta.mainConcern || consultationMeta.goal || consultationMeta.duration || consultationMeta.referral || attendees.length > 0) && (
+              <section className="bg-white rounded-lg border border-gray-200 p-4 space-y-2">
+                <h3 className="text-xs font-semibold text-black uppercase tracking-wider">Patient Pre-consult</h3>
+                {consultationMeta.mainConcern && (
+                  <p className="text-sm">
+                    <span className="font-medium text-black">Concern:</span> {consultationMeta.mainConcern}
+                  </p>
+                )}
+                {consultationMeta.goal && (
+                  <p className="text-sm">
+                    <span className="font-medium text-black">Goal:</span> {consultationMeta.goal}
+                  </p>
+                )}
+                {consultationMeta.duration && (
+                  <p className="text-sm">
+                    <span className="font-medium text-black">Duration:</span> {consultationMeta.duration}
+                  </p>
+                )}
+                {consultationMeta.referral && (
+                  <p className="text-sm">
+                    <span className="font-medium text-black">Referral Source:</span> {consultationMeta.referral}
+                  </p>
+                )}
+
+                {attendees.length > 0 && (
+                  <div className="mt-2">
+                    <span className="font-medium text-black text-sm">Additional Attendees:</span>
+                    <ul className="mt-1 space-y-1">
+                      {attendees.map((a, i) => (
+                        <li key={i} className="text-sm flex items-center gap-2">
+                          <span className="bg-gray-100 text-black px-2 py-0.5 rounded text-xs">{a.relationship}</span>
+                          {a.email}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {attachments.length > 0 && (
+              <section className="bg-white rounded-lg border border-gray-200 p-4 space-y-2">
+                <h3 className="text-xs font-semibold text-black uppercase tracking-wider">Attachments</h3>
+                <div className="space-y-2">
+                  {attachments.map((att, i) => {
+                    const isPdf =
+                      (att.document_type && att.document_type.toLowerCase() === "application/pdf") ||
+                      (!!att.name && att.name.toLowerCase().endsWith(".pdf")) ||
+                      (!!att.url && att.url.toLowerCase().endsWith(".pdf"));
+
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <button
+                          onClick={() => (isPdf ? openPdfPreview(att) : window.open(att.url, "_blank", "noopener,noreferrer"))}
+                          className="flex items-center gap-2 text-sm text-black hover:underline"
+                        >
+                          <FileText size={14} />
+                          <span>{att.name || `Attachment ${i + 1}`}</span>
+                        </button>
+
+                        <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-black">
+                          <ExternalLink size={12} />
+                        </a>
+
+                        {isPdf && (
+                          <button onClick={() => openPdfPreview(att)} className="ml-2 text-sm text-black flex items-center gap-1">
+                            <Eye size={14} />
+                            <span>Preview</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* PDF Preview Modal */}
+            {pdfPreviewUrl && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                      <div className="bg-white w-[95vw] h-[90vh] rounded-lg overflow-hidden shadow-xl flex flex-col relative">
+                        <div className="flex items-center justify-between p-2 border-b">
+                          <div className="text-sm font-semibold text-black">{pdfPreviewName}</div>
+                          <div className="flex items-center gap-2">
+                            <a href={pdfPreviewUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-black underline">Open in new tab</a>
+                            <button onClick={closePdfPreview} className="p-2 text-black">
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                        {pdfPreviewLoading && (
+                          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30">
+                            <Loader2 className="animate-spin text-white" size={40} />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <object data={pdfPreviewUrl} type="application/pdf" className="w-full h-full">
+                            <div className="p-6">
+                              <p className="text-black">Unable to preview this file. <a href={pdfPreviewUrl} target="_blank" rel="noopener noreferrer" className="text-black underline">Open in a new tab</a></p>
+                            </div>
+                          </object>
+                        </div>
+                      </div>
+                    </div>
+            )}
+          </div>
+        )}
+      </aside>
+    );
+  }
 
   /* ==================== SAVE SESSION (consultation tab) ==================== */
   const saveSession = async () => {
@@ -330,15 +508,111 @@ export default function ConsultationPanel({ appointmentId }: Props) {
         status === "issued"
           ? "Prescription issued successfully!"
           : status === "ready_to_issue"
-          ? "Ready to Issue."
-          : "Prescription draft saved."
+            ? "Ready to Issue."
+            : "Prescription draft saved."
       );
 
       setTimeout(() => setSuccess(null), 4000);
+
+      // If the prescription was moved to Ready, generate and show a PDF preview
+      if (status === "ready_to_issue") {
+        try {
+          setPdfPreviewLoading(true);
+
+          const previewRes = await authFetch(
+            `/api/booking/appointment/${appointmentId}/prescription/preview`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                diagnosis_id: diagId || null,
+                diagnosis_code: diagCode || null,
+                diagnosis: diagName || null,
+                diagnosis_description: diagDescription || null,
+                prescription_items: prescriptionItems.filter((i) => i.medicine_name.trim()),
+                special_notes: specialNotes || null,
+              }),
+            }
+          );
+
+          if (!previewRes.ok) {
+            const errJson = await previewRes.json().catch(() => null);
+            throw new Error(errJson?.error || "Failed to generate preview");
+          }
+
+          const blob = await previewRes.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          if (pdfPreviewIsObjectUrl && pdfPreviewUrl) {
+            try {
+              URL.revokeObjectURL(pdfPreviewUrl);
+            } catch {}
+          }
+          setPdfPreviewUrl(objectUrl);
+          setPdfPreviewName("Prescription Preview");
+          setPdfPreviewIsObjectUrl(true);
+        } catch (err: any) {
+          console.error("Prescription preview error:", err);
+          setError(err?.message || "Failed to generate preview");
+        } finally {
+          setPdfPreviewLoading(false);
+        }
+      }
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Generate a PDF preview from current form data without saving
+  const previewPrescription = async () => {
+    setError(null);
+    setSuccess(null);
+
+    const hasItems = prescriptionItems.some((i) => i.medicine_name.trim());
+    if (!hasItems) {
+      setError("Add at least one medicine before previewing.");
+      return;
+    }
+
+    setPdfPreviewLoading(true);
+    try {
+      const previewRes = await authFetch(
+        `/api/booking/appointment/${appointmentId}/prescription/preview`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            diagnosis_id: diagId || null,
+            diagnosis_code: diagCode || null,
+            diagnosis: diagName || null,
+            diagnosis_description: diagDescription || null,
+            prescription_items: prescriptionItems.filter((i) => i.medicine_name.trim()),
+            special_notes: specialNotes || null,
+          }),
+        }
+      );
+
+      if (!previewRes.ok) {
+        const errJson = await previewRes.json().catch(() => null);
+        throw new Error(errJson?.error || "Failed to generate preview");
+      }
+
+      const blob = await previewRes.blob();
+      if (pdfPreviewIsObjectUrl && pdfPreviewUrl) {
+        try {
+          URL.revokeObjectURL(pdfPreviewUrl);
+        } catch {}
+      }
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfPreviewUrl(objectUrl);
+      setPdfPreviewName("Prescription Preview");
+      setPdfPreviewIsObjectUrl(true);
+    } catch (err: any) {
+      console.error("Prescription preview error:", err);
+      setError(err?.message || "Failed to generate preview");
+    } finally {
+      setPdfPreviewLoading(false);
     }
   };
 
@@ -426,32 +700,55 @@ export default function ConsultationPanel({ appointmentId }: Props) {
               {/* Pre-consult (read-only) */}
               {(consultationMeta.mainConcern ||
                 consultationMeta.goal ||
-                consultationMeta.duration) && (
+                consultationMeta.duration ||
+                consultationMeta.referral ||
+                attendees.length > 0) && (
                   <section className="bg-white rounded-lg border border-gray-200 p-4 space-y-2">
                     <h3 className="text-xs font-semibold text-black uppercase tracking-wider">
                       Patient Pre-consult
                     </h3>
                     {consultationMeta.mainConcern && (
-                      <p className="text-sm">
-                        <span className="font-medium text-gray-600">
+                      <p className="text-sm text-black">
+                        <span className="font-medium text-black">
                           Concern:
                         </span>{" "}
                         {consultationMeta.mainConcern}
                       </p>
                     )}
                     {consultationMeta.goal && (
-                      <p className="text-sm">
-                        <span className="font-medium text-gray-600">Goal:</span>{" "}
+                      <p className="text-sm text-black">
+                        <span className="font-medium text-black">Goal:</span>{" "}
                         {consultationMeta.goal}
                       </p>
                     )}
                     {consultationMeta.duration && (
-                      <p className="text-sm">
-                        <span className="font-medium text-gray-600">
+                      <p className="text-sm text-black">
+                        <span className="font-medium text-black">
                           Duration:
                         </span>{" "}
                         {consultationMeta.duration}
                       </p>
+                    )}
+                    {consultationMeta.referral && (
+                      <p className="text-sm text-black">
+                        <span className="font-medium text-black">
+                          Referral Source:
+                        </span>{" "}
+                        {consultationMeta.referral}
+                      </p>
+                    )}
+                    {attendees.length > 0 && (
+                      <div className="mt-2">
+                        <span className="font-medium text-black text-sm">Additional Attendees:</span>
+                        <ul className="mt-1 space-y-1">
+                          {attendees.map((a, i) => (
+                            <li key={i} className="text-sm text-black flex items-center gap-2">
+                              <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">{a.relationship}</span>
+                              {a.email}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
                   </section>
                 )}
@@ -598,7 +895,7 @@ export default function ConsultationPanel({ appointmentId }: Props) {
               </section>
 
               {/* Follow-up */}
-              <section className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+              <section className="bg-white rounded-lg border border-gray-200 p-4 space-y-3 text-black">
                 <h3 className="text-xs font-semibold text-black uppercase tracking-wider">
                   Follow-up
                 </h3>
@@ -841,18 +1138,6 @@ export default function ConsultationPanel({ appointmentId }: Props) {
                       Draft
                     </button>
 
-                    <button
-                      onClick={() => savePrescription("ready_to_issue")}
-                      disabled={saving}
-                      className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl py-3 text-sm transition-all border border-indigo-200 active:scale-[0.98] disabled:opacity-50"
-                    >
-                      {saving ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <CheckCircle2 size={16} />
-                      )}
-                      Ready
-                    </button>
                   </div>
 
                   <div className="flex gap-2">

@@ -65,7 +65,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     // Fetch appointment basics
     const { data: appointment, error: apptErr } = await supabaseClient
       .from("appointments")
-      .select("id, patient_id, practitioner_id, created_at")
+      .select("id, patient_id, practitioner_id, created_at, additional_attendees")
       .eq("id", appointmentId)
       .limit(1)
       .maybeSingle();
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     responseData.consent = consent;
 
     if (!isAdmin) {
-      const { data: preconsult } = await supabaseClient.from("preconsult_responses").select("*").eq("appointment_id", appointmentId).maybeSingle();
+      const { data: preconsult } = await supabaseAdmin.from("preconsult_responses").select("*").eq("appointment_id", appointmentId).maybeSingle();
       responseData.preconsult = preconsult;
 
       if (isPractitioner) {
@@ -143,6 +143,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       };
     } else if (isPractitioner) {
       responseData.encounter = encounter;
+      responseData.attendees = appointment.additional_attendees;
       responseData.prescription = {
         ...prescription,
         items: prescriptionItems

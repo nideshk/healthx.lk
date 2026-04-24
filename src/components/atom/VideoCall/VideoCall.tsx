@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import VideoGrid from "./VideoGrid";
 import ControlsBar from "./ControlsBar";
 import { useVideoCall } from "./useVideoCall";
-import { Camera, ShieldCheck, Activity } from "lucide-react";
+import { Camera, ShieldCheck, Activity, ClipboardList, X } from "lucide-react";
 import ConsultationPanel from "./ConsultationPanel";
 import { logCallEvent } from "@/lib/logCallEvent";
 
@@ -37,6 +37,7 @@ export default function VideoCallContainer({
 
   const [panelWidth, setPanelWidth] = React.useState(380);
   const [isResizing, setIsResizing] = React.useState(false);
+  const [showPreconsult, setShowPreconsult] = React.useState(false);
 
   const startResizing = React.useCallback(() => {
     setIsResizing(true);
@@ -198,6 +199,33 @@ export default function VideoCallContainer({
             <ConsultationPanel appointmentId={appointmentId} />
           </div>
         </div>
+      )}
+
+      {/* Floating Pre-consult for patients/attendees */}
+      {!isPractitioner && (
+        <>
+          <button
+            onClick={() => setShowPreconsult(true)}
+            className="fixed bottom-6 right-6 z-50 bg-white text-black p-3 rounded-full shadow-lg"
+            title="View pre-consultation details"
+          >
+            <ClipboardList size={20} />
+          </button>
+
+            {showPreconsult && (
+            <div className="fixed right-6 bottom-20 z-50 w-[360px] h-[80vh] bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200 text-black">
+              <div className="flex items-center justify-between p-2 border-b">
+                <div className="text-sm font-semibold text-black">Pre-consultation</div>
+                <button onClick={() => setShowPreconsult(false)} className="p-2 text-black">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="h-full bg-[#f9fafb]">
+                <ConsultationPanel appointmentId={appointmentId} readOnly />
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
