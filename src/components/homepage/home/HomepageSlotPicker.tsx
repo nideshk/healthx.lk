@@ -73,7 +73,7 @@ const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, sele
     const tz =
       availability?.timezone ||
       practitioner?.timezone ||
-      Intl.DateTimeFormat().resolvedOptions().timeZone;
+      "Asia/Colombo";
 
     const startLocal = DateTime.fromObject(
       {
@@ -274,7 +274,7 @@ const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, sele
               const tz =
                 practitioner?.timezone ||
                 availability?.timezone ||
-                Intl.DateTimeFormat().resolvedOptions().timeZone;
+                "Asia/Colombo";
 
               // ✅ FIX: Preserve local/practitioner timezone
               const formattedDate = DateTime.fromJSDate(date)

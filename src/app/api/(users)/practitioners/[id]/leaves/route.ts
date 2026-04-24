@@ -54,7 +54,7 @@ function buildWindowsForDate(
   av: { starts_at_local: string; ends_at_local: string; timezone?: string },
   leaveType: string
 ) {
-  const timezone = av.timezone || "UTC";
+  const timezone = av.timezone || "Asia/Colombo";
   const startLocal = av.starts_at_local; // "HH:MM"
   const endLocal = av.ends_at_local; // "HH:MM"
 
@@ -227,15 +227,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
     };
 
-    const starts_at_local = formatParts(availability.starts_at, availability.timezone || "UTC");
-    const ends_at_local = formatParts(availability.ends_at, availability.timezone || "UTC");
+    const starts_at_local = formatParts(availability.starts_at, availability.timezone || "Asia/Colombo");
+    const ends_at_local = formatParts(availability.ends_at, availability.timezone || "Asia/Colombo");
 
     // build windows per date
     const dates = iterateDates(start_date, end_date);
     const applied_windows: Array<{ date: string; windows: Array<{ from: string; to: string }> }> = [];
 
     for (const dateYmd of dates) {
-      const weekday = weekdayNameForDate(dateYmd, availability.timezone || "UTC");
+      const weekday = weekdayNameForDate(dateYmd, availability.timezone || "Asia/Colombo");
 
       const windows = buildWindowsForDate(dateYmd, { starts_at_local, ends_at_local, timezone: availability.timezone }, leave_type);
       if (!windows || windows.length === 0) {

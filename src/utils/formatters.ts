@@ -1,4 +1,5 @@
 const SINHALA_DIGITS = ["෦","෧","෨","෩","෪","෫","෬","෭","෮","෯"];
+const TIMEZONE = 'Asia/Colombo';
 
 function toSinhalaDigits(value: string) {
   return value.replace(/\d/g, d => SINHALA_DIGITS[Number(d)]);
@@ -18,7 +19,7 @@ export function formatDate(
 ) {
   const formatted = new Intl.DateTimeFormat(
     locale === "si" ? "si-LK" : "en-US",
-    { day: "numeric", month: "short" }
+    { day: "numeric", month: "short", timeZone: TIMEZONE }
   ).format(new Date(date));
 
   return locale === "si" ? toSinhalaDigits(formatted) : formatted;
@@ -33,7 +34,8 @@ export function formatTime(
     {
       hour: "2-digit",
       minute: "2-digit",
-      hour12: true
+      hour12: true,
+      timeZone: TIMEZONE
     }
   ).format(new Date(date));
 

@@ -102,7 +102,7 @@ function ReschedulePage() {
   /* ----------------------------------------------
      TIMEZONE & 6-HOUR RULE
   ---------------------------------------------- */
-  const practitionerTZ = appointment.practitioner?.timezone || "UTC";
+  const practitionerTZ = appointment.practitioner?.timezone || "Asia/Colombo";
 
   const appointmentUTC = DateTime.fromISO(appointment.starts_at, {
     zone: "utc",

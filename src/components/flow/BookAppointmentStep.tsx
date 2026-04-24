@@ -53,7 +53,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
 
         const dates = windows.map((w: any) =>
           DateTime.fromISO(w.starts_at)
-            .setZone(w.timezone || "UTC")
+            .setZone(w.timezone || "Asia/Colombo")
             .toISODate()
         );
 
@@ -356,7 +356,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                               const [y, m, d] = selectedDate!.split("-").map(Number);
                               const start = DateTime.fromObject(
                                 { year: y, month: m, day: d, hour: H, minute: M },
-                                { zone: availability?.timezone || "UTC" }
+                                { zone: availability?.timezone || "Asia/Colombo" }
                               );
                               updateData({
                                 starts_at: start.toUTC().toISO(),
