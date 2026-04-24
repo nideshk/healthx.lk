@@ -72,10 +72,12 @@ const OrganizationTab: React.FC = () => {
 
   return (
     <div className="border border-slate-200 rounded-xl p-6 bg-white space-y-6 shadow-sm animate-in fade-in duration-300">
-      <div className="text-sm font-semibold text-slate-900 mb-2">Organization Profile</div>
-      <p className="text-xs text-slate-500 -mt-4 mb-4">
-        These details will be displayed on the website footer, contact pages, and generated prescription PDFs.
-      </p>
+      <div>
+        <div className="text-sm font-semibold text-slate-900 mb-1">Organization Profile</div>
+        <p className="text-xs text-slate-500">
+          These details will be displayed on the website footer, contact pages, and generated prescription PDFs.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">

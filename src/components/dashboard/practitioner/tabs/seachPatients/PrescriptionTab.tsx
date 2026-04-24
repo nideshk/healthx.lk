@@ -27,6 +27,14 @@ export interface PrescriptionDetails {
     practitioner_name: string;
 }
 
+export interface DraftPrescription {
+    appointmentId: string;
+    diagnosis: string;
+    diagnosis_code: string;
+    notes: string;
+    items: MedicineItem[];
+}
+
 /* -------------------- COMPONENT -------------------- */
 export default function PrescriptionTab({
     appointments,
