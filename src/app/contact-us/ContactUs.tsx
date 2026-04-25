@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "react-toastify";
 import {
@@ -11,14 +12,21 @@ import {
     ChevronRight,
     Send,
     MapPin,
+    Stethoscope,
 } from "lucide-react";
 
 export default function ContactUs() {
     const t = useTranslations("contactUs");
+    const searchParams = useSearchParams();
+
+    const prefillConcern = searchParams.get("concern") || "";
+    const reason = searchParams.get("reason") || "";
+    const isSpecialtyRequest = reason === "specialty_request";
+
     const [formData, setFormData] = useState({
         email: "",
         phone: "",
-        concern: "",
+        concern: prefillConcern,
     });
     const [loading, setLoading] = useState(false);
     const [dynSettings, setDynSettings] = useState<any>(null);
@@ -93,6 +101,22 @@ export default function ContactUs() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Form Card */}
                     <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50">
+                        {/* Specialty Request Banner */}
+                        {isSpecialtyRequest && (
+                            <div className="mb-8 flex items-start gap-4 bg-gradient-to-r from-cyan-50 to-teal-50 border border-cyan-100 rounded-2xl p-5">
+                                <div className="shrink-0 w-10 h-10 rounded-xl bg-cyan-500 flex items-center justify-center shadow-sm">
+                                    <Stethoscope className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">
+                                        Specialty Request
+                                    </h3>
+                                    <p className="text-sm text-slate-600 mt-1 leading-relaxed">
+                                        Tell us which specialty you&apos;re looking for. We&apos;ll review your request and get back to you as soon as possible.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
                             {/* Email */}
                             <div className="space-y-3">

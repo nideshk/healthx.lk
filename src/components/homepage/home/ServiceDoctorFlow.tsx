@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 import HomepageSlotPicker from "./HomepageSlotPicker";
 import { useTranslations, useLocale } from "next-intl";
 import Price from "@/components/common/Price";
@@ -12,6 +13,7 @@ import {
   ArrowLeft,
   Star,
   ChevronRight,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { BadgeCheck } from "lucide-react";
 import { ICON_MAP } from "@/lib/lucideIcons";
@@ -190,6 +192,7 @@ const ServicePicker = ({
 }) => {
   const t = useTranslations("bookingFlow.servicePicker");
   const locale = useLocale();
+  const router = useRouter();
 
   const sortedServices = useMemo(() => {
     return [...services].sort((a, b) => a.name.localeCompare(b.name));
@@ -278,6 +281,74 @@ const ServicePicker = ({
             </button>
           );
         })}
+      </div>
+
+      {/* Can't find your specialty? CTA */}
+      <div className="mt-10">
+        <button
+          id="specialty-request-cta"
+          onClick={() =>
+            router.push(
+              "/contact-us?reason=specialty_request&concern=" +
+              encodeURIComponent(
+                "Hi, I'm looking for a specialty that isn't listed on your platform yet. Could you help me find the right specialist?"
+              )
+            )
+          }
+          className="
+            group w-full relative overflow-hidden
+            bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-900
+            rounded-3xl p-8 md:p-10
+            border border-slate-700/50
+            shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)]
+            hover:shadow-[0_20px_50px_-12px_rgba(6,182,212,0.3)]
+            hover:-translate-y-1
+            active:scale-[0.99]
+            transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+            text-left
+          "
+        >
+          {/* Animated background shimmer */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          {/* Decorative glow */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
+            {/* Icon */}
+            <div className="
+              shrink-0 w-16 h-16 rounded-2xl
+              flex items-center justify-center
+              bg-cyan-500/20 text-cyan-400
+              group-hover:bg-cyan-500 group-hover:text-white
+              group-hover:shadow-[0_8px_20px_-4px_rgba(6,182,212,0.5)]
+              transition-all duration-500
+            ">
+              <MessageCircleQuestion className="w-8 h-8" strokeWidth={1.5} />
+            </div>
+
+            {/* Text */}
+            <div className="flex-1 space-y-2">
+              <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                Can&apos;t find the specialty you need?
+              </h3>
+              <p className="text-slate-400 text-[15px] leading-relaxed group-hover:text-slate-300 transition-colors">
+                Let us know what you&apos;re looking for — we&apos;ll do our best to connect you with the right specialist.
+              </p>
+            </div>
+
+            {/* Arrow */}
+            <div className="
+              shrink-0 w-12 h-12 rounded-full
+              flex items-center justify-center
+              bg-white/10 text-white/60
+              group-hover:bg-cyan-500 group-hover:text-white
+              group-hover:translate-x-1
+              transition-all duration-500
+            ">
+              <ChevronRight className="w-5 h-5" />
+            </div>
+          </div>
+        </button>
       </div>
     </div>
   );
