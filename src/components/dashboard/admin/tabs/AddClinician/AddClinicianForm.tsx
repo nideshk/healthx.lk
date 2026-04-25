@@ -429,6 +429,9 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                 </div>
                 <div className="p-4 border-2 border-dashed rounded-lg text-center">
                   <p className="text-sm font-medium">Signature Document (Required)</p>
+                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2 mb-2 text-left leading-relaxed">
+                    ⚠️ <span className="font-bold">Important:</span> This signature will be used to digitally sign all prescriptions issued by this practitioner.
+                  </p>
                   <input type="file" className="hidden" id="sig-upload" accept=".jpg,.jpeg,.png" onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0], "signature")} />
                   <label htmlFor="sig-upload" className={`cursor-pointer text-xs text-teal-600 ${signatureCount >= 1 ? "opacity-50" : ""}`}>Select File</label>
                 </div>

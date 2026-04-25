@@ -798,9 +798,17 @@ export default function PractitionerRegisterPage() {
                   <p className="font-semibold text-gray-700 mb-1">
                     Signature Document (Upload 1 Required)
                   </p>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Please upload a clear image of your signature on a white background. This will be used for digital prescriptions.
+                  <p className="text-xs text-gray-500 mb-3">
+                    Please upload a clear image of your signature on a white background.
                   </p>
+                  <div className="flex items-start gap-2.5 p-3 mb-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <svg className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      <span className="font-bold">Important:</span> This signature will be used to digitally sign all prescriptions you issue through the platform. Please ensure it matches your official medical signature.
+                    </p>
+                  </div>
                   <input
                     type="file"
                     className="hidden"
