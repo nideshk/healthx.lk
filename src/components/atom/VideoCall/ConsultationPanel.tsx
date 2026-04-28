@@ -151,7 +151,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
     if (pdfPreviewIsObjectUrl && pdfPreviewUrl) {
       try {
         URL.revokeObjectURL(pdfPreviewUrl);
-      } catch {}
+      } catch { }
       setPdfPreviewIsObjectUrl(false);
     }
 
@@ -163,7 +163,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
     if (pdfPreviewIsObjectUrl && pdfPreviewUrl) {
       try {
         URL.revokeObjectURL(pdfPreviewUrl);
-      } catch {}
+      } catch { }
       setPdfPreviewIsObjectUrl(false);
     }
     setPdfPreviewUrl(null);
@@ -348,31 +348,31 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
 
             {/* PDF Preview Modal */}
             {pdfPreviewUrl && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-                      <div className="bg-white w-[95vw] h-[90vh] rounded-lg overflow-hidden shadow-xl flex flex-col relative">
-                        <div className="flex items-center justify-between p-2 border-b">
-                          <div className="text-sm font-semibold text-black">{pdfPreviewName}</div>
-                          <div className="flex items-center gap-2">
-                            <a href={pdfPreviewUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-black underline">Open in new tab</a>
-                            <button onClick={closePdfPreview} className="p-2 text-black">
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                        {pdfPreviewLoading && (
-                          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30">
-                            <Loader2 className="animate-spin text-white" size={40} />
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <object data={pdfPreviewUrl} type="application/pdf" className="w-full h-full">
-                            <div className="p-6">
-                              <p className="text-black">Unable to preview this file. <a href={pdfPreviewUrl} target="_blank" rel="noopener noreferrer" className="text-black underline">Open in a new tab</a></p>
-                            </div>
-                          </object>
-                        </div>
-                      </div>
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                <div className="bg-white w-[95vw] h-[90vh] rounded-lg overflow-hidden shadow-xl flex flex-col relative">
+                  <div className="flex items-center justify-between p-2 border-b">
+                    <div className="text-sm font-semibold text-black">{pdfPreviewName}</div>
+                    <div className="flex items-center gap-2">
+                      <a href={pdfPreviewUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-black underline">Open in new tab</a>
+                      <button onClick={closePdfPreview} className="p-2 text-black">
+                        <X size={16} />
+                      </button>
                     </div>
+                  </div>
+                  {pdfPreviewLoading && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30">
+                      <Loader2 className="animate-spin text-white" size={40} />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <object data={pdfPreviewUrl} type="application/pdf" className="w-full h-full">
+                      <div className="p-6">
+                        <p className="text-black">Unable to preview this file. <a href={pdfPreviewUrl} target="_blank" rel="noopener noreferrer" className="text-black underline">Open in a new tab</a></p>
+                      </div>
+                    </object>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -545,7 +545,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
           if (pdfPreviewIsObjectUrl && pdfPreviewUrl) {
             try {
               URL.revokeObjectURL(pdfPreviewUrl);
-            } catch {}
+            } catch { }
           }
           setPdfPreviewUrl(objectUrl);
           setPdfPreviewName("Prescription Preview");
@@ -602,7 +602,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
       if (pdfPreviewIsObjectUrl && pdfPreviewUrl) {
         try {
           URL.revokeObjectURL(pdfPreviewUrl);
-        } catch {}
+        } catch { }
       }
       const objectUrl = URL.createObjectURL(blob);
       setPdfPreviewUrl(objectUrl);
@@ -729,14 +729,14 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                         {consultationMeta.duration}
                       </p>
                     )}
-                    {consultationMeta.referral && (
+                    {/* {consultationMeta.referral && (
                       <p className="text-sm text-black">
                         <span className="font-medium text-black">
                           Referral Source:
                         </span>{" "}
                         {consultationMeta.referral}
                       </p>
-                    )}
+                    )} */}
                     {attendees.length > 0 && (
                       <div className="mt-2">
                         <span className="font-medium text-black text-sm">Additional Attendees:</span>
