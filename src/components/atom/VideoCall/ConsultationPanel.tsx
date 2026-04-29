@@ -564,7 +564,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
     }
   };
 
-  // Generate a PDF preview from current form data without saving
+  // Generate a PDF preview from current form data without saving — opens in a new tab
   const previewPrescription = async () => {
     setError(null);
     setSuccess(null);
@@ -599,15 +599,13 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
       }
 
       const blob = await previewRes.blob();
-      if (pdfPreviewIsObjectUrl && pdfPreviewUrl) {
-        try {
-          URL.revokeObjectURL(pdfPreviewUrl);
-        } catch { }
-      }
       const objectUrl = URL.createObjectURL(blob);
-      setPdfPreviewUrl(objectUrl);
-      setPdfPreviewName("Prescription Preview");
-      setPdfPreviewIsObjectUrl(true);
+
+      // Open PDF directly in a new tab
+      window.open(objectUrl, "_blank", "noopener,noreferrer");
+
+      // Revoke after a short delay to allow the new tab to load the blob
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
     } catch (err: any) {
       console.error("Prescription preview error:", err);
       setError(err?.message || "Failed to generate preview");
@@ -1124,6 +1122,20 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
               {/* Action Buttons */}
               {!isLocked && (
                 <div className="space-y-3 pt-2">
+                  {/* Preview Button */}
+                  <button
+                    onClick={previewPrescription}
+                    disabled={saving || pdfPreviewLoading}
+                    className="w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold rounded-xl py-3 text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {pdfPreviewLoading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Eye size={16} />
+                    )}
+                    {pdfPreviewLoading ? "Generating Preview…" : "Preview PDF"}
+                  </button>
+
                   <div className="flex gap-2">
                     <button
                       onClick={() => savePrescription("draft")}
@@ -1137,7 +1149,6 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                       )}
                       Draft
                     </button>
-
                   </div>
 
                   <div className="flex gap-2">
@@ -1168,6 +1179,91 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* ---- PDF Preview Modal (Doctor side) ---- */}
+      {pdfPreviewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-[92vw] max-w-5xl h-[90vh] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <FileText size={16} className="text-blue-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">{pdfPreviewName || "Prescription Preview"}</div>
+                  <div className="text-xs text-gray-500">Review before issuing</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={pdfPreviewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  <ExternalLink size={13} />
+                  Open in new tab
+                </a>
+                <button
+                  onClick={closePdfPreview}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Close preview"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Loading overlay */}
+            {pdfPreviewLoading && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="animate-spin text-blue-600" size={36} />
+                  <span className="text-sm text-gray-500 font-medium">Generating PDF preview…</span>
+                </div>
+              </div>
+            )}
+
+            {/* PDF Viewer */}
+            <div className="flex-1 bg-gray-100">
+              <object
+                data={pdfPreviewUrl}
+                type="application/pdf"
+                className="w-full h-full"
+              >
+                <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+                  <FileText size={48} className="text-gray-300" />
+                  <p className="text-gray-500 text-sm text-center">
+                    Your browser cannot display PDFs inline.
+                  </p>
+                  <a
+                    href={pdfPreviewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    <ExternalLink size={14} />
+                    Open PDF
+                  </a>
+                </div>
+              </object>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-5 py-3 border-t bg-gray-50">
+              <p className="text-xs text-gray-400">This is a live preview — the prescription has not been issued yet.</p>
+              <button
+                onClick={closePdfPreview}
+                className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all"
+              >
+                <X size={14} />
+                Close Preview
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </aside>
