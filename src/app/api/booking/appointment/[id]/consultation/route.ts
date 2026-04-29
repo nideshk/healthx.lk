@@ -103,8 +103,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       const { data: preconsult } = await supabaseAdmin.from("preconsult_responses").select("*").eq("appointment_id", appointmentId).maybeSingle();
       responseData.preconsult = preconsult;
 
-      if (isPractitioner) {
-        const { data: attachments } = await supabaseAdmin.from("attachments").select("*").eq("appointment_id", appointmentId).eq("practitioner_id", user?.practitioner_id);
+      if (isPractitioner || isPatient) {
+        const { data: attachments } = await supabaseAdmin
+          .from("attachments")
+          .select("*")
+          .eq("appointment_id", appointmentId); 
         if (attachments) {
           responseData.attachments = await Promise.all(attachments.map(async (atc) => ({
             id: atc.id,

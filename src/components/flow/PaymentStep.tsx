@@ -229,6 +229,24 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
         appointmentIdRef.current = currentAppointmentId;
 
+        // UPLOAD ATTACHMENTS IMMEDIATELY (Before redirect)
+        if (currentAppointmentId) {
+          let files: File[] = [];
+          if (bookingControllerRef?.current?.getAttachments) {
+            files = bookingControllerRef.current.getAttachments();
+          }
+          if (files.length > 0) {
+            for (const file of files) {
+              try {
+                await uploadAttachmentAfterBooking(file, currentAppointmentId);
+              } catch (err) {
+                console.error("Attachment upload failed:", err);
+                // We don't block payment for attachment failures, but warn the user
+              }
+            }
+          }
+        }
+
         console.log("[WEBX][FRONTEND_REQUEST]", {
           action: "initiate_payment",
           provider,

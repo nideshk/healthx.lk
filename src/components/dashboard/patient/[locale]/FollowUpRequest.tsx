@@ -119,11 +119,10 @@ export default function FollowUpRequest() {
                   </div>
 
                   <span
-                    className={`rounded-full flex items-center px-3 py-1 text-xs font-medium ${
-                      isOverdue
+                    className={`rounded-full flex items-center px-3 py-1 text-xs font-medium ${isOverdue
                         ? "bg-red-100 text-red-700"
                         : "bg-yellow-100 text-yellow-700"
-                    }`}
+                      }`}
                   >
                     {isOverdue ? t("overdue") : t("required")}
                   </span>
