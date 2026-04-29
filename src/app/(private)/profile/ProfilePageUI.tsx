@@ -57,7 +57,7 @@ async function uploadAvatarToS3(file: File) {
     return publicUrl;
 }
 export default function UnifiedProfileUI() {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
 
     const [userData, setUserData] = useState<any>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -66,6 +66,12 @@ export default function UnifiedProfileUI() {
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+        };
+    }, [avatarPreview]);
 
     useEffect(() => {
         if (!user) return;
@@ -90,39 +96,56 @@ export default function UnifiedProfileUI() {
     }, [user]);
 
     const handleSave = async () => {
+        if (!userData) return;
+
         try {
             setUploadingAvatar(true);
-            let avatarUrl = userData.profile.avatar_url;
-            if (avatarFile) avatarUrl = await uploadAvatarToS3(avatarFile);
+            let avatarUrl = userData.profile?.avatar_url;
+            if (avatarFile) {
+                console.log("Uploading new avatar...");
+                const rawUrl = await uploadAvatarToS3(avatarFile);
+                // Append cache buster to force DB update and browser refresh
+                avatarUrl = `${rawUrl.split("?")[0]}?t=${Date.now()}`;
+            }
 
             const isPatient = userData.role === "patient";
+            const fullName = `${editForm.first_name} ${editForm.last_name}`.trim();
+
+            const profileUpdate: any = {
+                first_name: editForm.first_name || null,
+                last_name: editForm.last_name || null,
+                display_name: fullName || null,
+                city: editForm.city || null,
+                state: editForm.state || null,
+                country: editForm.country || null,
+                avatar_url: avatarUrl || null,
+            };
 
             const payload = {
                 phone: editForm.phone,
-                profile: {
-                    first_name: editForm.first_name,
-                    last_name: editForm.last_name,
-                    city: editForm.city,
-                    state: editForm.state,
-                    country: editForm.country,
-                    avatar_url: avatarUrl,
-                },
+                profile: profileUpdate,
                 ...(isPatient ? {
                     patient: {
+                        full_name: fullName,
                         contact_number: editForm.phone,
                         address: editForm.address,
                         allergies: editForm.allergies ? editForm.allergies.split(",").map((a: string) => a.trim()) : [],
+                        updated_at: new Date().toISOString(),
                     },
-                    // Update Gov ID logic
                     goveId: {
                         id_number_encrypted: editForm.govtId
                     }
                 } : {
                     practitioner: {
+                        full_name: fullName,
                         contact_number: editForm.phone,
+                        profile_picture_url: avatarUrl,
+                        updated_at: new Date().toISOString(),
                     }
                 })
             };
+
+            console.log("Sending update payload:", payload);
 
             const res = await authFetch("/api/auth/me", {
                 method: "PATCH",
@@ -130,12 +153,31 @@ export default function UnifiedProfileUI() {
                 body: JSON.stringify(payload),
             });
 
-            if (!res.ok) throw new Error("Sync failed");
+            const responseData = await res.json().catch(() => ({}));
+            console.log("Update response:", responseData);
+
+            if (!res.ok) {
+                throw new Error(responseData.error || responseData.details || "Sync failed");
+            }
+
+            if (!responseData.results?.profile?.updated) {
+                console.warn("⚠️ Profile table was not updated (matched 0 rows)");
+            }
+            
+            if (refreshUser) await refreshUser();
 
             toast.success("Identity & Profile synchronized");
+            
+            // Cleanup and close edit mode
+            if (avatarPreview) {
+                URL.revokeObjectURL(avatarPreview);
+                setAvatarPreview(null);
+            }
+            setAvatarFile(null);
             setIsEditing(false);
-        } catch (err: any) {
-            toast.error(err.message);
+        } catch (error: any) {
+            console.error("Profile save error:", error);
+            toast.error(error.message || "Failed to update profile");
         } finally {
             setUploadingAvatar(false);
         }

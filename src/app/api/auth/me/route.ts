@@ -31,8 +31,8 @@ export async function PATCH(req: Request) {
     patient,
     practitioner,
     admin,
+    goveId: bodyGoveId,
   } = body;
-
 
   const {
     auth_user_id,
@@ -40,25 +40,36 @@ export async function PATCH(req: Request) {
     patient_id,
     practitioner_id,
     admin: adminUser,
-    goveId,
   } = auth.user;
 
-  const { } = auth.user
+  const results: any = {};
+
   /* -------------------------------
      1️⃣ Update Profile (self only)
   ------------------------------- */
   if (profile) {
-    await supabaseAdmin
+    const { data: profileData, error: profileError } = await supabaseAdmin
       .from("profiles")
       .update(profile)
-      .eq("id", auth_user_id);
+      .eq("id", auth_user_id)
+      .select();
+    
+    if (profileError) {
+        console.error("❌ Profile update error:", profileError);
+        return Response.json({ error: "Failed to update profile", details: profileError.message }, { status: 500 });
+    }
+    results.profile = { updated: (profileData?.length ?? 0) > 0 };
   }
 
-  if (goveId) {
-    await supabaseAdmin
+  if (bodyGoveId && bodyGoveId.id_number_encrypted && !bodyGoveId.id_number_encrypted.includes("*")) {
+    const { error: govError } = await supabaseAdmin
       .from("user_government_ids")
-      .update(goveId)
+      .update(bodyGoveId)
       .eq("user_id", auth_user_id);
+    
+    if (govError) {
+        console.error("❌ Gov ID update error:", govError);
+    }
   }
 
   /* -------------------------------
@@ -69,10 +80,17 @@ export async function PATCH(req: Request) {
       return forbidden("Not a patient");
     }
 
-    await supabaseAdmin
+    const { data: patientData, error: patientError } = await supabaseAdmin
       .from("patients")
       .update(patient)
-      .eq("id", patient_id);
+      .eq("id", patient_id)
+      .select();
+    
+    if (patientError) {
+        console.error("❌ Patient update error:", patientError);
+        return Response.json({ error: "Failed to update patient data", details: patientError.message }, { status: 500 });
+    }
+    results.patient = { updated: (patientData?.length ?? 0) > 0 };
   }
 
   /* -------------------------------
@@ -83,10 +101,17 @@ export async function PATCH(req: Request) {
       return forbidden("Not a practitioner");
     }
 
-    await supabaseAdmin
+    const { data: practitionerData, error: practitionerError } = await supabaseAdmin
       .from("practitioners")
       .update(practitioner)
-      .eq("id", practitioner_id);
+      .eq("id", practitioner_id)
+      .select();
+    
+    if (practitionerError) {
+        console.error("❌ Practitioner update error:", practitionerError);
+        return Response.json({ error: "Failed to update practitioner data", details: practitionerError.message }, { status: 500 });
+    }
+    results.practitioner = { updated: (practitionerData?.length ?? 0) > 0 };
   }
 
   /* -------------------------------
@@ -97,20 +122,27 @@ export async function PATCH(req: Request) {
       return forbidden("Admin access required");
     }
 
-    // Optional policy check
     if (!adminUser.policies.includes("ADMIN_EDIT")) {
       return forbidden("Policy denied");
     }
 
-    await supabaseAdmin
+    const { data: adminData, error: adminError } = await supabaseAdmin
       .from("admin_users")
       .update(admin)
-      .eq("id", adminUser.id);
+      .eq("id", adminUser.id)
+      .select();
+    
+    if (adminError) {
+        console.error("❌ Admin update error:", adminError);
+        return Response.json({ error: "Failed to update admin data", details: adminError.message }, { status: 500 });
+    }
+    results.admin = { updated: (adminData?.length ?? 0) > 0 };
   }
 
   return Response.json({
     success: true,
     message: "User updated successfully",
+    results
   });
 }
 
