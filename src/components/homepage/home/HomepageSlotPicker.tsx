@@ -112,9 +112,10 @@ const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, sele
 
   if (!practitioner) return null;
   function extractAvailableDates(availableDays: any[]) {
-    return availableDays.map((day) => {
-      const d = new Date(day.starts_at);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const tz = practitioner?.timezone || availability?.timezone || "Asia/Colombo";
+    return (availableDays || []).map((day) => {
+      // Parse UTC string and convert to practitioner's timezone before extracting the date part
+      return DateTime.fromISO(day.starts_at).setZone(tz).toFormat("yyyy-MM-dd");
     });
   }
 
@@ -271,15 +272,9 @@ const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, sele
               }
               if (!date) return;
 
-              const tz =
-                practitioner?.timezone ||
-                availability?.timezone ||
-                "Asia/Colombo";
-
-              // ✅ FIX: Preserve local/practitioner timezone
-              const formattedDate = DateTime.fromJSDate(date)
-                .setZone(tz)
-                .toFormat("yyyy-MM-dd");
+              // ✅ FIX: Extract the date part exactly as selected in the UI
+              // without shifting it to another timezone.
+              const formattedDate = DateTime.fromJSDate(date).toFormat("yyyy-MM-dd");
 
               setSelectedDate(formattedDate);
               setSelectedTime(null);
