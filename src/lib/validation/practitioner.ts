@@ -23,7 +23,10 @@ export const practitionerSchema = z.object({
   experience_years: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
     message: "Experience must be a positive number",
   }),
-  contact_number: z.string().min(1, "Contact number is required"),
+  contact_number: z
+    .string()
+    .min(10, "Contact number must be at least 10 digits")
+    .regex(/^\+?[0-9]+$/, "Contact number must contain only digits and optional '+'"),
   profile_bio: z.string().min(20, "Bio must be at least 20 characters").max(1000, "Bio too long"),
   bank_details: z.object({
     bank_name: z.string().min(1, "Bank name is required"),

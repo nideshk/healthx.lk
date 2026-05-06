@@ -193,9 +193,15 @@ export default function PractitionerRegisterPage() {
       return;
     }
 
-    if (documentType === "signature" && signatureCount >= 1) {
-      setError("Only one signature document is allowed.");
-      return;
+    if (documentType === "signature") {
+      if (signatureCount >= 1) {
+        setError("Only one signature document is allowed.");
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        setError("Only image files (JPG, PNG) are allowed for your signature.");
+        return;
+      }
     }
 
     setPendingFiles(prev => [...prev, { file, document_type: documentType }]);
@@ -285,30 +291,21 @@ export default function PractitionerRegisterPage() {
   const onSubmit = async (form: PractitionerFormValues) => {
     if (specialization.length === 0) {
       setError("Please select at least one specialization.");
+      document.getElementById("specialization-section")?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setLoading(false);
       return;
     }
 
     if (selectedAppointments.length === 0) {
       setError("Please select at least one appointment type.");
+      document.getElementById("services-section")?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setLoading(false);
       return;
     }
 
-    if (governmentIdCount !== 2) {
-      setError("Please upload exactly two Government ID documents.");
-      setLoading(false);
-      return;
-    }
-
-    if (supportingDocCount !== 1) {
-      setError("Please upload one supporting document.");
-      setLoading(false);
-      return;
-    }
-
-    if (signatureCount !== 1) {
-      setError("Please upload your signature document.");
+    if (governmentIdCount !== 2 || supportingDocCount !== 1 || signatureCount !== 1) {
+      setError("Please upload all required documents.");
+      document.getElementById("documents-section")?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setLoading(false);
       return;
     }
@@ -404,6 +401,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="First Name"
                       required
                       value={field.value}
@@ -418,6 +416,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Last Name"
                       required
                       value={field.value}
@@ -432,6 +431,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="City"
                       required
                       value={field.value}
@@ -446,6 +446,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="State"
                       required
                       value={field.value}
@@ -463,6 +464,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Email Address"
                       type="email"
                       required
@@ -479,6 +481,7 @@ export default function PractitionerRegisterPage() {
                     control={control}
                     render={({ field, fieldState }) => (
                       <Input
+                        ref={field.ref}
                         type="password"
                         placeholder="Password"
                         required
@@ -501,6 +504,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Languages (comma separated, e.g. English, French)"
                       required
                       value={field.value || ""}
@@ -522,6 +526,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Qualification"
                       required
                       value={field.value || ""}
@@ -536,6 +541,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="License Number"
                       required
                       value={field.value || ""}
@@ -547,7 +553,7 @@ export default function PractitionerRegisterPage() {
                 />
               </div>
 
-              <div className="mt-4 relative">
+              <div className="mt-4 relative" id="specialization-section">
                 <label className="text-gray-700 font-medium mb-1 block">
                   Specializations
                 </label>
@@ -611,6 +617,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       type="number"
                       placeholder="Years of Experience"
                       required
@@ -630,10 +637,18 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Contact Number"
                       required
                       value={field.value || ""}
-                      onChange={field.onChange}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Allow leading +, then only digits
+                        const filtered = val.startsWith("+") 
+                          ? "+" + val.slice(1).replace(/[^0-9]/g, "")
+                          : val.replace(/[^0-9]/g, "");
+                        field.onChange(filtered);
+                      }}
                       error={fieldState.error?.message}
                       errorStatus={!!fieldState.error}
                     />
@@ -647,6 +662,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Textarea
+                      ref={field.ref}
                       placeholder="Profile Bio (brief description of your expertise)"
                       required
                       value={field.value || ""}
@@ -661,7 +677,7 @@ export default function PractitionerRegisterPage() {
             {/* SERVICES & FEES */}
             <div>
               <h2 className="section-title">Services & Fees</h2>
-              <div className="mt-4">
+              <div className="mt-4" id="services-section">
                 <label className="text-gray-700 font-medium mb-1 block">
                   Add Appointment Types
                 </label>
@@ -720,7 +736,7 @@ export default function PractitionerRegisterPage() {
             {/* DOCUMENTS */}
             <div>
               <h2 className="section-title">Documents & Verification</h2>
-              <div className="space-y-6 mt-4">
+              <div className="space-y-6 mt-4" id="documents-section">
                 {/* Government ID */}
                 <div className="p-5 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
                   <p className="font-semibold text-gray-700 mb-1">
@@ -821,15 +837,13 @@ export default function PractitionerRegisterPage() {
                         key={idx}
                         className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl shadow-sm"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-teal-100 text-teal-600 rounded flex items-center justify-center text-[10px] font-bold">
-                            FILE
-                          </div>
+                        <div className="flex items-center gap-4">
+                          <FilePreview file={item.file} />
                           <div>
-                            <p className="text-sm font-medium text-gray-800">
+                            <p className="text-sm font-semibold text-gray-800">
                               {item.file.name}
                             </p>
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                               {item.document_type.replace("_", " ")}
                             </p>
                           </div>
@@ -857,6 +871,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Bank Name"
                       required
                       value={field.value || ""}
@@ -871,6 +886,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Account Holder Name"
                       required
                       value={field.value || ""}
@@ -885,6 +901,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Branch Location"
                       required
                       value={field.value || ""}
@@ -900,6 +917,7 @@ export default function PractitionerRegisterPage() {
                   control={control}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Account Number"
                       required
                       value={field.value || ""}
@@ -926,6 +944,34 @@ export default function PractitionerRegisterPage() {
     </div>
   );
 }
+
+function FilePreview({ file }: { file: File }) {
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  if (preview) {
+    return (
+      <img
+        src={preview}
+        className="w-12 h-12 object-cover rounded-lg border border-gray-200 shadow-sm"
+        alt="Preview"
+      />
+    );
+  }
+
+  return (
+    <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center text-[10px] font-bold border border-teal-100 uppercase">
+      {file.name.split(".").pop() || "File"}
+    </div>
+  );
+}
+
 
 function PasswordStrength({ password }: { password?: string }) {
   if (!password) return null;

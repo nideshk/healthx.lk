@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 import { CircleAlert } from "lucide-react";
 
 type InputProps = {
+  id?: string;
+  name?: string;
   label?: string;
   placeholder?: string;
   type?: string;
@@ -19,7 +21,9 @@ type InputProps = {
   required?: boolean;              
 };
 
-export default function Input({
+const Input = forwardRef<HTMLInputElement, InputProps>(({
+  id,
+  name,
   label,
   placeholder,
   type = "text",
@@ -34,7 +38,7 @@ export default function Input({
   readOnly = false,
   iconPosition = "left",
   required = false,
-}: InputProps) {
+}, ref) => {
   const [touched, setTouched] = useState(false);
 
   const baseStyles =
@@ -60,6 +64,9 @@ export default function Input({
         )}
 
         <input
+          ref={ref}
+          id={id}
+          name={name}
           type={type}
           value={value}
           onChange={onChange}
@@ -92,4 +99,8 @@ export default function Input({
       )}
     </div>
   );
-}
+});
+
+Input.displayName = "Input";
+
+export default Input;
