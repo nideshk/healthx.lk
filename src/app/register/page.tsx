@@ -348,7 +348,7 @@ export default function PractitionerRegisterPage() {
         setLoading(false);
         return;
       }
-      
+
       const applicationId = data.application_id;
 
       try {
@@ -644,7 +644,7 @@ export default function PractitionerRegisterPage() {
                       onChange={(e) => {
                         const val = e.target.value;
                         // Allow leading +, then only digits
-                        const filtered = val.startsWith("+") 
+                        const filtered = val.startsWith("+")
                           ? "+" + val.slice(1).replace(/[^0-9]/g, "")
                           : val.replace(/[^0-9]/g, "");
                         field.onChange(filtered);
@@ -993,9 +993,8 @@ function PasswordStrength({ password }: { password?: string }) {
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className={`flex-1 rounded-full transition-colors ${
-              i <= strength ? colors[strength] : "bg-gray-200"
-            }`}
+            className={`flex-1 rounded-full transition-colors ${i <= strength ? colors[strength] : "bg-gray-200"
+              }`}
           />
         ))}
       </div>

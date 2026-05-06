@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     const result = practitionerApiSchema.safeParse(body);
     
     if (!result.success) {
+      console.error("Practitioner Registration Validation Error:", result.error.format());
       return NextResponse.json(
         {
           success: false,
@@ -80,6 +81,7 @@ export async function POST(req: Request) {
       .single();;
 
     if (error) {
+      console.error("Supabase Insertion Error (Practitioner Application):", error);
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }
@@ -92,6 +94,7 @@ export async function POST(req: Request) {
       application_id: data?.id,
     });
   } catch (err: any) {
+    console.error("Unexpected Practitioner Registration Error:", err);
     return NextResponse.json(
       { success: false, message: err.message },
       { status: 500 }
