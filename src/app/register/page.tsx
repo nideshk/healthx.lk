@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { practitionerSchema, PractitionerFormValues } from "@/lib/validation/practitioner";
 import { Trash2, ChevronDown, X } from "lucide-react";
 import Input from "@/components/atom/Input/Input";
 import Textarea from "@/components/atom/Textarea/Textarea";
@@ -72,7 +74,8 @@ export default function PractitionerRegisterPage() {
     handleSubmit,
     watch,
     setValue,
-  } = useForm<FormValues>({
+  } = useForm<PractitionerFormValues>({
+    resolver: zodResolver(practitionerSchema),
     mode: "onBlur",
     reValidateMode: "onBlur",
     defaultValues: {
@@ -87,11 +90,8 @@ export default function PractitionerRegisterPage() {
       specialization: [],
       license_number: "",
       experience_years: "",
-      contact_email: "",
       contact_number: "",
       profile_bio: "",
-      available_services: "",
-      fees: "",
       bank_details: {
         bank_name: "",
         account_name: "",
@@ -282,7 +282,7 @@ export default function PractitionerRegisterPage() {
   };
 
   /* ---------------- SUBMIT ---------------- */
-  const onSubmit = async (form: FormValues) => {
+  const onSubmit = async (form: PractitionerFormValues) => {
     if (specialization.length === 0) {
       setError("Please select at least one specialization.");
       setLoading(false);
@@ -319,7 +319,10 @@ export default function PractitionerRegisterPage() {
     try {
       const payload = {
         ...form,
-        contact_email: form.email,
+        email: form.email.toLowerCase().trim(),
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        contact_email: form.email.toLowerCase().trim(),
         languages: form.languages.split(",").map(l => l.trim()).filter(l => l !== ""),
         experience_years: Math.round(Number(form.experience_years) || 0),
         available_services: selectedAppointments.map(a => a.id),
@@ -339,7 +342,16 @@ export default function PractitionerRegisterPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Registration failed");
+      if (!res.ok) {
+        if (data.errors) {
+          setError(data.errors.map((e: any) => e.message).join(" | "));
+        } else {
+          throw new Error(data.message || data.error || "Registration failed");
+        }
+        setLoading(false);
+        return;
+      }
+      
       const applicationId = data.application_id;
 
       try {
@@ -390,7 +402,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="first_name"
                   control={control}
-                  rules={{ required: "First name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="First Name"
@@ -405,7 +416,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="last_name"
                   control={control}
-                  rules={{ required: "Last name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Last Name"
@@ -420,7 +430,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="city"
                   control={control}
-                  rules={{ required: "City is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="City"
@@ -435,7 +444,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="state"
                   control={control}
-                  rules={{ required: "State is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="State"
@@ -453,13 +461,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="email"
                   control={control}
-                  rules={{ 
-                    required: "Email is required",
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: "Invalid email address"
-                    }
-                  }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Email Address"
@@ -472,35 +473,32 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-                <Controller
-                  name="password"
-                  control={control}
-                  rules={{ 
-                    required: "Password is required",
-                    minLength: {
-                      value: 8,
-                      message: "Password must be at least 8 characters"
-                    }
-                  }}
-                  render={({ field, fieldState }) => (
-                    <Input
-                      type="password"
-                      placeholder="Password"
-                      required
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      error={fieldState.error?.message}
-                      errorStatus={!!fieldState.error}
-                    />
+                <div className="space-y-1">
+                  <Controller
+                    name="password"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <Input
+                        type="password"
+                        placeholder="Password"
+                        required
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        error={fieldState.error?.message}
+                        errorStatus={!!fieldState.error}
+                      />
+                    )}
+                  />
+                  {watch("password") && (
+                    <PasswordStrength password={watch("password")} />
                   )}
-                />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-1 gap-5 mt-4">
                 <Controller
                   name="languages"
                   control={control}
-                  rules={{ required: "Languages is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Languages (comma separated, e.g. English, French)"
@@ -522,7 +520,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="qualification"
                   control={control}
-                  rules={{ required: "Qualification is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Qualification"
@@ -537,7 +534,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="license_number"
                   control={control}
-                  rules={{ required: "License Number is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="License Number"
@@ -613,10 +609,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="experience_years"
                   control={control}
-                  rules={{ 
-                    required: "Years of experience is required",
-                    min: { value: 0, message: "Experience cannot be negative" }
-                  }}
                   render={({ field, fieldState }) => (
                     <Input
                       type="number"
@@ -636,13 +628,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="contact_number"
                   control={control}
-                  rules={{ 
-                    required: "Contact number is required",
-                    pattern: {
-                      value: /^\+?[0-9]{10,15}$/,
-                      message: "Invalid contact number"
-                    }
-                  }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Contact Number"
@@ -660,7 +645,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="profile_bio"
                   control={control}
-                  rules={{ required: "Profile bio is required" }}
                   render={({ field, fieldState }) => (
                     <Textarea
                       placeholder="Profile Bio (brief description of your expertise)"
@@ -871,7 +855,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="bank_details.bank_name"
                   control={control}
-                  rules={{ required: "Bank Name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Bank Name"
@@ -886,7 +869,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="bank_details.account_name"
                   control={control}
-                  rules={{ required: "Account Name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Account Holder Name"
@@ -901,7 +883,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="bank_details.branch_location"
                   control={control}
-                  rules={{ required: "Branch Location is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Branch Location"
@@ -917,7 +898,6 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="bank_details.account_number"
                   control={control}
-                  rules={{ required: "Account Number is required" }}
                   render={({ field, fieldState }) => (
                     <Input
                       placeholder="Account Number"
@@ -946,3 +926,44 @@ export default function PractitionerRegisterPage() {
     </div>
   );
 }
+
+function PasswordStrength({ password }: { password?: string }) {
+  if (!password) return null;
+
+  const requirements = [
+    { label: "8+ characters", met: password.length >= 8 },
+    { label: "Uppercase", met: /[A-Z]/.test(password) },
+    { label: "Lowercase", met: /[a-z]/.test(password) },
+    { label: "Number", met: /[0-9]/.test(password) },
+    { label: "Special symbol", met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+  ];
+
+  const strength = requirements.filter((r) => r.met).length;
+  const colors = ["bg-red-400", "bg-red-400", "bg-orange-400", "bg-yellow-400", "bg-green-400", "bg-green-500"];
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="flex gap-1 h-1.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className={`flex-1 rounded-full transition-colors ${
+              i <= strength ? colors[strength] : "bg-gray-200"
+            }`}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {requirements.map((r) => (
+          <div key={r.label} className="flex items-center gap-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${r.met ? "bg-green-500" : "bg-gray-300"}`} />
+            <span className={`text-[10px] font-medium ${r.met ? "text-green-600" : "text-gray-400"}`}>
+              {r.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
