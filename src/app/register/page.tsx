@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { practitionerSchema, PractitionerFormValues } from "@/lib/validation/practitioner";
 import { Trash2, ChevronDown, X } from "lucide-react";
 import Input from "@/components/atom/Input/Input";
 import Textarea from "@/components/atom/Textarea/Textarea";
@@ -72,7 +74,8 @@ export default function PractitionerRegisterPage() {
     handleSubmit,
     watch,
     setValue,
-  } = useForm<FormValues>({
+  } = useForm<PractitionerFormValues>({
+    resolver: zodResolver(practitionerSchema),
     mode: "onBlur",
     reValidateMode: "onBlur",
     defaultValues: {
@@ -87,11 +90,8 @@ export default function PractitionerRegisterPage() {
       specialization: [],
       license_number: "",
       experience_years: "",
-      contact_email: "",
       contact_number: "",
       profile_bio: "",
-      available_services: "",
-      fees: "",
       bank_details: {
         bank_name: "",
         account_name: "",
@@ -193,9 +193,15 @@ export default function PractitionerRegisterPage() {
       return;
     }
 
-    if (documentType === "signature" && signatureCount >= 1) {
-      setError("Only one signature document is allowed.");
-      return;
+    if (documentType === "signature") {
+      if (signatureCount >= 1) {
+        setError("Only one signature document is allowed.");
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        setError("Only image files (JPG, PNG) are allowed for your signature.");
+        return;
+      }
     }
 
     setPendingFiles(prev => [...prev, { file, document_type: documentType }]);
@@ -282,33 +288,24 @@ export default function PractitionerRegisterPage() {
   };
 
   /* ---------------- SUBMIT ---------------- */
-  const onSubmit = async (form: FormValues) => {
+  const onSubmit = async (form: PractitionerFormValues) => {
     if (specialization.length === 0) {
       setError("Please select at least one specialization.");
+      document.getElementById("specialization-section")?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setLoading(false);
       return;
     }
 
     if (selectedAppointments.length === 0) {
       setError("Please select at least one appointment type.");
+      document.getElementById("services-section")?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setLoading(false);
       return;
     }
 
-    if (governmentIdCount !== 2) {
-      setError("Please upload exactly two Government ID documents.");
-      setLoading(false);
-      return;
-    }
-
-    if (supportingDocCount !== 1) {
-      setError("Please upload one supporting document.");
-      setLoading(false);
-      return;
-    }
-
-    if (signatureCount !== 1) {
-      setError("Please upload your signature document.");
+    if (governmentIdCount !== 2 || supportingDocCount !== 1 || signatureCount !== 1) {
+      setError("Please upload all required documents.");
+      document.getElementById("documents-section")?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setLoading(false);
       return;
     }
@@ -319,7 +316,10 @@ export default function PractitionerRegisterPage() {
     try {
       const payload = {
         ...form,
-        contact_email: form.email,
+        email: form.email.toLowerCase().trim(),
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        contact_email: form.email.toLowerCase().trim(),
         languages: form.languages.split(",").map(l => l.trim()).filter(l => l !== ""),
         experience_years: Math.round(Number(form.experience_years) || 0),
         available_services: selectedAppointments.map(a => a.id),
@@ -339,7 +339,16 @@ export default function PractitionerRegisterPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Registration failed");
+      if (!res.ok) {
+        if (data.errors) {
+          setError(data.errors.map((e: any) => e.message).join(" | "));
+        } else {
+          throw new Error(data.message || data.error || "Registration failed");
+        }
+        setLoading(false);
+        return;
+      }
+
       const applicationId = data.application_id;
 
       try {
@@ -390,9 +399,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="first_name"
                   control={control}
-                  rules={{ required: "First name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="First Name"
                       required
                       value={field.value}
@@ -405,9 +414,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="last_name"
                   control={control}
-                  rules={{ required: "Last name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Last Name"
                       required
                       value={field.value}
@@ -420,9 +429,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="city"
                   control={control}
-                  rules={{ required: "City is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="City"
                       required
                       value={field.value}
@@ -435,9 +444,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="state"
                   control={control}
-                  rules={{ required: "State is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="State"
                       required
                       value={field.value}
@@ -453,15 +462,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="email"
                   control={control}
-                  rules={{ 
-                    required: "Email is required",
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: "Invalid email address"
-                    }
-                  }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Email Address"
                       type="email"
                       required
@@ -472,37 +475,36 @@ export default function PractitionerRegisterPage() {
                     />
                   )}
                 />
-                <Controller
-                  name="password"
-                  control={control}
-                  rules={{ 
-                    required: "Password is required",
-                    minLength: {
-                      value: 8,
-                      message: "Password must be at least 8 characters"
-                    }
-                  }}
-                  render={({ field, fieldState }) => (
-                    <Input
-                      type="password"
-                      placeholder="Password"
-                      required
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      error={fieldState.error?.message}
-                      errorStatus={!!fieldState.error}
-                    />
+                <div className="space-y-1">
+                  <Controller
+                    name="password"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <Input
+                        ref={field.ref}
+                        type="password"
+                        placeholder="Password"
+                        required
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        error={fieldState.error?.message}
+                        errorStatus={!!fieldState.error}
+                      />
+                    )}
+                  />
+                  {watch("password") && (
+                    <PasswordStrength password={watch("password")} />
                   )}
-                />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-1 gap-5 mt-4">
                 <Controller
                   name="languages"
                   control={control}
-                  rules={{ required: "Languages is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Languages (comma separated, e.g. English, French)"
                       required
                       value={field.value || ""}
@@ -522,9 +524,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="qualification"
                   control={control}
-                  rules={{ required: "Qualification is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Qualification"
                       required
                       value={field.value || ""}
@@ -537,9 +539,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="license_number"
                   control={control}
-                  rules={{ required: "License Number is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="License Number"
                       required
                       value={field.value || ""}
@@ -551,7 +553,7 @@ export default function PractitionerRegisterPage() {
                 />
               </div>
 
-              <div className="mt-4 relative">
+              <div className="mt-4 relative" id="specialization-section">
                 <label className="text-gray-700 font-medium mb-1 block">
                   Specializations
                 </label>
@@ -613,12 +615,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="experience_years"
                   control={control}
-                  rules={{ 
-                    required: "Years of experience is required",
-                    min: { value: 0, message: "Experience cannot be negative" }
-                  }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       type="number"
                       placeholder="Years of Experience"
                       required
@@ -636,19 +635,20 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="contact_number"
                   control={control}
-                  rules={{ 
-                    required: "Contact number is required",
-                    pattern: {
-                      value: /^\+?[0-9]{10,15}$/,
-                      message: "Invalid contact number"
-                    }
-                  }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Contact Number"
                       required
                       value={field.value || ""}
-                      onChange={field.onChange}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Allow leading +, then only digits
+                        const filtered = val.startsWith("+")
+                          ? "+" + val.slice(1).replace(/[^0-9]/g, "")
+                          : val.replace(/[^0-9]/g, "");
+                        field.onChange(filtered);
+                      }}
                       error={fieldState.error?.message}
                       errorStatus={!!fieldState.error}
                     />
@@ -660,9 +660,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="profile_bio"
                   control={control}
-                  rules={{ required: "Profile bio is required" }}
                   render={({ field, fieldState }) => (
                     <Textarea
+                      ref={field.ref}
                       placeholder="Profile Bio (brief description of your expertise)"
                       required
                       value={field.value || ""}
@@ -677,7 +677,7 @@ export default function PractitionerRegisterPage() {
             {/* SERVICES & FEES */}
             <div>
               <h2 className="section-title">Services & Fees</h2>
-              <div className="mt-4">
+              <div className="mt-4" id="services-section">
                 <label className="text-gray-700 font-medium mb-1 block">
                   Add Appointment Types
                 </label>
@@ -736,7 +736,7 @@ export default function PractitionerRegisterPage() {
             {/* DOCUMENTS */}
             <div>
               <h2 className="section-title">Documents & Verification</h2>
-              <div className="space-y-6 mt-4">
+              <div className="space-y-6 mt-4" id="documents-section">
                 {/* Government ID */}
                 <div className="p-5 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
                   <p className="font-semibold text-gray-700 mb-1">
@@ -837,15 +837,13 @@ export default function PractitionerRegisterPage() {
                         key={idx}
                         className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl shadow-sm"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-teal-100 text-teal-600 rounded flex items-center justify-center text-[10px] font-bold">
-                            FILE
-                          </div>
+                        <div className="flex items-center gap-4">
+                          <FilePreview file={item.file} />
                           <div>
-                            <p className="text-sm font-medium text-gray-800">
+                            <p className="text-sm font-semibold text-gray-800">
                               {item.file.name}
                             </p>
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                               {item.document_type.replace("_", " ")}
                             </p>
                           </div>
@@ -871,9 +869,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="bank_details.bank_name"
                   control={control}
-                  rules={{ required: "Bank Name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Bank Name"
                       required
                       value={field.value || ""}
@@ -886,9 +884,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="bank_details.account_name"
                   control={control}
-                  rules={{ required: "Account Name is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Account Holder Name"
                       required
                       value={field.value || ""}
@@ -901,9 +899,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="bank_details.branch_location"
                   control={control}
-                  rules={{ required: "Branch Location is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Branch Location"
                       required
                       value={field.value || ""}
@@ -917,9 +915,9 @@ export default function PractitionerRegisterPage() {
                 <Controller
                   name="bank_details.account_number"
                   control={control}
-                  rules={{ required: "Account Number is required" }}
                   render={({ field, fieldState }) => (
                     <Input
+                      ref={field.ref}
                       placeholder="Account Number"
                       required
                       value={field.value || ""}
@@ -946,3 +944,71 @@ export default function PractitionerRegisterPage() {
     </div>
   );
 }
+
+function FilePreview({ file }: { file: File }) {
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  if (preview) {
+    return (
+      <img
+        src={preview}
+        className="w-12 h-12 object-cover rounded-lg border border-gray-200 shadow-sm"
+        alt="Preview"
+      />
+    );
+  }
+
+  return (
+    <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center text-[10px] font-bold border border-teal-100 uppercase">
+      {file.name.split(".").pop() || "File"}
+    </div>
+  );
+}
+
+
+function PasswordStrength({ password }: { password?: string }) {
+  if (!password) return null;
+
+  const requirements = [
+    { label: "8+ characters", met: password.length >= 8 },
+    { label: "Uppercase", met: /[A-Z]/.test(password) },
+    { label: "Lowercase", met: /[a-z]/.test(password) },
+    { label: "Number", met: /[0-9]/.test(password) },
+    { label: "Special symbol", met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+  ];
+
+  const strength = requirements.filter((r) => r.met).length;
+  const colors = ["bg-red-400", "bg-red-400", "bg-orange-400", "bg-yellow-400", "bg-green-400", "bg-green-500"];
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="flex gap-1 h-1.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className={`flex-1 rounded-full transition-colors ${i <= strength ? colors[strength] : "bg-gray-200"
+              }`}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {requirements.map((r) => (
+          <div key={r.label} className="flex items-center gap-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${r.met ? "bg-green-500" : "bg-gray-300"}`} />
+            <span className={`text-[10px] font-medium ${r.met ? "text-green-600" : "text-gray-400"}`}>
+              {r.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+

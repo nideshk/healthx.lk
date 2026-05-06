@@ -1,9 +1,10 @@
-// components/ui/Textarea.tsx
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 import { CircleAlert } from "lucide-react";
 
 type TextareaProps = {
+  id?: string;
+  name?: string;
   label?: string;
   placeholder?: string;
   value?: string;
@@ -16,7 +17,9 @@ type TextareaProps = {
   className?: string;
 };
 
-export default function Textarea({
+const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
+  id,
+  name,
   label,
   placeholder,
   value,
@@ -27,7 +30,7 @@ export default function Textarea({
   rows = 4,
   theme = "light",
   className,
-}: TextareaProps) {
+}, ref) => {
   const [touched, setTouched] = useState(false);
 
   const baseStyles =
@@ -54,6 +57,9 @@ export default function Textarea({
       )}
 
       <textarea
+        ref={ref}
+        id={id}
+        name={name}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
@@ -70,4 +76,8 @@ export default function Textarea({
       )}
     </div>
   );
-}
+});
+
+Textarea.displayName = "Textarea";
+
+export default Textarea;
