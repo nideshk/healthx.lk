@@ -21,7 +21,7 @@ interface Props {
   selectedService: any;
 }
 
-const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, selectedService }: Props) => {
+const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selectedService }: Props) => {
   const t = useTranslations("slotFlow.slotPicker");
   const { openLoginModal } = useModalStore();
   const { user } = useAuth();
@@ -126,9 +126,9 @@ const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, sele
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
 
           {/* Profile Image */}
-          {practitioner.profile_picture_url ? (
+          {practitioner.profile_image ? (
             <img
-              src={practitioner.profile_picture_url}
+              src={practitioner.profile_image}
               alt={practitioner.full_name}
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover"
             />
@@ -153,16 +153,16 @@ const HomepageSlotPicker = ({ practitionerId,  practitioner: initialDoctor, sele
               </p>
             )}
 
-           {/* Experience */}
-          {practitioner.experience_years && (
-            <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
-              <span className="text-gray-500">Experience</span>
+            {/* Experience */}
+            {practitioner.experience_years && (
+              <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
+                <span className="text-gray-500">Experience</span>
 
-              <span className="px-2 py-0.5 text-xs rounded-md bg-gray-100 text-gray-700 font-medium">
-                {practitioner.experience_years}+ Years
-              </span>
-            </p>
-          )}
+                <span className="px-2 py-0.5 text-xs rounded-md bg-gray-100 text-gray-700 font-medium">
+                  {practitioner.experience_years}+ Years
+                </span>
+              </p>
+            )}
 
             {/* Qualification */}
             {practitioner.qualifications && (
