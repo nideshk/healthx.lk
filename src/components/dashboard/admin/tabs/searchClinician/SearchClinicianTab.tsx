@@ -87,6 +87,10 @@ const SearchClinicianTab: React.FC = () => {
       punctuality: number;
     };
     tags: string[];
+    experience_years: number;
+    gender: string;
+    contact_number: string;
+    languages: string[];
   };
 
   const [selectedClinician, setSelectedClinician] = useState<Clinician | null>(
@@ -126,6 +130,10 @@ const SearchClinicianTab: React.FC = () => {
         })) || [],
         ratings: { overall: 0, advice: 0, punctuality: 0 },
         tags: p.specialization ?? [],
+        experience_years: p.experience_years ?? 0,
+        gender: p.gender ?? "",
+        contact_number: p.contact_number ?? "",
+        languages: p.languages ?? [],
       });
 
       setOpenProfile(true);

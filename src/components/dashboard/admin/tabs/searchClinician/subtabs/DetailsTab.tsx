@@ -28,6 +28,11 @@ interface DetailsTabProps {
       branch: string;
       accountNumber: string;
     };
+    experience_years: number;
+    gender: string;
+    contact_number: string;
+    email: string;
+    languages: string[];
   };
 }
 
@@ -57,6 +62,11 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
     accountName: clinician.bank.accountName,
     branch: clinician.bank.branch,
     accountNumber: clinician.bank.accountNumber,
+    experience_years: clinician.experience_years,
+    gender: clinician.gender,
+    contact_number: clinician.contact_number,
+    email: clinician.email,
+    languages: clinician.languages,
   });
 
   /* ---------------- EFFECTS ---------------- */
@@ -100,6 +110,11 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
       branch: clinician.bank.branch,
       registration: clinician.registration,
       accountNumber: clinician.bank.accountNumber,
+      experience_years: clinician.experience_years,
+      gender: clinician.gender,
+      contact_number: clinician.contact_number,
+      email: clinician.email,
+      languages: clinician.languages,
     });
     setIsEditing(false);
     setIsSpecOpen(false);
@@ -120,8 +135,13 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
           last_name: lastName,
           license_number: formData.registration,
           qualification: formData.qualifications,
-          specialization: formData.specialty, 
+          specialization: formData.specialty,
           profile_bio: formData.intro,
+          experience_years: Number(formData.experience_years),
+          gender: formData.gender,
+          contact_number: formData.contact_number,
+          contact_email: formData.email,
+          languages: formData.languages,
           bank_details: {
             account_holder_name: formData.accountName,
             bank_name: formData.bankName,
@@ -220,11 +240,10 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
               Specialization
             </label>
             <div
-              className={`w-full min-h-[40px] px-3 py-2 rounded-lg border flex items-center justify-between transition-colors ${
-                isEditing
+              className={`w-full min-h-[40px] px-3 py-2 rounded-lg border flex items-center justify-between transition-colors ${isEditing
                   ? "border-slate-300 bg-white focus-within:ring-2 focus-within:ring-teal-500"
                   : "border-slate-200 bg-slate-50"
-              }`}
+                }`}
             >
               <div className="flex flex-wrap gap-2">
                 {formData.specialty.length === 0 ? (
@@ -277,6 +296,56 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
               </div>
             )}
           </div>
+
+          <Input
+            label="Experience (Years)"
+            type="number"
+            value={String(formData.experience_years)}
+            onChange={(e) => handleChange("experience_years", e.target.value)}
+            disabled={!isEditing}
+          />
+
+          <div className="space-y-1">
+            <label className="text-xs text-slate-600 font-medium">Gender</label>
+            <select
+              className={`w-full h-[40px] px-3 py-2 rounded-lg border transition-colors focus:outline-none ${isEditing
+                  ? "border-slate-300 bg-white focus:ring-2 focus:ring-teal-500"
+                  : "border-slate-200 bg-slate-50"
+                }`}
+              value={formData.gender}
+              onChange={(e) => handleChange("gender", e.target.value)}
+              disabled={!isEditing}
+            >
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <Input
+            label="Contact Number"
+            value={formData.contact_number}
+            onChange={(e) => handleChange("contact_number", e.target.value)}
+            disabled={!isEditing}
+          />
+
+          <Input
+            label="Contact Email"
+            value={formData.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            disabled={!isEditing}
+          />
+
+          <div className="col-span-2">
+            <Input
+              label="Languages (comma separated)"
+              value={Array.isArray(formData.languages) ? formData.languages.join(", ") : ""}
+              onChange={(e) => handleChange("languages", e.target.value.split(",").map(s => s.trim()).filter(s => s !== ""))}
+              disabled={!isEditing}
+              placeholder="e.g. English, Sinhala, Tamil"
+            />
+          </div>
         </div>
       </div>
 
@@ -290,11 +359,10 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
         </div>
 
         <textarea
-          className={`w-full border rounded-lg p-3 text-sm focus:outline-none transition-colors ${
-            isEditing
+          className={`w-full border rounded-lg p-3 text-sm focus:outline-none transition-colors ${isEditing
               ? "border-blue-300 bg-white"
               : "border-slate-300 bg-slate-50"
-          }`}
+            }`}
           rows={4}
           value={formData.intro}
           onChange={(e) => handleChange("intro", e.target.value)}

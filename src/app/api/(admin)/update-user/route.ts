@@ -286,6 +286,7 @@ export async function PATCH(req: NextRequest) {
         available_services: practitioner?.available_services,
         fees: practitioner?.fees,
         languages: practitioner?.languages,
+        gender: practitioner?.gender,
         updated_at: new Date().toISOString(),
       });
 
