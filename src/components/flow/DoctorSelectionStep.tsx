@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import {
   Star,
   ArrowLeft,
-  Mail,
   BadgeCheck,
   GraduationCap,
   ChevronRight,
@@ -63,7 +62,7 @@ const DoctorSelectionStep = forwardRef(
             id: p.id,
             name: p.full_name,
             license_number: p.license_number,
-            email: p.contact_email,
+
             qualification: p.qualification,
             profileImage: p.profile_picture_url || null,
             // fee: 950 + (p.fees || 0),
@@ -264,14 +263,7 @@ const DoctorSelectionStep = forwardRef(
                             {doctor.qualification}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-slate-500">
-                          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-white transition-colors">
-                            <Mail className="w-4 h-4 text-slate-400" />
-                          </div>
-                          <span className="text-xs font-bold truncate">
-                            {doctor?.email}
-                          </span>
-                        </div>
+
                       </div>
 
                       <div className="pt-5 border-t border-dashed border-slate-200 flex items-center justify-between">

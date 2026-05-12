@@ -89,7 +89,19 @@ export async function GET(req: Request) {
     // ✅ Build query
     let query = supabaseClient
       .from("practitioners")
-      .select("*")
+      .select(`
+        id,
+        full_name,
+        specialization,
+        qualification,
+        license_number,
+        experience_years,
+        profile_bio,
+        profile_picture_url,
+        available_services,
+        solo_consultation_fee,
+        family_consultation_fee
+      `)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 

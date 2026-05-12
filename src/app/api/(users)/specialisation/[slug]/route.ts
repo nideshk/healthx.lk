@@ -67,7 +67,7 @@ export async function GET(
         profile_bio,
         qualification,
         license_number,
-        contact_email,
+
         supabase_user_id,
         fees,
         specialization,
@@ -102,7 +102,7 @@ export async function GET(
         profile_bio: p.profile_bio,
         qualification: p.qualification,
         license_number: p.license_number,
-        contact_email: p.contact_email,
+
         profile_picture_url: getAvatarUrl(p.profiles),
         starting_price,
         ending_price,
