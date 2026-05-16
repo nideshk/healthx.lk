@@ -114,6 +114,9 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
   const [followUpNeeded, setFollowUpNeeded] = useState(false);
   const [followUpDate, setFollowUpDate] = useState<string | null>(null);
   const [followupNotes, setFollowupNotes] = useState("");
+  const [practitionerHasSignature, setPractitionerHasSignature] = useState(true);
+  const [practitionerId, setPractitionerId] = useState<string | null>(null);
+  const [uploadingSignature, setUploadingSignature] = useState(false);
 
   /* ---------- UI State ---------- */
   const [saving, setSaving] = useState(false);
@@ -245,6 +248,13 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
           );
           setSpecialNotes(data.prescription.special_notes || "");
           setPrescriptionStatus(data.prescription.status || "draft");
+        }
+
+        if (data.practitioner_has_signature !== undefined) {
+          setPractitionerHasSignature(data.practitioner_has_signature);
+        }
+        if (data.practitioner_id) {
+          setPractitionerId(data.practitioner_id);
         }
       } finally {
         setConsultationLoading(false);
@@ -634,6 +644,70 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
     const newItems = [...prescriptionItems];
     newItems[index] = { ...newItems[index], [field]: value };
     setPrescriptionItems(newItems);
+  };
+
+  const handleSignatureUpload = async (file: File) => {
+    if (!file) return;
+    
+    // Validations
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload an image file (JPG or PNG).");
+      return;
+    }
+
+    setUploadingSignature(true);
+    setError(null);
+
+    try {
+      // 1. Get presigned URL
+      const presignRes = await authFetch("/api/practitioner-document/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          application_id: practitionerId,
+          documentType: "signature",
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+        }),
+      });
+
+      if (!presignRes.ok) throw new Error("Failed to get upload URL");
+      const data = await presignRes.json();
+      const uploadUrl = data.uploadUrl;
+      const fileKey = data.document?.file_url;
+
+      // 2. Upload to S3
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadRes.ok) throw new Error("Signature upload failed");
+
+      // 3. Update practitioner profile
+      const updateRes = await authFetch("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          practitioner: {
+            signature_url: fileKey,
+            signature_uploaded_at: new Date().toISOString()
+          }
+        }),
+      });
+
+      if (!updateRes.ok) throw new Error("Failed to update practitioner profile");
+
+      setPractitionerHasSignature(true);
+      setSuccess("Signature uploaded successfully! You can now issue prescriptions.");
+    } catch (err: any) {
+      console.error("Signature upload error:", err);
+      setError(err.message || "Failed to upload signature");
+    } finally {
+      setUploadingSignature(false);
+    }
   };
 
   const isLocked = prescriptionStatus === "issued" || prescriptionStatus === "ready_to_issue";
@@ -1119,6 +1193,37 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                 />
               </section>
 
+              {/* Signature Requirement Check */}
+              {!practitionerHasSignature && !isLocked && (
+                <section className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-start gap-2 text-amber-800">
+                    <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold">Signature Required</p>
+                      <p className="text-xs">You must upload a digital signature to issue prescriptions. This signature will appear on all your prescriptions.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-1">
+                    <label className="flex items-center justify-center gap-2 bg-white border border-amber-300 text-amber-700 hover:bg-amber-100 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all shadow-sm">
+                      {uploadingSignature ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Plus size={16} />
+                      )}
+                      {uploadingSignature ? "Uploading..." : "Upload Signature"}
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])}
+                        disabled={uploadingSignature}
+                      />
+                    </label>
+                  </div>
+                </section>
+              )}
+
               {/* Action Buttons */}
               {!isLocked && (
                 <div className="space-y-3 pt-2">
@@ -1164,8 +1269,12 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                     )}
                     <button
                       onClick={() => savePrescription("issued")}
-                      disabled={saving}
-                      className="flex-1 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl py-3 text-sm shadow-lg shadow-slate-200 transition-all active:scale-[0.98] disabled:opacity-50"
+                      disabled={saving || !practitionerHasSignature}
+                      className={`flex-1 flex items-center justify-center gap-2 font-bold rounded-xl py-3 text-sm transition-all active:scale-[0.98] ${
+                        !practitionerHasSignature 
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed" 
+                        : "bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200"
+                      }`}
                     >
                       {saving ? (
                         <Loader2 size={16} className="animate-spin" />
