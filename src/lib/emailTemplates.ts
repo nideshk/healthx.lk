@@ -332,3 +332,140 @@ export function welcomeTemplate(firstName: string) {
   </div>
   `;
 }
+
+type PractitionerEmailParams = {
+  practitionerName: string;
+  patientName: string;
+  appointment: {
+    startsAt: string;
+    endsAt: string;
+    appointmentType: string;
+    roomKey?: string;
+    meetingUrl?: string;
+  };
+};
+
+export function generatePractitionerConfirmationEmail({
+  practitionerName,
+  patientName,
+  appointment,
+}: PractitionerEmailParams) {
+  const greeting = `Dear Dr. ${practitionerName},`;
+  const startTime = new Date(appointment.startsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
+  const endTime = new Date(appointment.endsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
+  const meetingUrl = appointment.meetingUrl || `https://www.clinecxa.lk/appointment/meeting?room=${appointment.roomKey}`;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Appointment Confirmed - Clinecxa</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
+    .container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header { text-align: center; margin-bottom: 30px; }
+    .logo { font-size: 24px; font-weight: bold; color: #007bff; margin-bottom: 10px; }
+    .title { font-size: 20px; font-weight: bold; color: #28a745; margin-bottom: 20px; }
+    .details { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #007bff; }
+    .join-button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 20px; }
+    .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee; font-size: 12px; color: #666666; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">Clinecxa</div>
+      <div class="title">New Appointment Scheduled</div>
+    </div>
+    <div class="message">
+      <p>${greeting}</p>
+      <p>A new telehealth appointment has been successfully scheduled and confirmed with you. Here are the details:</p>
+
+      <div class="details">
+        <h3 style="margin: 0 0 15px 0; color: #007bff; font-size: 18px;">📅 Appointment Information</h3>
+        <p style="margin: 5px 0;"><strong>Patient Name:</strong> ${patientName}</p>
+        <p style="margin: 5px 0;"><strong>Appointment Type:</strong> ${appointment.appointmentType}</p>
+        <p style="margin: 5px 0;"><strong>Date & Time:</strong> ${startTime} - ${endTime} (Colombo Time)</p>
+        ${appointment.roomKey ? `<p style="margin: 5px 0;"><strong>Room Number:</strong> ${appointment.roomKey}</p>` : ''}
+        <p style="margin: 5px 0;"><strong>Meeting Link:</strong> <a href="${meetingUrl}" style="color: #007bff; text-decoration: none;">Join Consultation</a></p>
+      </div>
+
+      <p>Please join the meeting at the scheduled time using the link below:</p>
+
+      <a href="${meetingUrl}" class="join-button">Join Consultation</a>
+    </div>
+    <div class="footer">
+      <p>This email was sent by Clinecxa Telehealth Platform.</p>
+      <p>If you have any queries, please contact the administrative support team.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+type AdminEmailParams = {
+  practitionerName: string;
+  patientName: string;
+  appointment: {
+    startsAt: string;
+    endsAt: string;
+    appointmentType: string;
+  };
+};
+
+export function generateAdminConfirmationEmail({
+  practitionerName,
+  patientName,
+  appointment,
+}: AdminEmailParams) {
+  const startTime = new Date(appointment.startsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
+  const endTime = new Date(appointment.endsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Booking Confirmation Alert - Clinecxa</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
+    .container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header { text-align: center; margin-bottom: 30px; }
+    .logo { font-size: 24px; font-weight: bold; color: #007bff; margin-bottom: 10px; }
+    .title { font-size: 20px; font-weight: bold; color: #28a745; margin-bottom: 20px; }
+    .details { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6c757d; }
+    .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee; font-size: 12px; color: #666666; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">Clinecxa Admin Alert</div>
+      <div class="title">New Booking Confirmed</div>
+    </div>
+    <div class="message">
+      <p>Hello Admin Team,</p>
+      <p>This is an automated notification to alert you that a new telehealth appointment has been successfully booked and paid for on Clinecxa.</p>
+
+      <div class="details">
+        <h3 style="margin: 0 0 15px 0; color: #6c757d; font-size: 18px;">📊 Booking Details</h3>
+        <p style="margin: 5px 0;"><strong>Patient Name:</strong> ${patientName}</p>
+        <p style="margin: 5px 0;"><strong>Practitioner Name:</strong> Dr. ${practitionerName}</p>
+        <p style="margin: 5px 0;"><strong>Appointment Type:</strong> ${appointment.appointmentType}</p>
+        <p style="margin: 5px 0;"><strong>Date & Time:</strong> ${startTime} - ${endTime} (Colombo Time)</p>
+      </div>
+
+      <p>No action is required. This alert is for administrative record purposes.</p>
+    </div>
+    <div class="footer">
+      <p>This email was sent by Clinecxa Telehealth Platform.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+}
