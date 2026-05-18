@@ -65,7 +65,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     // Fetch appointment basics
     const { data: appointment, error: apptErr } = await supabaseClient
       .from("appointments")
-      .select("id, patient_id, practitioner_id, created_at, additional_attendees")
+      .select("id, patient_id, practitioner_id, created_at, additional_attendees, practitioners(signature_url)")
       .eq("id", appointmentId)
       .limit(1)
       .maybeSingle();
@@ -147,6 +147,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     } else if (isPractitioner) {
       responseData.encounter = encounter;
       responseData.attendees = appointment.additional_attendees;
+      const practitioner = (appointment as any).practitioners;
+      const sigUrl = Array.isArray(practitioner) ? practitioner[0]?.signature_url : practitioner?.signature_url;
+      responseData.practitioner_has_signature = !!sigUrl;
+      responseData.practitioner_id = appointment.practitioner_id;
       responseData.prescription = {
         ...prescription,
         items: prescriptionItems
@@ -384,6 +388,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     // 6. Issue Workflow
     if (body.status === 'issued') {
+      // Ensure practitioner has a signature
+      const { data: practitionerData } = await supabaseAdmin
+        .from("practitioners")
+        .select("signature_url")
+        .eq("id", appointment.practitioner_id)
+        .single();
+
+      if (!practitionerData?.signature_url) {
+        return NextResponse.json({ 
+          error: "You must upload a digital signature before you can issue prescriptions. Please upload one in your profile settings or in the prescription tab." 
+        }, { status: 400 });
+      }
+
       await processPrescriptionIssuance({
         appointmentId,
         patientEmail: patientData?.email,

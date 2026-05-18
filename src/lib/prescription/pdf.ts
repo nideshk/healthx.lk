@@ -95,18 +95,23 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
 
         for (let i = 0; i < rowCount; i++) {
           const item = items[i];
-          
-          // Calculate dynamic row height based on content
+
+          // Calculate dynamic row height based on all columns
           let dynamicRowHeight = 25;
-          if (item?.notes) {
+          if (item) {
             doc.fontSize(9).font("Helvetica");
-            const notesHeight = doc.heightOfString(item.notes, { width: colWidths[4] - 10, align: "center" }) + 16;
-            dynamicRowHeight = Math.max(dynamicRowHeight, notesHeight);
-          }
-          if (item?.medicine_name) {
-            doc.fontSize(9).font("Helvetica");
-            const nameHeight = doc.heightOfString(item.medicine_name, { width: colWidths[0] - 10, align: "center" }) + 16;
-            dynamicRowHeight = Math.max(dynamicRowHeight, nameHeight);
+            const cols = [
+              { text: item.medicine_name || "", width: colWidths[0] - 10 },
+              { text: item.route || "", width: colWidths[1] - 10 },
+              { text: item.strength || "", width: colWidths[2] - 10 },
+              { text: item.duration || "", width: colWidths[3] - 10 },
+              { text: item.notes || "", width: colWidths[4] - 10 }
+            ];
+
+            cols.forEach(col => {
+              const h = doc.heightOfString(col.text, { width: col.width, align: "center" }) + 16;
+              dynamicRowHeight = Math.max(dynamicRowHeight, h);
+            });
           }
 
           if (y + dynamicRowHeight > doc.page.height - 100) {
@@ -120,13 +125,21 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
           });
 
           if (item) {
-            const verticalOffset = (dynamicRowHeight / 2) - 4.5; // Center text roughly
             doc.fontSize(9).font("Helvetica").fillColor("#000");
-            doc.text(item.medicine_name || "", colX[0] + 5, y + 8, { width: colWidths[0] - 10, align: "center" });
-            doc.text(item.route || "", colX[1] + 5, y + 8, { width: colWidths[1] - 10, align: "center" });
-            doc.text(item.strength || "", colX[2] + 5, y + 8, { width: colWidths[2] - 10, align: "center" });
-            doc.text(item.duration || "", colX[3] + 5, y + 8, { width: colWidths[3] - 10, align: "center" });
-            doc.text(item.notes || "", colX[4] + 5, y + 8, { width: colWidths[4] - 10, align: "center" });
+
+            // Draw columns with individual vertical centering if needed, but here we just use a consistent top offset
+            // pdfkit doesn't have a direct "vertical align center" for a box, so we calculate it
+            const drawCol = (text: string, x: number, width: number) => {
+              const textHeight = doc.heightOfString(text, { width: width, align: "center" });
+              const vOffset = (dynamicRowHeight - textHeight) / 2;
+              doc.text(text, x, y + vOffset, { width: width, align: "center" });
+            };
+
+            drawCol(item.medicine_name || "", colX[0] + 5, colWidths[0] - 10);
+            drawCol(item.route || "", colX[1] + 5, colWidths[1] - 10);
+            drawCol(item.strength || "", colX[2] + 5, colWidths[2] - 10);
+            drawCol(item.duration || "", colX[3] + 5, colWidths[3] - 10);
+            drawCol(item.notes || "", colX[4] + 5, colWidths[4] - 10);
           }
           y += dynamicRowHeight;
         }
@@ -138,10 +151,17 @@ export async function generatePrescriptionPDF(data: any): Promise<Buffer> {
           doc.addPage();
           y = 135;
         }
+
+        const doctorNotes = data.special_notes || "";
         doc.fontSize(10).font("Helvetica").fillColor("#000").text("Doctor Notes:", 40, y + 8);
-        doc.rect(142, y, pageWidth - 142 - 40, 35).fillAndStroke("#FFFFFF", "#aaa");
-        doc.fillColor("#000").fontSize(9).text(data.special_notes || "", 150, y + 10, { width: pageWidth - 142 - 50 });
-        y += 80;
+
+        const notesBoxWidth = pageWidth - 142 - 40;
+        const notesTextHeight = doc.heightOfString(doctorNotes, { width: notesBoxWidth - 10 });
+        const notesBoxHeight = Math.max(35, notesTextHeight + 15);
+
+        doc.rect(142, y, notesBoxWidth, notesBoxHeight).fillAndStroke("#FFFFFF", "#aaa");
+        doc.fillColor("#000").fontSize(9).text(doctorNotes, 150, y + 10, { width: notesBoxWidth - 10 });
+        y += notesBoxHeight + 20;
 
         // ---------------- DOCTOR DETAILS & SIGNATURE (END OF CONTENT) ----------------
         y = drawDoctorSignatureBlock(doc, data, y, signatureBuffer);
@@ -269,13 +289,21 @@ function drawSectionHeader(doc: any, title: string, y: number, height: number = 
 }
 
 function drawStyledField(doc: any, label: string, value: string | undefined, y: number, customBoxX?: number) {
-  doc.fontSize(10).font("Helvetica").fillColor("#000").text(label, 40, y + 6, { lineBreak: false });
   const boxX = customBoxX || 142;
   const boxWidth = doc.page.width - boxX - 40;
-  const boxHeight = 20;
-  doc.rect(boxX, y, boxWidth, boxHeight).fillAndStroke("#FFFFFF", "#aaa");
-  doc.fillColor("#000").font("Helvetica").text(value, boxX + 8, y + 6, { lineBreak: false });
-  return y + boxHeight + 4;
+
+  doc.fontSize(10).font("Helvetica").fillColor("#000").text(label, 40, y + 6, { lineBreak: false });
+
+  const val = value || "";
+  const textHeight = doc.heightOfString(val, { width: boxWidth - 10 });
+  const boxHeight = Math.max(20, textHeight + 10);
+
+  // Cleaner look: Light gray background instead of heavy borders if preferred, 
+  // but let's keep consistent with current style but make it dynamic.
+  doc.rect(boxX, y, boxWidth, boxHeight).fillAndStroke("#FFFFFF", "#eee");
+  doc.fillColor("#000").font("Helvetica").text(val, boxX + 8, y + (boxHeight - textHeight) / 2, { width: boxWidth - 10 });
+
+  return y + boxHeight + 6;
 }
 
 async function fetchImageBuffer(url: string): Promise<Buffer> {
@@ -284,20 +312,29 @@ async function fetchImageBuffer(url: string): Promise<Buffer> {
 }
 
 function drawStyledFieldRow(doc: any, label1: string, val1: string | undefined, label2: string, val2: string | undefined, y: number) {
-  const boxHeight = 20;
-  doc.fontSize(10).font("Helvetica").fillColor("#000").text(label1, 40, y + 6, { lineBreak: false });
-  doc.rect(142, y, 180, boxHeight).fillAndStroke("#FFFFFF", "#aaa");
-  doc.fillColor("#000");
-  if (val1) doc.text(val1, 150, y + 6, { lineBreak: false });
+  const box1Width = 180;
+  const val1Str = val1 || "";
+  doc.fontSize(10).font("Helvetica").fillColor("#000");
+
+  const h1 = doc.heightOfString(val1Str, { width: box1Width - 10 });
 
   const label2X = 335;
-  doc.text(label2, label2X, y + 6, { lineBreak: false });
-
   const box2X = label2X + 35;
   const box2Width = doc.page.width - box2X - 40;
-  doc.rect(box2X, y, box2Width, boxHeight).fillAndStroke("#FFFFFF", "#aaa");
-  doc.fillColor("#000");
-  if (val2) doc.text(val2, box2X + 8, y + 6, { lineBreak: false });
+  const val2Str = val2 || "";
+  const h2 = doc.heightOfString(val2Str, { width: box2Width - 10 });
 
-  return y + boxHeight + 4;
+  const boxHeight = Math.max(20, h1 + 10, h2 + 10);
+
+  // Label 1
+  doc.fillColor("#000").text(label1, 40, y + (boxHeight - 10) / 2, { lineBreak: false });
+  doc.roundedRect(142, y, box1Width, boxHeight, 2).fillAndStroke("#FFFFFF", "#eee");
+  doc.fillColor("#000").text(val1Str, 150, y + (boxHeight - h1) / 2, { width: box1Width - 10 });
+
+  // Label 2
+  doc.fillColor("#000").text(label2, label2X, y + (boxHeight - 10) / 2, { lineBreak: false });
+  doc.roundedRect(box2X, y, box2Width, boxHeight, 2).fillAndStroke("#FFFFFF", "#eee");
+  doc.fillColor("#000").text(val2Str, box2X + 8, y + (boxHeight - h2) / 2, { width: box2Width - 10 });
+
+  return y + boxHeight + 6;
 }

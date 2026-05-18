@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Appointment, Patient } from "@/types/Dashboard";
 import { authFetch } from "@/lib/authFetch";
 import { Card, CardBody } from "@/components/atom/Card/Card";
-import { FileText, ExternalLink, Pill, Calendar, User, Plus, ArrowLeft, Trash2, Save, Send, Loader2, Search, Eye, X } from "lucide-react";
+import { FileText, ExternalLink, Pill, Calendar, User, Plus, ArrowLeft, Trash2, Save, Send, Loader2, Search, Eye, X, AlertCircle } from "lucide-react";
 import Loader from "@/components/atom/Loader/Loader";
 import { toast } from "react-toastify";
 
@@ -29,6 +29,7 @@ export interface PrescriptionDetails {
 
 export interface DraftPrescription {
     appointmentId: string;
+    diagnosis_id?: string;
     diagnosis: string;
     diagnosis_code: string;
     notes: string;
@@ -52,11 +53,15 @@ export default function PrescriptionTab({
     const [showBuilder, setShowBuilder] = useState(viewMode === "builder");
 
     const validAppointments = useMemo(() => {
-        return appointments
+        return [...appointments]
             .filter(a =>
                 ["confirmed", "completed", "ongoing", "scheduled"].includes(a.status?.toLowerCase() || "")
             )
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            .sort((a, b) => {
+                const dateA = a.date ? new Date(a.date.split('/').reverse().join('-')) : new Date((a as any).starts_at || 0);
+                const dateB = b.date ? new Date(b.date.split('/').reverse().join('-')) : new Date((b as any).starts_at || 0);
+                return dateB.getTime() - dateA.getTime();
+            });
     }, [appointments]);
 
     /* ---------------------------------------------------------
@@ -133,11 +138,150 @@ export default function PrescriptionTab({
 
     const [builderData, setBuilderData] = useState<DraftPrescription>({
         appointmentId: "",
+        diagnosis_id: "",
         diagnosis: "",
         diagnosis_code: "",
         notes: "",
         items: [] as MedicineItem[]
     });
+
+    const [practitionerHasSignature, setPractitionerHasSignature] = useState(true);
+    const [practitionerId, setPractitionerId] = useState<string | null>(null);
+    const [uploadingSignature, setUploadingSignature] = useState(false);
+    const [fetchingAppointmentData, setFetchingAppointmentData] = useState(false);
+    const [existingStatus, setExistingStatus] = useState<"draft" | "issued" | null>(null);
+
+    // Auto-fetch existing prescription when appointment changes
+    useEffect(() => {
+        const fetchAppointmentData = async () => {
+            if (!builderData.appointmentId) {
+                setExistingStatus(null);
+                // Don't reset everything if we just cleared appointmentId, 
+                // but if we are switching, we should reset.
+                return;
+            }
+
+            setFetchingAppointmentData(true);
+            try {
+                const res = await authFetch(`/api/booking/appointment/${builderData.appointmentId}/consultation`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.prescription) {
+                        const diagRecord = data.prescription.diagnoses;
+                        setBuilderData(prev => ({
+                            ...prev,
+                            diagnosis_id: diagRecord?.id || "",
+                            diagnosis: diagRecord?.name || data.prescription.diagnosis || "",
+                            diagnosis_code: diagRecord?.code || data.prescription.diagnosis_code || "",
+                            notes: data.prescription.special_notes || "",
+                            items: (data.prescription.items || []).map((item: any) => ({
+                                medicine_name: item.medicine_name || "",
+                                strength: item.strength || "",
+                                route: item.route || "Oral",
+                                duration: item.duration || "",
+                                notes: item.notes || ""
+                            }))
+                        }));
+                        setExistingStatus(data.prescription.status || "draft");
+                    } else {
+                        // Reset form for fresh appointment
+                        setBuilderData(prev => ({
+                            ...prev,
+                            diagnosis_id: "",
+                            diagnosis: "",
+                            diagnosis_code: "",
+                            notes: "",
+                            items: []
+                        }));
+                        setExistingStatus(null);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch appointment data", err);
+            } finally {
+                setFetchingAppointmentData(false);
+            }
+        };
+
+        fetchAppointmentData();
+    }, [builderData.appointmentId]);
+
+    useEffect(() => {
+        const checkSignature = async () => {
+            try {
+                const res = await authFetch("/api/auth/me");
+                if (res.ok) {
+                    const data = await res.json();
+                    const practitioner = data.user?.practitioner;
+                    setPractitionerId(practitioner?.id || null);
+                    setPractitionerHasSignature(!!practitioner?.signature_url);
+                }
+            } catch (err) {
+                console.error("Failed to check signature status", err);
+            }
+        };
+        checkSignature();
+    }, []);
+
+    const handleSignatureUpload = async (file: File) => {
+        if (!file || !practitionerId) return;
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please upload an image file (JPG or PNG).");
+            return;
+        }
+
+        setUploadingSignature(true);
+        try {
+            // 1. Get presigned URL
+            const presignRes = await authFetch("/api/practitioner-document/upload-url", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    application_id: practitionerId,
+                    documentType: "signature",
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size,
+                }),
+            });
+
+            if (!presignRes.ok) throw new Error("Failed to get upload URL");
+            const data = await presignRes.json();
+            const uploadUrl = data.uploadUrl;
+            const fileKey = data.document?.file_url;
+
+            // 2. Upload to S3
+            const uploadRes = await fetch(uploadUrl, {
+                method: "PUT",
+                headers: { "Content-Type": file.type },
+                body: file,
+            });
+
+            if (!uploadRes.ok) throw new Error("Signature upload failed");
+
+            // 3. Update practitioner profile
+            const updateRes = await authFetch("/api/auth/me", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    practitioner: {
+                        signature_url: fileKey,
+                        signature_uploaded_at: new Date().toISOString()
+                    }
+                }),
+            });
+
+            if (!updateRes.ok) throw new Error("Failed to update profile");
+
+            setPractitionerHasSignature(true);
+            toast.success("Signature uploaded successfully!");
+        } catch (err: any) {
+            console.error("Signature upload error:", err);
+            toast.error(err.message || "Failed to upload signature");
+        } finally {
+            setUploadingSignature(false);
+        }
+    };
 
     const addMedicine = () => {
         setBuilderData(prev => ({
@@ -256,6 +400,7 @@ export default function PrescriptionTab({
     const selectDiagnosis = (diag: any) => {
         setBuilderData(prev => ({
             ...prev,
+            diagnosis_id: diag.id || "",
             diagnosis: diag.name || "",
             diagnosis_code: diag.code || ""
         }));
@@ -281,6 +426,7 @@ export default function PrescriptionTab({
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
+                        diagnosis_id: builderData.diagnosis_id || null,
                         diagnosis_code: builderData.diagnosis_code || null,
                         diagnosis: builderData.diagnosis || null,
                         prescription_items: builderData.items.filter((i) => i.medicine_name.trim()),
@@ -326,6 +472,7 @@ export default function PrescriptionTab({
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
+                        diagnosis_id: builderData.diagnosis_id || null,
                         diagnosis_code: builderData.diagnosis_code || null,
                         diagnosis: builderData.diagnosis || null,
                         prescription_items: builderData.items.filter((i) => i.medicine_name.trim()),
@@ -433,6 +580,17 @@ export default function PrescriptionTab({
                     </div>
                 </div>
 
+                {/* Read-only Banner */}
+                {existingStatus === "issued" && (
+                    <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 flex items-center gap-3 text-slate-600 animate-in fade-in slide-in-from-top-1">
+                        <Eye size={20} className="shrink-0 text-slate-400" />
+                        <div>
+                            <p className="text-sm font-bold">Read-only Mode</p>
+                            <p className="text-xs">This prescription has already been issued and cannot be modified.</p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-6">
                     {/* Section 1: Clinical Context */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50/50 rounded-2xl border border-slate-100">
@@ -443,16 +601,24 @@ export default function PrescriptionTab({
                             </label>
                             <select
                                 value={builderData.appointmentId}
+                                disabled={fetchingAppointmentData}
                                 onChange={e => setBuilderData(prev => ({ ...prev, appointmentId: e.target.value }))}
-                                className="w-full text-sm p-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                                className={`w-full text-sm p-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer ${fetchingAppointmentData ? 'opacity-50' : ''}`}
                                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.25rem' }}
                             >
                                 <option value="">-- Choose session --</option>
-                                {validAppointments.map(a => (
-                                    <option key={a.id} value={a.id}>
-                                        {new Date(a.date).toLocaleDateString()} - {a.time}
-                                    </option>
-                                ))}
+                                {validAppointments.map(a => {
+                                    const dateObj = a.date ? new Date(a.date.split('/').reverse().join('-')) : new Date((a as any).starts_at);
+                                    const dateStr = !isNaN(dateObj.getTime()) 
+                                        ? dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                                        : "Unknown Date";
+                                    
+                                    return (
+                                        <option key={a.id} value={a.id}>
+                                            {dateStr} - {a.time || (a as any).starts_at?.split('T')[1]?.slice(0, 5) || "N/A"}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </div>
 
@@ -466,12 +632,14 @@ export default function PrescriptionTab({
                                 <input
                                     type="text"
                                     value={diagSearchText}
+                                    disabled={existingStatus === "issued" || fetchingAppointmentData}
                                     onChange={e => setDiagSearchText(e.target.value)}
                                     onFocus={() => { if (diagSearchResults.length > 0) setShowDiagDropdown(true); }}
-                                    placeholder="Search by name or code..."
-                                    className="w-full text-sm pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                    placeholder={existingStatus === "issued" ? "Read-only" : "Search by name or code..."}
+                                    className="w-full text-sm pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
                                 />
                                 {isSearchingDiag && <Loader2 size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-500 animate-spin" />}
+                                {fetchingAppointmentData && <Loader2 size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 animate-spin" />}
                             </div>
                             {showDiagDropdown && (
                                 <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-2xl shadow-slate-200 mt-2 max-h-64 overflow-auto animate-in fade-in zoom-in-95 duration-200">
@@ -505,8 +673,9 @@ export default function PrescriptionTab({
                                         <span className="text-sm font-medium text-blue-900 truncate max-w-[200px]">{builderData.diagnosis}</span>
                                     </div>
                                     <button 
-                                        onClick={() => setBuilderData(prev => ({ ...prev, diagnosis: "", diagnosis_code: "" }))} 
-                                        className="text-blue-400 hover:text-blue-600 p-1"
+                                        onClick={() => setBuilderData(prev => ({ ...prev, diagnosis_id: "", diagnosis: "", diagnosis_code: "" }))} 
+                                        disabled={existingStatus === "issued"}
+                                        className="text-blue-400 hover:text-blue-600 p-1 disabled:opacity-0"
                                     >
                                         <ArrowLeft size={16} className="rotate-180" />
                                     </button>
@@ -526,7 +695,8 @@ export default function PrescriptionTab({
                             </div>
                             <button 
                                 onClick={addMedicine} 
-                                className="group px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all hover:shadow-lg hover:shadow-slate-200 active:scale-95"
+                                disabled={existingStatus === "issued" || fetchingAppointmentData}
+                                className="group px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all hover:shadow-lg hover:shadow-slate-200 active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:active:scale-100"
                             >
                                 <Plus size={16} className="group-hover:rotate-90 transition-transform duration-300" /> Add New Medicine
                             </button>
@@ -547,7 +717,8 @@ export default function PrescriptionTab({
                                         <div key={idx} className="group p-6 bg-white border border-slate-200 rounded-3xl relative transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5">
                                             <button 
                                                 onClick={() => removeMedicine(idx)} 
-                                                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                disabled={existingStatus === "issued"}
+                                                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all disabled:opacity-0"
                                                 title="Remove medicine"
                                             >
                                                 <Trash2 size={16} />
@@ -559,8 +730,9 @@ export default function PrescriptionTab({
                                                     <input 
                                                         type="text" 
                                                         value={item.medicine_name} 
+                                                        disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'medicine_name', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300" 
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0 disabled:font-bold disabled:text-slate-900" 
                                                         placeholder="e.g. Paracetamol" 
                                                     />
                                                 </div>
@@ -569,8 +741,9 @@ export default function PrescriptionTab({
                                                     <input 
                                                         type="text" 
                                                         value={item.strength} 
+                                                        disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'strength', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300" 
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0" 
                                                         placeholder="e.g. 500mg" 
                                                     />
                                                 </div>
@@ -578,9 +751,10 @@ export default function PrescriptionTab({
                                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Route</label>
                                                     <select 
                                                         value={item.route} 
+                                                        disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'route', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
-                                                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.25rem' }}
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer disabled:bg-transparent disabled:border-none disabled:px-0 disabled:cursor-default"
+                                                        style={{ backgroundImage: existingStatus === "issued" ? 'none' : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.25rem' }}
                                                     >
                                                         <option value="Oral">Oral (Tablet/Liquid)</option>
                                                         <option value="IV">IV (Intravenous)</option>
@@ -594,19 +768,20 @@ export default function PrescriptionTab({
                                                     <input 
                                                         type="text" 
                                                         value={item.duration} 
+                                                        disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'duration', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300" 
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0" 
                                                         placeholder="e.g. 5 days" 
                                                     />
                                                 </div>
-
                                                 <div className="lg:col-span-12 space-y-2 mt-2">
                                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Medication Notes / Instructions</label>
                                                     <input 
                                                         type="text" 
                                                         value={item.notes} 
+                                                        disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'notes', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 italic" 
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 italic disabled:bg-transparent disabled:border-none disabled:px-0" 
                                                         placeholder="e.g. 'Take after food', 'Avoid driving'..." 
                                                     />
                                                 </div>
@@ -626,18 +801,53 @@ export default function PrescriptionTab({
                         <textarea 
                             rows={3} 
                             value={builderData.notes} 
+                            disabled={existingStatus === "issued"}
                             onChange={e => setBuilderData(prev => ({ ...prev, notes: e.target.value }))} 
-                            className="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-3xl shadow-inner focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300" 
-                            placeholder="Provide any additional instructions, e.g. 'Take after food', 'Avoid driving'..."
+                            className="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-3xl shadow-inner focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0 disabled:shadow-none" 
+                            placeholder={existingStatus === "issued" ? "" : "Provide any additional instructions, e.g. 'Take after food', 'Avoid driving'..."}
                         ></textarea>
                     </div>
+
+                    {/* Signature Requirement Check */}
+                    {!practitionerHasSignature && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 space-y-4 animate-in fade-in slide-in-from-top-2">
+                            <div className="flex items-start gap-3 text-amber-800">
+                                <AlertCircle size={20} className="shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                    <p className="text-sm font-bold">Signature Required</p>
+                                    <p className="text-xs leading-relaxed">
+                                        You must upload a digital signature to issue prescriptions. 
+                                        This signature will appear on all your generated PDF prescriptions.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className="inline-flex items-center gap-2 bg-white border border-amber-300 text-amber-700 hover:bg-amber-100 px-5 py-2.5 rounded-xl text-sm font-bold cursor-pointer transition-all shadow-sm active:scale-95">
+                                    {uploadingSignature ? (
+                                        <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                        <Plus size={16} />
+                                    )}
+                                    {uploadingSignature ? "Uploading..." : "Upload Your Signature"}
+                                    <input 
+                                        type="file" 
+                                        className="hidden" 
+                                        accept="image/*" 
+                                        onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])}
+                                        disabled={uploadingSignature}
+                                    />
+                                </label>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex flex-col sm:flex-row justify-end gap-3 pt-8 mt-4">
                         <button 
                             onClick={() => handleIssue(false)} 
-                            disabled={saving} 
-                            className="px-6 py-3 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95 shadow-sm"
+                            disabled={saving || fetchingAppointmentData || existingStatus === "issued"} 
+                            className="px-6 py-3 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Save as Draft
                         </button>
@@ -650,11 +860,15 @@ export default function PrescriptionTab({
                         </button>
                         <button 
                             onClick={() => handleIssue(true)} 
-                            disabled={saving || isPreviewing} 
-                            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+                            disabled={saving || isPreviewing || fetchingAppointmentData || existingStatus === "issued" || !practitionerHasSignature} 
+                            className={`px-8 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95 shadow-lg ${
+                                (!practitionerHasSignature || existingStatus === "issued") 
+                                ? "bg-slate-200 text-slate-400 cursor-not-allowed" 
+                                : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20"
+                            }`}
                         >
                             {saving ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="shrink-0" />} 
-                            <span className="leading-none">Issue Prescription</span>
+                            <span className="leading-none">{existingStatus === "issued" ? "Already Issued" : "Issue Prescription"}</span>
                         </button>
                     </div>
 
