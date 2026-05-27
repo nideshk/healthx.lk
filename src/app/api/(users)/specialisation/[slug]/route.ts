@@ -1,4 +1,4 @@
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextResponse } from "next/server";
 
 /* ------------------------- helpers ------------------------- */
@@ -59,7 +59,7 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const sort = searchParams.get("sort"); // asc | desc | null
 
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabaseAdmin
       .from("practitioners")
       .select(`
         id,

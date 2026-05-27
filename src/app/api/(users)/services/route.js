@@ -1,7 +1,7 @@
 // app/api/services/route.js
 
 import { requireUser } from "@/lib/authGuard";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(req) {
   try {
@@ -10,7 +10,7 @@ export async function GET(req) {
 
 
     // Fetch all appointment types from your DB
-    const { data: appointmentTypes, error } = await supabaseClient
+    const { data: appointmentTypes, error } = await supabaseAdmin
       .from("appointment_type")
       .select("*")
       .eq("is_active", true)

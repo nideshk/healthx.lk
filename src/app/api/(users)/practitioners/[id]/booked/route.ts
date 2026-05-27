@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DateTime } from "luxon";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
@@ -46,7 +46,7 @@ export async function GET(
 
     const TIMEZONE = "Asia/Colombo";
 
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabaseAdmin
       .from("appointments")
       .select("id, starts_at, ends_at, appointment_type_id, status, telehealth_url")
       .eq("practitioner_id", practitionerId)

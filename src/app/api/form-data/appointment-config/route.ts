@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(req: Request) {
@@ -10,7 +9,7 @@ export async function GET(req: Request) {
     /* ---------------------------------------
      * 1️⃣ Fetch services
      * --------------------------------------- */
-    let servicesQuery = supabaseClient
+    let servicesQuery = supabaseAdmin
       .from("services")
       .select("*")
       .order("created_at", { ascending: false });

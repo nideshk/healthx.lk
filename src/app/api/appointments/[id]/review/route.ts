@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { auditLog } from "@/lib/audit/auditLog";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
@@ -35,7 +35,7 @@ export async function POST(
     }
 
     /* ---------------- LOAD APPOINTMENT ---------------- */
-    const { data: appointment, error: apptError } = await supabaseClient
+    const { data: appointment, error: apptError } = await supabaseAdmin
       .from("appointments")
       .select("id, patient_id, practitioner_id, status")
       .eq("id", id)
@@ -60,7 +60,7 @@ export async function POST(
     }
 
     /* ---------------- CHECK DUPLICATE ---------------- */
-    const { data: existing } = await supabaseClient
+    const { data: existing } = await supabaseAdmin
       .from("appointment_reviews")
       .select("id")
       .eq("appointment_id", appointment.id)
@@ -74,7 +74,7 @@ export async function POST(
     }
 
     /* ---------------- INSERT REVIEW ---------------- */
-    const { data: review, error: insertError } = await supabaseClient
+    const { data: review, error: insertError } = await supabaseAdmin
       .from("appointment_reviews")
       .insert({
         appointment_id: appointment.id,
@@ -94,7 +94,7 @@ export async function POST(
     }
 
     /* ---------------- UPDATE PRACTITIONER RATING ---------------- */
-    const { data: practitioner } = await supabaseClient
+    const { data: practitioner } = await supabaseAdmin
       .from("practitioners")
       .select("avg_rating, total_reviews")
       .eq("id", appointment.practitioner_id)
@@ -106,7 +106,7 @@ export async function POST(
     const newCount = oldCount + 1;
     const newAvg = (oldAvg * oldCount + rating) / newCount;
 
-    await supabaseClient
+    await supabaseAdmin
       .from("practitioners")
       .update({
         avg_rating: Number(newAvg.toFixed(2)),
@@ -115,7 +115,7 @@ export async function POST(
       .eq("id", appointment.practitioner_id);
 
     /* ---------------- MARK APPOINTMENT REVIEWED ---------------- */
-    await supabaseClient
+    await supabaseAdmin
       .from("appointments")
       .update({ reviewed_at: new Date().toISOString() })
       .eq("id", appointment.id);

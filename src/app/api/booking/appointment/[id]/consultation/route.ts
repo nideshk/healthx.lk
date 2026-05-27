@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { signViewUrl } from "../route";
@@ -63,7 +62,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
   try {
     // Fetch appointment basics
-    const { data: appointment, error: apptErr } = await supabaseClient
+    const { data: appointment, error: apptErr } = await supabaseAdmin
       .from("appointments")
       .select("id, patient_id, practitioner_id, created_at, additional_attendees, practitioners(signature_url)")
       .eq("id", appointmentId)
@@ -96,7 +95,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const responseData: any = {};
 
     // 1. Fetch Consent & Pre-consult
-    const { data: consent } = await supabaseClient.from("consents").select("*").eq("appointment_id", appointmentId).maybeSingle();
+    const { data: consent } = await supabaseAdmin.from("consents").select("*").eq("appointment_id", appointmentId).maybeSingle();
     responseData.consent = consent;
 
     if (!isAdmin) {
@@ -120,10 +119,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     }
 
     // 2. Fetch Encounter (Follow-up only)
-    const { data: encounter } = await supabaseClient.from("encounters").select("id, clinician_notes, follow_up_needed, follow_up_date, follow_up_comments, created_at").eq("appointment_id", appointmentId).maybeSingle();
+    const { data: encounter } = await supabaseAdmin.from("encounters").select("id, clinician_notes, follow_up_needed, follow_up_date, follow_up_comments, created_at").eq("appointment_id", appointmentId).maybeSingle();
 
     // 3. Fetch Prescription & Items (Directly via appointment_id)
-    const { data: prescData } = await supabaseClient
+    const { data: prescData } = await supabaseAdmin
       .from("prescriptions")
       .select("*, diagnoses(*)")
       .eq("appointment_id", appointmentId)
@@ -133,7 +132,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     let prescriptionItems = [];
 
     if (prescription && (isPractitioner || isAdmin)) {
-      const { data: items } = await supabaseClient.from("prescription_items").select("*").eq("prescription_id", prescription.id);
+      const { data: items } = await supabaseAdmin.from("prescription_items").select("*").eq("prescription_id", prescription.id);
       prescriptionItems = items || [];
     }
 
@@ -268,7 +267,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       updated_at: new Date().toISOString()
     };
 
-    const { data: existingEnc } = await supabaseClient
+    const { data: existingEnc } = await supabaseAdmin
       .from("encounters")
       .select("id")
       .eq("appointment_id", appointmentId)
@@ -277,14 +276,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     let encounterId;
 
     if (existingEnc) {
-      await supabaseClient
+      await supabaseAdmin
         .from("encounters")
         .update(encounterRow)
         .eq("id", existingEnc.id);
 
       encounterId = existingEnc.id;
     } else {
-      const { data: newEnc } = await supabaseClient
+      const { data: newEnc } = await supabaseAdmin
         .from("encounters")
         .insert([{ ...encounterRow, created_at: new Date().toISOString() }])
         .select("id")
@@ -330,7 +329,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       };
     }
 
-    const { data: existingPresc } = await supabaseClient
+    const { data: existingPresc } = await supabaseAdmin
       .from("prescriptions")
       .select("id, status")
       .eq("appointment_id", appointmentId)
@@ -345,7 +344,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     let prescriptionId;
 
     if (existingPresc) {
-      const { data: updated } = await supabaseClient
+      const { data: updated } = await supabaseAdmin
         .from("prescriptions")
         .update(prescriptionRow)
         .eq("id", existingPresc.id)
@@ -354,7 +353,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
       prescriptionId = updated?.id;
     } else {
-      const { data: inserted } = await supabaseClient
+      const { data: inserted } = await supabaseAdmin
         .from("prescriptions")
         .insert([{ ...prescriptionRow, created_at: new Date().toISOString() }])
         .select("id")
@@ -365,7 +364,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     // 5. Prescription Items
     if (body.prescription_items) {
-      await supabaseClient
+      await supabaseAdmin
         .from("prescription_items")
         .delete()
         .eq("prescription_id", prescriptionId);
@@ -380,7 +379,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           notes: item.notes
         }));
 
-        await supabaseClient
+        await supabaseAdmin
           .from("prescription_items")
           .insert(itemsToInsert);
       }

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
-import { get } from "http";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
@@ -40,7 +39,7 @@ export async function GET(req: NextRequest) {
 
     try {
         // Fetch all transactions for the patient using their patient ID
-        const { data: transactions, error } = await supabaseClient
+        const { data: transactions, error } = await supabaseAdmin
             .from("transactions")
             .select("*")
             .eq("patient_id", patientId)

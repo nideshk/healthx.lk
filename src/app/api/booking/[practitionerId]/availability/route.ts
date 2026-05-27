@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { DateTime } from "luxon";
-
 
 function toMinutes(t: string) {
   const [h, m] = t.split(":").map(Number);
@@ -64,7 +63,7 @@ export async function GET(
     /* ---------------------------
        STEP 1: Practitioner Services
     --------------------------- */
-    const { data: practitioner } = await supabaseClient
+    const { data: practitioner } = await supabaseAdmin
       .from("practitioners")
       .select("available_services")
       .eq("id", practitionerId)
@@ -111,7 +110,7 @@ export async function GET(
     /* ---------------------------
        STEP 3: Availability Windows
     --------------------------- */
-    const { data: availabilityWindows } = await supabaseClient
+    const { data: availabilityWindows } = await supabaseAdmin
       .from("practitioner_availability")
       .select("starts_at, ends_at, timezone")
       .eq("practitioner_id", practitionerId)
@@ -129,7 +128,7 @@ export async function GET(
     /* ---------------------------
        STEP 4: Appointment Types
     --------------------------- */
-    const { data: appointmentTypes } = await supabaseClient
+    const { data: appointmentTypes } = await supabaseAdmin
       .from("appointment_type")
       .select("id, name, duration_mins")
       .eq("is_active", true)
@@ -147,7 +146,7 @@ export async function GET(
     --------------------------- */
     const nowUTC = DateTime.utc().toISO();
 
-    const { data: booked } = await supabaseClient
+    const { data: booked } = await supabaseAdmin
       .from("appointments")
       .select("starts_at, ends_at")
       .eq("practitioner_id", practitionerId)
@@ -170,7 +169,7 @@ export async function GET(
     /* ---------------------------
        STEP 6: Leaves
     --------------------------- */
-    const { data: leaves } = await supabaseClient
+    const { data: leaves } = await supabaseAdmin
       .from("practitioner_leaves")
       .select("applied_windows, leave_type")
       .eq("practitioner_id", practitionerId)

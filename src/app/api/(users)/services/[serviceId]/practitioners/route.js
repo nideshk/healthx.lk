@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/authGuard";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(req, { params }) {
   try {
@@ -13,7 +13,7 @@ export async function GET(req, { params }) {
       return Response.json({ error: "Service ID is required" }, { status: 400 });
     }
 
-    const { data: practitioners, error } = await supabaseClient
+    const { data: practitioners, error } = await supabaseAdmin
       .from("practitioners")
       .select("*")
       .contains("available_services", [serviceId]);

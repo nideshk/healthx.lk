@@ -3,7 +3,6 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { computeDiscount } from "@/lib/coupons/computeDiscount";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
@@ -111,7 +110,7 @@ export async function POST(
     });
 
     const { data: appointmentType, error: typeErr } =
-      await supabaseClient
+      await supabaseAdmin
         .from("appointment_type")
         .select(`
           id,
@@ -168,7 +167,7 @@ export async function POST(
       starts_at
     });
 
-    const { data: existing, error: existError } = await supabaseClient
+    const { data: existing, error: existError } = await supabaseAdmin
       .from("appointments")
       .select("id")
       .eq("practitioner_id", practitionerId)
@@ -323,7 +322,7 @@ export async function POST(
     });
 
     const { data: appointment, error: insertError } =
-      await supabaseClient
+      await supabaseAdmin
         .from("appointments")
         .insert({
           practitioner_id: practitionerId,
@@ -390,7 +389,7 @@ export async function POST(
         action: "insert",
         appointment_id: appointment.id
       });
-      await supabaseClient.from("consents").insert({
+      await supabaseAdmin.from("consents").insert({
         appointment_id: appointment.id,
         telehealth: consent.telehealth ?? false,
         terms: consent.terms ?? false,
@@ -409,7 +408,7 @@ export async function POST(
         action: "insert",
         appointment_id: appointment.id
       });
-      await supabaseClient.from("preconsult_responses").insert({
+      await supabaseAdmin.from("preconsult_responses").insert({
         appointment_id: appointment.id,
         raw_payload: pre_consultation,
         patient_id: patient_id,

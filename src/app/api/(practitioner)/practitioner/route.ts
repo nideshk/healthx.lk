@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
@@ -191,7 +190,7 @@ export async function GET(req: NextRequest) {
      * ================================================= */
     const specialization = searchParams.get("specialization");
 
-    let query = supabaseClient
+    let query = supabaseAdmin
       .from("practitioners")
       .select(`
         id,

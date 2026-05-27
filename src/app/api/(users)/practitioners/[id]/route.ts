@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
@@ -24,7 +23,7 @@ export async function GET(
     // ---------------------------
     // 1️⃣ Fetch Practitioner
     // ---------------------------
-    const { data: practitioner, error: dbError } = await supabaseClient
+    const { data: practitioner, error: dbError } = await supabaseAdmin
       .from("practitioners")
       .select("*")
       .eq("id", id)
@@ -50,7 +49,7 @@ export async function GET(
     let appointmentTypeMap: Record<string, any> = {};
 
     if (appointmentTypeIds.length > 0) {
-      const { data: appointmentTypes, error } = await supabaseClient
+      const { data: appointmentTypes, error } = await supabaseAdmin
         .from("appointment_type")
         .select(`
           id,
@@ -148,7 +147,7 @@ export async function GET(
       );
     }
 
-    const { data: available, error: availableError } = await supabaseClient
+    const { data: available, error: availableError } = await supabaseAdmin
       .from("practitioner_availability")
       .select("*")
       .eq("practitioner_id", id);

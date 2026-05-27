@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
@@ -86,13 +86,13 @@ export async function GET(req: NextRequest) {
         const requiredFields = "amount, appointment_id, consultation_fee, created_at, currency, customer_email, customer_name, customer_phone, id, order_id, payment_id, platform_fee, practitioner_id, status";
 
 
-        let analyticsQuery = supabaseClient
+        let analyticsQuery = supabaseAdmin
             .from("transactions")
             .select("amount, platform_fee, consultation_fee, status")
             .eq("status", "paid");
 
         // Create base query
-        let query = supabaseClient.from("transactions").select(requiredFields, { count: 'exact' });
+        let query = supabaseAdmin.from("transactions").select(requiredFields, { count: 'exact' });
 
         if (from) {
             analyticsQuery = analyticsQuery.gte(dateColumn, `${from}T00:00:00Z`);

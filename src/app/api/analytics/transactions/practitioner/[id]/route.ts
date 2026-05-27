@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest
 
     try {
         // Fetch the transaction by ID
-        const { data: transaction, error } = await supabaseClient
+        const { data: transaction, error } = await supabaseAdmin
             .from("transactions")
             .select("*")
             .eq("id", transactionId)

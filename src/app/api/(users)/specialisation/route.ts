@@ -1,4 +1,4 @@
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -7,7 +7,7 @@ export async function GET(req: Request) {
     const includeInactive = searchParams.get("includeInactive") === "true";
 
     // 🧩 Build Supabase query
-    let query = supabaseClient
+    let query = supabaseAdmin
       .from("services")
       .select("*")
       .order("created_at", { ascending: false });

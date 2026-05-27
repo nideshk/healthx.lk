@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
@@ -23,7 +23,7 @@ export async function GET(
   const { authorized, user } = await requireUser(req);
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = supabaseClient;
+  const supabase = supabaseAdmin;
   const { id: practitionerId } = await context.params;
 
 

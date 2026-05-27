@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(req: NextRequest) {
     try {
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
         }
 
         /* ---------------- QUERY ---------------- */
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabaseAdmin
             .from("appointments")
             .select(`
         id,

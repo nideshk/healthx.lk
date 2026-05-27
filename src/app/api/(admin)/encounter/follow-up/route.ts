@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { notify } from "@/lib/notify";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
-import { count } from "console";
 
 export const dynamic = "force-dynamic";
 

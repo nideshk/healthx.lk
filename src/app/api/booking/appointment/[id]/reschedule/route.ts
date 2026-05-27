@@ -1,7 +1,7 @@
 // FILE: /app/api/booking/appointment/[id]/reschedule/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { DateTime } from "luxon";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
@@ -33,7 +33,7 @@ export async function PATCH(
     }
 
     // Fetch original appointment
-    const { data: appointment, error: fetchErr } = await supabaseClient
+    const { data: appointment, error: fetchErr } = await supabaseAdmin
       .from("appointments")
       .select("id, practitioner_id, patient_id, status, starts_at")
       .eq("id", appointmentId)
@@ -88,7 +88,7 @@ export async function PATCH(
     }
 
     // Check if new slot is free
-    const { data: conflict } = await supabaseClient
+    const { data: conflict } = await supabaseAdmin
       .from("appointments")
       .select("id")
       .eq("practitioner_id", appointment.practitioner_id)
@@ -104,7 +104,7 @@ export async function PATCH(
       );
     }
 
-    const { data: updated, error: updateErr } = await supabaseClient
+    const { data: updated, error: updateErr } = await supabaseAdmin
       .from("appointments")
       .update({
         starts_at,

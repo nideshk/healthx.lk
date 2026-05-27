@@ -1,7 +1,7 @@
 import { auditLog } from "@/lib/audit/auditLog";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const { user } = await requireUser(req);
 
     /* user.patientId is trusted */
-    const { data: files, error } = await supabaseClient
+    const { data: files, error } = await supabaseAdmin
       .from("attachments")
       .select(
         "*"

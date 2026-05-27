@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
@@ -91,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     } else if (isPractitioner) {
       // 2. Practitioner: Only see own, full clinical data
-      query = supabaseClient
+      query = supabaseAdmin
         .from("prescriptions")
         .select(`
           id, issued_at, status, special_notes, pdf_url, appointment_id, created_at,
@@ -117,7 +116,7 @@ export async function GET(request: NextRequest) {
 
     } else if (isPatient) {
       // 3. Patient: Only see own, only issued, masked clinical data (just PDF)
-      query = supabaseClient
+      query = supabaseAdmin
         .from("prescriptions")
         .select(`
           id, issued_at, status, pdf_url, appointment_id, practitioner_id, created_at,

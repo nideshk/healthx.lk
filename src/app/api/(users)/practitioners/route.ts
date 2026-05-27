@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabaseAdmin
       .from("practitioners")
       .insert([body])
       .select()
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
     const offset = Number(searchParams.get("offset") ?? 0);
 
     // ✅ Build query
-    let query = supabaseClient
+    let query = supabaseAdmin
       .from("practitioners")
       .select(`
         id,
