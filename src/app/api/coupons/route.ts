@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const { user } = await requireUser(req);
     const body = await req.json();
     const cnx = getAuditContext(req, user);
-    if (!["admin", "practitioner"].includes(user?.role || "admin")) {
+    if (!["admin", "superadmin", "practitioner"].includes(user?.role || "admin")) {
         await auditLog({
             ...cnx,
             action: "FAILED",
