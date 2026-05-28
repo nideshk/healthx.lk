@@ -16,7 +16,7 @@ export async function PATCH(
     const { user } = await requireUser(req);
     const body = await req.json();
     const cnx = getAuditContext(req, user);
-    if (!user || !["admin", "practitioner"].includes(user?.role || "")) {
+    if (!user || !["admin", "superadmin", "practitioner"].includes(user?.role || "")) {
         return NextResponse.json(
             { error: "Unauthorized" },
             { status: 403 }
