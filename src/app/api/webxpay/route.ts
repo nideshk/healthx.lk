@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabaseServer";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 import crypto from 'crypto';
+import { fulfillAppointment } from "@/lib/payments/fulfillmentService";
 
 export async function POST(request: NextRequest) {
     const requestId = crypto.randomUUID();
@@ -91,8 +92,54 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized: Ownership mismatch." }, { status: 403 });
         }
 
+        const numericAmount = parseFloat(appt.fee_charged);
         const formattedAmount = parseFloat(appt.fee_charged).toFixed(2);
         const orderID = appointment_id;
+
+        if (numericAmount === 0) {
+            console.log("[API][ZERO_PAYMENT_DETECTED]", { requestId, appointment_id });
+
+            // Upsert Transaction immediately as paid
+            await supabase.from('transactions').upsert({
+                order_id: orderID,
+                status: 'paid',
+                amount: "0.00",
+                currency: 'LKR',
+                customer_email: email,
+                customer_name: `${first_name} ${last_name}`,
+                customer_phone: phone,
+                customer_address: address,
+                customer_city: city,
+                customer_country: country,
+                patient_id: patient_id,
+                appointment_id: appointment_id,
+                practitioner_id: practitioner_id,
+                consultation_fee: "0.00",
+                platform_fee: "0.00",
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'order_id' });
+
+            // Execute abstracted Fulfillment logic directly
+            await fulfillAppointment({ order_id: orderID, requestId });
+
+            // Write an Audit Log entry for the bypass checkout
+            const cnx = getAuditContext(request, user);
+            await auditLog({
+                ...cnx,
+                action: "CREATED",
+                entityType: "TRANSACTION",
+                entityId: orderID,
+                purpose: "operations",
+                source: "user_portal",
+                metadata: { amount: "0.00", appointment_id, provider: 'free_checkout_bypass' }
+            });
+
+            return NextResponse.json({
+                success: true,
+                skipGateway: true,
+                order_id: orderID
+            });
+        }
 
         // 2. Upsert Transaction
         console.log("[DB][QUERY_START]", {
@@ -173,6 +220,7 @@ export async function POST(request: NextRequest) {
 
         const responseData = {
             success: true,
+            skipGateway: false,
             order_id: orderID,
             total_amount: formattedAmount,
             payment_fields: {
