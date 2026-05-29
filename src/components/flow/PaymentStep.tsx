@@ -284,6 +284,17 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
 
         if (provider === "webxpay") {
           const responseData = await payRes.json();
+          
+          // If this is zero amount transaction then skip the payment gateway and directly mark as paid
+          if(responseData && responseData.skipGateway)
+          {
+            setIsPaymentProcessing(false);
+            setPaymentDone(true);
+
+            await handlePostBookingActions(currentAppointmentId!);
+            router.push(`/dashboard/appointment/status?appointmentId=${currentAppointmentId}&payment=success`);            
+            return;
+          }
 
           const { payment_fields } = responseData;
 
