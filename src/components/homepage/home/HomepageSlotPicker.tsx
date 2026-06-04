@@ -19,9 +19,10 @@ interface Props {
   practitionerId: string;
   practitioner: any;
   selectedService: any;
+  hideStepCounter?: boolean;
 }
 
-const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selectedService }: Props) => {
+const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selectedService, hideStepCounter }: Props) => {
   const t = useTranslations("slotFlow.slotPicker");
   const { openLoginModal } = useModalStore();
   const { user } = useAuth();
@@ -221,9 +222,11 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
       </div>
       {/* Step Header */}
       <div className="mb-6">
-        <p className="text-sm font-medium text-cyan-600">
-          {t("stepLabel")}
-        </p>
+        {!hideStepCounter && (
+          <p className="text-sm font-medium text-cyan-600">
+            {t("stepLabel")}
+          </p>
+        )}
         <h3 className="text-xl font-semibold text-gray-900">
           {t("title")}
         </h3>
