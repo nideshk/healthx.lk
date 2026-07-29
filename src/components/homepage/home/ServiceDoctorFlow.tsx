@@ -57,9 +57,17 @@ export default function ServiceDoctorFlow() {
 
   /* ---------- Fetch services ---------- */
   useEffect(() => {
-    axios.get("/api/specialisation").then((res) => {
-      setServices(res.data.services || []);
-    });
+    axios
+      .get("/api/specialisation", {
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      })
+      .then((res) => {
+        setServices(res.data.services || []);
+      });
   }, []);
 
   /* ---------- Fetch doctors ---------- */
@@ -68,7 +76,13 @@ export default function ServiceDoctorFlow() {
 
     setLoading(true);
     axios
-      .get(`/api/specialisation/${selectedService.slug.toLowerCase()}`)
+      .get(`/api/specialisation/${selectedService.slug.toLowerCase()}`, {
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      })
       .then((res) => {
         setDoctors(res.data.practitioners || []);
       })

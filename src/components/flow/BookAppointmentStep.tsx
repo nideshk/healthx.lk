@@ -37,6 +37,19 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
+  const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
+
+  function isInHomeType(type: any) {
+    if (!type) return false;
+    const slug = (type.slug || type.sin_slug || "").toString().toLowerCase();
+    if (slug) {
+      if (slug === "in-home-visit" || slug === "in-home" || slug.includes("home")) return true;
+    }
+    const name = (type.name || "").toString().toLowerCase();
+    if (name.includes("in-home") || name.includes("home visit") || name.includes("home")) return true;
+    return false;
+  }
+
   const timeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -257,10 +270,13 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                       setSelectedType(type);
                       setSelectedDate(null);
                       setSelectedTime(null);
-                      updateData({
-                        appointmentType: type,
-                        selectedAttendees: type.max_attendees <= 1 ? [] : bookingData.selectedAttendees?.slice(0, Math.max(0, type.max_attendees - 1))
-                      });
+                      // Do not persist In-Home Visit selection to booking draft to avoid creating a draft/appointment
+                      if (!isInHomeType(type)) {
+                        updateData({
+                          appointmentType: type,
+                          selectedAttendees: type.max_attendees <= 1 ? [] : bookingData.selectedAttendees?.slice(0, Math.max(0, type.max_attendees - 1))
+                        });
+                      }
                     }}
                     className={`group relative p-6 rounded-3xl border-2 text-left transition-all ${selectedType?.id === type.id
                       ? "border-teal-500 bg-teal-50/30"
@@ -289,8 +305,8 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
               </div>
             </div>
 
-            {/* Calendar & Time */}
-            {selectedType && (
+            {/* Calendar & Time or In-Home CTA */}
+            {selectedType && !isInHomeType(selectedType) && (
               <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50 animate-in fade-in slide-in-from-bottom-6 duration-700">
                 <div className="grid md:grid-cols-2 gap-12">
 
@@ -379,12 +395,39 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
               </div>
             )}
 
+            {selectedType && isInHomeType(selectedType) && (
+              <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50 text-center">
+                <p className="text-sm text-gray-700 mb-4">
+                  In-Home Visits are arranged manually through WhatsApp. Please contact us to request an In-Home Visit and we'll coordinate the details.
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  {WHATSAPP_NUMBER ? (
+                    <a
+                      href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || bookingData?.selectedDoctor?.full_name || ''}${practitioner?.specialization?.length ? ' (' + (Array.isArray(practitioner.specialization) ? practitioner.specialization.join(', ') : practitioner.specialization) + ')' : ''}${selectedDate && selectedTime ? ' Preferred: ' + selectedDate + ' ' + selectedTime : ''}.`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-8 py-3 bg-teal-600 text-white rounded-2xl font-bold inline-block"
+                    >
+                      Contact on WhatsApp
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => toast.error("WhatsApp number not configured.")}
+                      className="px-8 py-3 bg-slate-200 text-slate-600 rounded-2xl font-bold"
+                    >
+                      Contact on WhatsApp
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       </div>
 
       {/* Sticky Footer */}
-      <div className={`fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 p-4 z-50 transition-all duration-500 ${selectedTime ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
+      <div className={`fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 p-4 z-50 transition-all duration-500 ${(selectedTime && !isInHomeType(selectedType)) ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
 
           <div className="flex items-center gap-6">

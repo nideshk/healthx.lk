@@ -35,6 +35,18 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
 
   const updateDraft = useBookingDraftStore((s) => s.update);
   const router = useRouter();
+  const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
+
+  function isInHomeType(type: any) {
+    if (!type) return false;
+    const slug = (type.slug || type.sin_slug || "").toString().toLowerCase();
+    if (slug) {
+      if (slug === "in-home-visit" || slug === "in-home" || slug.includes("home")) return true;
+    }
+    const name = (type.name || "").toString().toLowerCase();
+    if (name.includes("in-home") || name.includes("home visit") || name.includes("home")) return true;
+    return false;
+  }
   /* ---------- Load practitioner ---------- */
   useEffect(() => {
     axios
@@ -259,82 +271,109 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
         </div>
       </div>
 
-      {/* Date & Time */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Date */}
-        <div>
-          <h4 className="font-medium mb-2">{t("dateLabel")}</h4>
-          <Calendar
-            minDate={new Date()}
-            highlightedDates={extractAvailableDates(practitioner.available_days)}
-            value={selectedDate ? new Date(selectedDate) : undefined}
-            onChange={(date) => {
-              if (!selectedType) {
-                toast.error("Please select type");
-                return;
-              }
-              if (!date) return;
-
-              // ✅ FIX: Extract the date part exactly as selected in the UI
-              // without shifting it to another timezone.
-              const formattedDate = DateTime.fromJSDate(date).toFormat("yyyy-MM-dd");
-
-              setSelectedDate(formattedDate);
-              setSelectedTime(null);
-            }}
-            theme="light"
-          />
+      {/* Date & Time or In-Home CTA */}
+      {isInHomeType(selectedType) ? (
+        <div className="mb-6 p-6 border border-dashed rounded-lg bg-gray-50 text-center">
+          <p className="text-sm text-gray-700 mb-4">
+            In-Home Visits are arranged manually through WhatsApp. Please contact us to request an In-Home Visit and we'll coordinate the details.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+                {WHATSAPP_NUMBER ? (
+                  <a
+                    href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || ''}${practitioner?.specialization?.length ? ' (' + practitioner.specialization.join(', ') + ')' : ''}.`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold inline-block"
+                  >
+                    Contact on WhatsApp
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => toast.error("WhatsApp number not configured.")}
+                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-bold"
+                  >
+                    Contact on WhatsApp
+                  </button>
+                )}
+          </div>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Date */}
+          <div>
+            <h4 className="font-medium mb-2">{t("dateLabel")}</h4>
+            <Calendar
+              minDate={new Date()}
+              highlightedDates={extractAvailableDates(practitioner.available_days)}
+              value={selectedDate ? new Date(selectedDate) : undefined}
+              onChange={(date) => {
+                if (!selectedType) {
+                  toast.error("Please select type");
+                  return;
+                }
+                if (!date) return;
 
-        {/* Time */}
-        <div>
-          <h4 className="font-medium mb-2 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-cyan-600" />
-            {t("timeLabel")}
-          </h4>
+                const formattedDate = DateTime.fromJSDate(date).toFormat("yyyy-MM-dd");
 
-          {!selectedDate ? (
-            <p className="text-sm text-gray-400 mt-4">
-              {t("messages.selectDatePrompt")}
-            </p>
-          ) : loadingSlots ? (
-            <p className="text-sm text-gray-500 mt-4">
-              {t("messages.loading")}
-            </p>
-          ) : slots.length === 0 ? (
-            <div className="text-sm text-gray-500 mt-4">
-              {t("messages.noSlots")}
-              <br />
-              {t("messages.tryAnotherDay")}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {slots.map((time: string) => (
-                <button
-                  key={time}
-                  onClick={() => setSelectedTime(time)}
-                  className={`px-4 py-2 rounded-lg text-sm border transition
-                    ${selectedTime === time
-                      ? "bg-green-600 text-white border-green-600"
-                      : "bg-white border-gray-300 hover:border-cyan-500"
-                    }`}
-                >
-                  {time}
-                </button>
-              ))}
-            </div>
-          )}
+                setSelectedDate(formattedDate);
+                setSelectedTime(null);
+              }}
+              theme="light"
+            />
+          </div>
+
+          {/* Time */}
+          <div>
+            <h4 className="font-medium mb-2 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-cyan-600" />
+              {t("timeLabel")}
+            </h4>
+
+            {!selectedDate ? (
+              <p className="text-sm text-gray-400 mt-4">
+                {t("messages.selectDatePrompt")}
+              </p>
+            ) : loadingSlots ? (
+              <p className="text-sm text-gray-500 mt-4">
+                {t("messages.loading")}
+              </p>
+            ) : slots.length === 0 ? (
+              <div className="text-sm text-gray-500 mt-4">
+                {t("messages.noSlots")}
+                <br />
+                {t("messages.tryAnotherDay")}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {slots.map((time: string) => (
+                  <button
+                    key={time}
+                    onClick={() => setSelectedTime(time)}
+                    className={`px-4 py-2 rounded-lg text-sm border transition
+                      ${selectedTime === time
+                        ? "bg-green-600 text-white border-green-600"
+                        : "bg-white border-gray-300 hover:border-cyan-500"
+                      }`}
+                  >
+                    {time}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Continue */}
-      <Button
-        className="mt-8 w-full"
-        disabled={!selectedType || !selectedDate || !selectedTime}
-        onClick={handleContinue}
-      >
-        {t("buttonText")}
-      </Button>
+      {/* Continue - hidden for In-Home Visit types */}
+      {!isInHomeType(selectedType) && (
+        <Button
+          className="mt-8 w-full"
+          disabled={!selectedType || !selectedDate || !selectedTime}
+          onClick={handleContinue}
+        >
+          {t("buttonText")}
+        </Button>
+      )}
 
       <p className="text-xs text-gray-500 mt-3 text-center">
         {t("footerNote")}

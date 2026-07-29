@@ -56,7 +56,14 @@ const DoctorSelectionStep = forwardRef(
         setLoading(true);
         try {
           const res = await axios.get(
-            `/api/specialisation/${bookingData.selectedService.slug.toLowerCase()}`
+            `/api/specialisation/${bookingData.selectedService.slug.toLowerCase()}`,
+            {
+              headers: {
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                Pragma: "no-cache",
+                Expires: "0",
+              },
+            }
           );
           const mapped = res.data.practitioners.map((p: any) => ({
             id: p.id,
