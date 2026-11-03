@@ -11,10 +11,11 @@ import { getMessages } from "next-intl/server";
 import { getLocaleFromCookie } from "@/utils/getLocale";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import IdleLogoutProvider from "@/components/providers/IdleLogoutProvider";
+import Footer from "@/components/homepage/footer/footer";
 
 export const metadata: Metadata = {
   title: "clinecxa.lk",
-  description: "Clinicxa is a telehealth platform that provides remote medical consultations and virtual care services.",
+  description: "Clinecxa is a telehealth platform that provides remote medical consultations and virtual care services.",
 };
 
 export default async function RootLayout({
@@ -47,6 +48,7 @@ export default async function RootLayout({
                 <Header />
                 <Analytics />
                 {children}
+                <Footer />
               </AuthProvider>
             </CurrencyProvider>
           </IdleLogoutProvider>

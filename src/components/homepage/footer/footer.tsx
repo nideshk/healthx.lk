@@ -3,14 +3,24 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { Facebook, Instagram } from "lucide-react";
 import PrivacyModal from "./PrivacyModal";
 import RefundModal from "./RefundModal";
 
 const mainLinks = [
   { key: "about", href: "/about-us" }, // Fixed to /about-us based on previous context
-  { key: "contact", href: "/contact" },
+  { key: "contact", href: "/contact-us" },
   { key: "help", href: "/help" },
 ];
+
+/**
+ * TODO: Replace these placeholder URLs with the real Clinecxa Instagram
+ * and Facebook pages. The owner will supply the URLs.
+ */
+const SOCIAL_PLACEHOLDER_LINKS = {
+  instagram: "https://instagram.com/",
+  facebook: "https://facebook.com/",
+} as const;
 
 const companyName = "Clinecxa";
 const currentYear = new Date().getFullYear();
@@ -122,6 +132,24 @@ const Footer = () => {
           <div className="flex-1 flex flex-col items-start md:items-end space-y-2 text-right w-full md:w-auto pt-2 md:pt-0">
             <div className="flex items-center space-x-3">
               <ClincoLogo />
+              <a
+                href={SOCIAL_PLACEHOLDER_LINKS.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t("social.instagram")}
+                className="text-gray-400 hover:text-cyan-500 transition duration-150"
+              >
+                <Instagram className="w-5 h-5" aria-hidden="true" />
+              </a>
+              <a
+                href={SOCIAL_PLACEHOLDER_LINKS.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t("social.facebook")}
+                className="text-gray-400 hover:text-cyan-500 transition duration-150"
+              >
+                <Facebook className="w-5 h-5" aria-hidden="true" />
+              </a>
             </div>
 
             <p className="text-xs text-green-400 flex items-center md:justify-end">
@@ -151,6 +179,14 @@ const Footer = () => {
           <div className="text-sm font-light text-gray-400">
             &copy; {currentYear} {companyName}. {t("rights")}
           </div>
+          <a
+            href="https://squarecoin.com.au"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block text-xs text-gray-500 hover:text-cyan-400 transition duration-150"
+          >
+            {t("builtBy")}
+          </a>
         </div>
       </div>
 

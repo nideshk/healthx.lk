@@ -198,7 +198,7 @@ export default function AppointmentConfirmPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">📄 Terms and Conditions</h3>
             <div className="p-3 border rounded-md text-sm text-gray-600 h-32 overflow-y-auto bg-gray-50">
-              Appointments must be cancelled at least 24 hours in advance. No-show
+              A full refund is available if you cancel more than 24 hours before the appointment. A 50% refund is available if you cancel between 24 hours and 5 hours before. No refund is available if you cancel 5 hours or less before the appointment. No-show
               appointments may incur fees. Payment is due at time of service.
             </div>
             <label className="flex items-center mt-3 text-sm text-gray-700">

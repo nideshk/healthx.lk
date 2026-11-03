@@ -50,11 +50,11 @@
 
 <p>21. Cancellation windows are ascertained on the basis of Sri Lanka Standard Time (SLST).</p>
 
-<p>22. For full refund eligibility, cancellation must occur at least 24 hours prior to the scheduled appointment time.</p>
+<p>22. A full refund is available if the appointment is cancelled more than 24 hours before the scheduled appointment time.</p>
 
-<p>23. Subject to the clauses below, for partial refund eligibility i.e., to receive upto 50% of the total amount paid, cancellation must occur within 24 hours of the scheduled appointment time.</p>
+<p>23. A 50% refund is available if the appointment is cancelled between 24 hours and 5 hours before the scheduled appointment time.</p>
 
-<p>24. No refund shall be available if cancellation occurs within 5 hours of the appointment time.</p>
+<p>24. No refund is available if the appointment is cancelled 5 hours or less before the scheduled appointment time.</p>
 
 <p>25. No refund shall be available in the event of non-attendance (“no-show”).</p>
 

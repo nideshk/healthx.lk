@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from "next/navigation";
+import { useFormatSpecialties } from "@/lib/specialtyLabels";
 import { useEffect, useState, useCallback } from "react";
 import { DateTime } from "luxon";
 import {
@@ -42,6 +43,7 @@ const CANCEL_REASONS = [
 export default function AppointmentDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const formatSpecialties = useFormatSpecialties();
   const [appointment, setAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -190,7 +192,7 @@ export default function AppointmentDetailsPage() {
                       Dr. {appointment.practitioner.full_name}
                     </h1>
                     <p className="text-slate-500 font-bold text-sm mt-1 uppercase tracking-wide italic">
-                      {appointment.practitioner.specialization?.join(" • ")}
+                      {formatSpecialties(appointment.practitioner.specialization, " • ")}
                     </p>
 
                     <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-12 border-t border-slate-50 pt-8">

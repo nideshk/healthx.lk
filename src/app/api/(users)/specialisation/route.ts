@@ -24,11 +24,25 @@ export async function GET(req: Request) {
         { status: 500 }
       );
     }
-    return NextResponse.json({
-      success: true,
-      count: data?.length || 0,
-      services: data,
-    });
+    // Public specialty catalog changes rarely. Inactive-inclusive admin
+    // reads stay uncached. Availability is not part of this payload.
+    const cacheControl =
+      includeInactive
+        ? "private, no-store"
+        : "public, max-age=120, s-maxage=300, stale-while-revalidate=900";
+
+    return NextResponse.json(
+      {
+        success: true,
+        count: data?.length || 0,
+        services: data,
+      },
+      {
+        headers: {
+          "Cache-Control": cacheControl,
+        },
+      }
+    );
   } catch (err: any) {
     console.error("❌ Unexpected Server Error:", err);
     return NextResponse.json(
