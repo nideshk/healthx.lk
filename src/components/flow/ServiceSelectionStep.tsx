@@ -13,6 +13,7 @@ import { toast } from 'react-toastify';
 import { AppointmentFormInputs } from '@/types/FormType';
 import Loader from '@/components/atom/Loader/Loader';
 import { useTranslations, useLocale } from 'next-intl';
+import { useServiceCardLabel } from '@/lib/specialtyLabels';
 
 type Service = {
   id: string | number;
@@ -34,6 +35,7 @@ const ConsultationStep = forwardRef(
   ({ updateData, bookingData, draftData, nextStep, prevStep }: Props, ref) => {
     const t = useTranslations("serviceSelection");
     const locale = useLocale();
+    const serviceLabel = useServiceCardLabel();
 
     const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
@@ -145,7 +147,7 @@ const ConsultationStep = forwardRef(
                   </div>
 
                   <h3 className={`text-xl font-bold mb-3 tracking-tight ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                    {locale === 'si' && service.sin_slug ? (service.sin_slug as string) : service.name}
+                    {serviceLabel(service)}
                   </h3>
 
                   <p className={`text-sm font-medium leading-relaxed mb-8 line-clamp-3 ${isSelected ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -181,7 +183,7 @@ const ConsultationStep = forwardRef(
                   ? (() => {
                     const sel = services.find(s => s.id === selectedServiceId);
                     if (!sel) return t("selectServicePrompt");
-                    return locale === 'si' && sel.sin_slug ? (sel.sin_slug as string) : sel.name;
+                    return serviceLabel(sel);
                   })()
                   : t("selectServicePrompt")}
               </p>

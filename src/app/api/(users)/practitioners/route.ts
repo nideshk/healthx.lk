@@ -94,7 +94,6 @@ export async function GET(req: Request) {
         full_name,
         specialization,
         qualification,
-        license_number,
         experience_years,
         profile_bio,
         profile_picture_url,

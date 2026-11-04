@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireUser } from "@/lib/authGuard";
 
 export async function GET(request: Request) {
+    const { authorized } = await requireUser(request);
+    if (!authorized) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q");
 

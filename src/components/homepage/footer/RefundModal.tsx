@@ -26,6 +26,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => {
     const [markdownContent, setMarkdownContent] = useState<string>("");
 
     useEffect(() => {
+        if (!isOpen) return;
         const fetchContent = async () => {
             try {
                 const response = await fetch(isSi ? '/content/refund-si.md' : '/content/refund-en.md');
@@ -36,7 +37,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => {
             }
         };
         fetchContent();
-    }, [isSi]);
+    }, [isOpen, isSi]);
 
     // Track scroll progress for "Accept" logic
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
@@ -6,11 +7,9 @@ import ToastProvider from "./toast-provider";
 import Header from "@/components/homepage/header/header";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Analytics } from "@vercel/analytics/next"
-import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
-import { getLocaleFromCookie } from "@/utils/getLocale";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import IdleLogoutProvider from "@/components/providers/IdleLogoutProvider";
+import LocaleProvider from "@/components/providers/LocaleProvider";
 import Footer from "@/components/homepage/footer/footer";
 
 export const metadata: Metadata = {
@@ -24,18 +23,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  const locale = await getLocaleFromCookie();
-  const messages = await getMessages({ locale });
-
   return (
-    <html lang={locale}>
+    <html lang="en" suppressHydrationWarning>
       <body>
 
-        <NextIntlClientProvider
-          locale={locale}
-          timeZone="Asia/Colombo" // 👈 REQUIRED HERE
-          messages={messages}
-        >
+        <LocaleProvider>
           <IdleLogoutProvider>
 
             <CurrencyProvider>
@@ -45,14 +37,16 @@ export default async function RootLayout({
                   strategy="lazyOnload"
                 />
                 <ToastProvider />
-                <Header />
+                <Suspense fallback={null}>
+                  <Header />
+                </Suspense>
                 <Analytics />
                 {children}
                 <Footer />
               </AuthProvider>
             </CurrencyProvider>
           </IdleLogoutProvider>
-        </NextIntlClientProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

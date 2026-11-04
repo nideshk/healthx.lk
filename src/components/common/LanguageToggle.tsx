@@ -2,22 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { notifyLocaleChange, readLocaleCookie } from "@/components/providers/LocaleProvider";
 
 export default function LanguageToggle() {
   const [lang, setLang] = useState<"en" | "si">("en");
   const router = useRouter();
 
   useEffect(() => {
-    const match = document.cookie.match(/locale=(en|si)/);
-    if (match) setLang(match[1] as "en" | "si");
+    setLang(readLocaleCookie());
   }, []);
 
   const switchLang = (next: "en" | "si") => {
     if (lang === next) return;
     document.cookie = `locale=${next}; path=/; max-age=31536000`;
     setLang(next);
+    notifyLocaleChange();
 
-    // Smoothly refresh the page data without hard-reloading the auth/app state
+    // Refresh server components that still read the locale cookie.
     router.refresh();
   };
 

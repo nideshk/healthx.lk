@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 type SpecialtyTranslator = {
   has: (key: string) => boolean;
@@ -48,4 +48,46 @@ export function useFormatSpecialties() {
   const t = useTranslations("specialties");
   return (value: unknown, separator = ", ") =>
     formatSpecialtyList(value, t, separator);
+}
+
+type ServiceCardSource = {
+  slug?: string | null;
+  name?: string | null;
+  sin_slug?: string | null;
+};
+
+/**
+ * The OB/GYN service is stored under the gynecologist slug, but its catalog
+ * name is "Obstetrician/ Gynecologist (OB/GYN)". The specialties.gynecologist
+ * string is only "Gynaecologist", so service cards must keep the DB name.
+ */
+const SERVICE_CARD_LABEL_EXCLUSIONS = new Set([
+  "gynecologist",
+  "gynaecologist",
+]);
+
+/** Service-card title: specialties.<slug> when that key exists, otherwise the DB name / sin_slug. */
+export function formatServiceCardLabel(
+  service: ServiceCardSource,
+  locale: string,
+  t?: SpecialtyTranslator
+): string {
+  const slug = (service.slug ?? "").trim().toLowerCase();
+  const dbName = (service.name ?? "").trim();
+  const sinSlug = (service.sin_slug ?? "").trim();
+
+  if (slug && !SERVICE_CARD_LABEL_EXCLUSIONS.has(slug) && t?.has(slug)) {
+    return t(slug);
+  }
+
+  if (locale === "si" && sinSlug) return sinSlug;
+  if (dbName) return dbName;
+  return slug ? titleCaseSpecialty(slug) : "";
+}
+
+export function useServiceCardLabel() {
+  const t = useTranslations("specialties");
+  const locale = useLocale();
+  return (service: ServiceCardSource) =>
+    formatServiceCardLabel(service, locale, t);
 }

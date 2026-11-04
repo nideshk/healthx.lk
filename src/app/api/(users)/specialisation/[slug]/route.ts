@@ -69,9 +69,6 @@ export async function GET(
         full_name,
         profile_bio,
         qualification,
-        license_number,
-
-        supabase_user_id,
         fees,
         specialization,
         languages,
@@ -81,18 +78,16 @@ export async function GET(
         )
       `;
 
-    const results = await Promise.all(
-      variants.map((variant) =>
-        supabaseClient
-          .from("practitioners")
-          .select(practitionerSelect)
-          .contains("specialization", [variant])
-          .order("created_at", { ascending: false })
-      )
-    );
+    // One array-overlap read instead of a query per slug variant.
+    // Availability stays a follow-up query: embedding it can turn into an
+    // inner join and hide doctors who have no future window.
+    const { data: rows, error: queryError } = await supabaseClient
+      .from("practitioners")
+      .select(practitionerSelect)
+      .overlaps("specialization", variants)
+      .order("created_at", { ascending: false });
 
-    const queryError = results.find((result) => result.error)?.error;
-    if (queryError && results.every((result) => result.error)) {
+    if (queryError) {
       console.error("❌ Supabase query error:", queryError.message);
       return NextResponse.json(
         {
@@ -104,13 +99,7 @@ export async function GET(
       );
     }
 
-    const byId = new Map<string, any>();
-    for (const result of results) {
-      for (const row of result.data || []) {
-        byId.set(row.id, row);
-      }
-    }
-    const data = Array.from(byId.values());
+    const data = rows || [];
 
     // A future published window means the doctor can still be booked.
     // This does not generate slots. The date picker stays the live check.
@@ -146,8 +135,6 @@ export async function GET(
         full_name: p.full_name,
         profile_bio: p.profile_bio,
         qualification: p.qualification,
-        license_number: p.license_number,
-
         profile_picture_url: getAvatarUrl(p.profiles),
         starting_price,
         ending_price,

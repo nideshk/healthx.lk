@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Facebook, Instagram } from "lucide-react";
-import PrivacyModal from "./PrivacyModal";
-import RefundModal from "./RefundModal";
+
+const PrivacyModal = dynamic(() => import("./PrivacyModal"), { ssr: false });
+const RefundModal = dynamic(() => import("./RefundModal"), { ssr: false });
 
 const mainLinks = [
   { key: "about", href: "/about-us" }, // Fixed to /about-us based on previous context
@@ -190,8 +192,12 @@ const Footer = () => {
         </div>
       </div>
 
-      <PrivacyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
-      <RefundModal isOpen={isRefundOpen} onClose={() => setIsRefundOpen(false)} />
+      {isPrivacyOpen && (
+        <PrivacyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
+      )}
+      {isRefundOpen && (
+        <RefundModal isOpen={isRefundOpen} onClose={() => setIsRefundOpen(false)} />
+      )}
     </footer>
   );
 };

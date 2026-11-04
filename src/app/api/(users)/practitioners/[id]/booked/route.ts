@@ -27,6 +27,10 @@ export async function GET(
 
     const { user } = await requireUser(req);
 
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     if (user?.role === "patient") {
       return NextResponse.json(
         { error: "Access denied" },

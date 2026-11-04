@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { BadgeCheck } from "lucide-react";
 import { ICON_MAP } from "@/lib/lucideIcons";
-import { useFormatSpecialties } from "@/lib/specialtyLabels";
+import { useFormatSpecialties, useServiceCardLabel } from "@/lib/specialtyLabels";
 
 /* ---------- Types ---------- */
 
@@ -221,6 +221,7 @@ const ServicePicker = ({
 }) => {
   const t = useTranslations("bookingFlow.servicePicker");
   const locale = useLocale();
+  const serviceLabel = useServiceCardLabel();
   const router = useRouter();
 
   const sortedServices = useMemo(() => {
@@ -278,7 +279,7 @@ const ServicePicker = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold text-slate-900 tracking-tight">
-                      {locale === 'si' && s.sin_slug ? s.sin_slug : s.name}
+                      {serviceLabel(s)}
                     </h3>
                   </div>
 
@@ -394,13 +395,9 @@ interface DoctorPickerProps {
 const DoctorPicker = ({ doctors, service, onSelect }: DoctorPickerProps) => {
   const tSelection = useTranslations("doctorSelection");
   const tPicker = useTranslations("bookingFlow.doctorPicker");
-  const locale = useLocale();
   const formatSpecialties = useFormatSpecialties();
-  const serviceName = (
-    locale === "si" && service.sin_slug ? service.sin_slug : service.name
-  )
-    .replace(/\s+/g, " ")
-    .trim();
+  const serviceLabel = useServiceCardLabel();
+  const serviceName = serviceLabel(service).replace(/\s+/g, " ").trim();
 
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
