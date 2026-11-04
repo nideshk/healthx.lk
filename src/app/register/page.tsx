@@ -211,7 +211,10 @@ export default function PractitionerRegisterPage() {
     setPendingFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const uploadDocumentsAfterApplication = async (applicationId: string) => {
+  const uploadDocumentsAfterApplication = async (
+    applicationId: string,
+    uploadKey: string
+  ) => {
     const governmentIdCount = pendingFiles.filter(
       f => f.document_type === "government_id"
     ).length;
@@ -240,7 +243,10 @@ export default function PractitionerRegisterPage() {
       for (const item of pendingFiles) {
         const res = await fetch("/api/practitioner-document/upload-url", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Application-Upload-Key": uploadKey,
+          },
           body: JSON.stringify({
             application_id: applicationId,
             fileName: item.file.name,
@@ -272,7 +278,10 @@ export default function PractitionerRegisterPage() {
         `/api/auth/practitioner-application/${applicationId}/document_added`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Application-Upload-Key": uploadKey,
+          },
           body: JSON.stringify({ documents: uploadedDocs }),
         }
       );
@@ -350,9 +359,13 @@ export default function PractitionerRegisterPage() {
       }
 
       const applicationId = data.application_id;
+      const uploadKey = data.upload_key;
 
       try {
-        await uploadDocumentsAfterApplication(applicationId);
+        if (!applicationId || !uploadKey) {
+          throw new Error("Failed to attach documents to application");
+        }
+        await uploadDocumentsAfterApplication(applicationId, uploadKey);
       } catch (err) {
         setMessage(
           "Application submitted, but document upload failed. You can upload later."

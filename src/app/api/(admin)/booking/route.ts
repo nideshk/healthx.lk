@@ -281,17 +281,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1️⃣ Auth check
-    const { user } = await requireUser(req);
-    const cnx = getAuditContext(req, user);
-    // const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+    const auth = await requireUser(req);
+    if (!auth.authorized || !auth.user) return auth.response;
 
-    // if (!isAdmin) {
-    //   return NextResponse.json(
-    //     { error: "Unauthorized" },
-    //     { status: 401 }
-    //   );
-    // }
+    if (auth.user.role !== "admin" && auth.user.role !== "superadmin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const user = auth.user;
+    const cnx = getAuditContext(req, user);
 
     // 2️⃣ Parse body
     const {
