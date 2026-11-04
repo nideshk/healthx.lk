@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -9,6 +9,8 @@ type CalendarProps = {
   minDate?: Date;
   highlightedDates?: string[];
   theme?: "light" | "dark";
+  /** Fires with YYYY-MM when the visible month changes, including the first paint. */
+  onMonthChange?: (month: string) => void;
 };
 
 export default function Calendar({
@@ -17,6 +19,7 @@ export default function Calendar({
   minDate = new Date(),
   highlightedDates = [],
   theme = "light",
+  onMonthChange,
 }: CalendarProps) {
   const today = new Date();
 
@@ -26,6 +29,14 @@ export default function Calendar({
   const [currentYear, setCurrentYear] = useState(
     value?.getFullYear() ?? today.getFullYear()
   );
+
+  const onMonthChangeRef = useRef(onMonthChange);
+  onMonthChangeRef.current = onMonthChange;
+
+  useEffect(() => {
+    const month = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`;
+    onMonthChangeRef.current?.(month);
+  }, [currentYear, currentMonth]);
 
   const months = [
     "January", "February", "March", "April", "May", "June",

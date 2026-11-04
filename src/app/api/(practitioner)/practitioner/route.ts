@@ -207,7 +207,6 @@ export async function GET(req: NextRequest) {
         total_reviews,
         review_count,
         languages,
-        available_services,
         profile_bio,
         fees
       `
@@ -226,7 +225,6 @@ export async function GET(req: NextRequest) {
         total_reviews,
         review_count,
         languages,
-        available_services,
         profile_bio,
         fees
       `
@@ -258,7 +256,6 @@ export async function GET(req: NextRequest) {
         total_reviews: p.total_reviews ?? 0,
         review_count: p.review_count ?? 0,
         languages: p.languages ?? [],
-        available_services: p.available_services ?? [],
         profile_bio: p.profile_bio,
         fees: normalizeFeesToArray(p.fees),
       };
