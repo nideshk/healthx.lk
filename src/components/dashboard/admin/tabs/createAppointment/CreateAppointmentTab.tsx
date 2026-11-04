@@ -89,7 +89,7 @@ export default function CreateAppointmentTab() {
 
         const fetchPractitioners = async () => {
             try {
-                const res = await fetch(
+                const res = await authFetch(
                     `/api/practitioners?q=${encodeURIComponent(practitionerSearch)}`
                 );
                 const json = await res.json();

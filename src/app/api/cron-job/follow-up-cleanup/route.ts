@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { auditLog } from "@/lib/audit/auditLog";
+import { unauthorizedCronResponse } from "@/lib/cronAuth";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
+    const denied = unauthorizedCronResponse(req);
+    if (denied) return denied;
+
     try {
         const now = new Date().toISOString();
 

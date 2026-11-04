@@ -180,6 +180,13 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: Request) {
   try {
+    const auth = await requireUser(req);
+    if (!auth.authorized || !auth.user) return auth.response;
+
+    if (auth.user.role !== "admin" && auth.user.role !== "superadmin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const specialization = searchParams.get("specialization");
     const q = searchParams.get("q")?.trim() || "";
