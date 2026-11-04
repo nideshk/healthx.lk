@@ -1,5 +1,6 @@
-// components/ui/Modal.tsx
-import { ReactNode } from "react";
+"use client";
+
+import { ReactNode, useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,8 @@ type ModalProps = {
   theme?: "light" | "dark";
   maxHeight?: string;
   width?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full" | string;
+  /** Escape and backdrop dismiss. Close control is hidden when false. */
+  dismissible?: boolean;
 };
 
 const widthMap: Record<string, string> = {
@@ -35,7 +38,37 @@ export default function Modal({
   theme = "light",
   maxHeight = "80vh",
   width = "md",
+  dismissible = true,
 }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  const titleId = useId();
+
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!dismissible || event.key !== "Escape") return;
+      event.preventDefault();
+      onCloseRef.current();
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [isOpen, dismissible]);
+
   if (!isOpen) return null;
 
   const resolvedWidth = widthMap[width] || width;
@@ -47,17 +80,28 @@ export default function Modal({
   const footerBg = theme === "dark" ? "bg-gray-800" : "bg-gray-50";
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      {/* Outer container for centering */}
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onMouseDown={(event) => {
+        if (dismissible && event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-label={title ? undefined : "Dialog"}
+        tabIndex={-1}
         className={cn(
-          "flex flex-col rounded-2xl shadow-lg w-full max-h-[90vh] overflow-hidden",
+          "flex flex-col rounded-2xl shadow-lg w-full max-h-[90vh] overflow-hidden outline-none",
           resolvedWidth,
           containerStyles
         )}
         style={{ maxHeight }}
       >
-        {/* Header */}
         <div
           className={cn(
             "flex-shrink-0 sticky top-0 z-10 p-4 flex items-center justify-between border-b",
@@ -65,16 +109,23 @@ export default function Modal({
             containerStyles
           )}
         >
-          {title && <h2 className="text-lg font-semibold truncate">{title}</h2>}
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 transition"
-          >
-            <X size={20} />
-          </button>
+          {title && (
+            <h2 id={titleId} className="text-lg font-semibold truncate">
+              {title}
+            </h2>
+          )}
+          {dismissible && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 transition"
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
 
-        {/* Content (scrollable only when needed) */}
         <div
           className={cn(
             "flex-1 overflow-y-auto p-4 sm:p-5 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
@@ -83,7 +134,6 @@ export default function Modal({
           {children}
         </div>
 
-        {/* Footer (sticks to bottom) */}
         {footer && (
           <div
             className={cn(

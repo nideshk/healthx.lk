@@ -121,6 +121,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     const { user } = await requireUser(req);
+    if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const cnx = getAuditContext(req, user);
     let query = supabaseAdmin
         .from("discount_coupons")

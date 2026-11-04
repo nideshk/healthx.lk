@@ -2,21 +2,49 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+/** Keys read by the public footer and contact page. */
+const PUBLIC_PLATFORM_SETTING_KEYS = [
+  "org_address",
+  "org_phone",
+  "org_email",
+] as const;
+
 /**
- * GET: Fetch all platform settings (Public)
+ * GET: Public callers receive the allowlisted keys only.
+ * Authenticated admins still receive every row.
  */
 export async function GET(req: NextRequest) {
   try {
-    const { data, error } = await supabaseAdmin
+    const { authorized, role } = await requireUser(req);
+    const isAdmin =
+      authorized && (role === "admin" || role === "superadmin");
+
+    let query = supabaseAdmin
       .from("platform_settings")
-      .select("key, value, description")
+      .select(isAdmin ? "key, value, description" : "key, value")
       .order("key", { ascending: true });
+
+    if (!isAdmin) {
+      query = query.in("key", [...PUBLIC_PLATFORM_SETTING_KEYS]);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json(
+      { success: true, data },
+      {
+        headers: {
+          "Cache-Control": isAdmin
+            ? "private, no-store"
+            : "public, s-maxage=300, stale-while-revalidate=600",
+          Vary: "Authorization",
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

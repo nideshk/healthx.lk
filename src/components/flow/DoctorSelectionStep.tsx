@@ -18,13 +18,14 @@ import {
 } from 'lucide-react';
 import { AppointmentFormInputs, Doctor } from '@/types/FormType';
 import Loader from '@/components/atom/Loader/Loader';
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useServiceCardLabel } from '@/lib/specialtyLabels';
 import Price from '@/components/common/Price';
 
 const DoctorSelectionStep = forwardRef(
   ({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
     const t = useTranslations('doctorSelection');
-    const locale = useLocale();
+    const serviceLabel = useServiceCardLabel();
 
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -61,8 +62,6 @@ const DoctorSelectionStep = forwardRef(
           const mapped = res.data.practitioners.map((p: any) => ({
             id: p.id,
             name: p.full_name,
-            license_number: p.license_number,
-
             qualification: p.qualification,
             profileImage: p.profile_picture_url || null,
             // fee: 950 + (p.fees || 0),
@@ -140,9 +139,7 @@ const DoctorSelectionStep = forwardRef(
               <p className="text-sm text-slate-500 font-medium mt-1">
                 {t('subtitle')}{' '}
                 <span className="text-teal-600 font-bold">
-                  {locale === 'si' && bookingData.selectedService?.sin_slug
-                    ? bookingData.selectedService.sin_slug
-                    : bookingData.selectedService?.name}
+                  {serviceLabel(bookingData.selectedService ?? {})}
                 </span>
               </p>
             </div>

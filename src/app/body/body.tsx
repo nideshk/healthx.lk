@@ -4,10 +4,11 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/atom/Button/Button";
 import { useModalStore } from "@/store/useModalStore";
-import { ShieldCheck, Clock, BadgeCheck, X, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Clock, BadgeCheck, AlertTriangle } from "lucide-react";
 import ServiceDoctorFlow from "@/components/homepage/home/ServiceDoctorFlow";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
+import Modal from "@/components/atom/Modal/Modal";
 
 /* ================= HERO ================= */
 
@@ -140,64 +141,38 @@ const DisclaimerModal = () => {
     localStorage.setItem("disclaimerModalDismissed", "true");
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-amber-50 flex items-center justify-center p-4 
-                    bg-white/10 backdrop-blur-md">
-      <div className="bg-white/90 bg-amber-50 backdrop-blur-lg 
-                      rounded-2xl shadow-2xl 
-                      max-w-2xl w-full max-h-[90vh] overflow-y-auto
-                      border border-white/40">
-
-        <div className="sticky top-0 bg-amber-50 backdrop-blur-md
-                        border-b border-gray-200 
-                        p-6 flex items-start justify-between
-                        rounded-t-2xl">
-          <div className="flex items-start gap-3">
-            <div className="bg-amber-100 p-2 rounded-xl">
-              <AlertTriangle
-                className="text-amber-600 bg-amber-50 flex-shrink-0"
-                size={22}
-              />
-            </div>
-            <h2 className="text-xl font-semibold bg-amber-50 text-gray-900">
-              {t("disclaimerTitle")}
-            </h2>
-          </div>
-
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-700 
-                       hover:bg-gray-100 rounded-lg p-2 transition"
-            aria-label="Close"
-          >
-            <X size={20} />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={t("disclaimerTitle")}
+      width="2xl"
+      maxHeight="90vh"
+      footer={
+        <Button
+          onClick={handleClose}
+          className="bg-cyan-600 hover:bg-cyan-700 
+                     text-white px-6 py-2.5 
+                     rounded-xl font-medium
+                     shadow-md hover:shadow-lg
+                     transition-all"
+        >
+          I Understand
+        </Button>
+      }
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <div className="bg-amber-100 p-2 rounded-xl">
+          <AlertTriangle
+            className="text-amber-600 flex-shrink-0"
+            size={22}
+          />
         </div>
-
-        <div className="p-6 bg-amber-50">
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">
-            {t("disclaimerText")}
-          </p>
-        </div>
-
-        <div className="border-t border-gray-200 p-6 
-                        bg-amber-50 backdrop-blur-md
-                        flex justify-end rounded-b-2xl">
-          <Button
-            onClick={handleClose}
-            className="bg-cyan-600 hover:bg-cyan-700 
-                       text-white px-6 py-2.5 
-                       rounded-xl font-medium
-                       shadow-md hover:shadow-lg
-                       transition-all"
-          >
-            I Understand
-          </Button>
-        </div>
+        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">
+          {t("disclaimerText")}
+        </p>
       </div>
-    </div>
+    </Modal>
   );
 };
 

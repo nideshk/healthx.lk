@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
      * 🔐 Auth check (optional – may be guest)
      * ------------------------------------------------ */
     const authResult = await requireUser(req);
-    const { user } = await requireUser(req);
+    const { user } = authResult;
     const isAdmin =
       authResult.authorized && authResult.role === "admin";
 
@@ -190,10 +190,28 @@ export async function GET(req: NextRequest) {
      * 🌍 GUEST / PUBLIC FLOW
      * ================================================= */
     const specialization = searchParams.get("specialization");
+    const isAnonymous = !authResult.authorized;
 
     let query = supabaseClient
       .from("practitioners")
-      .select(`
+      .select(
+        isAnonymous
+          ? `
+        id,
+        full_name,
+        qualification,
+        specialization,
+        profile_picture_url,
+        experience_years,
+        avg_rating,
+        total_reviews,
+        review_count,
+        languages,
+        available_services,
+        profile_bio,
+        fees
+      `
+          : `
         id,
         full_name,
         qualification,
@@ -211,7 +229,8 @@ export async function GET(req: NextRequest) {
         available_services,
         profile_bio,
         fees
-      `)
+      `
+      )
       .eq("is_active", true)
 
     if (specialization) {
@@ -219,7 +238,6 @@ export async function GET(req: NextRequest) {
     }
 
     const { data, error } = await query;
-    console.log(data)
     if (error) {
       console.error("❌ Supabase Fetch Error:", error);
       return NextResponse.json(
@@ -228,27 +246,48 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const publicPractitioners = (data ?? []).map((p: any) => ({
-      ...p,
-      total_reviews: p.total_reviews ?? 0,
-      review_count: p.review_count ?? 0,
-      available_services: p.available_services ?? [],
-      languages: p.languages ?? [],
-      fees: normalizeFeesToArray(p.fees),
-    }));
+    const publicPractitioners = (data ?? []).map((p: any) => {
+      const shared = {
+        id: p.id,
+        full_name: p.full_name,
+        qualification: p.qualification,
+        specialization: p.specialization,
+        profile_picture_url: p.profile_picture_url,
+        experience_years: p.experience_years,
+        avg_rating: p.avg_rating,
+        total_reviews: p.total_reviews ?? 0,
+        review_count: p.review_count ?? 0,
+        languages: p.languages ?? [],
+        available_services: p.available_services ?? [],
+        profile_bio: p.profile_bio,
+        fees: normalizeFeesToArray(p.fees),
+      };
 
-    await auditLog({
-      ...cnx,
-      action: "VIEWED",
-      entityType: "PRACTITIONER",
-      purpose: "operations",
-      metadata: {
-        success: true,
-        role: "guest",
-        count: publicPractitioners.length,
-        data: publicPractitioners,
-      }
-    })
+      if (isAnonymous) return shared;
+
+      return {
+        ...shared,
+        license_number: p.license_number,
+        contact_email: p.contact_email,
+        contact_number: p.contact_number,
+        gender: p.gender,
+      };
+    });
+
+    if (!isAnonymous) {
+      await auditLog({
+        ...cnx,
+        action: "VIEWED",
+        entityType: "PRACTITIONER",
+        purpose: "operations",
+        metadata: {
+          success: true,
+          role: "guest",
+          count: publicPractitioners.length,
+          data: publicPractitioners,
+        }
+      })
+    }
 
     return NextResponse.json(
       {

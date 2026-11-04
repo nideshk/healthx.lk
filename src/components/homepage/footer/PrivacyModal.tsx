@@ -20,6 +20,7 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        if (!isOpen) return;
         const fetchContent = async () => {
             try {
                 const response = await fetch(isSi ? '/content/privacy-si.md' : '/content/privacy-en.md');
@@ -30,7 +31,7 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
             }
         };
         fetchContent();
-    }, [isSi]);
+    }, [isOpen, isSi]);
 
     // Track scroll progress for "Accept" logic
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {

@@ -12,7 +12,16 @@ export async function GET(req: Request) {
      * --------------------------------------- */
     let servicesQuery = supabaseClient
       .from("services")
-      .select("*")
+      .select(`
+        id,
+        name,
+        slug,
+        icon,
+        description,
+        sin_description,
+        sin_slug,
+        active
+      `)
       .order("created_at", { ascending: false });
 
     if (!includeInactive) {

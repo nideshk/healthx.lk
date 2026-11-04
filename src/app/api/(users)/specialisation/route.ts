@@ -9,7 +9,16 @@ export async function GET(req: Request) {
     // 🧩 Build Supabase query
     let query = supabaseClient
       .from("services")
-      .select("*")
+      .select(`
+        id,
+        name,
+        slug,
+        icon,
+        description,
+        sin_description,
+        sin_slug,
+        active
+      `)
       .order("created_at", { ascending: false });
 
     // Optionally exclude inactive
