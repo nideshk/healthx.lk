@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireUser } from "@/lib/authGuard";
+import {
+  applicationUploadKeyAllows,
+  readApplicationUploadKey,
+} from "@/lib/applicationUploadKey";
 
 function emailsMatch(left: unknown, right: unknown) {
   if (typeof left !== "string" || typeof right !== "string") return false;
@@ -14,9 +18,6 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireUser(req);
-    if (!auth.authorized || !auth.user) return auth.response;
-
     const { id: applicationId } = await context.params;
     if (!applicationId) {
       return NextResponse.json(
@@ -25,36 +26,46 @@ export async function POST(
       );
     }
 
-    const { data: application, error: fetchError } = await supabaseAdmin
-      .from("practitioner_applications")
-      .select("id, user_id, email, contact_email")
-      .eq("id", applicationId)
-      .maybeSingle();
+    const keyAllows = applicationUploadKeyAllows(
+      readApplicationUploadKey(req),
+      applicationId
+    );
 
-    if (fetchError) {
-      console.error("document_added application lookup failed");
-      return NextResponse.json(
-        { error: "Internal server error" },
-        { status: 500 }
-      );
-    }
+    if (!keyAllows) {
+      const auth = await requireUser(req);
+      if (!auth.authorized || !auth.user) return auth.response;
 
-    if (!application) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+      const { data: application, error: fetchError } = await supabaseAdmin
+        .from("practitioner_applications")
+        .select("id, user_id, email, contact_email")
+        .eq("id", applicationId)
+        .maybeSingle();
 
-    const isAdmin =
-      auth.user.role === "admin" || auth.user.role === "superadmin";
-    const sessionEmail =
-      auth.user.user?.email || auth.user.profile?.email || "";
-    const ownsApplication =
-      (!!application.user_id &&
-        application.user_id === auth.user.auth_user_id) ||
-      emailsMatch(application.email, sessionEmail) ||
-      emailsMatch(application.contact_email, sessionEmail);
+      if (fetchError) {
+        console.error("document_added application lookup failed");
+        return NextResponse.json(
+          { error: "Internal server error" },
+          { status: 500 }
+        );
+      }
 
-    if (!isAdmin && !ownsApplication) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (!application) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+
+      const isAdmin =
+        auth.user.role === "admin" || auth.user.role === "superadmin";
+      const sessionEmail =
+        auth.user.user?.email || auth.user.profile?.email || "";
+      const ownsApplication =
+        (!!application.user_id &&
+          application.user_id === auth.user.auth_user_id) ||
+        emailsMatch(application.email, sessionEmail) ||
+        emailsMatch(application.contact_email, sessionEmail);
+
+      if (!isAdmin && !ownsApplication) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     const { documents } = await req.json();
