@@ -12,7 +12,7 @@ export async function GET(
     if (!month) {
         return NextResponse.json(
             { error: "month required (YYYY-MM)" },
-            { status: 400 }
+            { status: 400, headers: { "Cache-Control": "private, no-store" } }
         );
     }
 
@@ -47,7 +47,10 @@ export async function GET(
         day = day.plus({ days: 1 });
     }
 
-    return NextResponse.json({
-        available_dates: dates,
-    });
+    return NextResponse.json(
+        {
+            available_dates: dates,
+        },
+        { headers: { "Cache-Control": "private, no-store" } }
+    );
 }

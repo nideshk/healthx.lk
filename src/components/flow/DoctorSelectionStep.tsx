@@ -56,14 +56,7 @@ const DoctorSelectionStep = forwardRef(
         setLoading(true);
         try {
           const res = await axios.get(
-            `/api/specialisation/${bookingData.selectedService.slug.toLowerCase()}`,
-            {
-              headers: {
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                Pragma: "no-cache",
-                Expires: "0",
-              },
-            }
+            `/api/specialisation/${bookingData.selectedService.slug.toLowerCase()}`
           );
           const mapped = res.data.practitioners.map((p: any) => ({
             id: p.id,
@@ -77,6 +70,7 @@ const DoctorSelectionStep = forwardRef(
             endingPrice: 950 + (p.ending_price || 0),
             currency: 'LKR',
             rating: { overall: 4.8 },
+            hasCurrentAvailability: p.has_current_availability !== false,
           }));
           setDoctors(mapped);
         } catch (err) {
@@ -88,8 +82,8 @@ const DoctorSelectionStep = forwardRef(
       fetchDoctors();
     }, [bookingData.selectedService?.slug]);
 
-    const handleSelectDoctor = async (doctor: Doctor) => {
-      if (isSaving) return;
+    const handleSelectDoctor = async (doctor: Doctor & { hasCurrentAvailability?: boolean }) => {
+      if (isSaving || doctor.hasCurrentAvailability === false) return;
 
       setIsSaving(true);
       setSelectedDoctorId(doctor.id);
@@ -203,14 +197,19 @@ const DoctorSelectionStep = forwardRef(
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedDoctors.map((doctor: any) => {
                 const isSelected = selectedDoctorId === doctor.id;
+                const bookable = doctor.hasCurrentAvailability !== false;
 
                 return (
                   <div
                     key={doctor.id}
-                    onClick={() => handleSelectDoctor(doctor)}
-                    className={`relative flex flex-col rounded-[2rem] border-2 transition-all duration-500 cursor-pointer overflow-hidden group ${isSelected
+                    onClick={() => {
+                      if (bookable) handleSelectDoctor(doctor);
+                    }}
+                    className={`relative flex flex-col rounded-[2rem] border-2 transition-all duration-500 overflow-hidden group ${bookable ? 'cursor-pointer' : 'cursor-not-allowed opacity-80'} ${isSelected
                       ? 'bg-teal-50 border-teal-500 shadow-xl shadow-teal-200/50 scale-[1.02]'
-                      : 'bg-white border-slate-100 hover:border-teal-200 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1'
+                      : bookable
+                        ? 'bg-white border-slate-100 hover:border-teal-200 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1'
+                        : 'bg-white border-slate-100'
                       }`}
                   >
                     <div className="p-6">
@@ -259,6 +258,11 @@ const DoctorSelectionStep = forwardRef(
                         <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mt-1.5">
                           {t('verifiedSpecialist')}
                         </p>
+                        {!bookable && (
+                          <p className="mt-2 inline-flex text-xs font-bold text-amber-800 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-1 normal-case tracking-normal">
+                            {t('noCurrentAvailability')}
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-3 mb-8">

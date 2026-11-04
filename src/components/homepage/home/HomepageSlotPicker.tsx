@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { authFetch } from "@/lib/authFetch";
 import Price from "@/components/common/Price";
+import { useFormatSpecialties } from "@/lib/specialtyLabels";
 
 interface Props {
   practitionerId: string;
@@ -22,11 +23,22 @@ interface Props {
   hideStepCounter?: boolean;
 }
 
+function normalizeDoctor(doctor: any) {
+  if (!doctor) return null;
+  return {
+    ...doctor,
+    profile_image: doctor.profile_image || doctor.profile_picture_url || null,
+    full_name: doctor.full_name || doctor.name || "",
+  };
+}
+
 const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selectedService, hideStepCounter }: Props) => {
   const t = useTranslations("slotFlow.slotPicker");
+  const formatSpecialties = useFormatSpecialties();
   const { openLoginModal } = useModalStore();
   const { user } = useAuth();
-  const [practitioner, setPractitioner] = useState<any>(null);
+  const [practitioner, setPractitioner] = useState<any>(() => normalizeDoctor(initialDoctor));
+  const [detailsLoading, setDetailsLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -49,10 +61,22 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
   }
   /* ---------- Load practitioner ---------- */
   useEffect(() => {
+    let cancelled = false;
+    setDetailsLoading(true);
     axios
       .get(`/api/practitioners/${practitionerId}`)
-      .then((res) => setPractitioner(res.data.practitioner))
-      .catch(() => toast.error(t("errors.loadDoctor")));
+      .then((res) => {
+        if (!cancelled) setPractitioner(normalizeDoctor(res.data.practitioner));
+      })
+      .catch(() => {
+        if (!cancelled) toast.error(t("errors.loadDoctor"));
+      })
+      .finally(() => {
+        if (!cancelled) setDetailsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [practitionerId, t]);
 
 
@@ -123,7 +147,9 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
     }
   };
 
-  if (!practitioner) return null;
+  if (!practitioner) {
+    return <SlotPickerSkeleton />;
+  }
   function extractAvailableDates(availableDays: any[]) {
     const tz = practitioner?.timezone || availability?.timezone || "Asia/Colombo";
     return (availableDays || []).map((day) => {
@@ -162,7 +188,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
             {/* Specialization */}
             {practitioner.specialization?.length > 0 && (
               <p className="text-sm text-cyan-600 font-medium mt-1">
-                {practitioner.specialization.join(" • ")}
+                {formatSpecialties(practitioner.specialization, " • ")}
               </p>
             )}
 
@@ -232,6 +258,10 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
           </p>
         )}
       </div>
+      {detailsLoading ? (
+        <SlotControlsSkeleton />
+      ) : (
+      <>
       {/* Step Header */}
       <div className="mb-6">
         {!hideStepCounter && (
@@ -280,7 +310,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
           <div className="flex items-center justify-center gap-3">
                 {WHATSAPP_NUMBER ? (
                   <a
-                    href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || ''}${practitioner?.specialization?.length ? ' (' + practitioner.specialization.join(', ') + ')' : ''}.`)}`}
+                    href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || ''}${practitioner?.specialization?.length ? ' (' + formatSpecialties(practitioner.specialization) + ')' : ''}.`)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold inline-block"
@@ -378,8 +408,42 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
       <p className="text-xs text-gray-500 mt-3 text-center">
         {t("footerNote")}
       </p>
+      </>
+      )}
     </div>
   );
 };
+
+const SlotPickerSkeleton = () => (
+  <div className="bg-white rounded-2xl shadow-md p-6 md:p-8" aria-busy="true" aria-live="polite">
+    <div className="mb-8 flex gap-4">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-slate-100 animate-pulse" />
+      <div className="flex-1 space-y-2 py-1">
+        <div className="h-5 w-48 max-w-full rounded bg-slate-200 animate-pulse" />
+        <div className="h-4 w-64 max-w-full rounded bg-slate-100 animate-pulse" />
+        <div className="h-3 w-40 rounded bg-slate-100 animate-pulse" />
+      </div>
+    </div>
+    <SlotControlsSkeleton />
+  </div>
+);
+
+const SlotControlsSkeleton = () => (
+  <div className="space-y-6" aria-hidden="true">
+    <div className="space-y-2">
+      <div className="h-6 w-56 rounded bg-slate-200 animate-pulse" />
+      <div className="h-4 w-72 max-w-full rounded bg-slate-100 animate-pulse" />
+    </div>
+    <div className="flex flex-wrap gap-3">
+      <div className="h-10 w-40 rounded-full bg-slate-100 animate-pulse" />
+      <div className="h-10 w-44 rounded-full bg-slate-100 animate-pulse" />
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="h-64 rounded-2xl bg-slate-100 animate-pulse" />
+      <div className="h-64 rounded-2xl bg-slate-50 border border-dashed border-slate-200" />
+    </div>
+    <div className="h-11 w-full rounded-xl bg-slate-200 animate-pulse" />
+  </div>
+);
 
 export default HomepageSlotPicker;

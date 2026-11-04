@@ -23,6 +23,14 @@ function isOverlapping(
   });
 }
 
+/** Slot results must not be cached. A booked time has to disappear immediately. */
+function availabilityJson(body: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  headers.set("Cache-Control", "private, no-store");
+  const response = NextResponse.json(body, { ...init, headers });
+  return response;
+}
+
 function generateSlots(startTime: string, endTime: string, duration: number) {
   const slots: string[] = [];
   let start = toMinutes(startTime);
@@ -55,7 +63,7 @@ export async function GET(
     const date = searchParams.get("date"); // YYYY-MM-DD
 
     if (!date) {
-      return NextResponse.json(
+      return availabilityJson(
         { error: "Missing required: date (YYYY-MM-DD)" },
         { status: 400 }
       );
@@ -71,7 +79,7 @@ export async function GET(
       .single();
 
     if (!practitioner) {
-      return NextResponse.json(
+      return availabilityJson(
         { error: "Practitioner not found" },
         { status: 404 }
       );
@@ -79,7 +87,7 @@ export async function GET(
 
     const offeredTypes = practitioner.available_services || [];
     if (offeredTypes.length === 0) {
-      return NextResponse.json({
+      return availabilityJson({
         practitioner_id: practitionerId,
         date,
         available: false,
@@ -97,7 +105,7 @@ export async function GET(
 
     const requestedDate = DateTime.fromISO(date, { zone: timezone });
     if (requestedDate < nowInTZ.startOf("day")) {
-      return NextResponse.json({
+      return availabilityJson({
         practitioner_id: practitionerId,
         date,
         available: false,
@@ -119,7 +127,7 @@ export async function GET(
       .lte("starts_at", dayEndUTC);
 
     if (!availabilityWindows || availabilityWindows.length === 0) {
-      return NextResponse.json({
+      return availabilityJson({
         practitioner_id: practitionerId,
         date,
         available: false,
@@ -136,7 +144,7 @@ export async function GET(
       .in("id", offeredTypes);
 
     if (!appointmentTypes) {
-      return NextResponse.json(
+      return availabilityJson(
         { error: "Failed to load appointment types" },
         { status: 500 }
       );
@@ -284,7 +292,7 @@ export async function GET(
     /* ---------------------------
        RESPONSE
     --------------------------- */
-    return NextResponse.json({
+    return availabilityJson({
       practitioner_id: practitionerId,
       date,
       timezone,
@@ -296,7 +304,7 @@ export async function GET(
     });
   } catch (err: any) {
     console.error("❌ Availability API Error:", err);
-    return NextResponse.json(
+    return availabilityJson(
       { error: err.message || "Server error" },
       { status: 500 }
     );

@@ -21,9 +21,11 @@ import Loader from "@/components/atom/Loader/Loader";
 import { useTranslations } from "next-intl";
 import { authFetch } from "@/lib/authFetch";
 import Price from "@/components/common/Price";
+import { useFormatSpecialties } from "@/lib/specialtyLabels";
 
 const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
   const t = useTranslations("bookAppointment");
+  const formatSpecialties = useFormatSpecialties();
 
   const practitionerId = bookingData?.selectedDoctor?.id;
   const [availableDates, setAvailableDates] = useState<any>([]);
@@ -199,7 +201,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                   Dr. {practitioner.full_name}
                 </h2>
                 <p className="text-sm font-bold text-slate-700">
-                  {practitioner.profile_bios || " is specialised in " + practitioner.specialization.join(' • ') + " with over " + practitioner.experience_years + " years of experience"}
+                  {practitioner.profile_bios || " is specialised in " + formatSpecialties(practitioner.specialization, ' • ') + " with over " + practitioner.experience_years + " years of experience"}
                 </p>
 
                 {/* Specialization Mapping */}
@@ -207,7 +209,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                   <Stethoscope className="w-3.5 h-3.5" />
                   <p className="font-bold text-xs uppercase tracking-tighter">
                     {practitioner.specialization?.length > 0
-                      ? practitioner.specialization.join(' • ')
+                      ? formatSpecialties(practitioner.specialization, ' • ')
                       : t("clinicalPractice")}
                   </p>
                 </div>
@@ -403,7 +405,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                 <div className="flex items-center justify-center gap-3">
                   {WHATSAPP_NUMBER ? (
                     <a
-                      href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || bookingData?.selectedDoctor?.full_name || ''}${practitioner?.specialization?.length ? ' (' + (Array.isArray(practitioner.specialization) ? practitioner.specialization.join(', ') : practitioner.specialization) + ')' : ''}${selectedDate && selectedTime ? ' Preferred: ' + selectedDate + ' ' + selectedTime : ''}.`)}`}
+                      href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || bookingData?.selectedDoctor?.full_name || ''}${practitioner?.specialization?.length ? ' (' + formatSpecialties(practitioner.specialization) + ')' : ''}${selectedDate && selectedTime ? ' Preferred: ' + selectedDate + ' ' + selectedTime : ''}.`)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="px-8 py-3 bg-teal-600 text-white rounded-2xl font-bold inline-block"

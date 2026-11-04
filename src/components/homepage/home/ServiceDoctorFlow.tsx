@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { BadgeCheck } from "lucide-react";
 import { ICON_MAP } from "@/lib/lucideIcons";
+import { useFormatSpecialties } from "@/lib/specialtyLabels";
 
 /* ---------- Types ---------- */
 
@@ -33,11 +34,12 @@ type Service = {
 type Doctor = {
   id: string;
   full_name: string;
-  specialization: string;
+  specialization: string[];
   avg_rating: number;
   qualification: string | null;
   profile_bio: string | null;
   profile_picture_url: string | null;
+  has_current_availability?: boolean;
 };
 
 /* ---------- Main Component ---------- */
@@ -48,6 +50,7 @@ export default function ServiceDoctorFlow() {
 
   const [services, setServices] = useState<Service[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const [selectedService, setSelectedService] =
@@ -57,17 +60,21 @@ export default function ServiceDoctorFlow() {
 
   /* ---------- Fetch services ---------- */
   useEffect(() => {
+    let cancelled = false;
     axios
-      .get("/api/specialisation", {
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      })
+      .get("/api/specialisation")
       .then((res) => {
-        setServices(res.data.services || []);
+        if (!cancelled) setServices(res.data.services || []);
+      })
+      .catch(() => {
+        if (!cancelled) setServices([]);
+      })
+      .finally(() => {
+        if (!cancelled) setServicesLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /* ---------- Fetch doctors ---------- */
@@ -75,18 +82,21 @@ export default function ServiceDoctorFlow() {
     if (!selectedService) return;
 
     setLoading(true);
+    let cancelled = false;
     axios
-      .get(`/api/specialisation/${selectedService.slug.toLowerCase()}`, {
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      })
+      .get(`/api/specialisation/${selectedService.slug.toLowerCase()}`)
       .then((res) => {
-        setDoctors(res.data.practitioners || []);
+        if (!cancelled) setDoctors(res.data.practitioners || []);
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!cancelled) setDoctors([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedService]);
 
   const goBack = () => {
@@ -113,21 +123,26 @@ export default function ServiceDoctorFlow() {
 
         {/* Content */}
         <div className="bg-white rounded-2xl shadow-md p-6">
-          {loading && <LoadingState />}
+          {step === 1 && servicesLoading && <ServiceSkeleton />}
 
-          {step === 1 && !loading && (
+          {step === 1 && !servicesLoading && (
             <ServicePicker
               services={services}
               onSelect={(s) => {
+                setDoctors([]);
+                setLoading(true);
                 setSelectedService(s);
                 setStep(2);
               }}
             />
           )}
 
+          {step === 2 && loading && <DoctorSkeleton />}
+
           {step === 2 && selectedService && !loading && (
             <DoctorPicker
               doctors={doctors}
+              service={selectedService}
               onSelect={(d) => {
                 setSelectedDoctor(d);
                 setStep(3);
@@ -372,12 +387,20 @@ const ServicePicker = ({
 
 interface DoctorPickerProps {
   doctors: Doctor[];
+  service: Service;
   onSelect: (d: Doctor) => void;
 }
 
-const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
+const DoctorPicker = ({ doctors, service, onSelect }: DoctorPickerProps) => {
   const tSelection = useTranslations("doctorSelection");
   const tPicker = useTranslations("bookingFlow.doctorPicker");
+  const locale = useLocale();
+  const formatSpecialties = useFormatSpecialties();
+  const serviceName = (
+    locale === "si" && service.sin_slug ? service.sin_slug : service.name
+  )
+    .replace(/\s+/g, " ")
+    .trim();
 
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -400,7 +423,8 @@ const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
           {tSelection("title")}
         </h2>
         <p className="text-slate-500 font-medium mt-1">
-          {tSelection("subtitle")}
+          {tSelection("subtitle")}{" "}
+          <span className="text-cyan-700 font-semibold">{serviceName}</span>
         </p>
 
         {/* 🔥 Sort Control */}
@@ -422,15 +446,23 @@ const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
 
       <div className="space-y-4">
         {sortedDoctors.length > 0 ? (
-          sortedDoctors.map((d: any) => (
+          sortedDoctors.map((d: any) => {
+            const bookable = d.has_current_availability !== false;
+            return (
             <button
               key={d.id}
-              onClick={() => onSelect(d)}
-              className="group w-full text-left bg-white
+              type="button"
+              aria-disabled={!bookable}
+              onClick={() => {
+                if (bookable) onSelect(d);
+              }}
+              className={`group w-full text-left bg-white
                 border border-slate-200 rounded-2xl p-4 sm:p-5
-                hover:border-cyan-500 hover:shadow-lg
-                active:scale-[0.99]
-                transition-all duration-200"
+                transition-all duration-200
+                ${bookable
+                  ? "hover:border-cyan-500 hover:shadow-lg active:scale-[0.99]"
+                  : "cursor-not-allowed opacity-80"
+                }`}
             >
               <div className="flex items-start gap-4">
                 {/* Avatar */}
@@ -481,7 +513,7 @@ const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
                   <div className="mt-0.5 min-w-0">
                     {d.specialization?.length > 0 ? (
                       <p className="text-cyan-600 text-sm font-semibold truncate">
-                        {d.specialization.join(", ")}
+                        {formatSpecialties(d.specialization)}
                       </p>
                     ) : (
                       <p className="text-slate-400 text-sm italic">
@@ -489,6 +521,12 @@ const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
                       </p>
                     )}
                   </div>
+
+                  {!bookable && (
+                    <p className="mt-2 inline-flex text-xs font-bold text-amber-800 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-1">
+                      {tSelection("noCurrentAvailability")}
+                    </p>
+                  )}
 
                   {/* Bio */}
                   {d.profile_bio && (
@@ -511,18 +549,21 @@ const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
                         ))}
                       </div>
 
-                      <div className="hidden sm:flex items-center text-cyan-500 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1">
-                        <span className="text-xs font-bold mr-1">
-                          {tPicker("actionText").replace(" →", "")}
-                        </span>
-                        <ChevronRight size={18} />
-                      </div>
+                      {bookable && (
+                        <div className="hidden sm:flex items-center text-cyan-500 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1">
+                          <span className="text-xs font-bold mr-1">
+                            {tPicker("actionText").replace(" →", "")}
+                          </span>
+                          <ChevronRight size={18} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
             </button>
-          ))
+            );
+          })
         ) : (
           <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-3xl">
             <p className="text-slate-500 font-bold">
@@ -543,11 +584,42 @@ const DoctorPicker = ({ doctors, onSelect }: DoctorPickerProps) => {
 
 /* ---------- Loading ---------- */
 
-const LoadingState = () => {
-  const t = useTranslations("bookingFlow");
-  return (
-    <div className="text-center py-16 text-gray-500">
-      {t("loadingText")}
+const ServiceSkeleton = () => (
+  <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12" aria-busy="true" aria-live="polite">
+    <div className="mb-12 space-y-3">
+      <div className="h-9 w-64 max-w-full rounded-lg bg-slate-200 animate-pulse" />
+      <div className="h-4 w-96 max-w-full rounded bg-slate-100 animate-pulse" />
     </div>
-  );
-};
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={index} className="rounded-3xl border border-slate-100 p-8 space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 animate-pulse" />
+          <div className="h-5 w-40 rounded bg-slate-200 animate-pulse" />
+          <div className="h-4 w-full rounded bg-slate-100 animate-pulse" />
+          <div className="h-4 w-2/3 rounded bg-slate-100 animate-pulse" />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const DoctorSkeleton = () => (
+  <div className="max-w-2xl mx-auto" aria-busy="true" aria-live="polite">
+    <div className="mb-6 space-y-2">
+      <div className="h-8 w-72 max-w-full rounded-lg bg-slate-200 animate-pulse" />
+      <div className="h-4 w-56 max-w-full rounded bg-slate-100 animate-pulse" />
+    </div>
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="flex gap-4 border border-slate-200 rounded-2xl p-5">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 animate-pulse shrink-0" />
+          <div className="flex-1 space-y-2 py-1">
+            <div className="h-5 w-40 rounded bg-slate-200 animate-pulse" />
+            <div className="h-4 w-56 rounded bg-slate-100 animate-pulse" />
+            <div className="h-3 w-full rounded bg-slate-100 animate-pulse" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
