@@ -23,22 +23,24 @@ export default function LanguageToggle() {
   };
 
   return (
-    <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 w-fit">
+    <div className="flex items-center gap-1 bg-cx-tint p-1 rounded-xl w-fit">
       <button
+        type="button"
         onClick={() => switchLang("en")}
-        className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all duration-200 ${lang === "en"
-          ? "bg-white text-teal-600 shadow-sm ring-1 ring-slate-200/50"
-          : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+        className={`min-h-12 px-4 py-2 rounded-lg text-sm font-semibold ${lang === "en"
+          ? "bg-white text-cx-primary"
+          : "text-cx-ink hover:bg-white"
           }`}
       >
         EN
       </button>
 
       <button
+        type="button"
         onClick={() => switchLang("si")}
-        className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all duration-200 ${lang === "si"
-          ? "bg-white text-teal-600 shadow-sm ring-1 ring-slate-200/50"
-          : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+        className={`min-h-12 px-4 py-2 rounded-lg text-sm font-semibold ${lang === "si"
+          ? "bg-white text-cx-primary"
+          : "text-cx-ink hover:bg-white"
           }`}
       >
         සිං

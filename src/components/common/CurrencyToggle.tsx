@@ -39,9 +39,9 @@ export default function CurrencyToggle() {
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-all border border-slate-100 bg-white"
+                className="flex items-center gap-2 min-h-12 px-3 text-base font-semibold text-cx-ink hover:bg-cx-tint rounded-xl border border-cx-border bg-white"
             >
-                <span className="w-5 h-5 flex items-center justify-center bg-slate-100 rounded text-[10px] font-black text-slate-500">
+                    <span className="w-5 h-5 flex items-center justify-center bg-cx-tint rounded text-xs font-semibold text-cx-ink">
                     {selectedData.symbol}
                 </span>
                 <span className="uppercase">{selectedCurrency}</span>
@@ -49,18 +49,18 @@ export default function CurrencyToggle() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in duration-200">
+                <div className="absolute right-0 mt-2 w-64 bg-white border border-cx-border rounded-2xl p-2 z-[100]">
                     <div className="px-3 py-2">
                         <input
                             type="text"
                             placeholder="Search currency..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full px-3 py-2 text-xs font-medium border border-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all bg-slate-50"
+                            className="w-full px-3 py-2 text-base font-medium border border-cx-border rounded-lg focus:outline-none focus:ring-2 focus:ring-cx-primary bg-cx-bg text-cx-ink"
                             autoFocus
                         />
                     </div>
-                    <div className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">
+                    <div className="px-3 py-2 text-sm font-semibold text-cx-ink border-b border-cx-border mb-1">
                         Select Currency
                     </div>
                     <div className="max-h-72 overflow-y-auto custom-scrollbar">
@@ -74,22 +74,22 @@ export default function CurrencyToggle() {
                                             setCurrency(code);
                                             setIsOpen(false);
                                         }}
-                                        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-bold rounded-xl transition-all mb-0.5 ${selectedCurrency === code
-                                            ? "bg-teal-50 text-teal-600"
-                                            : "text-slate-600 hover:bg-slate-50"
+                                        className={`w-full flex items-center justify-between px-3 py-3 min-h-12 text-base font-semibold rounded-xl mb-0.5 ${selectedCurrency === code
+                                            ? "bg-cx-tint text-cx-primary"
+                                            : "text-cx-ink hover:bg-cx-tint"
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-slate-100 rounded text-[10px] font-black text-slate-400">
+                                            <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-cx-tint rounded text-xs font-semibold text-cx-ink">
                                                 {c.symbol}
                                             </span>
                                             <div className="flex flex-col items-start min-w-0">
                                                 <span className="leading-tight">{code}</span>
-                                                <span className="text-[10px] font-medium text-slate-400 truncate w-full">{c.name}</span>
+                                                <span className="text-sm font-medium text-cx-ink truncate w-full">{c.name}</span>
                                             </div>
                                         </div>
                                         {selectedCurrency === code && (
-                                            <div className="w-1.5 h-1.5 rounded-full bg-teal-500 flex-shrink-0" />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-cx-primary flex-shrink-0" />
                                         )}
                                     </button>
                                 );
