@@ -5,6 +5,29 @@ import { notify } from "@/lib/notify";
 import { sendAppointmentInvites } from '@/lib/additional_attendee/appointmentInvites';
 import { getCleanUUID } from "@/utils/uuidUtils";
 import { fulfillAppointment } from "@/lib/payments/fulfillmentService";
+import {
+    pendingFailureMatchesCallback,
+    readSignedCallbackPayment,
+    verifyWebxpaySignature,
+} from "@/lib/payments/webxpaySignature";
+
+function callbackReference(...candidates: Array<string | null | undefined>): string {
+    for (const candidate of candidates) {
+        if (typeof candidate !== "string") continue;
+        const value = candidate.trim();
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+            return value;
+        }
+        if (/^[A-Za-z0-9_-]{1,64}$/.test(value)) return value;
+    }
+    return "";
+}
+
+function callbackStatusCode(status: FormDataEntryValue | null): string {
+    if (typeof status !== "string") return "";
+    const value = status.trim();
+    return /^-?\d{1,3}$/.test(value) ? value : "";
+}
 
 export async function POST(request: NextRequest) {
     const requestId = crypto.randomUUID();
@@ -23,13 +46,6 @@ export async function POST(request: NextRequest) {
         // Decode the appointment_id if it's in base64 format
         appointment_id = getCleanUUID(appointment_id);
 
-        console.log("[WEBX][WEBHOOK_RECEIVED]", {
-            requestId,
-            headers: Object.fromEntries(request.headers.entries()),
-            body: Object.fromEntries(formData.entries()),
-            timestamp: new Date().toISOString()
-        });
-
         let signature = getParam('signature') as string;
         let paymentBase64 = getParam('payment') as string;
 
@@ -38,70 +54,44 @@ export async function POST(request: NextRequest) {
 
         const isSuccess = (status_code === '0' || status_code === '00');
 
-        if (isSuccess && (!signature || !paymentBase64)) {
-            console.error("[WEBX][WEBHOOK_ERROR]", {
-                requestId,
-                error: "Missing critical payment data",
-                formDataKeys: Array.from(formData.keys())
-            });
-            return NextResponse.json({ error: "Data missing" }, { status: 400 });
-        }
+        const verification = verifyWebxpaySignature({
+            signature,
+            paymentBase64,
+            publicKey: process.env.WEBXPAY_PUBLIC_KEY,
+        });
 
-        if(isSuccess)
-        {
-            const rawPaymentData = Buffer.from(paymentBase64, 'base64').toString('utf8');
-            const publicKey = process.env.WEBXPAY_PUBLIC_KEY;
+        const reference = callbackReference(
+            verification.ok ? readSignedCallbackPayment(verification.rawPaymentData).orderId : "",
+            order_id,
+            appointment_id
+        );
 
-            if (!publicKey) {
-                console.error("[WEBX][WEBHOOK_ERROR]", {
-                    requestId,
-                    error: "Public key not configured"
-                });
-                return NextResponse.json({ error: "Verification failed" }, { status: 500 });
-            }
+        console.log("[WEBX][WEBHOOK]", {
+            reference,
+            status_code: callbackStatusCode(status_code),
+            signatureVerified: verification.ok,
+        });
 
-            let pemKey = publicKey?.replace(/\\n/g, '\n').replace(/"/g, '').trim();
+        if (!verification.ok) {
+            console.warn("[WEBX][SIGNATURE_REJECTED]", { reference });
 
-            if (!pemKey.includes('-----BEGIN PUBLIC KEY-----')) {
-                pemKey = `-----BEGIN PUBLIC KEY-----\n${pemKey}\n-----END PUBLIC KEY-----`;
-            }
-
-            let decryptedSignature = "";
-
-            try {
-                const keyObject = crypto.createPublicKey({
-                    key: pemKey,
-                    format: 'pem',
-                });
-
-                decryptedSignature = crypto.publicDecrypt(
-                    {
-                        key: keyObject,
-                        padding: crypto.constants.RSA_PKCS1_PADDING,
-                    },
-                    Buffer.from(signature, 'base64')
-                ).toString('utf8').replace(/\0/g, '');
-            } catch (decryptionError) {
-                console.error("[WEBX][WEBHOOK_ERROR]", {
-                    requestId,
-                    error: "Signature Decryption Failed",
-                    detail: decryptionError
-                });
-                return NextResponse.json({ error: "Verification failed" }, { status: 403 });
-            }
-
-            if (rawPaymentData.trim() !== decryptedSignature.trim()) {
-                console.error("[WEBX][WEBHOOK_ERROR]", {
-                    requestId,
-                    error: "SECURITY ALERT: Signature Mismatch!",
-                    rawPaymentData,
-                    decryptedSignature
-                });
+            if (isSuccess) {
+                if (verification.reason === "missing") {
+                    return NextResponse.json({ error: "Data missing" }, { status: 400 });
+                }
+                if (verification.reason === "no_key") {
+                    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
+                }
+                if (verification.reason === "decrypt_failed") {
+                    return NextResponse.json({ error: "Verification failed" }, { status: 403 });
+                }
                 return NextResponse.json({ error: "Invalid Signature" }, { status: 403 });
             }
+
+            return NextResponse.json({ error: "Invalid Signature" }, { status: 403 });
         }
 
-        const supabase = await supabaseAdmin;
+        const signed = readSignedCallbackPayment(verification.rawPaymentData);
 
         if (isSuccess) {
 
@@ -115,22 +105,38 @@ export async function POST(request: NextRequest) {
             return NextResponse.redirect(`${baseUrl}/dashboard/appointment/status?appointmentId=${appointment_id}&payment=success`, 303);
         }
         else {
+            const formOrderId = typeof order_id === "string" ? order_id.trim() : "";
+            const supabase = await supabaseAdmin;
+            const { data: pending, error: pendingError } = await supabase
+                .from('transactions')
+                .select('order_id, amount, status')
+                .eq('order_id', signed.orderId)
+                .eq('status', 'pending')
+                .maybeSingle();
+
+            if (pendingError || !pendingFailureMatchesCallback({ signed, formOrderId, pending })) {
+                console.warn("[WEBX][CALLBACK_MISMATCH]", {
+                    reference: callbackReference(signed.orderId, reference),
+                });
+                return NextResponse.redirect(`${baseUrl}/dashboard/appointment/status?appointmentId=${appointment_id}&payment=failed`, 303);
+            }
+
             console.log("[DB][QUERY_START]", {
                 requestId,
                 action: "batch_update_failed_status",
-                order_id
+                order_id: signed.orderId
             });
 
             const [txRes, appRes] = await Promise.all([
                 supabase
                     .from('transactions')
                     .update({ status: 'failed', updated_at: new Date().toISOString() })
-                    .eq('order_id', order_id)
-                    .neq('status', 'paid'),
+                    .eq('order_id', signed.orderId)
+                    .eq('status', 'pending'),
                 supabase
                     .from('appointments')
                     .update({ status: "payment_failed", payment_status: "failed" })
-                    .eq('id', order_id)
+                    .eq('id', signed.orderId)
                     .eq('status', 'pending')
             ]);
 
