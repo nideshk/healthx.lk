@@ -12,6 +12,12 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireUser(req);
+    if (!auth.authorized || !auth.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const user = auth.user;
+
     const { id: practitionerId } = await context.params;
     const { searchParams } = new URL(req.url);
 
@@ -23,12 +29,6 @@ export async function GET(
         { error: "Missing from/to query params" },
         { status: 400 }
       );
-    }
-
-    const { user } = await requireUser(req);
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (user?.role === "patient") {

@@ -20,8 +20,11 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireUser(_request);
+    if (!auth.authorized) return auth.response;
+    const user = auth.user;
+
     const { id } = await context.params;
-    const { user } = await requireUser(_request);
 
     /* Ownership check */
     const { data: attachment } = await supabaseAdmin
@@ -80,8 +83,11 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireUser(_request);
+    if (!auth.authorized) return auth.response;
+    const user = auth.user;
+
     const { id } = await context.params;
-    const { user } = await requireUser(_request);
 
     /* 1️⃣ Ownership check */
     const { data: attachment } = await supabaseAdmin

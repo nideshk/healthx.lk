@@ -28,7 +28,8 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   const formatSpecialties = useFormatSpecialties();
 
   const practitionerId = bookingData?.selectedDoctor?.id;
-  const [availableDates, setAvailableDates] = useState<any>([]);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [visibleMonth, setVisibleMonth] = useState<string | null>(null);
 
   const [practitioner, setPractitioner] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -55,35 +56,25 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   const timeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function loadAvailabilityDates() {
-      if (!practitionerId) return;
+    if (!practitionerId || !visibleMonth) return;
 
-      try {
-        const res = await authFetch(
-          `/api/practitioner/availability?practitioner_id=${practitionerId}`
-        );
-        const data = await res.json();
+    let cancelled = false;
+    setAvailableDates([]);
 
-        const windows = data.availability || [];
+    axios
+      .get(`/api/booking/${practitionerId}/available-dates?month=${visibleMonth}`)
+      .then((res) => {
+        if (cancelled || res.data?.month !== visibleMonth) return;
+        setAvailableDates(Array.isArray(res.data?.dates) ? res.data.dates : []);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableDates([]);
+      });
 
-        const dates = windows.map((w: any) =>
-          DateTime.fromISO(w.starts_at)
-            .setZone(w.timezone || "Asia/Colombo")
-            .toISODate()
-        );
-
-        // remove duplicates
-        const uniqueDates = Array.from(new Set(dates));
-
-        setAvailableDates(uniqueDates || []);
-      } catch (err) {
-        console.error(err);
-        setAvailableDates([]);
-      }
-    }
-
-    loadAvailabilityDates();
-  }, [practitionerId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [practitionerId, visibleMonth]);
 
   useEffect(() => {
     async function load() {
@@ -322,6 +313,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                     <div className="flex justify-center md:justify-start scale-110 origin-top-left">
                       <Calendar
                         highlightedDates={availableDates}
+                        onMonthChange={setVisibleMonth}
                         value={selectedDate ? new Date(selectedDate) : undefined}
                         onChange={(date) => {
                           if (!date) return;

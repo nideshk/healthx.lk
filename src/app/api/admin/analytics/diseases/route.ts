@@ -6,7 +6,13 @@ import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   try {
- 
+    const { authorized, role, response } = await requireUser(req);
+    if (!authorized) return response;
+
+    if (role !== "admin" && role !== "superadmin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
 
     const country = searchParams.get("country") || "LK";
@@ -34,9 +40,9 @@ export async function GET(req: Request) {
     const { data, error } = await query;
 
     if (error) {
-      console.error(error);
+      console.error("Disease analytics query failed");
       return NextResponse.json(
-        { error: error.message },
+        { error: "Failed to load analytics" },
         { status: 500 }
       );
     }
@@ -78,10 +84,10 @@ export async function GET(req: Request) {
       }))
     });
 
-  } catch (err: any) {
-    console.error(err);
+  } catch {
+    console.error("Disease analytics request failed");
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to load analytics" },
       { status: 500 }
     );
   }

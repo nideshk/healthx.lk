@@ -44,6 +44,8 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [availability, setAvailability] = useState<any>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState<string | null>(null);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
 
   const updateDraft = useBookingDraftStore((s) => s.update);
   const router = useRouter();
@@ -79,6 +81,28 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
     };
   }, [practitionerId, t]);
 
+
+  /* ---------- Bookable dates for the visible month ---------- */
+  useEffect(() => {
+    if (!practitionerId || !visibleMonth) return;
+
+    let cancelled = false;
+    setAvailableDates([]);
+
+    axios
+      .get(`/api/booking/${practitionerId}/available-dates?month=${visibleMonth}`)
+      .then((res) => {
+        if (cancelled || res.data?.month !== visibleMonth) return;
+        setAvailableDates(Array.isArray(res.data?.dates) ? res.data.dates : []);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableDates([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [practitionerId, visibleMonth]);
 
   /* ---------- Load availability ---------- */
   useEffect(() => {
@@ -150,14 +174,6 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
   if (!practitioner) {
     return <SlotPickerSkeleton />;
   }
-  function extractAvailableDates(availableDays: any[]) {
-    const tz = practitioner?.timezone || availability?.timezone || "Asia/Colombo";
-    return (availableDays || []).map((day) => {
-      // Parse UTC string and convert to practitioner's timezone before extracting the date part
-      return DateTime.fromISO(day.starts_at).setZone(tz).toFormat("yyyy-MM-dd");
-    });
-  }
-
   return (
     <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
       {/* Doctor Info Card */}
@@ -334,7 +350,8 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
             <h4 className="font-medium mb-2">{t("dateLabel")}</h4>
             <Calendar
               minDate={new Date()}
-              highlightedDates={extractAvailableDates(practitioner.available_days)}
+              highlightedDates={availableDates}
+              onMonthChange={setVisibleMonth}
               value={selectedDate ? new Date(selectedDate) : undefined}
               onChange={(date) => {
                 if (!selectedType) {
