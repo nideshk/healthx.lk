@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import Modal from "@/components/atom/Modal/Modal";
+import { PolicyStatusMessage, usePolicyMarkdown } from "./usePolicyMarkdown";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { useLocale } from "next-intl";
@@ -23,21 +24,10 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => {
     const isSi = locale === "si";
     const [scrolledToEnd, setScrolledToEnd] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const [markdownContent, setMarkdownContent] = useState<string>("");
-
-    useEffect(() => {
-        if (!isOpen) return;
-        const fetchContent = async () => {
-            try {
-                const response = await fetch(isSi ? '/content/refund-si.md' : '/content/refund-en.md');
-                const text = await response.text();
-                setMarkdownContent(text);
-            } catch (error) {
-                console.error("Failed to load refund policy:", error);
-            }
-        };
-        fetchContent();
-    }, [isOpen, isSi]);
+    const { markdown: markdownContent, status: policyStatus } = usePolicyMarkdown(
+        isSi ? "/content/refund-si.md" : "/content/refund-en.md",
+        isOpen
+    );
 
     // Track scroll progress for "Accept" logic
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -131,6 +121,9 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => {
                     onScroll={handleScroll}
                     className="flex-1 overflow-y-auto pr-2 custom-scrollbar scroll-smooth"
                 >
+                    {policyStatus !== "ready" ? (
+                        <PolicyStatusMessage status={policyStatus} />
+                    ) : (
                     <div className="max-w-3xl py-4">
                         <header className="mb-16">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wider mb-6 border border-emerald-100 dark:border-emerald-800">
@@ -187,6 +180,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => {
                        
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
         </Modal>

@@ -15,6 +15,7 @@ import {
   X,
   ChevronDown,
   User,
+  LogIn,
   LogOut,
   LayoutDashboard,
   Calendar,
@@ -36,6 +37,22 @@ import LanguageToggle from "@/components/common/LanguageToggle";
 import CurrencyToggle from "@/components/common/CurrencyToggle";
 import { homeRedesignCopy } from "@/content/homeRedesignCopy";
 import { openSpecialties } from "@/lib/homeNavigation";
+
+function BrandLockup() {
+  return (
+    <Link
+      href="/"
+      className="relative block h-11 w-[7.25rem] max-w-full min-w-0 shrink overflow-hidden md:h-14 md:w-[11rem] md:max-w-none md:shrink-0"
+      aria-label="Clinecxa"
+    >
+      <img
+        src="/assets/logo.png"
+        alt=""
+        className="absolute left-1/2 top-1/2 h-auto w-[calc(100%*500/429)] max-w-none -translate-x-1/2 -translate-y-1/2 md:h-[10rem] md:w-auto"
+      />
+    </Link>
+  );
+}
 
 export default function Header() {
   const t = useTranslations("header"); // Initialize translations
@@ -177,10 +194,8 @@ export default function Header() {
   if (loading) {
     return (
       <header className="sticky top-0 z-50 w-full bg-white border-b border-cx-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Link href="/" className="relative flex h-11 w-[7.25rem] items-center overflow-hidden" aria-label="Clinecxa">
-            <img src="/assets/logo.png" alt="" className="absolute left-1/2 top-1/2 h-[6.75rem] w-auto max-w-none -translate-x-1/2 -translate-y-1/2" />
-          </Link>
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <BrandLockup />
           <div className="flex items-center gap-4">
             <div className="w-24 h-10 bg-cx-tint rounded-lg animate-pulse" />
             <div className="w-10 h-10 bg-cx-tint rounded-full animate-pulse" />
@@ -193,22 +208,20 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-white border-b border-cx-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20 gap-4">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+          <div className="flex h-20 min-w-0 items-center justify-between gap-1 sm:gap-4">
 
-            <div className="flex items-center gap-4 md:gap-8 min-w-0">
+            <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-4 md:gap-8">
               <button
                 type="button"
-                className="md:hidden min-h-12 min-w-12 inline-flex items-center justify-center text-cx-ink hover:bg-cx-tint rounded-xl"
+                className="md:hidden min-h-12 min-w-12 shrink-0 inline-flex items-center justify-center text-cx-ink hover:bg-cx-tint rounded-xl"
                 onClick={() => setIsMenuOpen(true)}
                 aria-label="Open menu"
               >
                 <Menu size={26} />
               </button>
 
-              <Link href="/" className="relative flex h-11 w-[7.25rem] md:h-14 md:w-[11rem] items-center overflow-hidden shrink-0" aria-label="Clinecxa">
-                <img src="/assets/logo.png" alt="" className="absolute left-1/2 top-1/2 h-[6.75rem] md:h-[10rem] w-auto max-w-none -translate-x-1/2 -translate-y-1/2" />
-              </Link>
+              <BrandLockup />
 
               <nav className="hidden md:flex items-center gap-1">
                 {[...(user ? privateLinks : []), ...publicLinks].map((link) => (
@@ -224,16 +237,17 @@ export default function Header() {
               </nav>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <div className="flex md:hidden items-center gap-1">
-                <LanguageToggle />
+            <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+              <div className="flex items-center gap-1 md:hidden">
+                <LanguageToggle compact />
                 {!user ? (
                   <button
                     type="button"
                     onClick={() => openLoginModal("/dashboard")}
-                    className="sm:hidden min-h-12 px-2 text-base font-semibold text-cx-ink"
+                    className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-cx-ink hover:bg-cx-tint sm:hidden"
+                    aria-label={t("auth.logIn")}
                   >
-                    {t("auth.logIn")}
+                    <LogIn size={22} aria-hidden="true" />
                   </button>
                 ) : null}
               </div>
