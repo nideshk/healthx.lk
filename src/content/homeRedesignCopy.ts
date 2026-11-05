@@ -5,7 +5,9 @@
  */
 export const homeRedesignCopy = {
   bookConsultation: "Book a consultation",
-  photoSlot: "Photo",
+  heroImageAlt: "Doctor on a Clinecxa video consultation",
+  loading: "Loading...",
+  policyLoadError: "Unable to load this policy.",
   howItWorks: {
     steps: [
       {

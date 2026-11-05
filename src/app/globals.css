@@ -104,6 +104,16 @@ button {
   opacity: 0.5;
 }
 
+/* Home mobile book bar: 1px border + 0.75rem top padding + 3rem button
+   + bottom padding of max(0.75rem, the safe-area inset). */
+@media (max-width: 767px) {
+  .cx-mobile-book-clearance {
+    padding-bottom: calc(
+      0.75rem + 3rem + max(0.75rem, env(safe-area-inset-bottom, 0px)) + 1px
+    );
+  }
+}
+
 /* Home booking step uses the shared Button, whose fill is a different blue. */
 .cx-force-primary {
   background-color: var(--cx-primary) !important;

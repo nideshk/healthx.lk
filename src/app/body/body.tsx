@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -70,10 +71,17 @@ const HeroSection = () => {
           ) : null}
         </div>
 
-        <div className="aspect-[4/3] rounded-2xl border border-cx-border bg-cx-tint flex items-center justify-center">
-          <span className="text-base md:text-lg font-semibold text-cx-ink">
-            {homeRedesignCopy.photoSlot}
-          </span>
+        <div className="min-w-0">
+          <Image
+            src="/images/clinecxa-hero.webp"
+            alt={homeRedesignCopy.heroImageAlt}
+            width={1454}
+            height={977}
+            priority
+            sizes="(max-width: 767px) calc(100vw - 2rem), 33rem"
+            className="h-auto w-full"
+            style={{ width: "100%", height: "auto" }}
+          />
         </div>
       </div>
     </section>

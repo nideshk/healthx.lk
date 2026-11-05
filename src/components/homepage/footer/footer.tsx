@@ -4,6 +4,7 @@ import React from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Facebook, Instagram } from "lucide-react";
 
 const PrivacyModal = dynamic(() => import("./PrivacyModal"), { ssr: false });
@@ -45,6 +46,8 @@ const ClincoLogo = () => (
 
 const Footer = () => {
   const t = useTranslations("footer");
+  const pathname = usePathname();
+  const clearMobileBookBar = pathname === "/";
   const [isPrivacyOpen, setIsPrivacyOpen] = React.useState(false);
   const [isRefundOpen, setIsRefundOpen] = React.useState(false);
   const [dynSettings, setDynSettings] = React.useState<any>(null);
@@ -65,7 +68,7 @@ const Footer = () => {
   }, []);
 
   return (
-    <footer className="bg-cx-deep text-white border-t-4 border-cx-gold">
+    <footer className={`bg-cx-deep text-white border-t-4 border-cx-gold${clearMobileBookBar ? " cx-mobile-book-clearance" : ""}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col md:flex-row justify-between items-start gap-8 pb-8 border-b border-white/20">
           <div className="flex-1 text-left w-full md:w-auto">
