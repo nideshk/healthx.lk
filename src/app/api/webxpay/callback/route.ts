@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
             const supabase = await supabaseAdmin;
             const { data: pending, error: pendingError } = await supabase
                 .from('transactions')
-                .select('order_id, amount, status')
+                .select('order_id, status')
                 .eq('order_id', signed.orderId)
                 .eq('status', 'pending')
                 .maybeSingle();

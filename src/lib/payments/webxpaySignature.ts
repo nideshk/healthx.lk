@@ -8,13 +8,11 @@ export type WebxpaySignatureResult =
 
 export type SignedCallbackPayment = {
     orderId: string;
-    amount: string | null;
     statusCode: string;
 };
 
 type PendingTransaction = {
     order_id: string;
-    amount: unknown;
     status: string;
 };
 
@@ -80,39 +78,22 @@ export function verifyWebxpaySignature(input: {
 /**
  * Documented signed payment string (WebXPay redirect callback):
  * order_id|order_refference_number|date_time_transaction|status_code|comment|payment_gateway_used
- * That string does not include the charged amount unless a two-decimal amount
- * segment is also present. Amount is taken only from the signed string.
+ * The charged amount is not part of this string. Failure handling matches the
+ * order id only.
  */
 export function readSignedCallbackPayment(rawPaymentData: string): SignedCallbackPayment {
     const parts = rawPaymentData.trim().split("|").map((part) => part.trim());
-    const amounts = parts
-        .slice(1)
-        .filter((part) => /^\d+\.\d{1,2}$/.test(part))
-        .map((part) => normalizeMoney(part))
-        .filter((part): part is string => part !== null);
 
     return {
         orderId: parts[0] ?? "",
-        amount: amounts.length === 1 ? amounts[0] : null,
         statusCode: parts[3] ?? "",
     };
 }
 
-export function normalizeMoney(value: unknown): string | null {
-    if (typeof value === "number") {
-        if (!Number.isFinite(value)) return null;
-        return value.toFixed(2);
-    }
-    if (typeof value !== "string") return null;
-    const trimmed = value.trim();
-    if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return null;
-    const [whole, fraction = ""] = trimmed.split(".");
-    return `${whole}.${fraction.padEnd(2, "0")}`;
-}
-
 /**
- * Failure updates require the signed order id and amount to match the pending
- * transaction. A signed approval status is not a failure.
+ * A failure update applies only to the pending transaction whose order id is
+ * the signed callback order id. Amount is not compared. A signed approval
+ * status is not a failure.
  */
 export function pendingFailureMatchesCallback(input: {
     signed: SignedCallbackPayment;
@@ -124,8 +105,5 @@ export function pendingFailureMatchesCallback(input: {
     if (!input.signed.orderId || pending.order_id !== input.signed.orderId) return false;
     if (input.formOrderId && input.formOrderId !== input.signed.orderId) return false;
     if (input.signed.statusCode === "0" || input.signed.statusCode === "00") return false;
-
-    const storedAmount = normalizeMoney(pending.amount);
-    if (!input.signed.amount || !storedAmount) return false;
-    return input.signed.amount === storedAmount;
+    return true;
 }
