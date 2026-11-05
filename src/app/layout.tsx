@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Noto_Sans, Noto_Sans_Sinhala } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import ToastProvider from "./toast-provider";
@@ -11,6 +11,20 @@ import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import IdleLogoutProvider from "@/components/providers/IdleLogoutProvider";
 import LocaleProvider from "@/components/providers/LocaleProvider";
 import Footer from "@/components/homepage/footer/footer";
+
+const notoSans = Noto_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-noto-sans",
+  display: "swap",
+});
+
+const notoSansSinhala = Noto_Sans_Sinhala({
+  subsets: ["sinhala"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-noto-sinhala",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "clinecxa.lk",
@@ -24,8 +38,12 @@ export default async function RootLayout({
 }>) {
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
+    <html
+      lang="en"
+      className={`${notoSans.variable} ${notoSansSinhala.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="font-sans antialiased">
 
         <LocaleProvider>
           <IdleLogoutProvider>

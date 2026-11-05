@@ -175,9 +175,9 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
     return <SlotPickerSkeleton />;
   }
   return (
-    <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
+    <div className="bg-white rounded-2xl border border-cx-border p-6 md:p-8">
       {/* Doctor Info Card */}
-      <div className="mb-8 bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+      <div className="mb-8 bg-white border border-cx-border rounded-2xl p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
 
           {/* Profile Image */}
@@ -203,7 +203,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
 
             {/* Specialization */}
             {practitioner.specialization?.length > 0 && (
-              <p className="text-sm text-cyan-600 font-medium mt-1">
+              <p className="text-sm text-cx-primary font-medium mt-1">
                 {formatSpecialties(practitioner.specialization, " • ")}
               </p>
             )}
@@ -281,7 +281,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
       {/* Step Header */}
       <div className="mb-6">
         {!hideStepCounter && (
-          <p className="text-sm font-medium text-cyan-600">
+          <p className="text-sm font-medium text-cx-primary">
             {t("stepLabel")}
           </p>
         )}
@@ -307,8 +307,8 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
               }}
               className={`px-4 py-2 rounded-full text-sm font-medium border transition
                 ${selectedType?.id === type.id
-                  ? "bg-cyan-600 text-white border-cyan-600"
-                  : "bg-white border-gray-300 hover:border-cyan-500"
+                  ? "bg-cx-primary text-white border-cx-primary"
+                  : "bg-white border-cx-border hover:border-cx-primary"
                 }`}
             >
               {type.name} · {type.duration_mins} {t("minLabel")} · <Price amount={type.fee} />
@@ -329,7 +329,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
                     href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || ''}${practitioner?.specialization?.length ? ' (' + formatSpecialties(practitioner.specialization) + ')' : ''}.`)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold inline-block"
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 min-h-12 rounded-lg font-semibold inline-flex items-center"
                   >
                     Contact on WhatsApp
                   </a>
@@ -372,7 +372,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
           {/* Time */}
           <div>
             <h4 className="font-medium mb-2 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-cyan-600" />
+              <Clock className="w-4 h-4 text-cx-primary" />
               {t("timeLabel")}
             </h4>
 
@@ -398,8 +398,8 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
                     onClick={() => setSelectedTime(time)}
                     className={`px-4 py-2 rounded-lg text-sm border transition
                       ${selectedTime === time
-                        ? "bg-green-600 text-white border-green-600"
-                        : "bg-white border-gray-300 hover:border-cyan-500"
+                        ? "bg-cx-primary text-white border-cx-primary"
+                        : "bg-white border-cx-border hover:border-cx-primary"
                       }`}
                   >
                     {time}
@@ -414,7 +414,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
       {/* Continue - hidden for In-Home Visit types */}
       {!isInHomeType(selectedType) && (
         <Button
-          className="mt-8 w-full"
+          className="mt-8 w-full cx-force-primary min-h-12"
           disabled={!selectedType || !selectedDate || !selectedTime}
           onClick={handleContinue}
         >
@@ -432,7 +432,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
 };
 
 const SlotPickerSkeleton = () => (
-  <div className="bg-white rounded-2xl shadow-md p-6 md:p-8" aria-busy="true" aria-live="polite">
+  <div className="bg-white rounded-2xl border border-cx-border p-6 md:p-8" aria-busy="true" aria-live="polite">
     <div className="mb-8 flex gap-4">
       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-slate-100 animate-pulse" />
       <div className="flex-1 space-y-2 py-1">
