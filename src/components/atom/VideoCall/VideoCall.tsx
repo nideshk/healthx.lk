@@ -133,7 +133,7 @@ export default function VideoCallContainer({
           <div className="flex flex-col items-center justify-center h-full bg-gradient-to-b from-zinc-900 to-black p-6">
             <div className="w-full max-w-md space-y-8 text-center">
               <div className="flex flex-col items-center gap-4">
-                <div className="p-4 bg-blue-500/10 rounded-full text-blue-500">
+                <div className="p-4 bg-cx-primary/10 rounded-full text-cx-primary">
                   <Activity size={48} />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tight">Consultation Room</h1>
@@ -148,7 +148,7 @@ export default function VideoCallContainer({
 
                 <button
                   onClick={handleJoin}
-                  className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl text-lg font-bold transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-600/20"
+                  className="w-full bg-cx-primary hover:bg-cx-deep py-4 rounded-2xl text-lg font-bold transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-cx-primary/20"
                 >
                   Join Consultation
                 </button>
@@ -191,7 +191,7 @@ export default function VideoCallContainer({
           {/* DRAG HANDLE */}
           <div
             onMouseDown={startResizing}
-            className={`absolute top-0 left-0 w-1.5 h-full cursor-col-resize z-50 transition-colors ${isResizing ? "bg-blue-600" : "hover:bg-blue-600/50"
+            className={`absolute top-0 left-0 w-1.5 h-full cursor-col-resize z-50 transition-colors ${isResizing ? "bg-cx-primary" : "hover:bg-cx-primary/50"
               }`}
           />
           <div className="flex-1 overflow-y-auto">

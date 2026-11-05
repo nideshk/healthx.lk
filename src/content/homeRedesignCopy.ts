@@ -32,4 +32,13 @@ export const homeRedesignCopy = {
     title: "Looking after family and ageing parents from abroad",
     text: "You can create an account for a family member and attend the consultation with them.",
   },
+  practitioner: {
+    subtitle:
+      "Bring your patients online with Clinecxa. Share your booking page, see patients by video, and manage your schedule, fees, prescriptions and patient records in one place.",
+    benefits: [
+      "Your own booking page to share with patients",
+      "Video consultations on your own schedule",
+      "Prescriptions, follow-ups and patient records",
+    ],
+  },
 } as const;

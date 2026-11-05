@@ -205,7 +205,7 @@ export default function PreConsultationStep({
             </p>
           </div>
           <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-100 shadow-sm self-start">
-            <ShieldCheck className="w-4 h-4 text-teal-500" />
+            <ShieldCheck className="w-4 h-4 text-cx-primary" />
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               {t("privacy")}
             </span>
@@ -218,7 +218,7 @@ export default function PreConsultationStep({
             {/* Concern */}
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-                <MessageSquare className="w-4 h-4 text-teal-500" />
+                <MessageSquare className="w-4 h-4 text-cx-primary" />
                 {t("concern")} *
               </label>
               <textarea
@@ -238,7 +238,7 @@ export default function PreConsultationStep({
             {/* Outcome */}
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-                <Target className="w-4 h-4 text-teal-500" />
+                <Target className="w-4 h-4 text-cx-primary" />
                 {t("outcome")} *
               </label>
               <textarea
@@ -258,7 +258,7 @@ export default function PreConsultationStep({
             {/* Duration */}
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-                <Target className="w-4 h-4 text-teal-500" />
+                <Target className="w-4 h-4 text-cx-primary" />
                 {t("duration")} *
               </label>
               <textarea
@@ -294,7 +294,7 @@ export default function PreConsultationStep({
                   },
                 });
               }}
-              className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-teal-500 bg-slate-50/50 appearance-none cursor-pointer outline-none transition-all font-bold text-slate-700"
+              className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-cx-primary bg-slate-50/50 appearance-none cursor-pointer outline-none transition-all font-bold text-slate-700"
             >
               <option value="" disabled>
                 {t("selectOption")}
@@ -306,7 +306,7 @@ export default function PreConsultationStep({
               ))}
             </select>
 
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-hover:text-teal-500 pointer-events-none transition-colors" />
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-hover:text-cx-primary pointer-events-none transition-colors" />
           </div>
 
           {(isCustomReferral ||
@@ -323,7 +323,7 @@ export default function PreConsultationStep({
                       },
                     })
                   }
-                  className="w-full border-2 border-teal-100 rounded-2xl p-4 text-sm focus:border-teal-500 bg-white shadow-inner outline-none font-medium"
+                  className="w-full border-2 border-cx-border rounded-2xl p-4 text-sm focus:border-cx-primary bg-white shadow-inner outline-none font-medium"
                 />
               </div>
             )}
@@ -342,9 +342,9 @@ export default function PreConsultationStep({
             </div>
 
             {attachments.length < 3 ? (
-              <label className="group flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-200 rounded-3xl cursor-pointer hover:bg-teal-50/50 hover:border-teal-300 transition-all">
-                <Paperclip className="w-8 h-8 text-slate-300 group-hover:text-teal-500 mb-2 transition-colors" />
-                <p className="text-xs font-bold text-slate-400 group-hover:text-teal-700 text-center px-4">
+              <label className="group flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-200 rounded-3xl cursor-pointer hover:bg-cx-tint/50 hover:border-cx-primary transition-all">
+                <Paperclip className="w-8 h-8 text-slate-300 group-hover:text-cx-primary mb-2 transition-colors" />
+                <p className="text-xs font-bold text-slate-400 group-hover:text-cx-primary text-center px-4">
                   {attachments.length === 0 ? t("uploadHint") : t("uploadMoreHint", { defaultValue: "Add more documents" })}
                 </p>
                 <input
@@ -357,7 +357,7 @@ export default function PreConsultationStep({
               </label>
             ) : (
               <div className="w-full h-40 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center bg-slate-50/50 opacity-60">
-                <CheckCircle2 className="w-8 h-8 text-teal-400 mb-2" />
+                <CheckCircle2 className="w-8 h-8 text-cx-tint mb-2" />
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                   Maximum limit reached
                 </p>
@@ -366,18 +366,18 @@ export default function PreConsultationStep({
 
             <div className="mt-4 space-y-2">
               {attachments.map((file, idx) => (
-                <div key={`${file.name}-${idx}`} className="flex items-center justify-between p-4 bg-teal-50 border border-teal-100 rounded-2xl">
+                <div key={`${file.name}-${idx}`} className="flex items-center justify-between p-4 bg-cx-tint border border-cx-border rounded-2xl">
                   <div className="flex items-center gap-3 truncate">
                     <div className="p-2 bg-white rounded-xl shadow-sm">
-                      <FileText className="w-4 h-4 text-teal-500" />
+                      <FileText className="w-4 h-4 text-cx-primary" />
                     </div>
-                    <span className="text-sm font-bold text-teal-900 truncate">
+                    <span className="text-sm font-bold text-cx-deep truncate">
                       {file.name}
                     </span>
                   </div>
                   <button
                     onClick={() => removeAttachment(idx)}
-                    className="p-1 hover:bg-white rounded-full text-teal-600 transition-colors"
+                    className="p-1 hover:bg-white rounded-full text-cx-primary transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -400,9 +400,9 @@ export default function PreConsultationStep({
                 </label>
               </div>
 
-              <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
-                <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                <p className="text-[11px] font-bold text-blue-700 leading-normal">
+              <div className="mt-3 flex items-start gap-2 p-3 bg-cx-tint/50 border border-cx-border rounded-xl">
+                <AlertCircle className="w-4 h-4 text-cx-primary shrink-0 mt-0.5" />
+                <p className="text-[11px] font-bold text-cx-primary leading-normal">
                   {t.rich("attendeeFeeNote", {
                     price: () => <Price amount={500} />,
                   })}
@@ -420,7 +420,7 @@ export default function PreConsultationStep({
                       email: e.target.value,
                     })
                   }
-                  className="flex-1 border-2 border-slate-50 rounded-2xl p-3 text-sm focus:border-teal-500 bg-slate-50/50 outline-none font-medium"
+                  className="flex-1 border-2 border-slate-50 rounded-2xl p-3 text-sm focus:border-cx-primary bg-slate-50/50 outline-none font-medium"
                 />
 
                 <select
@@ -445,7 +445,7 @@ export default function PreConsultationStep({
 
                 <button
                   onClick={addAttendee}
-                  className="p-3 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-all shadow-lg shadow-slate-200"
+                  className="p-3 bg-slate-900 text-white rounded-2xl hover:bg-cx-primary transition-all shadow-lg shadow-slate-200"
                 >
                   <UserPlus className="w-5 h-5" />
                 </button>
@@ -502,7 +502,7 @@ export default function PreConsultationStep({
 
             <button
               onClick={handleNext}
-              className="w-full md:w-auto px-10 py-4 bg-slate-900 hover:bg-teal-600 text-white rounded-2xl text-sm font-bold"
+              className="w-full md:w-auto px-10 py-4 bg-slate-900 hover:bg-cx-primary text-white rounded-2xl text-sm font-bold"
             >
               {t("continue")}
               <ChevronRight size={16} />

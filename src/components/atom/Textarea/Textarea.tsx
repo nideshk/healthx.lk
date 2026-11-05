@@ -38,13 +38,13 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
 
   const lightStyles = cn(
     baseStyles,
-    error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-[#018BB5] focus:border-[#018BB5]",
+    error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-cx-primary focus:border-cx-primary",
     "bg-white text-gray-900"
   );
 
   const darkStyles = cn(
     baseStyles,
-    error ? "border-red-500 focus:ring-red-500" : "border-gray-600 focus:ring-[#018BB5] focus:border-[#018BB5]",
+    error ? "border-red-500 focus:ring-red-500" : "border-gray-600 focus:ring-cx-primary focus:border-cx-primary",
     "bg-gray-800 text-gray-200"
   );
 

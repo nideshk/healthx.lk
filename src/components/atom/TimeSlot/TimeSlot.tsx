@@ -72,7 +72,7 @@ export default function TimeSlotGroup({
         const lightStyles = cn(
           baseStyles,
           isSelected
-            ? "bg-[#018BB5] text-white border-[#018BB5]"
+            ? "bg-cx-primary text-white border-cx-primary"
             : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100",
           isDisabled && "opacity-50 cursor-not-allowed hover:bg-white"
         );
@@ -80,7 +80,7 @@ export default function TimeSlotGroup({
         const darkStyles = cn(
           baseStyles,
           isSelected
-            ? "bg-[#018BB5] text-white border-[#018BB5]"
+            ? "bg-cx-primary text-white border-cx-primary"
             : "bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700",
           isDisabled && "opacity-50 cursor-not-allowed hover:bg-gray-800"
         );

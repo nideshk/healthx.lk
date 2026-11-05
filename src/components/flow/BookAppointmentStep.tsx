@@ -141,9 +141,9 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
         <div className="flex items-center justify-between mb-10">
           <button
             onClick={() => prevStep()}
-            className="group flex items-center gap-2 text-slate-400 hover:text-teal-600 transition-all"
+            className="group flex items-center gap-2 text-slate-400 hover:text-cx-primary transition-all"
           >
-            <div className="p-2 rounded-full bg-white shadow-sm border border-slate-100 group-hover:bg-teal-50 group-hover:border-teal-100 transition-colors">
+            <div className="p-2 rounded-full bg-white shadow-sm border border-slate-100 group-hover:bg-cx-tint group-hover:border-cx-primary transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </div>
             <span className="text-xs font-black uppercase tracking-[0.15em]">
@@ -152,7 +152,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
           </button>
 
           <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-100 shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-teal-500" />
+            <ShieldCheck className="w-4 h-4 text-cx-primary" />
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               {t("secured")}
             </span>
@@ -163,7 +163,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
 
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-10">
             <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-teal-50 text-teal-600 px-5 py-2 rounded-bl-2xl text-[10px] font-black uppercase tracking-widest">
+              <div className="absolute top-0 right-0 bg-cx-tint text-cx-primary px-5 py-2 rounded-bl-2xl text-[10px] font-black uppercase tracking-widest">
                 {t("specialist")}
               </div>
 
@@ -196,7 +196,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                 </p>
 
                 {/* Specialization Mapping */}
-                <div className="flex items-center gap-1.5 mt-2 text-teal-600">
+                <div className="flex items-center gap-1.5 mt-2 text-cx-primary">
                   <Stethoscope className="w-3.5 h-3.5" />
                   <p className="font-bold text-xs uppercase tracking-tighter">
                     {practitioner.specialization?.length > 0
@@ -251,7 +251,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
             {/* Appointment Type */}
             <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                <span className="w-6 h-6 rounded-lg bg-teal-500 text-white flex items-center justify-center text-[10px]">01</span>
+                <span className="w-6 h-6 rounded-lg bg-cx-primary text-white flex items-center justify-center text-[10px]">01</span>
                 {t("sessionType")}
               </h3>
 
@@ -272,22 +272,22 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                       }
                     }}
                     className={`group relative p-6 rounded-3xl border-2 text-left transition-all ${selectedType?.id === type.id
-                      ? "border-teal-500 bg-teal-50/30"
-                      : "border-slate-100 hover:border-teal-200 bg-white"
+                      ? "border-cx-primary bg-cx-tint/30"
+                      : "border-slate-100 hover:border-cx-primary bg-white"
                       }`}
                   >
                     {selectedType?.id === type.id && (
-                      <CheckCircle2 className="absolute top-6 right-6 w-6 h-6 text-teal-500 fill-teal-50" />
+                      <CheckCircle2 className="absolute top-6 right-6 w-6 h-6 text-cx-primary fill-cx-tint" />
                     )}
 
-                    <p className={`font-black text-lg ${selectedType?.id === type.id ? 'text-teal-900' : 'text-slate-800'}`}>
+                    <p className={`font-black text-lg ${selectedType?.id === type.id ? 'text-cx-deep' : 'text-slate-800'}`}>
                       {type.name}{" "}
                       <span className="text-xs font-bold uppercase tracking-tight">
                         (<Price amount={(type.fee ?? 0) + (type.platform_fee ?? 0)} />)
                       </span>
                     </p>
 
-                    <div className="flex items-center gap-2 mt-2 text-slate-400 group-hover:text-teal-600 transition-colors">
+                    <div className="flex items-center gap-2 mt-2 text-slate-400 group-hover:text-cx-primary transition-colors">
                       <Clock className="w-3.5 h-3.5" />
                       <span className="text-xs font-bold uppercase tracking-tight">
                         {type.duration_mins} {t("minuteSession")}
@@ -306,7 +306,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                   {/* Calendar */}
                   <div>
                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-lg bg-teal-500 text-white flex items-center justify-center text-[10px]">02</span>
+                      <span className="w-6 h-6 rounded-lg bg-cx-primary text-white flex items-center justify-center text-[10px]">02</span>
                       {t("chooseDate")}
                     </h3>
 
@@ -330,7 +330,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                   {/* Time */}
                   <div ref={timeRef}>
                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-lg bg-teal-500 text-white flex items-center justify-center text-[10px]">03</span>
+                      <span className="w-6 h-6 rounded-lg bg-cx-primary text-white flex items-center justify-center text-[10px]">03</span>
                       {t("availableSlots")}
                     </h3>
 
@@ -374,8 +374,8 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                               });
                             }}
                             className={`py-4 rounded-2xl text-[13px] font-black transition-all ${selectedTime === time
-                              ? "bg-teal-500 text-white shadow-lg shadow-teal-100"
-                              : "bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-700"
+                              ? "bg-cx-primary text-white shadow-lg shadow-cx-primary/15"
+                              : "bg-slate-50 text-slate-600 hover:bg-cx-tint hover:text-cx-primary"
                               }`}
                           >
                             {time}
@@ -400,7 +400,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                       href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || bookingData?.selectedDoctor?.full_name || ''}${practitioner?.specialization?.length ? ' (' + formatSpecialties(practitioner.specialization) + ')' : ''}${selectedDate && selectedTime ? ' Preferred: ' + selectedDate + ' ' + selectedTime : ''}.`)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-8 py-3 bg-teal-600 text-white rounded-2xl font-bold inline-block"
+                      className="px-8 py-3 bg-cx-primary text-white rounded-2xl font-bold inline-block"
                     >
                       Contact on WhatsApp
                     </a>
@@ -425,11 +425,11 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
 
           <div className="flex items-center gap-6">
-            <div className="hidden sm:flex w-14 h-14 rounded-2xl bg-teal-50 items-center justify-center border border-teal-100">
-              <CalendarDays className="w-6 h-6 text-teal-600" />
+            <div className="hidden sm:flex w-14 h-14 rounded-2xl bg-cx-tint items-center justify-center border border-cx-border">
+              <CalendarDays className="w-6 h-6 text-cx-primary" />
             </div>
             <div>
-              <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mb-1">
+              <p className="text-[10px] font-black text-cx-primary uppercase tracking-[0.2em] mb-1">
                 {t("summary")}
               </p>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -447,7 +447,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
           <button
             disabled={isConfirming}
             onClick={handleFinalConfirm}
-            className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-50"
+            className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-cx-primary transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-50"
           >
             {isConfirming ? (
               <>{t("confirming")} <Loader2 className="w-4 h-4 animate-spin" /></>

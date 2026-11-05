@@ -82,7 +82,7 @@ const DoctorSelectionStep = forwardRef(
     }, [bookingData.selectedService?.slug]);
 
     const handleSelectDoctor = async (doctor: Doctor & { hasCurrentAvailability?: boolean }) => {
-      if (isSaving || doctor.hasCurrentAvailability === false) return;
+      if (isSaving) return;
 
       setIsSaving(true);
       setSelectedDoctorId(doctor.id);
@@ -128,7 +128,7 @@ const DoctorSelectionStep = forwardRef(
               <button
                 type="button"
                 onClick={() => prevStep()}
-                className="flex items-center gap-1.5 text-slate-400 hover:text-teal-600 font-bold text-xs mb-3 transition-colors uppercase tracking-wider group"
+                className="flex items-center gap-1.5 text-slate-400 hover:text-cx-primary font-bold text-xs mb-3 transition-colors uppercase tracking-wider group"
               >
                 <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
                 {t('backToSpecialization')}
@@ -138,7 +138,7 @@ const DoctorSelectionStep = forwardRef(
               </h2>
               <p className="text-sm text-slate-500 font-medium mt-1">
                 {t('subtitle')}{' '}
-                <span className="text-teal-600 font-bold">
+                <span className="text-cx-primary font-bold">
                   {serviceLabel(bookingData.selectedService ?? {})}
                 </span>
               </p>
@@ -158,7 +158,7 @@ const DoctorSelectionStep = forwardRef(
                       e.target.value as 'lowToHigh' | 'highToLow'
                     )
                   }
-                  className="text-xs font-bold border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-teal-500"
+                  className="text-xs font-bold border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-cx-primary"
                 >
                   <option value="lowToHigh">
                     {t('priceLowHigh') || 'Price: Low to High'}
@@ -185,7 +185,7 @@ const DoctorSelectionStep = forwardRef(
               </p>
               <button
                 onClick={() => prevStep()}
-                className="mt-4 text-teal-600 underline font-bold"
+                className="mt-4 text-cx-primary underline font-bold"
               >
                 {t('tryAnotherService')}
               </button>
@@ -194,19 +194,15 @@ const DoctorSelectionStep = forwardRef(
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedDoctors.map((doctor: any) => {
                 const isSelected = selectedDoctorId === doctor.id;
-                const bookable = doctor.hasCurrentAvailability !== false;
+                const unavailable = doctor.hasCurrentAvailability === false;
 
                 return (
                   <div
                     key={doctor.id}
-                    onClick={() => {
-                      if (bookable) handleSelectDoctor(doctor);
-                    }}
-                    className={`relative flex flex-col rounded-[2rem] border-2 transition-all duration-500 overflow-hidden group ${bookable ? 'cursor-pointer' : 'cursor-not-allowed opacity-80'} ${isSelected
-                      ? 'bg-teal-50 border-teal-500 shadow-xl shadow-teal-200/50 scale-[1.02]'
-                      : bookable
-                        ? 'bg-white border-slate-100 hover:border-teal-200 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1'
-                        : 'bg-white border-slate-100'
+                    onClick={() => handleSelectDoctor(doctor)}
+                    className={`relative flex flex-col rounded-[2rem] border-2 transition-all duration-500 overflow-hidden group cursor-pointer ${isSelected
+                      ? 'bg-cx-tint border-cx-primary shadow-xl shadow-cx-primary/20 scale-[1.02]'
+                      : 'bg-white border-slate-100 hover:border-cx-primary hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1'
                       }`}
                   >
                     <div className="p-6">
@@ -216,14 +212,14 @@ const DoctorSelectionStep = forwardRef(
                             src={doctor.profileImage}
                             alt={doctor.name}
                             className={`w-20 h-20 rounded-2xl object-cover border-2 transition-all ${isSelected
-                              ? 'border-teal-300 shadow-md'
+                              ? 'border-cx-primary shadow-md'
                               : 'border-slate-50'
                               }`}
                           />
                         ) : (
                           <div
                             className={`w-20 h-20 rounded-2xl border-2 flex items-center justify-center text-xl font-bold transition-all ${isSelected
-                              ? 'border-teal-300 bg-teal-50 text-teal-700 shadow-md'
+                              ? 'border-cx-primary bg-cx-tint text-cx-primary shadow-md'
                               : 'border-slate-100 bg-slate-100 text-slate-500'
                               }`}
                           >
@@ -237,7 +233,7 @@ const DoctorSelectionStep = forwardRef(
                         )}
 
                         <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-md">
-                          <div className="bg-teal-500 rounded-full p-1">
+                          <div className="bg-cx-primary rounded-full p-1">
                             <BadgeCheck className="w-4 h-4 text-white" />
                           </div>
                         </div>
@@ -246,16 +242,16 @@ const DoctorSelectionStep = forwardRef(
                       <div className="mb-5">
                         <h3
                           className={`text-xl font-black transition-colors ${isSelected
-                            ? 'text-teal-900'
+                            ? 'text-cx-deep'
                             : 'text-slate-900'
                             }`}
                         >
                           Dr. {doctor.name}
                         </h3>
-                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mt-1.5">
+                        <p className="text-[10px] font-black text-cx-primary uppercase tracking-[0.2em] mt-1.5">
                           {t('verifiedSpecialist')}
                         </p>
-                        {!bookable && (
+                        {unavailable && (
                           <p className="mt-2 inline-flex text-xs font-bold text-amber-800 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-1 normal-case tracking-normal">
                             {t('noCurrentAvailability')}
                           </p>
@@ -279,7 +275,7 @@ const DoctorSelectionStep = forwardRef(
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
                             {t('consultationFee')}
                           </p>
-                          <p className={`text-xl font-black ${isSelected ? 'text-teal-700' : 'text-slate-900'}`}>
+                          <p className={`text-xl font-black ${isSelected ? 'text-cx-primary' : 'text-slate-900'}`}>
                             {doctor.startingPrice === doctor.endingPrice ? (
                               <Price amount={doctor.startingPrice} />
                             ) : (
@@ -292,8 +288,8 @@ const DoctorSelectionStep = forwardRef(
 
                         <div
                           className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg ${isSelected
-                            ? 'bg-teal-500 text-white shadow-teal-200'
-                            : 'bg-slate-900 text-white group-hover:bg-teal-600 shadow-slate-200'
+                            ? 'bg-cx-primary text-white shadow-cx-primary/20'
+                            : 'bg-slate-900 text-white group-hover:bg-cx-primary shadow-slate-200'
                             }`}
                         >
                           {isSaving && isSelected ? (

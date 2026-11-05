@@ -16,13 +16,9 @@ const mainLinks = [
   { key: "help", href: "/help" },
 ];
 
-/**
- * TODO: Replace these placeholder URLs with the real Clinecxa Instagram
- * and Facebook pages. The owner will supply the URLs.
- */
-const SOCIAL_PLACEHOLDER_LINKS = {
-  instagram: "https://instagram.com/",
-  facebook: "https://facebook.com/",
+const SOCIAL_LINKS = {
+  instagram: "https://www.instagram.com/clinecxa.lk/",
+  facebook: "https://www.facebook.com/clinecxa",
 } as const;
 
 const companyName = "Clinecxa";
@@ -137,7 +133,7 @@ const Footer = () => {
             <div className="flex items-center space-x-3">
               <ClincoLogo />
               <a
-                href={SOCIAL_PLACEHOLDER_LINKS.instagram}
+                href={SOCIAL_LINKS.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={t("social.instagram")}
@@ -146,7 +142,7 @@ const Footer = () => {
                 <Instagram className="w-5 h-5" aria-hidden="true" />
               </a>
               <a
-                href={SOCIAL_PLACEHOLDER_LINKS.facebook}
+                href={SOCIAL_LINKS.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={t("social.facebook")}
@@ -171,14 +167,14 @@ const Footer = () => {
               {t("secure")}
             </p>
 
-            <p className="text-base text-white max-w-md text-left md:text-right">
+            <p className="text-base text-white max-w-md text-left md:text-right pr-20">
               <span className="font-semibold">{t("disclaimerTitle")}:</span>{" "}
               {t("disclaimerText")}
             </p>
           </div>
         </div>
 
-        <div className="pt-6 text-center">
+        <div className="pt-6 pr-20 text-center">
           <div className="text-base text-white">
             &copy; {currentYear} {companyName}. {t("rights")}
           </div>
