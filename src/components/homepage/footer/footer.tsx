@@ -167,14 +167,14 @@ const Footer = () => {
               {t("secure")}
             </p>
 
-            <p className="text-base text-white max-w-md text-left md:text-right">
+            <p className="text-base text-white max-w-md text-left md:text-right pr-20">
               <span className="font-semibold">{t("disclaimerTitle")}:</span>{" "}
               {t("disclaimerText")}
             </p>
           </div>
         </div>
 
-        <div className="pt-6 text-center">
+        <div className="pt-6 pr-20 text-center">
           <div className="text-base text-white">
             &copy; {currentYear} {companyName}. {t("rights")}
           </div>
