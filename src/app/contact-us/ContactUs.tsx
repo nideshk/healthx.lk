@@ -90,7 +90,7 @@ export default function ContactUs() {
                         </p>
                     </div>
                     <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-100 shadow-sm self-start">
-                        <ShieldCheck className="w-4 h-4 text-teal-500" />
+                        <ShieldCheck className="w-4 h-4 text-cx-primary" />
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                             {t("privacy")}
                         </span>
@@ -103,8 +103,8 @@ export default function ContactUs() {
                     <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50">
                         {/* Specialty Request Banner */}
                         {isSpecialtyRequest && (
-                            <div className="mb-8 flex items-start gap-4 bg-gradient-to-r from-cyan-50 to-teal-50 border border-cyan-100 rounded-2xl p-5">
-                                <div className="shrink-0 w-10 h-10 rounded-xl bg-cyan-500 flex items-center justify-center shadow-sm">
+                            <div className="mb-8 flex items-start gap-4 bg-gradient-to-r from-cx-tint to-cx-tint border border-cx-border rounded-2xl p-5">
+                                <div className="shrink-0 w-10 h-10 rounded-xl bg-cx-primary flex items-center justify-center shadow-sm">
                                     <Stethoscope className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
@@ -121,7 +121,7 @@ export default function ContactUs() {
                             {/* Email */}
                             <div className="space-y-3">
                                 <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-                                    <Mail className="w-4 h-4 text-teal-500" />
+                                    <Mail className="w-4 h-4 text-cx-primary" />
                                     {t("emailLabel")} *
                                 </label>
                                 <input
@@ -131,14 +131,14 @@ export default function ContactUs() {
                                     value={formData.email}
                                     onChange={handleChange}
                                     required
-                                    className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-teal-500 bg-slate-50/50 outline-none transition-all font-medium"
+                                    className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-cx-primary bg-slate-50/50 outline-none transition-all font-medium"
                                 />
                             </div>
 
                             {/* Phone */}
                             <div className="space-y-3">
                                 <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-                                    <PhoneIcon className="w-4 h-4 text-teal-500" />
+                                    <PhoneIcon className="w-4 h-4 text-cx-primary" />
                                     {t("phoneLabel")}
                                 </label>
                                 <input
@@ -147,14 +147,14 @@ export default function ContactUs() {
                                     placeholder={t("phonePlaceholder")}
                                     value={formData.phone}
                                     onChange={handleChange}
-                                    className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-teal-500 bg-slate-50/50 outline-none transition-all font-medium"
+                                    className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-cx-primary bg-slate-50/50 outline-none transition-all font-medium"
                                 />
                             </div>
 
                             {/* Concern */}
                             <div className="space-y-3">
                                 <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-                                    <MessageSquare className="w-4 h-4 text-teal-500" />
+                                    <MessageSquare className="w-4 h-4 text-cx-primary" />
                                     {t("concernLabel")} *
                                 </label>
                                 <textarea
@@ -164,7 +164,7 @@ export default function ContactUs() {
                                     value={formData.concern}
                                     onChange={handleChange}
                                     required
-                                    className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-teal-500 bg-slate-50/50 outline-none transition-all font-medium resize-none"
+                                    className="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm focus:border-cx-primary bg-slate-50/50 outline-none transition-all font-medium resize-none"
                                 ></textarea>
                             </div>
 
@@ -173,7 +173,7 @@ export default function ContactUs() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full md:w-auto px-10 py-4 bg-slate-900 hover:bg-teal-600 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-200 disabled:opacity-50"
+                                    className="w-full md:w-auto px-10 py-4 bg-slate-900 hover:bg-cx-primary text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-200 disabled:opacity-50"
                                 >
                                     {loading ? (
                                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -195,8 +195,8 @@ export default function ContactUs() {
 
                             <div className="space-y-8">
                                 <div className="flex gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center shrink-0 shadow-sm border border-teal-100/50">
-                                        <MapPin className="w-5 h-5 text-teal-600" />
+                                    <div className="w-12 h-12 rounded-2xl bg-cx-tint flex items-center justify-center shrink-0 shadow-sm border border-cx-border">
+                                        <MapPin className="w-5 h-5 text-cx-primary" />
                                     </div>
                                     <div>
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{t("addressTitle")}</h4>
@@ -205,25 +205,25 @@ export default function ContactUs() {
                                 </div>
 
                                 <div className="flex gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center shrink-0 shadow-sm border border-teal-100/50">
-                                        <PhoneIcon className="w-5 h-5 text-teal-600" />
+                                    <div className="w-12 h-12 rounded-2xl bg-cx-tint flex items-center justify-center shrink-0 shadow-sm border border-cx-border">
+                                        <PhoneIcon className="w-5 h-5 text-cx-primary" />
                                     </div>
                                     <div>
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{t("phoneTitle")}</h4>
                                         <p className="text-slate-600 font-semibold text-sm">
-                                            <a href={`tel:${dynSettings?.org_phone || "+94771050867"}`} className="hover:text-teal-600 transition-colors">{dynSettings?.org_phone || t("phoneValue")}</a>
+                                            <a href={`tel:${dynSettings?.org_phone || "+94771050867"}`} className="hover:text-cx-primary transition-colors">{dynSettings?.org_phone || t("phoneValue")}</a>
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="flex gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center shrink-0 shadow-sm border border-teal-100/50">
-                                        <Mail className="w-5 h-5 text-teal-600" />
+                                    <div className="w-12 h-12 rounded-2xl bg-cx-tint flex items-center justify-center shrink-0 shadow-sm border border-cx-border">
+                                        <Mail className="w-5 h-5 text-cx-primary" />
                                     </div>
                                     <div>
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{t("emailTitle")}</h4>
                                         <p className="text-slate-600 font-semibold text-sm">
-                                            <a href={`mailto:${dynSettings?.org_email || "support@clinecxa.lk"}`} className="hover:text-teal-600 transition-colors">{dynSettings?.org_email || t("emailValue")}</a>
+                                            <a href={`mailto:${dynSettings?.org_email || "support@clinecxa.lk"}`} className="hover:text-cx-primary transition-colors">{dynSettings?.org_email || t("emailValue")}</a>
                                         </p>
                                     </div>
                                 </div>

@@ -32,7 +32,7 @@ export default function RadioButton({
   const lightStyles = cn(
     baseStyles,
     checked
-      ? "border-[#018BB5] bg-[#018BB5] ring-2 ring-[#018BB5]"
+      ? "border-cx-primary bg-cx-primary ring-2 ring-cx-primary"
       : "border-gray-300 bg-white hover:bg-gray-50",
     disabled && "opacity-50 cursor-not-allowed",
     error && "border-red-500 ring-red-500"
@@ -41,7 +41,7 @@ export default function RadioButton({
   const darkStyles = cn(
     baseStyles,
     checked
-      ? "border-[#018BB5] bg-[#018BB5] ring-2 ring-[#018BB5]"
+      ? "border-cx-primary bg-cx-primary ring-2 ring-cx-primary"
       : "border-gray-600 bg-gray-800 hover:bg-gray-700",
     disabled && "opacity-50 cursor-not-allowed",
     error && "border-red-500 ring-red-500"

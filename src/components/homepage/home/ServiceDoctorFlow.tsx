@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import HomepageSlotPicker from "./HomepageSlotPicker";
@@ -57,6 +57,12 @@ export default function ServiceDoctorFlow() {
     useState<Service | null>(null);
   const [selectedDoctor, setSelectedDoctor] =
     useState<Doctor | null>(null);
+  const [doctorRequest, setDoctorRequest] = useState(0);
+  const [doctorError, setDoctorError] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const pendingScroll = useRef(false);
+  const pendingFocus = useRef(false);
 
   /* ---------- Fetch services ---------- */
   useEffect(() => {
@@ -79,25 +85,77 @@ export default function ServiceDoctorFlow() {
 
   /* ---------- Fetch doctors ---------- */
   useEffect(() => {
-    if (!selectedService) return;
+    if (!selectedService || doctorRequest === 0) return;
 
+    const controller = new AbortController();
+    let active = true;
     setLoading(true);
-    let cancelled = false;
+    setDoctorError(false);
+
     axios
-      .get(`/api/specialisation/${selectedService.slug.toLowerCase()}`)
-      .then((res) => {
-        if (!cancelled) setDoctors(res.data.practitioners || []);
+      .get(`/api/specialisation/${selectedService.slug.toLowerCase()}`, {
+        signal: controller.signal,
       })
-      .catch(() => {
-        if (!cancelled) setDoctors([]);
+      .then((res) => {
+        if (!active) return;
+        const list = res.data?.practitioners;
+        setDoctors(Array.isArray(list) ? list : []);
+        setDoctorError(false);
+      })
+      .catch((err: unknown) => {
+        if (!active || controller.signal.aborted) return;
+        if (axios.isCancel(err)) return;
+        setDoctors([]);
+        setDoctorError(true);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (active) setLoading(false);
       });
+
     return () => {
-      cancelled = true;
+      active = false;
+      controller.abort();
     };
-  }, [selectedService]);
+  }, [selectedService, doctorRequest]);
+
+  const assignHeading = (node: HTMLHeadingElement | null) => {
+    headingRef.current = node;
+    if (!node || !pendingFocus.current || pendingScroll.current) return;
+    node.focus({ preventScroll: true });
+    pendingFocus.current = false;
+  };
+
+  useLayoutEffect(() => {
+    if (!pendingScroll.current) return;
+    pendingScroll.current = false;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    sectionRef.current?.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+    if (headingRef.current && pendingFocus.current) {
+      headingRef.current.focus({ preventScroll: true });
+      pendingFocus.current = false;
+    }
+  }, [step]);
+
+  const openDoctorStep = (service: Service) => {
+    pendingScroll.current = true;
+    pendingFocus.current = true;
+    setDoctors([]);
+    setDoctorError(false);
+    setLoading(true);
+    setSelectedService(service);
+    setDoctorRequest((n) => n + 1);
+    setStep(2);
+  };
+
+  const openTimeStep = (doctor: Doctor) => {
+    pendingScroll.current = true;
+    pendingFocus.current = true;
+    setSelectedDoctor(doctor);
+    setStep(3);
+  };
 
   const goBack = () => {
     if (step === 1) return;
@@ -105,7 +163,7 @@ export default function ServiceDoctorFlow() {
   };
 
   return (
-    <section id="specialties" className="scroll-mt-24 py-8 md:py-12">
+    <section ref={sectionRef} id="specialties" className="scroll-mt-24 py-8 md:py-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Progress */}
         {step > 1 && <ProgressHeader step={step} />}
@@ -128,25 +186,25 @@ export default function ServiceDoctorFlow() {
           {step === 1 && !servicesLoading && (
             <ServicePicker
               services={services}
-              onSelect={(s) => {
-                setDoctors([]);
-                setLoading(true);
-                setSelectedService(s);
-                setStep(2);
-              }}
+              onSelect={openDoctorStep}
             />
           )}
 
           {step === 2 && loading && <DoctorSkeleton />}
 
-          {step === 2 && selectedService && !loading && (
+          {step === 2 && selectedService && !loading && doctorError && (
+            <DoctorFetchError
+              headingRef={assignHeading}
+              onBack={() => setStep(1)}
+            />
+          )}
+
+          {step === 2 && selectedService && !loading && !doctorError && (
             <DoctorPicker
               doctors={doctors}
               service={selectedService}
-              onSelect={(d) => {
-                setSelectedDoctor(d);
-                setStep(3);
-              }}
+              headingRef={assignHeading}
+              onSelect={openTimeStep}
             />
           )}
 
@@ -155,6 +213,7 @@ export default function ServiceDoctorFlow() {
               practitionerId={selectedDoctor.id}
               practitioner={selectedDoctor}
               selectedService={selectedService}
+              headingRef={assignHeading}
             />
           )}
         </div>
@@ -316,9 +375,10 @@ interface DoctorPickerProps {
   doctors: Doctor[];
   service: Service;
   onSelect: (d: Doctor) => void;
+  headingRef: (node: HTMLHeadingElement | null) => void;
 }
 
-const DoctorPicker = ({ doctors, service, onSelect }: DoctorPickerProps) => {
+const DoctorPicker = ({ doctors, service, onSelect, headingRef }: DoctorPickerProps) => {
   const tSelection = useTranslations("doctorSelection");
   const tPicker = useTranslations("bookingFlow.doctorPicker");
   const formatSpecialties = useFormatSpecialties();
@@ -342,7 +402,7 @@ const DoctorPicker = ({ doctors, service, onSelect }: DoctorPickerProps) => {
   return (
     <div className="max-w-2xl mx-auto">
       <header className="mb-6">
-        <h2 className="cx-heading">
+        <h2 ref={headingRef} tabIndex={-1} className="cx-heading">
           {tSelection("title")}
         </h2>
         <p className="text-base md:text-lg text-cx-ink mt-2">
@@ -373,21 +433,13 @@ const DoctorPicker = ({ doctors, service, onSelect }: DoctorPickerProps) => {
       <div className="space-y-4">
         {sortedDoctors.length > 0 ? (
           sortedDoctors.map((d: any) => {
-            const bookable = d.has_current_availability !== false;
+            const unavailable = d.has_current_availability === false;
             return (
             <button
               key={d.id}
               type="button"
-              aria-disabled={!bookable}
-              onClick={() => {
-                if (bookable) onSelect(d);
-              }}
-              className={`group w-full text-left bg-white
-                border border-cx-border rounded-2xl p-4 sm:p-5
-                ${bookable
-                  ? "hover:border-cx-primary"
-                  : "cursor-not-allowed"
-                }`}
+              onClick={() => onSelect(d)}
+              className="group w-full text-left bg-white border border-cx-border rounded-2xl p-4 sm:p-5 hover:border-cx-primary"
             >
               <div className="flex items-start gap-4">
                 {/* Avatar */}
@@ -447,7 +499,7 @@ const DoctorPicker = ({ doctors, service, onSelect }: DoctorPickerProps) => {
                     )}
                   </div>
 
-                  {!bookable && (
+                  {unavailable && (
                     <p className="mt-2 inline-flex text-sm font-semibold text-cx-ink bg-cx-gold rounded-full px-3 py-1">
                       {tSelection("noCurrentAvailability")}
                     </p>
@@ -474,14 +526,12 @@ const DoctorPicker = ({ doctors, service, onSelect }: DoctorPickerProps) => {
                         ))}
                       </div>
 
-                      {bookable && (
-                        <div className="hidden sm:flex items-center text-cx-primary">
-                          <span className="text-xs font-bold mr-1">
-                            {tPicker("actionText").replace(" →", "")}
-                          </span>
-                          <ChevronRight size={18} />
-                        </div>
-                      )}
+                      <div className="hidden sm:flex items-center text-cx-primary">
+                        <span className="text-xs font-bold mr-1">
+                          {tPicker("actionText").replace(" →", "")}
+                        </span>
+                        <ChevronRight size={18} />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -507,6 +557,34 @@ const DoctorPicker = ({ doctors, service, onSelect }: DoctorPickerProps) => {
     </div>
   );
 };
+
+function DoctorFetchError({
+  onBack,
+  headingRef,
+}: {
+  onBack: () => void;
+  headingRef: (node: HTMLHeadingElement | null) => void;
+}) {
+  const t = useTranslations("doctorSelection");
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <h2 ref={headingRef} tabIndex={-1} className="cx-heading">
+        {t("title")}
+      </h2>
+      <div className="mt-6 text-center py-12 border border-cx-border rounded-2xl bg-white">
+        <p className="text-cx-ink font-semibold">{t("fetchDoctorError")}</p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-2 min-h-12 text-cx-primary underline font-semibold text-base"
+        >
+          {t("tryAnotherService")}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /* ---------- Loading ---------- */
 

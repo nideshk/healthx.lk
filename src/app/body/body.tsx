@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -248,7 +248,12 @@ const DisclaimerSection = () => {
 
 const PractitionerSection = () => {
   const t = useTranslations("homepage.practitioner");
+  const locale = useLocale();
   const router = useRouter();
+  const englishCopy = locale === "en" ? homeRedesignCopy.practitioner : null;
+  const benefits = englishCopy
+    ? englishCopy.benefits
+    : [t("benefits.1"), t("benefits.2"), t("benefits.3")];
 
   return (
     <section className="py-16 md:py-24">
@@ -256,16 +261,16 @@ const PractitionerSection = () => {
         <div className="rounded-2xl border border-cx-border bg-white px-6 py-10 md:px-10 text-center">
           <h2 className="cx-heading">{t("title")}</h2>
           <p className="mt-4 text-base md:text-lg text-cx-ink max-w-2xl mx-auto">
-            {t("subtitle")}
+            {englishCopy ? englishCopy.subtitle : t("subtitle")}
           </p>
           <ul className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-            {[1, 2, 3].map((key) => (
+            {benefits.map((benefit) => (
               <li
-                key={key}
+                key={benefit}
                 className="rounded-2xl border border-cx-border p-5"
               >
                 <BadgeCheck className="text-cx-primary mb-3" size={24} strokeWidth={1.5} />
-                <p className="text-base md:text-lg text-cx-ink">{t(`benefits.${key}`)}</p>
+                <p className="text-base md:text-lg text-cx-ink">{benefit}</p>
               </li>
             ))}
           </ul>

@@ -118,6 +118,17 @@ export default function Header() {
     document.body.style.overflow = isMenuOpen ? "hidden" : "unset";
   }, [isMenuOpen]);
 
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (document.querySelector("[data-currency-menu='open']")) return;
+      setIsMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isMenuOpen]);
+
   // Handle outside clicks for dropdowns
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -251,7 +262,7 @@ export default function Header() {
                   </button>
                 ) : null}
               </div>
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden md:flex items-center self-center gap-2">
                 <CurrencyToggle />
                 <LanguageToggle />
               </div>
@@ -383,9 +394,9 @@ export default function Header() {
               </div>
             )}
 
-            <div className="pt-4 border-t border-cx-border flex flex-col gap-4">
-              <CurrencyToggle />
-              <LanguageToggle />
+            <div className="pt-4 border-t border-cx-border grid grid-cols-2 gap-3">
+              <CurrencyToggle fullWidth />
+              <LanguageToggle fullWidth />
             </div>
           </div>
 

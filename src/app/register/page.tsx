@@ -388,7 +388,7 @@ export default function PractitionerRegisterPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-5 flex justify-center">
       <div className="w-full max-w-3xl">
         <h1 className="text-4xl font-bold text-gray-900 text-center mb-10">
-          Application for <span className="text-teal-600">Practitioner</span>
+          Application for <span className="text-cx-primary">Practitioner</span>
         </h1>
 
         <div className="bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
@@ -571,7 +571,7 @@ export default function PractitionerRegisterPage() {
                   Specializations
                 </label>
                 <div
-                  className="w-full min-h-[44px] px-3 py-2 rounded-lg border border-gray-300 bg-white flex items-center justify-between focus-within:ring-2 focus-within:ring-teal-500"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-lg border border-gray-300 bg-white flex items-center justify-between focus-within:ring-2 focus-within:ring-cx-primary"
                 >
                   <div className="flex flex-wrap gap-2">
                     {specialization.length === 0 ? (
@@ -582,7 +582,7 @@ export default function PractitionerRegisterPage() {
                         return (
                           <span
                             key={slug}
-                            className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm"
+                            className="bg-cx-tint text-cx-primary px-2 py-1 rounded-full text-sm"
                           >
                             {spec?.name || slug}
                           </span>
@@ -610,7 +610,7 @@ export default function PractitionerRegisterPage() {
                         >
                           <input
                             type="checkbox"
-                            className="rounded accent-teal-600"
+                            className="rounded accent-cx-primary"
                             checked={specialization.includes(spec.slug)}
                             onChange={() => toggleSpecialization(spec.slug)}
                           />
@@ -697,7 +697,7 @@ export default function PractitionerRegisterPage() {
                 <select
                   value={selectedAppointmentId}
                   onChange={handleAppointmentSelect}
-                  className="w-full h-[44px] px-3 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-teal-500 outline-none"
+                  className="w-full h-[44px] px-3 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-cx-primary outline-none"
                 >
                   <option value="">-- Choose a type --</option>
                   {appointmentTypes.map(t => (
@@ -714,7 +714,7 @@ export default function PractitionerRegisterPage() {
                   {selectedAppointments.map(appt => (
                     <div
                       key={appt.id}
-                      className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-teal-50 border border-teal-100 rounded-xl gap-4"
+                      className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-cx-tint border border-cx-border rounded-xl gap-4"
                     >
                       <div className="flex-1">
                         <p className="font-semibold text-gray-800">{appt.name}</p>
@@ -728,7 +728,7 @@ export default function PractitionerRegisterPage() {
                           type="number"
                           value={appt.base_fee}
                           onChange={e => handleAppointmentFeeChange(appt.id, e.target.value)}
-                          className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-teal-500 outline-none"
+                          className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-cx-primary outline-none"
                         />
                         <button
                           type="button"
@@ -946,7 +946,7 @@ export default function PractitionerRegisterPage() {
             <button
               type="submit"
               disabled={loading || uploadingDocs}
-              className="w-full bg-teal-600 text-white py-3 rounded-xl text-lg font-semibold hover:bg-teal-700 transition"
+              className="w-full bg-cx-primary text-white py-3 rounded-xl text-lg font-semibold hover:bg-cx-deep transition"
             >
               {loading ? "Registering…" : "Register Practitioner"}
             </button>
@@ -979,7 +979,7 @@ function FilePreview({ file }: { file: File }) {
   }
 
   return (
-    <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center text-[10px] font-bold border border-teal-100 uppercase">
+    <div className="w-12 h-12 bg-cx-tint text-cx-primary rounded-lg flex items-center justify-center text-[10px] font-bold border border-cx-border uppercase">
       {file.name.split(".").pop() || "File"}
     </div>
   );

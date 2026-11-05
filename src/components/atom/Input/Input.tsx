@@ -42,7 +42,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
   const [touched, setTouched] = useState(false);
 
   const baseStyles =
-    "w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#018BB5] focus:border-[#018BB5] disabled:opacity-50 disabled:cursor-not-allowed transition-all";
+    "w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cx-primary focus:border-cx-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all";
 
   const requiredError = required && touched && !value;
 

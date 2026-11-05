@@ -21,6 +21,7 @@ interface Props {
   practitioner: any;
   selectedService: any;
   hideStepCounter?: boolean;
+  headingRef?: React.Ref<HTMLHeadingElement>;
 }
 
 function normalizeDoctor(doctor: any) {
@@ -32,7 +33,7 @@ function normalizeDoctor(doctor: any) {
   };
 }
 
-const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selectedService, hideStepCounter }: Props) => {
+const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selectedService, hideStepCounter, headingRef }: Props) => {
   const t = useTranslations("slotFlow.slotPicker");
   const formatSpecialties = useFormatSpecialties();
   const { openLoginModal } = useModalStore();
@@ -197,7 +198,11 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
           <div className="flex-1">
 
             {/* Name */}
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+            <h2
+              ref={headingRef}
+              tabIndex={headingRef ? -1 : undefined}
+              className="text-lg sm:text-xl font-semibold text-gray-900"
+            >
               {practitioner.full_name}
             </h2>
 

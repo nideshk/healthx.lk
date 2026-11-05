@@ -109,7 +109,7 @@ const ConsultationStep = forwardRef(
       <div className="pb-32 pt-10">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 text-teal-700 text-[10px] font-black uppercase tracking-widest mb-4 border border-teal-100">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cx-tint text-cx-primary text-[10px] font-black uppercase tracking-widest mb-4 border border-cx-border">
               {t("stepLabel")}
             </div>
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-3">
@@ -131,16 +131,16 @@ const ConsultationStep = forwardRef(
                   onClick={() => handleSelectService(service)}
                   className={`group relative rounded-[2rem] p-8 transition-all duration-300 cursor-pointer border-2 flex flex-col ${isSelected
                     ? 'bg-slate-900 border-slate-900 shadow-2xl shadow-slate-200 -translate-y-1'
-                    : 'bg-white border-slate-100 hover:border-teal-200 hover:shadow-xl hover:shadow-slate-100 hover:-translate-y-1'
+                    : 'bg-white border-slate-100 hover:border-cx-primary hover:shadow-xl hover:shadow-slate-100 hover:-translate-y-1'
                     }`}
                 >
                   {isSelected && (
-                    <div className="absolute top-6 right-6 text-teal-400 animate-in zoom-in duration-300">
-                      <CheckCircle2 className="w-6 h-6 fill-teal-400/10" />
+                    <div className="absolute top-6 right-6 text-cx-tint animate-in zoom-in duration-300">
+                      <CheckCircle2 className="w-6 h-6 fill-cx-primary/10" />
                     </div>
                   )}
 
-                  <div className={`w-14 h-14 flex items-center justify-center rounded-2xl mb-6 transition-colors ${isSelected ? 'bg-slate-800 text-teal-400' : 'bg-slate-50 text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600'
+                  <div className={`w-14 h-14 flex items-center justify-center rounded-2xl mb-6 transition-colors ${isSelected ? 'bg-slate-800 text-cx-tint' : 'bg-slate-50 text-slate-400 group-hover:bg-cx-tint group-hover:text-cx-primary'
                     }`}
                   >
                     <Icon className="w-7 h-7" />
@@ -157,10 +157,10 @@ const ConsultationStep = forwardRef(
                   </p>
 
                   <div className="mt-auto flex items-center justify-between">
-                    <span className={`text-xs font-black uppercase tracking-widest ${isSelected ? 'text-teal-400' : 'text-slate-300 group-hover:text-teal-600'}`}>
+                    <span className={`text-xs font-black uppercase tracking-widest ${isSelected ? 'text-cx-tint' : 'text-slate-300 group-hover:text-cx-primary'}`}>
                       {isSelected ? t("currentSelection") : t("selectType")}
                     </span>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-teal-400 text-slate-900' : 'bg-slate-50 text-slate-400 group-hover:bg-teal-600 group-hover:text-white group-hover:rotate-[-45deg]'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-cx-tint text-slate-900' : 'bg-slate-50 text-slate-400 group-hover:bg-cx-primary group-hover:text-white group-hover:rotate-[-45deg]'
                       }`}>
                       <ArrowRight className="w-4 h-4" />
                     </div>
