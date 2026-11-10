@@ -1,15 +1,29 @@
+"use client";
+
 import Link from "next/link";
 import { Calendar, Clock, Stethoscope } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { formatDate, formatTime, formatTimeLeft } from "@/utils/formatters";
-import { getLocaleFromCookie } from "@/utils/getLocale";
+import {
+  resolveNextAppointmentJoin,
+  type JoinableAppointment,
+} from "@/lib/meetings/joinLink";
 
-export async function NextAppointmentCard({ appt }: any) {
+export function NextAppointmentCard({
+  appt,
+  appointments,
+}: {
+  appt?: JoinableAppointment | null;
+  appointments?: readonly JoinableAppointment[] | null;
+}) {
   const t = useTranslations("nextAppointment");
+  const locale = useLocale() as "en" | "si";
+  const resolved = resolveNextAppointmentJoin({ appt, appointments });
+  if (!resolved) return null;
 
-  const start = new Date(appt.starts_at);
-  const locale = await getLocaleFromCookie();
-  const timeLeft = formatTimeLeft(appt.starts_at, locale);
+  const { appointment, joinPath } = resolved;
+  const start = new Date(appointment.starts_at);
+  const timeLeft = formatTimeLeft(appointment.starts_at, locale);
   const isLive = timeLeft === "now";
 
   return (
@@ -21,9 +35,9 @@ export async function NextAppointmentCard({ appt }: any) {
 
         <div className="flex-1">
           <p className="text-base font-semibold text-gray-900">
-            {appt.practitioner?.full_name || t("defaultPractitioner")}
+            {appointment.practitioner?.full_name || t("defaultPractitioner")}
           </p>
-          <p className="text-sm text-gray-600">{appt.appointment_type?.name}</p>
+          <p className="text-sm text-gray-600">{appointment.appointment_type?.name}</p>
         </div>
       </div>
 
@@ -50,9 +64,9 @@ export async function NextAppointmentCard({ appt }: any) {
         </span>
       </div>
 
-      {isLive && (
+      {isLive && joinPath && (
         <Link
-          href={`/appointment/meeting?room=${appt.telehealth_url}`}
+          href={joinPath}
           className="mt-4 block w-full text-center rounded-xl bg-green-600 py-2 text-sm font-semibold text-white hover:bg-green-700 transition"
         >
           {t("join")}

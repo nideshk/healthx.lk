@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import Loader from "@/components/atom/Loader/Loader";
 import { authFetch } from "@/lib/authFetch";
 import { uploadAttachmentAfterBooking } from "@/lib/s3/uploadAttachmentAfterBooking";
+import { meetingJoinPath } from "@/lib/meetings/joinLink";
 
 const CANCEL_REASONS = [
   "Schedule conflict",
@@ -139,6 +140,7 @@ export default function AppointmentDetailsPage() {
   const now = DateTime.now();
 
   const canJoin = appointment.status === "confirmed" && now >= start.minus({ minutes: 15 }) && now <= end.plus({ minutes: 30 });
+  const joinPath = meetingJoinPath(appointment.room_key);
   const canCancel = appointment.status !== "cancelled" && now < start;
 
   return (
@@ -231,10 +233,10 @@ export default function AppointmentDetailsPage() {
           {/* RIGHT SIDEBAR */}
           <div className="space-y-6">
             {/* JOIN ACTION CARD */}
-            {canJoin && (
+            {canJoin && joinPath && (
               <section className="bg-slate-900 rounded-[2.5rem] p-4 shadow-2xl shadow-slate-200 ring-8 ring-slate-100">
                 <button
-                  onClick={() => router.push(`/meeting?room=${appointment.room_key}`)}
+                  onClick={() => router.push(joinPath)}
                   className="w-full py-6 bg-cx-primary hover:bg-cx-deep text-white rounded-[2rem] text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all group"
                 >
                   <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />

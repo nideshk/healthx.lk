@@ -16,6 +16,7 @@ import {
   formatDate,
   formatTime
 } from "@/utils/formatters";
+import { meetingJoinPath } from "@/lib/meetings/joinLink";
 
 export function AppointmentCard({
   appt,
@@ -28,6 +29,7 @@ export function AppointmentCard({
   const locale = useLocale() as "en" | "si";
   const router = useRouter();
   const start = new Date(appt.starts_at);
+  const joinPath = meetingJoinPath(appt.room_key);
 
   const canNavigate = !isPending && !isCancelled;
 
@@ -160,9 +162,9 @@ export function AppointmentCard({
           </button>
         )}
 
-        {isOngoing && (
+        {isOngoing && joinPath && (
           <Link
-            href={`/appointment/meeting?room=${appt.room_key}`}
+            href={joinPath}
             onClick={(e) => e.stopPropagation()}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-xl shadow-lg flex items-center justify-center gap-2"
           >
