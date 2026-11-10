@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppointmentCard } from "../AppointmentCard";
+import { NextAppointmentCard } from "../NextAppointmentCard";
 import Loader from "@/components/atom/Loader/Loader";
 import {
   Activity,
@@ -59,8 +60,18 @@ export default function AppointmentTab() {
     return <EmptyDashboardState />;
   }
 
+  const allAppointments = [
+    ...data.ongoing,
+    ...data.upcoming,
+    ...data.pending,
+    ...data.past,
+    ...data.cancelled,
+  ];
+
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
+      <NextAppointmentCard appointments={allAppointments} />
+
       {(data.ongoing.length > 0 || data.pending.length > 0) && (
         <div className="grid grid-cols-1 gap-6">
           <Section
