@@ -82,7 +82,7 @@ const SecuritySettings: React.FC = () => {
             onChange={handleToggle}
             disabled={twoFactorEnabled === null || loading}
           />
-          <div className="w-11 h-6 bg-slate-300 rounded-full peer-checked:bg-blue-600 transition" />
+          <div className="w-11 h-6 bg-slate-300 rounded-full peer-checked:bg-cx-primary transition" />
           <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-5" />
         </label>
       </div>
@@ -100,7 +100,7 @@ const SecuritySettings: React.FC = () => {
               <button
                 onClick={createChallenge}
                 disabled={loading}
-                className="flex-1 bg-blue-600 text-white py-2 rounded"
+                className="flex-1 bg-cx-primary text-white py-2 rounded"
               >
                 Enable 2FA
               </button>
@@ -126,7 +126,7 @@ const SecuritySettings: React.FC = () => {
                 <button
                   onClick={verifyEnrollment}
                   disabled={loading}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded"
+                  className="flex-1 bg-cx-primary text-white py-2 rounded"
                 >
                   Verify & Enable
                 </button>

@@ -86,7 +86,7 @@ const AnalyticsTab: React.FC = () => {
       {/* ------------------------------------------------ */}
       {/* HEADER                                           */}
       {/* ------------------------------------------------ */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
+      <div className="bg-gradient-to-r from-cx-primary to-cx-deep rounded-2xl p-6 text-white">
         <div className="text-lg font-semibold">Analytics</div>
         <div className="text-xs opacity-90">
           Comprehensive analytics and tracking
@@ -155,7 +155,7 @@ const AnalyticsButton = ({
         border
         ${
           active
-            ? "bg-blue-600 text-white border-blue-600 shadow-md"
+            ? "bg-cx-primary text-white border-cx-primary shadow-md"
             : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
         }
       `}

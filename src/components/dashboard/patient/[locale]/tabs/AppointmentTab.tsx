@@ -86,7 +86,7 @@ export default function AppointmentTab() {
       <Section
         title={t("upcoming")}
         items={data.upcoming}
-        icon={<CalendarClock className="text-blue-500" />}
+        icon={<CalendarClock className="text-cx-primary" />}
       >
         {(a: any) => <AppointmentCard appt={a} />}
       </Section>
@@ -120,7 +120,7 @@ function Section({ title, items, children, icon, accent = "blue", gridCols = "lg
   if (items.length === 0) return null;
 
   const accentColors: any = {
-    blue: "bg-blue-50 text-blue-700",
+    blue: "bg-cx-tint text-cx-deep",
     emerald: "bg-emerald-50 text-emerald-700",
     amber: "bg-amber-50 text-amber-700",
   };

@@ -25,7 +25,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
       <div className="flex flex-col text-sm">
         <button
           type="button"
-          className="text-blue-600 font-semibold text-sm text-left hover:underline"
+          className="text-cx-primary font-semibold text-sm text-left hover:underline"
         >
           {name}
         </button>

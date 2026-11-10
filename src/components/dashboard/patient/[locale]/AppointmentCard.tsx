@@ -65,8 +65,8 @@ export function AppointmentCard({
       },
     },
     upcoming: {
-      container: "bg-white border-slate-200 hover:border-blue-300 hover:shadow-md",
-      iconBg: "bg-blue-50 text-blue-600",
+      container: "bg-white border-slate-200 hover:border-cx-primary hover:shadow-md",
+      iconBg: "bg-cx-tint text-cx-primary",
       badge: null,
     },
   };
@@ -172,7 +172,7 @@ export function AppointmentCard({
         )}
 
         {canNavigate && !isOngoing && !isPending && (
-          <div className="flex items-center justify-between text-blue-600 group-hover:translate-x-1 transition-transform">
+          <div className="flex items-center justify-between text-cx-primary group-hover:translate-x-1 transition-transform">
             <span className="text-[11px] font-bold uppercase">
               {t("viewDetails")}
             </span>

@@ -37,7 +37,10 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [availability, setAvailability] = useState<any>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [slotsError, setSlotsError] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
   const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
@@ -59,47 +62,106 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
     if (!practitionerId || !visibleMonth) return;
 
     let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
     setAvailableDates([]);
 
     axios
-      .get(`/api/booking/${practitionerId}/available-dates?month=${visibleMonth}`)
+      .get(`/api/booking/${practitionerId}/available-dates?month=${visibleMonth}`, {
+        signal: controller.signal,
+        timeout: 15000,
+      })
       .then((res) => {
         if (cancelled || res.data?.month !== visibleMonth) return;
         setAvailableDates(Array.isArray(res.data?.dates) ? res.data.dates : []);
       })
       .catch(() => {
-        if (!cancelled) setAvailableDates([]);
+        if (cancelled) return;
+        setAvailableDates([]);
       });
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
     };
   }, [practitionerId, visibleMonth]);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await authFetch(`/api/practitioners/${practitionerId}`);
+    if (!practitionerId) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    setLoadingInfo(true);
+    setLoadError(false);
+
+    authFetch(`/api/practitioners/${practitionerId}`, { signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("load failed");
         const data = await res.json();
+        if (cancelled) return;
+        if (!data?.practitioner) throw new Error("missing practitioner");
         setPractitioner(data.practitioner);
-      } catch {
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadError(true);
         toast.error(t("loadDoctorError"));
-      } finally {
-        setLoadingInfo(false);
-      }
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        if (!cancelled) setLoadingInfo(false);
+      });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [practitionerId, loadAttempt, t]);
+
+  const preselectedTypeId = useRef<string | null>(null);
+  useEffect(() => {
+    const types = practitioner?.appointment_types;
+    if (!Array.isArray(types) || types.length !== 1) return;
+    const only = types[0];
+    if (preselectedTypeId.current === only.id) return;
+    preselectedTypeId.current = only.id;
+    setSelectedType(only);
+    if (!isInHomeType(only)) {
+      updateData({
+        appointmentType: only,
+        selectedAttendees:
+          only.max_attendees <= 1
+            ? []
+            : bookingData.selectedAttendees?.slice(0, Math.max(0, only.max_attendees - 1)),
+      });
     }
-    if (practitionerId) load();
-  }, [practitionerId]);
+  }, [practitioner]);
 
   async function fetchAvailability(dateStr: string) {
     if (!practitionerId || !selectedType) return;
     setLoadingAvailability(true);
+    setSlotsError(false);
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 15000);
     try {
-      const res = await axios.get(`/api/booking/${practitionerId}/availability?date=${dateStr}`);
+      const res = await axios.get(
+        `/api/booking/${practitionerId}/availability?date=${dateStr}`,
+        { signal: controller.signal, timeout: 15000 }
+      );
       setAvailability(res.data);
-    } catch {
+    } catch (err) {
+      if (axios.isCancel(err) && !timedOut) return;
+      setAvailability(null);
+      setSlotsError(true);
       toast.error(t("loadSlotsError"));
     } finally {
+      clearTimeout(timer);
       setLoadingAvailability(false);
     }
   }
@@ -132,6 +194,21 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   }, [availability, selectedType]);
 
   if (loadingInfo) return <div className="flex justify-center py-20"><Loader size="lg" /></div>;
+
+  if (loadError || !practitioner) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 px-4 text-center">
+        <p className="text-base font-semibold text-cx-ink">{t("loadDoctorError")}</p>
+        <button
+          type="button"
+          onClick={() => setLoadAttempt((n) => n + 1)}
+          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-cx-primary px-5 font-semibold text-white hover:bg-cx-deep"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-32 pt-6 md:pt-12 bg-[#FBFDFF] min-h-screen relative">
@@ -344,6 +421,17 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                     ) : loadingAvailability ? (
                       <div className="h-64 flex items-center justify-center">
                         <Loader size="md" />
+                      </div>
+                    ) : slotsError ? (
+                      <div className="h-64 flex flex-col items-center justify-center gap-3 text-center">
+                        <p className="text-sm font-semibold text-cx-ink">{t("loadSlotsError")}</p>
+                        <button
+                          type="button"
+                          onClick={() => selectedDate && fetchAvailability(selectedDate)}
+                          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-cx-primary px-5 font-semibold text-white hover:bg-cx-deep"
+                        >
+                          Retry
+                        </button>
                       </div>
                     ) : slots.length === 0 ? (
                       <div className="h-64 flex flex-col items-center justify-center text-center p-8 bg-amber-50/50 rounded-[2rem] border-2 border-dashed border-amber-100">

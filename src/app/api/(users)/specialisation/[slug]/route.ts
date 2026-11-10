@@ -17,7 +17,42 @@ function getAvatarUrl(
 type FeeItem = {
   fee?: number;
   type?: string;
+  duration_mins?: number;
+  max_attendees?: number;
+  extra_fee_per_attendee?: number;
 };
+
+type AppointmentTypeMeta = {
+  id: string;
+  name?: string | null;
+  duration_mins?: number | null;
+  max_attendee?: number | null;
+  platform_fee?: number | null;
+  extra_fee_per_attendee?: number | null;
+};
+
+function appointmentTypesFromFees(
+  fees: Record<string, FeeItem> | null | undefined,
+  typeMap: Record<string, AppointmentTypeMeta>
+) {
+  if (!fees || typeof fees !== "object") return [];
+
+  return Object.entries(fees).flatMap(([id, fee]) => {
+    const meta = typeMap[id];
+    const name = meta?.name || fee?.type;
+    if (!name) return [];
+    return [{
+      id,
+      name,
+      fee: fee?.fee ?? null,
+      platform_fee: meta?.platform_fee ?? null,
+      duration_mins: meta?.duration_mins ?? fee?.duration_mins ?? null,
+      max_attendees: meta?.max_attendee ?? fee?.max_attendees ?? null,
+      extra_fee_per_attendee:
+        meta?.extra_fee_per_attendee ?? fee?.extra_fee_per_attendee ?? 0,
+    }];
+  });
+}
 
 function calculateFeeRange(
   fees?: Record<string, FeeItem> | null
@@ -66,6 +101,7 @@ export async function GET(
     const variants = specialtySlugVariants(slug);
     const practitionerSelect = `
         id,
+        slug,
         full_name,
         profile_bio,
         qualification,
@@ -108,19 +144,38 @@ export async function GET(
     const availableIds = new Set<string>();
     const ids = data.map((practitioner) => practitioner.id).filter(Boolean);
 
-    if (ids.length > 0) {
-      const { data: windows, error: windowError } = await supabaseClient
-        .from("practitioner_availability")
-        .select("practitioner_id")
-        .in("practitioner_id", ids)
-        .gt("ends_at", new Date().toISOString());
+    const appointmentTypeMap: Record<string, AppointmentTypeMeta> = {};
 
-      if (windowError) {
-        console.error("❌ Availability lookup failed:", windowError.message);
+    if (ids.length > 0) {
+      const [windowsResult, typesResult] = await Promise.all([
+        supabaseClient
+          .from("practitioner_availability")
+          .select("practitioner_id")
+          .in("practitioner_id", ids)
+          .gt("ends_at", new Date().toISOString()),
+        supabaseClient
+          .from("appointment_type")
+          .select(
+            "id, name, duration_mins, max_attendee, platform_fee, extra_fee_per_attendee"
+          )
+          .eq("is_active", true)
+          .is("deleted_at", null),
+      ]);
+
+      if (windowsResult.error) {
+        console.error("❌ Availability lookup failed:", windowsResult.error.message);
       } else {
         availabilityKnown = true;
-        for (const window of windows || []) {
+        for (const window of windowsResult.data || []) {
           if (window.practitioner_id) availableIds.add(window.practitioner_id);
+        }
+      }
+
+      if (typesResult.error) {
+        console.error("❌ Appointment type lookup failed:", typesResult.error.message);
+      } else {
+        for (const type of typesResult.data || []) {
+          appointmentTypeMap[type.id] = type;
         }
       }
     }
@@ -132,6 +187,7 @@ export async function GET(
 
       return {
         id: p.id,
+        slug: p.slug ?? null,
         full_name: p.full_name,
         profile_bio: p.profile_bio,
         qualification: p.qualification,
@@ -144,6 +200,10 @@ export async function GET(
         has_current_availability: availabilityKnown
           ? availableIds.has(p.id)
           : true,
+        appointment_types: appointmentTypesFromFees(
+          (p.fees ?? null) as Record<string, FeeItem> | null,
+          appointmentTypeMap
+        ),
       };
     });
 

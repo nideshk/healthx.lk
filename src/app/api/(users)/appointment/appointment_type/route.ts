@@ -4,7 +4,14 @@ import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
-export async function GET() {
+const PUBLIC_APPOINTMENT_TYPE_FIELDS = [
+  "id",
+  "name",
+  "duration_mins",
+  "max_attendee",
+] as const;
+
+export async function GET(req: Request) {
   try {
     const { data, error } = await supabaseAdmin
       .from("appointment_type")
@@ -17,7 +24,24 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch appointment types" }, { status: 500 });
     }
 
-    return NextResponse.json({ appointment_types: data || [] });
+    const rows = data || [];
+    let appointment_types: Array<Record<string, unknown>> = rows.map((row) => {
+      const pub: Record<string, unknown> = {};
+      for (const field of PUBLIC_APPOINTMENT_TYPE_FIELDS) {
+        pub[field] = row[field];
+      }
+      return pub;
+    });
+
+    const authHeader = req.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const { authorized, role } = await requireUser(req);
+      if (authorized && role === "superadmin") {
+        appointment_types = rows;
+      }
+    }
+
+    return NextResponse.json({ appointment_types });
   } catch (err: any) {
     console.error("GET /appointment-types:", err);
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
@@ -28,7 +52,11 @@ export async function POST(req: NextRequest) {
   try {
     const { authorized, role, user } = await requireUser(req);
 
-    if (!authorized || role !== "superadmin") {
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (role !== "superadmin") {
       return NextResponse.json(
         { error: "Only super admin can create appointment types" },
         { status: 403 }
@@ -104,7 +132,11 @@ export async function PUT(req: Request) {
   try {
     const { authorized, role } = await requireUser(req);
 
-    if (!authorized || role !== "superadmin") {
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (role !== "superadmin") {
       return NextResponse.json(
         { error: "Only super admin can update appointment types" },
         { status: 403 }

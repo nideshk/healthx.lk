@@ -194,24 +194,24 @@ const PlatformTab: React.FC = () => {
           </thead>
           <tbody>
             {fees.map((fee) => (
-              <tr key={fee.id} className="hover:bg-blue-50/30 transition even:bg-slate-50/50">
+              <tr key={fee.id} className="hover:bg-cx-tint/30 transition even:bg-slate-50/50">
                 <td className="p-4 border-b">
-                  <input type="text" className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium" value={fee.name} onChange={(e) => updateFeeField(fee.id, "name", e.target.value)} />
+                  <input type="text" className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-cx-primary font-medium" value={fee.name} onChange={(e) => updateFeeField(fee.id, "name", e.target.value)} />
                 </td>
                 <td className="p-4 border-b">
-                  <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.base_fee} onChange={(e) => updateFeeField(fee.id, "base_fee", e.target.value === "" ? "" : Number(e.target.value))} />
+                  <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-cx-primary" value={fee.base_fee} onChange={(e) => updateFeeField(fee.id, "base_fee", e.target.value === "" ? "" : Number(e.target.value))} />
                 </td>
                 <td className="p-4 border-b">
-                  <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 text-blue-700 font-bold" value={fee.platform_fee} onChange={(e) => updateFeeField(fee.id, "platform_fee", e.target.value === "" ? "" : Number(e.target.value))} />
+                  <input type="number" step="any" className="w-28 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-cx-primary text-cx-deep font-bold" value={fee.platform_fee} onChange={(e) => updateFeeField(fee.id, "platform_fee", e.target.value === "" ? "" : Number(e.target.value))} />
                 </td>
                 <td className="p-4 border-b">
-                  <input type="number" className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.max_attendee} onChange={(e) => updateFeeField(fee.id, "max_attendee", e.target.value === "" ? "" : Number(e.target.value))} />
+                  <input type="number" className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-cx-primary" value={fee.max_attendee} onChange={(e) => updateFeeField(fee.id, "max_attendee", e.target.value === "" ? "" : Number(e.target.value))} />
                 </td>
                 <td className="p-4 border-b">
-                  <input type="number" className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500" value={fee.duration_mins} onChange={(e) => updateFeeField(fee.id, "duration_mins", e.target.value === "" ? "" : Number(e.target.value))} />
+                  <input type="number" className="w-20 bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-cx-primary" value={fee.duration_mins} onChange={(e) => updateFeeField(fee.id, "duration_mins", e.target.value === "" ? "" : Number(e.target.value))} />
                 </td>
                 <td className="p-4 border-b">
-                  <input type="text" className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 italic" value={fee.description} onChange={(e) => updateFeeField(fee.id, "description", e.target.value)} />
+                  <input type="text" className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-cx-primary text-slate-600 italic" value={fee.description} onChange={(e) => updateFeeField(fee.id, "description", e.target.value)} />
                 </td>
                 <td className="p-4 border-b text-center sticky right-0 bg-white/95 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">
                   <button onClick={() => setDeleteModal({ isOpen: true, typeId: fee.id, typeName: fee.name })} className="text-red-500 hover:text-red-700 transition hover:scale-110 p-1 rounded-full hover:bg-red-50">

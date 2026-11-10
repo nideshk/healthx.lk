@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useFormatSpecialties } from "@/lib/specialtyLabels";
+import { practitionerPublicPath } from "@/lib/practitionerPath";
 import { homeRedesignCopy } from "@/content/homeRedesignCopy";
 
 type PublicDoctor = {
   id: string;
+  slug?: string | null;
   full_name: string;
   specialization?: string[];
   qualification?: string | null;
@@ -129,7 +132,9 @@ export default function MeetDoctors() {
                     )}
                     <div className="min-w-0">
                       <h3 className="text-lg font-semibold text-cx-ink leading-tight">
-                        {doctor.full_name}
+                        <Link href={practitionerPublicPath(doctor)} className="hover:text-cx-primary">
+                          {doctor.full_name}
+                        </Link>
                       </h3>
                       {specialties ? (
                         <p className="mt-1 text-base text-cx-primary">

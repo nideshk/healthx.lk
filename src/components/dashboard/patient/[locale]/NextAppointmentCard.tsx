@@ -15,8 +15,8 @@ export async function NextAppointmentCard({ appt }: any) {
   return (
     <div className="mt-4 p-4 rounded-2xl bg-white/80 backdrop-blur ring-1 ring-black/5 shadow-sm">
       <div className="flex items-start gap-3">
-        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
-          <Stethoscope className="w-6 h-6 text-blue-700" />
+        <div className="w-12 h-12 rounded-xl bg-cx-tint flex items-center justify-center">
+          <Stethoscope className="w-6 h-6 text-cx-deep" />
         </div>
 
         <div className="flex-1">
@@ -43,7 +43,7 @@ export async function NextAppointmentCard({ appt }: any) {
           className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
             isLive
               ? "bg-green-600 text-white animate-pulse"
-              : "bg-blue-50 text-blue-700"
+              : "bg-cx-tint text-cx-deep"
           }`}
         >
           {isLive ? t("live") : t("startsIn", { time: timeLeft })}

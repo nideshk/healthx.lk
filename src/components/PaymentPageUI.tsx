@@ -18,7 +18,7 @@ import {
   User2,
 } from "lucide-react";
 import { AppointmentFormInputs } from "@/types/FormType";
-import { useAuth } from "@/contexts/AuthContext";
+import { authFetch } from "@/lib/authFetch";
 import { useTranslations } from "next-intl";
 import Price from "@/components/common/Price";
 
@@ -90,8 +90,6 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const { user } = useAuth();
-
   const platformFee = attendeeCount * 500;
   const baseTotal = consultationFee + platformFee;
   const discountAmount = appliedCoupon?.discount?.discount_total || 0;
@@ -104,12 +102,11 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
     setCouponError(null);
 
     try {
-      const res = await fetch("/api/coupons/validate", {
+      const res = await authFetch("/api/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: couponCode,
-          patient_id: user?.patient_id,
           practitioner_id: doctor?.id,
           pricing: {
             consultation_fee: consultationFee,

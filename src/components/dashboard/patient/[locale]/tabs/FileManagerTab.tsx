@@ -137,7 +137,7 @@ export default function FileManagerTab() {
                 className="group flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all"
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-cx-tint rounded-xl flex items-center justify-center">
                     <FileText className="w-6 h-6" />
                   </div>
                   <div className="min-w-0">
@@ -155,7 +155,7 @@ export default function FileManagerTab() {
                   <button
                     onClick={() => viewFile(file.id)}
                     disabled={busy}
-                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-teal-700 bg-teal-50 rounded-lg"
+                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-cx-deep bg-cx-tint rounded-lg"
                   >
                     {busy ? "..." : <><ExternalLink className="w-3.5 h-3.5" /> {t("view")}</>}
                   </button>

@@ -26,7 +26,7 @@ const DashboardShell: React.FC<DashboardShellProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-cx-bg flex flex-col">
       {/* TOP HEADER */}
       <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-8 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
@@ -62,7 +62,7 @@ const DashboardShell: React.FC<DashboardShellProps> = ({
           {/* Drawer Content */}
           <div className="fixed inset-y-0 left-0 w-64 bg-white p-4 shadow-xl">
             <div className="flex justify-between items-center mb-6">
-              <span className="font-bold text-blue-600">Menu</span>
+              <span className="font-bold text-cx-primary">Menu</span>
               <button onClick={() => setIsMobileMenuOpen(false)}><X size={20}/></button>
             </div>
             {/* This is the "Component Call" your friend mentioned */}

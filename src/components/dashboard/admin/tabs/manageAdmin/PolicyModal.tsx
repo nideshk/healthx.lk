@@ -92,13 +92,13 @@ const PolicyModal = ({ admin, onClose, onRefresh }: any) => {
               key={p.code}
               className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
                 selectedPolicies.includes(p.code)
-                  ? "border-blue-200 bg-blue-50/30"
+                  ? "border-cx-border bg-cx-tint/30"
                   : "border-slate-200 hover:bg-slate-50"
               }`}
             >
               <input
                 type="checkbox"
-                className="mt-1 h-4 w-4 accent-blue-600"
+                className="mt-1 h-4 w-4 accent-cx-primary"
                 checked={selectedPolicies.includes(p.code)}
                 onChange={() => togglePolicy(p.code)}
               />

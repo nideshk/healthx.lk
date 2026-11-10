@@ -91,6 +91,7 @@ const SearchClinicianTab: React.FC = () => {
     gender: string;
     contact_number: string;
     languages: string[];
+    slug: string;
   };
 
   const [selectedClinician, setSelectedClinician] = useState<Clinician | null>(
@@ -134,6 +135,7 @@ const SearchClinicianTab: React.FC = () => {
         gender: p.gender ?? "",
         contact_number: p.contact_number ?? "",
         languages: p.languages ?? [],
+        slug: p.slug ?? "",
       });
 
       setOpenProfile(true);
@@ -171,7 +173,7 @@ const SearchClinicianTab: React.FC = () => {
               <select
                 value={limit}
                 onChange={(e) => setLimit(Number(e.target.value))}
-                className="text-xs border border-slate-200 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="text-xs border border-slate-200 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-cx-primary"
               >
                 {[10, 20, 50, 100].map((val) => (
                   <option key={val} value={val}>

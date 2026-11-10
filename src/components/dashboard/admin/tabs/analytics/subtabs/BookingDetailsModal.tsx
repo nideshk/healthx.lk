@@ -90,7 +90,7 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
         <div className="flex-1 overflow-auto p-6">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="animate-spin text-blue-600" size={32} />
+              <Loader2 className="animate-spin text-cx-primary" size={32} />
               <p className="text-slate-500 text-sm">Loading page {currentPage}...</p>
             </div>
           ) : data.length === 0 ? (
