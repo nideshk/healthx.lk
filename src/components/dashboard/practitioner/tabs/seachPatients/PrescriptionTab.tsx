@@ -329,7 +329,7 @@ export default function PrescriptionTab({
                     {px.items.map((med, i) => (
                         <div key={i} className="space-y-1">
                             <div className="flex items-center gap-2 text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                <Pill size={12} className="text-blue-500" />
+                                <Pill size={12} className="text-cx-primary" />
                                 <span className="font-semibold text-slate-800">{med.medicine_name}</span>
                                 <span className="text-slate-500">• {med.strength}</span>
                                 <span className="text-slate-500">• {med.route}</span>
@@ -503,13 +503,13 @@ export default function PrescriptionTab({
         const px = standalonePrescription;
         return (
             <div className="space-y-4 animate-in fade-in duration-500">
-                <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-start gap-3">
-                    <div className="bg-white p-2 rounded-xl shadow-sm border border-blue-50">
-                        <FileText size={20} className="text-blue-600" />
+                <div className="bg-cx-tint/50 p-4 rounded-2xl border border-cx-tint flex items-start gap-3">
+                    <div className="bg-white p-2 rounded-xl shadow-sm border border-cx-tint">
+                        <FileText size={20} className="text-cx-primary" />
                     </div>
                     <div className="flex-grow">
                         <div className="flex justify-between items-center mb-1">
-                            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-widest leading-none">Diagnosis</span>
+                            <span className="text-[11px] font-bold text-cx-primary uppercase tracking-widest leading-none">Diagnosis</span>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${px.status === "issued" ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"}`}>
                                 {px.status}
                             </span>
@@ -557,7 +557,7 @@ export default function PrescriptionTab({
         return (
             <div className="space-y-8 bg-white p-8 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 relative overflow-hidden">
                 {/* Visual Accent */}
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500" />
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-cx-primary via-indigo-500 to-cx-primary" />
 
                 <div className="flex items-center justify-between pb-2">
                     <div className="flex items-center gap-3">
@@ -574,9 +574,9 @@ export default function PrescriptionTab({
                             <p className="text-xs text-slate-500">Create and issue a digital prescription for the selected patient.</p>
                         </div>
                     </div>
-                    <div className="hidden md:flex flex-col items-end gap-1 px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100">
-                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Patient Name</span>
-                        <span className="text-sm font-bold text-blue-900">{patient.full_name}</span>
+                    <div className="hidden md:flex flex-col items-end gap-1 px-4 py-2 bg-cx-tint rounded-2xl border border-cx-tint">
+                        <span className="text-[10px] font-bold text-cx-primary uppercase tracking-widest">Patient Name</span>
+                        <span className="text-sm font-bold text-cx-deep">{patient.full_name}</span>
                     </div>
                 </div>
 
@@ -603,7 +603,7 @@ export default function PrescriptionTab({
                                 value={builderData.appointmentId}
                                 disabled={fetchingAppointmentData}
                                 onChange={e => setBuilderData(prev => ({ ...prev, appointmentId: e.target.value }))}
-                                className={`w-full text-sm p-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer ${fetchingAppointmentData ? 'opacity-50' : ''}`}
+                                className={`w-full text-sm p-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary outline-none transition-all appearance-none cursor-pointer ${fetchingAppointmentData ? 'opacity-50' : ''}`}
                                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.25rem' }}
                             >
                                 <option value="">-- Choose session --</option>
@@ -636,9 +636,9 @@ export default function PrescriptionTab({
                                     onChange={e => setDiagSearchText(e.target.value)}
                                     onFocus={() => { if (diagSearchResults.length > 0) setShowDiagDropdown(true); }}
                                     placeholder={existingStatus === "issued" ? "Read-only" : "Search by name or code..."}
-                                    className="w-full text-sm pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+                                    className="w-full text-sm pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
                                 />
-                                {isSearchingDiag && <Loader2 size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-500 animate-spin" />}
+                                {isSearchingDiag && <Loader2 size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-cx-primary animate-spin" />}
                                 {fetchingAppointmentData && <Loader2 size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 animate-spin" />}
                             </div>
                             {showDiagDropdown && (
@@ -650,10 +650,10 @@ export default function PrescriptionTab({
                                             <li
                                                 key={result.id}
                                                 onClick={() => selectDiagnosis(result)}
-                                                className="px-5 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 group transition-colors"
+                                                className="px-5 py-3 hover:bg-cx-tint cursor-pointer border-b border-slate-50 last:border-0 group transition-colors"
                                             >
                                                 <div className="flex items-center justify-between">
-                                                    <span className="font-bold text-blue-600 group-hover:text-blue-700">{result.code}</span>
+                                                    <span className="font-bold text-cx-primary group-hover:text-cx-deep">{result.code}</span>
                                                     <span className="text-xs text-slate-400">ICD-10</span>
                                                 </div>
                                                 <p className="text-sm text-slate-700 mt-0.5">{result.name}</p>
@@ -665,17 +665,17 @@ export default function PrescriptionTab({
                             
                             {/* Selected Diagnosis Badge */}
                             {builderData.diagnosis && (
-                                <div className="mt-2 flex items-center justify-between p-3 bg-blue-50/50 border border-blue-100 rounded-xl animate-in fade-in slide-in-from-top-1">
+                                <div className="mt-2 flex items-center justify-between p-3 bg-cx-tint/50 border border-cx-tint rounded-xl animate-in fade-in slide-in-from-top-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                        <div className="bg-cx-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                                             {builderData.diagnosis_code}
                                         </div>
-                                        <span className="text-sm font-medium text-blue-900 truncate max-w-[200px]">{builderData.diagnosis}</span>
+                                        <span className="text-sm font-medium text-cx-deep truncate max-w-[200px]">{builderData.diagnosis}</span>
                                     </div>
                                     <button 
                                         onClick={() => setBuilderData(prev => ({ ...prev, diagnosis_id: "", diagnosis: "", diagnosis_code: "" }))} 
                                         disabled={existingStatus === "issued"}
-                                        className="text-blue-400 hover:text-blue-600 p-1 disabled:opacity-0"
+                                        className="text-cx-primary hover:text-cx-primary p-1 disabled:opacity-0"
                                     >
                                         <ArrowLeft size={16} className="rotate-180" />
                                     </button>
@@ -689,7 +689,7 @@ export default function PrescriptionTab({
                         <div className="flex justify-between items-end px-1">
                             <div>
                                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                    <Pill size={18} className="text-blue-500" /> Medications
+                                    <Pill size={18} className="text-cx-primary" /> Medications
                                 </h4>
                                 <p className="text-xs text-slate-500">List all prescribed medicines, dosage, and intake route.</p>
                             </div>
@@ -714,7 +714,7 @@ export default function PrescriptionTab({
                             ) : (
                                 <div className="grid grid-cols-1 gap-4">
                                     {builderData.items.map((item, idx) => (
-                                        <div key={idx} className="group p-6 bg-white border border-slate-200 rounded-3xl relative transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5">
+                                        <div key={idx} className="group p-6 bg-white border border-slate-200 rounded-3xl relative transition-all hover:border-cx-primary hover:shadow-xl hover:shadow-cx-primary/5">
                                             <button 
                                                 onClick={() => removeMedicine(idx)} 
                                                 disabled={existingStatus === "issued"}
@@ -732,7 +732,7 @@ export default function PrescriptionTab({
                                                         value={item.medicine_name} 
                                                         disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'medicine_name', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0 disabled:font-bold disabled:text-slate-900" 
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0 disabled:font-bold disabled:text-slate-900" 
                                                         placeholder="e.g. Paracetamol" 
                                                     />
                                                 </div>
@@ -743,7 +743,7 @@ export default function PrescriptionTab({
                                                         value={item.strength} 
                                                         disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'strength', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0" 
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0" 
                                                         placeholder="e.g. 500mg" 
                                                     />
                                                 </div>
@@ -753,7 +753,7 @@ export default function PrescriptionTab({
                                                         value={item.route} 
                                                         disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'route', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer disabled:bg-transparent disabled:border-none disabled:px-0 disabled:cursor-default"
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary outline-none transition-all appearance-none cursor-pointer disabled:bg-transparent disabled:border-none disabled:px-0 disabled:cursor-default"
                                                         style={{ backgroundImage: existingStatus === "issued" ? 'none' : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.25rem' }}
                                                     >
                                                         <option value="Oral">Oral (Tablet/Liquid)</option>
@@ -770,7 +770,7 @@ export default function PrescriptionTab({
                                                         value={item.duration} 
                                                         disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'duration', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0" 
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0" 
                                                         placeholder="e.g. 5 days" 
                                                     />
                                                 </div>
@@ -781,7 +781,7 @@ export default function PrescriptionTab({
                                                         value={item.notes} 
                                                         disabled={existingStatus === "issued"}
                                                         onChange={e => updateMedicine(idx, 'notes', e.target.value)} 
-                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 italic disabled:bg-transparent disabled:border-none disabled:px-0" 
+                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary outline-none transition-all placeholder:text-slate-300 italic disabled:bg-transparent disabled:border-none disabled:px-0" 
                                                         placeholder="e.g. 'Take after food', 'Avoid driving'..." 
                                                     />
                                                 </div>
@@ -803,7 +803,7 @@ export default function PrescriptionTab({
                             value={builderData.notes} 
                             disabled={existingStatus === "issued"}
                             onChange={e => setBuilderData(prev => ({ ...prev, notes: e.target.value }))} 
-                            className="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-3xl shadow-inner focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0 disabled:shadow-none" 
+                            className="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-3xl shadow-inner focus:bg-white focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary outline-none transition-all placeholder:text-slate-300 disabled:bg-transparent disabled:border-none disabled:px-0 disabled:shadow-none" 
                             placeholder={existingStatus === "issued" ? "" : "Provide any additional instructions, e.g. 'Take after food', 'Avoid driving'..."}
                         ></textarea>
                     </div>
@@ -864,7 +864,7 @@ export default function PrescriptionTab({
                             className={`px-8 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95 shadow-lg ${
                                 (!practitionerHasSignature || existingStatus === "issued") 
                                 ? "bg-slate-200 text-slate-400 cursor-not-allowed" 
-                                : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20"
+                                : "bg-gradient-to-r from-cx-primary to-indigo-600 hover:from-cx-deep hover:to-indigo-700 text-white shadow-cx-primary/20"
                             }`}
                         >
                             {saving ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="shrink-0" />} 
@@ -878,8 +878,8 @@ export default function PrescriptionTab({
                             <div className="bg-white w-full max-w-5xl h-full max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300">
                                 <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white z-10">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-50 rounded-xl">
-                                            <FileText size={20} className="text-blue-600" />
+                                        <div className="p-2 bg-cx-tint rounded-xl">
+                                            <FileText size={20} className="text-cx-primary" />
                                         </div>
                                         <div>
                                             <h3 className="text-sm font-bold text-slate-900 leading-none">Prescription Preview</h3>
@@ -909,7 +909,7 @@ export default function PrescriptionTab({
                                     </button>
                                     <button 
                                         onClick={() => { closePreview(); handleIssue(true); }}
-                                        className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+                                        className="px-8 py-2.5 bg-cx-primary hover:bg-cx-deep text-white rounded-xl text-sm font-bold shadow-lg shadow-cx-primary/20 active:scale-95 transition-all"
                                     >
                                         Everything looks good, Issue Now
                                     </button>
@@ -931,7 +931,7 @@ export default function PrescriptionTab({
                     <h3 className="text-sm font-semibold text-slate-900">Prescription History</h3>
                     <button
                         onClick={() => setShowBuilder(true)}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold"
+                        className="px-3 py-2 bg-cx-primary text-white rounded-lg text-xs font-bold"
                     >
                         Create New
                     </button>

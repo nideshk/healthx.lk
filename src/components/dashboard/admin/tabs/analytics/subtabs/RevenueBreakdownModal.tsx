@@ -110,7 +110,7 @@ const RevenueBreakdownModal: React.FC<RevenueBreakdownModalProps> = ({
           </div>
         </div>
 
-        <Button className="mt-8 w-full bg-blue-600 hover:bg-blue-700 border-none" onClick={onClose}>
+        <Button className="mt-8 w-full bg-cx-primary hover:bg-cx-deep border-none" onClick={onClose}>
           Close
         </Button>
       </div>

@@ -60,7 +60,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
               <button
                 onClick={() => setViewMode("grid")}
                 className={`p-1.5 rounded-md transition-all ${viewMode === "grid"
-                    ? "bg-white shadow-sm text-blue-600"
+                    ? "bg-white shadow-sm text-cx-primary"
                     : "text-slate-400 hover:text-slate-600"
                   }`}
                 title="Grid View"
@@ -70,7 +70,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
               <button
                 onClick={() => setViewMode("list")}
                 className={`p-1.5 rounded-md transition-all ${viewMode === "list"
-                    ? "bg-white shadow-sm text-blue-600"
+                    ? "bg-white shadow-sm text-cx-primary"
                     : "text-slate-400 hover:text-slate-600"
                   }`}
                 title="List View"
@@ -103,23 +103,23 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                 <div
                   key={appt.id}
                   onClick={() => setSelectedAppt(appt)}
-                  className="group relative bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all cursor-pointer overflow-hidden"
+                  className="group relative bg-white border border-slate-200 rounded-2xl p-4 hover:border-cx-primary hover:shadow-lg hover:shadow-cx-primary/5 transition-all cursor-pointer overflow-hidden"
                 >
-                  <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity ${appt.status === "completed" ? "bg-slate-500" : "bg-blue-500"
+                  <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity ${appt.status === "completed" ? "bg-slate-500" : "bg-cx-primary"
                     }`} />
 
                   <div className="flex justify-between items-start mb-3 relative">
                     <div className="space-y-0.5">
-                      <div className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">
+                      <div className="text-[11px] font-semibold text-cx-primary uppercase tracking-wider">
                         {appt.time}
                       </div>
-                      <div className="font-bold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                      <div className="font-bold text-slate-900 line-clamp-1 group-hover:text-cx-primary transition-colors">
                         {appt.patient || "Guest Patient"}
                       </div>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter self-start ${appt.status === "completed"
                         ? "bg-slate-100 text-slate-600 border border-slate-200"
-                        : "bg-blue-50 text-blue-700 border border-blue-100"
+                        : "bg-cx-tint text-cx-deep border border-cx-tint"
                       }`}>
                       {appt.status}
                     </span>
@@ -155,28 +155,28 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                     <tr
                       key={appt.id}
                       onClick={() => setSelectedAppt(appt)}
-                      className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
+                      className="hover:bg-cx-tint/40 transition-colors cursor-pointer group"
                     >
                       <td className="px-5 py-4">
-                        <span className="text-xs font-bold text-blue-600 tabular-nums">
+                        <span className="text-xs font-bold text-cx-primary tabular-nums">
                           {appt.time}
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <div className="font-semibold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
+                        <div className="font-semibold text-slate-900 text-sm group-hover:text-cx-primary transition-colors">
                           {appt.patient}
                         </div>
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2 text-xs text-slate-600">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-cx-primary" />
                           {appt.appointmentType}
                         </div>
                       </td>
                       <td className="px-5 py-4">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border transition-colors ${appt.status === "completed"
                             ? "bg-slate-100 text-slate-500 border-slate-200"
-                            : "bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-100"
+                            : "bg-cx-tint text-cx-primary border-cx-tint group-hover:bg-cx-tint"
                           }`}>
                           {appt.status}
                         </span>
@@ -353,7 +353,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
                     appointment.patient || "",
                   )
                 }
-                className="text-blue-600 font-semibold hover:underline cursor-pointer text-left"
+                className="text-cx-primary font-semibold hover:underline cursor-pointer text-left"
               >
                 {appointment.patient}
               </button>

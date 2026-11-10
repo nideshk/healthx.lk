@@ -24,6 +24,22 @@ interface Props {
   headingRef?: React.Ref<HTMLHeadingElement>;
 }
 
+function credentialLines(practitioner: any) {
+  const values = [practitioner?.qualifications, practitioner?.qualification];
+  const seen = new Set<string>();
+  const lines: string[] = [];
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const text = value.trim();
+    if (!text) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    lines.push(text);
+  }
+  return lines;
+}
+
 function normalizeDoctor(doctor: any) {
   if (!doctor) return null;
   return {
@@ -39,14 +55,21 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
   const { openLoginModal } = useModalStore();
   const { user } = useAuth();
   const [practitioner, setPractitioner] = useState<any>(() => normalizeDoctor(initialDoctor));
-  const [detailsLoading, setDetailsLoading] = useState(true);
+  const initialHasTypes = Array.isArray(initialDoctor?.appointment_types) && initialDoctor.appointment_types.length > 0;
+  const [detailsLoading, setDetailsLoading] = useState(!initialHasTypes);
+  const [detailsError, setDetailsError] = useState(false);
+  const [detailsAttempt, setDetailsAttempt] = useState(0);
   const [selectedType, setSelectedType] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [availability, setAvailability] = useState<any>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState(false);
+  const [slotAttempt, setSlotAttempt] = useState(0);
   const [visibleMonth, setVisibleMonth] = useState<string | null>(null);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [datesError, setDatesError] = useState(false);
+  const [datesAttempt, setDatesAttempt] = useState(0);
 
   const updateDraft = useBookingDraftStore((s) => s.update);
   const router = useRouter();
@@ -62,59 +85,136 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
     if (name.includes("in-home") || name.includes("home visit") || name.includes("home")) return true;
     return false;
   }
+  const hasAppointmentTypes =
+    Array.isArray(practitioner?.appointment_types) &&
+    practitioner.appointment_types.length > 0;
+
   /* ---------- Load practitioner ---------- */
   useEffect(() => {
     let cancelled = false;
-    setDetailsLoading(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    const knownTypes =
+      Array.isArray(initialDoctor?.appointment_types) &&
+      initialDoctor.appointment_types.length > 0;
+    if (!knownTypes) {
+      setDetailsLoading(true);
+    }
+    setDetailsError(false);
+
     axios
-      .get(`/api/practitioners/${practitionerId}`)
+      .get(`/api/practitioners/${practitionerId}`, {
+        signal: controller.signal,
+        timeout: 15000,
+      })
       .then((res) => {
-        if (!cancelled) setPractitioner(normalizeDoctor(res.data.practitioner));
+        if (cancelled) return;
+        const next = normalizeDoctor(res.data?.practitioner);
+        if (!next) {
+          if (!knownTypes) setDetailsError(true);
+          return;
+        }
+        setPractitioner(next);
       })
       .catch(() => {
-        if (!cancelled) toast.error(t("errors.loadDoctor"));
+        if (cancelled || knownTypes) return;
+        setDetailsError(true);
+        toast.error(t("errors.loadDoctor"));
       })
       .finally(() => {
+        clearTimeout(timer);
         if (!cancelled) setDetailsLoading(false);
       });
+
     return () => {
       cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
     };
-  }, [practitionerId, t]);
+  }, [practitionerId, detailsAttempt, initialDoctor, t]);
 
+  useEffect(() => {
+    const types = practitioner?.appointment_types;
+    if (!Array.isArray(types) || types.length !== 1) return;
+    const only = types[0];
+    setSelectedType((current: any) => {
+      if (
+        current?.id === only.id &&
+        current?.fee === only.fee &&
+        current?.duration_mins === only.duration_mins &&
+        current?.platform_fee === only.platform_fee
+      ) {
+        return current;
+      }
+      return only;
+    });
+  }, [practitioner]);
 
   /* ---------- Bookable dates for the visible month ---------- */
   useEffect(() => {
     if (!practitionerId || !visibleMonth) return;
 
     let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
     setAvailableDates([]);
+    setDatesError(false);
 
     axios
-      .get(`/api/booking/${practitionerId}/available-dates?month=${visibleMonth}`)
+      .get(`/api/booking/${practitionerId}/available-dates?month=${visibleMonth}`, {
+        signal: controller.signal,
+        timeout: 15000,
+      })
       .then((res) => {
         if (cancelled || res.data?.month !== visibleMonth) return;
         setAvailableDates(Array.isArray(res.data?.dates) ? res.data.dates : []);
       })
       .catch(() => {
-        if (!cancelled) setAvailableDates([]);
+        if (cancelled) return;
+        setAvailableDates([]);
+        setDatesError(true);
       });
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
     };
-  }, [practitionerId, visibleMonth]);
+  }, [practitionerId, visibleMonth, datesAttempt]);
 
   /* ---------- Load availability ---------- */
   useEffect(() => {
     if (!selectedDate || !selectedType) return;
 
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
     setLoadingSlots(true);
+    setSlotsError(false);
     axios
-      .get(`/api/booking/${practitionerId}/availability?date=${selectedDate}`)
-      .then((res) => setAvailability(res.data))
-      .finally(() => setLoadingSlots(false));
-  }, [selectedDate, selectedType, practitionerId]);
+      .get(`/api/booking/${practitionerId}/availability?date=${selectedDate}`, {
+        signal: controller.signal,
+        timeout: 15000,
+      })
+      .then((res) => {
+        if (!cancelled) setAvailability(res.data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAvailability(null);
+        setSlotsError(true);
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        if (!cancelled) setLoadingSlots(false);
+      });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [selectedDate, selectedType, practitionerId, slotAttempt]);
 
   /* ---------- Slots by type ---------- */
   const slots = useMemo(() => {
@@ -172,8 +272,17 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
     }
   };
 
-  if (!practitioner) {
+  if (!practitioner && detailsLoading) {
     return <SlotPickerSkeleton />;
+  }
+
+  if (!practitioner) {
+    return (
+      <SlotPickerError
+        message={t("errors.loadDoctor")}
+        onRetry={() => setDetailsAttempt((n) => n + 1)}
+      />
+    );
   }
   return (
     <div className="bg-white rounded-2xl border border-cx-border p-6 md:p-8">
@@ -224,18 +333,11 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
               </p>
             )}
 
-            {/* Qualification */}
-            {practitioner.qualifications && (
-              <p className="text-sm text-gray-500 mt-1">
-                {practitioner.qualifications}
+            {credentialLines(practitioner).map((line) => (
+              <p key={line} className="text-sm text-gray-600 mt-1">
+                {line}
               </p>
-            )}
-
-            {practitioner.qualification && (
-              <p className="text-sm text-gray-600 mt-1">
-                {practitioner.qualification}
-              </p>
-            )}
+            ))}
 
             {/* License */}
             {practitioner.license_number && (
@@ -273,14 +375,23 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
         )}
 
         {/* Bio */}
-        {practitioner.profile_bio && (
+        {practitioner.profile_bio &&
+          !credentialLines(practitioner).some(
+            (line) =>
+              line.toLowerCase() === String(practitioner.profile_bio).trim().toLowerCase()
+          ) && (
           <p className="text-sm text-gray-600 mt-4 leading-relaxed">
             {practitioner.profile_bio}
           </p>
         )}
       </div>
-      {detailsLoading ? (
+      {detailsLoading && !hasAppointmentTypes ? (
         <SlotControlsSkeleton />
+      ) : detailsError && !hasAppointmentTypes ? (
+        <SlotPickerError
+          message={t("errors.loadDoctor")}
+          onRetry={() => setDetailsAttempt((n) => n + 1)}
+        />
       ) : (
       <>
       {/* Step Header */}
@@ -372,6 +483,15 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
               }}
               theme="light"
             />
+            {datesError && (
+              <button
+                type="button"
+                onClick={() => setDatesAttempt((n) => n + 1)}
+                className="mt-3 text-sm font-semibold text-cx-primary underline"
+              >
+                Couldn&apos;t load available dates. Retry
+              </button>
+            )}
           </div>
 
           {/* Time */}
@@ -389,6 +509,14 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
               <p className="text-sm text-gray-500 mt-4">
                 {t("messages.loading")}
               </p>
+            ) : slotsError ? (
+              <button
+                type="button"
+                onClick={() => setSlotAttempt((n) => n + 1)}
+                className="mt-4 text-sm font-semibold text-cx-primary underline"
+              >
+                Couldn&apos;t load available times. Retry
+              </button>
             ) : slots.length === 0 ? (
               <div className="text-sm text-gray-500 mt-4">
                 {t("messages.noSlots")}
@@ -435,6 +563,25 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
     </div>
   );
 };
+
+const SlotPickerError = ({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) => (
+  <div className="bg-white rounded-2xl border border-cx-border p-6 md:p-8 text-center">
+    <p className="text-base text-cx-ink">{message}</p>
+    <button
+      type="button"
+      onClick={onRetry}
+      className="mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-cx-primary px-5 font-semibold text-white hover:bg-cx-deep"
+    >
+      Retry
+    </button>
+  </div>
+);
 
 const SlotPickerSkeleton = () => (
   <div className="bg-white rounded-2xl border border-cx-border p-6 md:p-8" aria-busy="true" aria-live="polite">

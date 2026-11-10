@@ -53,14 +53,14 @@ const DashboardMenuCard: React.FC<DashboardMenuCardProps> = ({
               type="button"
               onClick={() => onChange(item.id)}
               className={`w-full text-left rounded-lg px-3 py-2 text-sm border transition ${active
-                ? "bg-blue-500 text-white border-blue-500"
+                ? "bg-cx-primary text-white border-cx-primary"
                 : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
                 }`}
             >
               <div className="font-medium">{item.label}</div>
               {item.description && (
                 <div
-                  className={`text-[11px] ${active ? "text-blue-50" : "text-slate-500"
+                  className={`text-[11px] ${active ? "text-cx-tint" : "text-slate-500"
                     }`}
                 >
                   {item.description}

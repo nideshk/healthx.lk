@@ -164,7 +164,7 @@ const RefundsRequestedTab: React.FC = () => {
     {
       header: "TXN ID",
       render: (item) => (
-        <span className="font-mono text-blue-600 font-bold">{item.transaction_id}</span>
+        <span className="font-mono text-cx-primary font-bold">{item.transaction_id}</span>
       ),
     },
     {
@@ -277,7 +277,7 @@ const RefundsRequestedTab: React.FC = () => {
                 Admin Note (Optional)
               </label>
               <textarea
-                className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-cx-primary transition-all"
                 placeholder="Enter details for this action..."
                 rows={3}
                 value={adminNote}
@@ -295,7 +295,7 @@ const RefundsRequestedTab: React.FC = () => {
               <button
                 className={`flex-1 py-2.5 text-sm font-medium text-white rounded-xl transition-colors ${
                   actionType === "mark_refunded"
-                    ? "bg-blue-600 hover:bg-blue-700"
+                    ? "bg-cx-primary hover:bg-cx-deep"
                     : "bg-red-600 hover:bg-red-700"
                 }`}
                 onClick={handleProcessAction}

@@ -156,6 +156,10 @@ export async function requireUser(req: Request): Promise<RequireUserResult> {
    Helpers
 ------------------------------- */
 
+export function isAdminRole(role: string | null | undefined) {
+  return role === "admin" || role === "superadmin";
+}
+
 function unauthorized(): RequireUserResult {
   return {
     authorized: false,

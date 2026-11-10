@@ -79,7 +79,7 @@ export default function PractitionerPrescriptionsTab() {
             placeholder="Search by patient name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary/20 transition-all"
           />
         </div>
       </div>
@@ -107,23 +107,23 @@ export default function PractitionerPrescriptionsTab() {
       ) : (
         <div className="grid gap-4">
           {filteredPrescriptions.map((px) => (
-            <Card key={px.id} className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500 overflow-hidden">
+            <Card key={px.id} className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-cx-primary overflow-hidden">
               <CardBody className="p-0">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between p-6 gap-6">
                   <div className="flex items-start gap-5">
-                    <div className="p-4 bg-blue-50 rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 flex-shrink-0 shadow-sm">
+                    <div className="p-4 bg-cx-tint rounded-2xl text-cx-primary group-hover:bg-cx-deep group-hover:text-white transition-all duration-300 flex-shrink-0 shadow-sm">
                       <FileText size={28} />
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
-                         <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 ring-2 ring-white">
+                         <span className="text-[10px] font-black uppercase tracking-wider text-cx-deep bg-cx-tint px-3 py-1 rounded-full border border-cx-tint ring-2 ring-white">
                           {px.status}
                         </span>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">
                           Ref: {px.id.split('-')[0]}
                         </p>
                       </div>
-                      <h4 className="text-xl font-black text-slate-900 group-hover:text-blue-700 transition-colors">
+                      <h4 className="text-xl font-black text-slate-900 group-hover:text-cx-deep transition-colors">
                         Patient: {px.patients?.full_name || "Unknown Patient"}
                       </h4>
                       <div className="flex flex-wrap items-center gap-5 text-sm text-slate-500 font-semibold">
@@ -133,7 +133,7 @@ export default function PractitionerPrescriptionsTab() {
                         </div>
                         {px.diagnoses && (
                           <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-lg text-slate-600 border border-slate-200">
-                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                             <div className="w-1.5 h-1.5 rounded-full bg-cx-primary" />
                              <span>{px.diagnoses.name}</span>
                           </div>
                         )}
@@ -147,7 +147,7 @@ export default function PractitionerPrescriptionsTab() {
                         href={px.pdf_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-slate-900 hover:bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-slate-200 transition-all active:scale-[0.98] group/btn"
+                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-cx-primary hover:bg-cx-deep text-white rounded-2xl font-bold text-sm shadow-xl shadow-cx-primary/20 transition-all active:scale-[0.98] group/btn"
                       >
                         <ExternalLink size={18} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
                         View PDF

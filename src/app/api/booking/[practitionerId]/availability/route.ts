@@ -83,12 +83,56 @@ export async function GET(
     /* ---------------------------
        STEP 3: Availability Windows
     --------------------------- */
-    const { data: availabilityWindows } = await supabaseClient
-      .from("practitioner_availability")
-      .select("starts_at, ends_at, timezone")
-      .eq("practitioner_id", practitionerId)
-      .gte("starts_at", dayStartUTC)
-      .lte("starts_at", dayEndUTC);
+    const nowUTC = DateTime.utc().toISO();
+
+    // One round trip for the day, instead of a query per table.
+    const [windowsResult, typesResult, bookedResult, leavesResult] =
+      await Promise.all([
+        supabaseClient
+          .from("practitioner_availability")
+          .select("starts_at, ends_at, timezone")
+          .eq("practitioner_id", practitionerId)
+          .gte("starts_at", dayStartUTC)
+          .lte("starts_at", dayEndUTC),
+        supabaseClient
+          .from("appointment_type")
+          .select("id, name, duration_mins")
+          .eq("is_active", true)
+          .in("id", offeredTypes),
+        supabaseClient
+          .from("appointments")
+          .select("starts_at, ends_at")
+          .eq("practitioner_id", practitionerId)
+          .gte("starts_at", dayStartUTC)
+          .lte("starts_at", dayEndUTC)
+          .in("status", ["pending", "scheduled", "confirmed"])
+          .or(`expires_at.is.null,expires_at.gt.${nowUTC}`)
+          .neq("payment_status", "failed"),
+        supabaseClient
+          .from("practitioner_leaves")
+          .select("applied_windows, leave_type")
+          .eq("practitioner_id", practitionerId)
+          .lte("start_date", date)
+          .gte("end_date", date),
+      ]);
+
+    if (
+      windowsResult.error ||
+      typesResult.error ||
+      bookedResult.error ||
+      leavesResult.error
+    ) {
+      console.error("Availability lookup failed");
+      return availabilityJson(
+        { error: "Unable to load availability" },
+        { status: 500 }
+      );
+    }
+
+    const availabilityWindows = windowsResult.data;
+    const appointmentTypes = typesResult.data;
+    const booked = bookedResult.data;
+    const leaves = leavesResult.data;
 
     if (!availabilityWindows || availabilityWindows.length === 0) {
       return availabilityJson({
@@ -98,14 +142,6 @@ export async function GET(
         reason: "No availability published",
       });
     }
-    /* ---------------------------
-       STEP 4: Appointment Types
-    --------------------------- */
-    const { data: appointmentTypes } = await supabaseClient
-      .from("appointment_type")
-      .select("id, name, duration_mins")
-      .eq("is_active", true)
-      .in("id", offeredTypes);
 
     if (!appointmentTypes) {
       return availabilityJson(
@@ -113,31 +149,6 @@ export async function GET(
         { status: 500 }
       );
     }
-
-    /* ---------------------------
-       STEP 5: Bookings
-    --------------------------- */
-    const nowUTC = DateTime.utc().toISO();
-
-    const { data: booked } = await supabaseClient
-      .from("appointments")
-      .select("starts_at, ends_at")
-      .eq("practitioner_id", practitionerId)
-      .gte("starts_at", dayStartUTC)
-      .lte("starts_at", dayEndUTC)
-      .in("status", ["pending", "scheduled", "confirmed"])
-      .or(`expires_at.is.null,expires_at.gt.${nowUTC}`)
-      .neq("payment_status", "failed");
-
-    /* ---------------------------
-       STEP 6: Leaves
-    --------------------------- */
-    const { data: leaves } = await supabaseClient
-      .from("practitioner_leaves")
-      .select("applied_windows, leave_type")
-      .eq("practitioner_id", practitionerId)
-      .lte("start_date", date)
-      .gte("end_date", date);
 
     const { slots_by_type, bookedIntervals, leaveIntervals } =
       computeDayAvailability({

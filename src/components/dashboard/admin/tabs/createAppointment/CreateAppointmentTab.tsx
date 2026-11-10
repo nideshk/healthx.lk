@@ -315,10 +315,10 @@ export default function CreateAppointmentTab() {
                     <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
-                                <UserCheck size={16} className="text-teal-600" /> Practitioner
+                                <UserCheck size={16} className="text-cx-primary" /> Practitioner
                             </label>
                             <select
-                                className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 transition-all"
+                                className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-cx-primary transition-all"
                                 value={form.practitioner_id}
                                 onChange={e => handleChange("practitioner_id", e.target.value)}
                             >
@@ -331,7 +331,7 @@ export default function CreateAppointmentTab() {
 
                         <div>
                             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
-                                <User size={16} className="text-teal-600" /> Patient
+                                <User size={16} className="text-cx-primary" /> Patient
                             </label>
                             <div className="relative">
                                 <input
@@ -394,8 +394,8 @@ export default function CreateAppointmentTab() {
                                             type="button"
                                             onClick={() => handleChange("start_time", time)}
                                             className={`py-2 text-sm font-medium rounded-lg border transition-all ${form.start_time === time
-                                                ? "bg-teal-600 border-teal-600 text-white shadow-md"
-                                                : "bg-white border-slate-200 text-slate-600 hover:border-teal-500"
+                                                ? "bg-cx-primary border-cx-primary text-white shadow-md"
+                                                : "bg-white border-slate-200 text-slate-600 hover:border-cx-primary"
                                                 }`}
                                         >
                                             {time}
@@ -442,7 +442,7 @@ export default function CreateAppointmentTab() {
                         <div>
                             <label className="text-sm font-semibold text-slate-700 block mb-2">How did you hear about this platform? *</label>
                             <select
-                                className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 transition-all"
+                                className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-cx-primary transition-all"
                                 value={form.referral}
                                 onChange={e => handleChange("referral", e.target.value)}
                             >
@@ -458,7 +458,7 @@ export default function CreateAppointmentTab() {
                     <button
                         onClick={handleSubmit}
                         disabled={loading || !form.start_time}
-                        className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-teal-700 shadow-lg shadow-teal-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                        className="w-full bg-cx-primary text-white py-4 rounded-xl font-bold text-lg hover:bg-cx-deep shadow-lg shadow-cx-tint disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                         {loading ? "Processing..." : "Confirm Appointment"}
                     </button>
@@ -469,7 +469,7 @@ export default function CreateAppointmentTab() {
             <div className="w-full lg:w-80 space-y-4">
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm sticky top-4">
                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <Clock size={18} className="text-teal-600" /> Appointment Summary
+                        <Clock size={18} className="text-cx-primary" /> Appointment Summary
                     </h3>
                     <div className="space-y-4 text-sm">
                         <SummaryItem label="Practitioner" value={practitioners.find(p => p.id === form.practitioner_id)?.full_name} />

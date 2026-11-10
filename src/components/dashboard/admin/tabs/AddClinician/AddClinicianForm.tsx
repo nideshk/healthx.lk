@@ -319,7 +319,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-4xl">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-teal-600 mb-6 transition-colors font-medium">
+        <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-cx-primary mb-6 transition-colors font-medium">
           <ArrowLeft size={20} /> Back to Clinicians
         </button>
         <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
@@ -373,7 +373,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                   <div className="flex flex-wrap gap-1">
                     {specialization.length === 0 ? <span className="text-gray-400">Select...</span> : specialization.map(slug => {
                       const spec = specializations.find(s => s.slug === slug);
-                      return <span key={slug} className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm">{spec?.name || slug}</span>;
+                      return <span key={slug} className="bg-cx-tint text-cx-deep px-2 py-1 rounded-full text-sm">{spec?.name || slug}</span>;
                     })}
                   </div>
                   <ChevronDown size={18} className="text-gray-400" />
@@ -382,7 +382,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                   <div className="absolute z-20 mt-2 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg">
                     {specializations.filter(s => s.active).map(spec => (
                       <label key={spec.id} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer">
-                        <input type="checkbox" className="rounded accent-teal-600" checked={specialization.includes(spec.slug)} onChange={() => toggleSpecialization(spec.slug)} />
+                        <input type="checkbox" className="rounded accent-cx-primary" checked={specialization.includes(spec.slug)} onChange={() => toggleSpecialization(spec.slug)} />
                         <span className="text-gray-700">{spec.name}</span>
                       </label>
                     ))}
@@ -403,7 +403,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
               </select>
               <div className="space-y-2">
                 {selectedAppointments.map(appt => (
-                  <div key={appt.id} className="flex items-center justify-between p-3 bg-teal-50 border border-teal-100 rounded-lg">
+                  <div key={appt.id} className="flex items-center justify-between p-3 bg-cx-tint border border-cx-tint rounded-lg">
                     <span className="font-medium text-gray-700">{appt.name}</span>
                     <div className="flex items-center gap-2">
                       <input type="number" value={appt.base_fee} onChange={e => handleAppointmentFeeChange(appt.id, e.target.value)} className="w-20 px-2 py-1 border rounded" />
@@ -420,12 +420,12 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                 <div className="p-4 border-2 border-dashed rounded-lg text-center">
                   <p className="text-sm font-medium">Gov ID (Required 2)</p>
                   <input type="file" className="hidden" id="gov-id" onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0], "government_id")} />
-                  <label htmlFor="gov-id" className={`cursor-pointer text-xs text-teal-600 ${governmentIdCount >= 2 ? "opacity-50" : ""}`}>Select File</label>
+                  <label htmlFor="gov-id" className={`cursor-pointer text-xs text-cx-primary ${governmentIdCount >= 2 ? "opacity-50" : ""}`}>Select File</label>
                 </div>
                 <div className="p-4 border-2 border-dashed rounded-lg text-center">
                   <p className="text-sm font-medium">Supporting Document (Required)</p>
                   <input type="file" className="hidden" id="sup-doc" onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0], "supporting_document")} />
-                  <label htmlFor="sup-doc" className={`cursor-pointer text-xs text-teal-600 ${supportingDocCount >= 1 ? "opacity-50" : ""}`}>Select File</label>
+                  <label htmlFor="sup-doc" className={`cursor-pointer text-xs text-cx-primary ${supportingDocCount >= 1 ? "opacity-50" : ""}`}>Select File</label>
                 </div>
                 <div className="p-4 border-2 border-dashed rounded-lg text-center">
                   <p className="text-sm font-medium">Signature Document (Required)</p>
@@ -433,7 +433,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
                     ⚠️ <span className="font-bold">Important:</span> This signature will be used to digitally sign all prescriptions issued by this practitioner.
                   </p>
                   <input type="file" className="hidden" id="sig-upload" accept=".jpg,.jpeg,.png" onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0], "signature")} />
-                  <label htmlFor="sig-upload" className={`cursor-pointer text-xs text-teal-600 ${signatureCount >= 1 ? "opacity-50" : ""}`}>Select File</label>
+                  <label htmlFor="sig-upload" className={`cursor-pointer text-xs text-cx-primary ${signatureCount >= 1 ? "opacity-50" : ""}`}>Select File</label>
                 </div>
               </div>
               <div className="space-y-1">
@@ -456,7 +456,7 @@ export default function AddClinicianForm({ onBack }: AddClinicianFormProps) {
               </div>
             </div>
 
-            <button type="submit" disabled={loading || uploadingDocs} className="w-full bg-teal-600 text-white py-3 rounded-xl text-lg font-semibold hover:bg-teal-700 transition disabled:opacity-50">
+            <button type="submit" disabled={loading || uploadingDocs} className="w-full bg-cx-primary text-white py-3 rounded-xl text-lg font-semibold hover:bg-cx-deep transition disabled:opacity-50">
               {loading ? "Registering..." : "Register Practitioner"}
             </button>
           </form>

@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isAdminRole, requireUser } from "@/lib/authGuard";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const includeInactive = searchParams.get("includeInactive") === "true";
+    let includeInactive = searchParams.get("includeInactive") === "true";
+
+    if (includeInactive) {
+      const { authorized, role } = await requireUser(req);
+      if (!authorized || !isAdminRole(role)) {
+        includeInactive = false;
+      }
+    }
 
     /* ---------------------------------------
      * 1️⃣ Fetch services

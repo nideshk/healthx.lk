@@ -136,7 +136,7 @@ const ManageAdminsTab: React.FC = () => {
                     <span
                       className={`text-[11px] px-2 py-0.5 rounded-full ${admin.role === "superadmin"
                         ? "bg-purple-100 text-purple-700"
-                        : "bg-blue-100 text-blue-700"
+                        : "bg-cx-tint text-cx-deep"
                         }`}
                     >
                       {admin.role === "superadmin" ? "Super Admin" : "Admin"}

@@ -180,7 +180,7 @@ export default function FollowUpRequest() {
                 <div className="mt-6 flex justify-end">
                   <Link
                     href={`/appointment?followUpFor=${req.appointment.id}`}
-                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
+                    className="inline-flex items-center gap-2 rounded-xl bg-cx-primary px-4 py-2 text-sm font-semibold text-white hover:bg-cx-deep transition"
                   >
                     <CalendarDays className="w-4 h-4" />
                     {t("book")}

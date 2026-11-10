@@ -159,7 +159,7 @@ export default function AdminPrescriptionsTab() {
                         href={px.pdf_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-cx-primary hover:bg-cx-deep text-white rounded-2xl font-bold text-sm shadow-xl shadow-cx-primary/20 transition-all active:scale-[0.98]"
                       >
                         <ExternalLink size={16} />
                         View PDF

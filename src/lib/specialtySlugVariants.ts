@@ -1,8 +1,9 @@
 /**
  * Service slugs and the slugs stored on practitioners do not always match.
- * The paediatrician service is stored as "peadiatrician" while clinicians
- * are tagged "pediatrician". Matching is also case-sensitive in Postgres,
- * and the cancer service slug is "Cancer-specialist".
+ * The paediatrician service slug is "paediatrician". Older links and some
+ * clinician tags still use "peadiatrician" or "pediatrician". Matching is
+ * also case-sensitive in Postgres, and the cancer service slug is
+ * "Cancer-specialist".
  *
  * This only widens the read. It does not write specialty data.
  */

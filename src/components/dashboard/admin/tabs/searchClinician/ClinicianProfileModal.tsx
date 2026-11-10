@@ -57,7 +57,7 @@ const ClinicianProfileModal: React.FC<ClinicianProfileModalProps> = ({
               onClick={() => setActiveTab(tab)}
               className={`text-sm pb-2 ${
                 activeTab === tab
-                  ? "font-semibold text-blue-600 border-b-2 border-blue-600"
+                  ? "font-semibold text-cx-primary border-b-2 border-cx-primary"
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >

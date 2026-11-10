@@ -43,12 +43,12 @@ export default function PaymentStatusPage() {
     }, [appointmentId]);
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+        <div className="min-h-screen bg-cx-bg flex flex-col items-center justify-center p-6">
             <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center animate-in fade-in zoom-in duration-500">
                 {status === "loading" && (
                     <div className="flex flex-col items-center gap-6">
-                        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
-                            <Loader2 size={40} className="text-blue-600 animate-spin" />
+                        <div className="w-20 h-20 bg-cx-tint rounded-full flex items-center justify-center">
+                            <Loader2 size={40} className="text-cx-primary animate-spin" />
                         </div>
                         <h1 className="text-2xl font-bold text-slate-900">Checking payment status...</h1>
                         <p className="text-slate-500">Please wait while we verify your transaction.</p>
@@ -76,7 +76,7 @@ export default function PaymentStatusPage() {
                         <div className="w-full space-y-3 mt-4">
                             <Link
                                 href={`/dashboard/appointment/${appointmentId}`}
-                                className="flex items-center justify-center gap-2 w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-colors"
+                                className="flex items-center justify-center gap-2 w-full py-4 bg-cx-primary text-white rounded-2xl font-bold hover:bg-cx-deep transition-colors"
                             >
                                 <Calendar size={18} />
                                 View Appointment
@@ -102,7 +102,7 @@ export default function PaymentStatusPage() {
                         <div className="w-full space-y-3 mt-4">
                             <Link
                                 href="/dashboard/appointment"
-                                className="flex items-center justify-center gap-2 w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-colors"
+                                className="flex items-center justify-center gap-2 w-full py-4 bg-cx-primary text-white rounded-2xl font-bold hover:bg-cx-deep transition-colors"
                             >
                                 Try Again
                             </Link>

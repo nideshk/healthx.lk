@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isPractitionerId } from "@/lib/practitionerPath";
 import { NextResponse } from "next/server";
 
 const PUBLIC_DOCTOR_COLUMNS = `
@@ -13,22 +14,56 @@ const PUBLIC_DOCTOR_COLUMNS = `
   profile_picture_url
 `;
 
+async function findPractitioner(key: string) {
+  const bySlug = await supabaseAdmin
+    .from("practitioners")
+    .select(PUBLIC_DOCTOR_COLUMNS)
+    .eq("slug", key)
+    .eq("is_active", true)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (bySlug.error) return { data: null, error: bySlug.error };
+  if (bySlug.data) return { data: bySlug.data, error: null };
+  if (!isPractitionerId(key)) return { data: null, error: null };
+
+  const byId = await supabaseAdmin
+    .from("practitioners")
+    .select(PUBLIC_DOCTOR_COLUMNS)
+    .eq("id", key)
+    .eq("is_active", true)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  return { data: byId.data, error: byId.error };
+}
+
 export async function GET(
     req: Request,
     { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
         const { slug } = await params;
+        const key = decodeURIComponent(slug || "").trim();
 
-        const { data: practitioner, error } = await supabaseAdmin
-            .from("practitioners")
-            .select(PUBLIC_DOCTOR_COLUMNS)
-            .eq("slug", slug)
-            .eq("is_active", true)
-            .is("deleted_at", null)
-            .single();
+        if (!key) {
+            return NextResponse.json(
+                { success: false, error: "Practitioner not found" },
+                { status: 404 }
+            );
+        }
 
-        if (error || !practitioner) {
+        const { data: practitioner, error } = await findPractitioner(key);
+
+        if (error) {
+            console.error("Practitioner lookup failed");
+            return NextResponse.json(
+                { success: false, error: "Internal server error" },
+                { status: 500 }
+            );
+        }
+
+        if (!practitioner) {
             return NextResponse.json(
                 {
                     success: false,
@@ -48,7 +83,6 @@ export async function GET(
                     specialization: practitioner.specialization,
                     profile_bio: practitioner.profile_bio,
                     qualification: practitioner.qualification,
-                    qualifications: practitioner.qualification,
                     languages: practitioner.languages ?? [],
                     experience_years: practitioner.experience_years,
                     profile_picture_url: practitioner.profile_picture_url,

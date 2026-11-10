@@ -57,7 +57,7 @@ export default function PatientDashboardLayout({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
+    <div className="min-h-screen bg-cx-bg text-slate-900">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Changed gap and grid behavior */}
         <div className="grid lg:grid-cols-12 gap-8">
@@ -108,7 +108,7 @@ export default function PatientDashboardLayout({
               <div className="pt-6 border-t border-slate-100">
                 <Link
                   href="/appointment"
-                  className="group flex items-center justify-center gap-2 w-full px-4 py-3 bg-slate-900 hover:bg-teal-600 text-white rounded-2xl font-bold shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
+                  className="group flex items-center justify-center gap-2 w-full px-4 py-3 bg-cx-primary hover:bg-cx-deep text-white rounded-2xl font-bold shadow-lg shadow-cx-primary/20 transition-all active:scale-[0.98]"
                 >
                   <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
                   {t("newBooking")}
@@ -118,7 +118,7 @@ export default function PatientDashboardLayout({
               {/* TRUST BADGE */}
               <div className="mt-8 px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100">
                 <div className="flex items-center gap-2 text-slate-500 mb-1">
-                  <ShieldCheck className="w-3 h-3 text-teal-500" />
+                  <ShieldCheck className="w-3 h-3 text-cx-primary" />
                   <span className="text-[10px] font-black uppercase tracking-wider">
                     {t("privacyTitle")}
                   </span>
@@ -146,7 +146,7 @@ export default function PatientDashboardLayout({
               <div className="lg:hidden mb-6">
                 <Link
                   href="/appointment"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-lg active:scale-[0.98]"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-cx-primary hover:bg-cx-deep text-white rounded-2xl font-bold shadow-lg shadow-cx-primary/20 active:scale-[0.98]"
                 >
                   <Plus className="w-4 h-4" />
                   {t("newBooking")}
@@ -179,19 +179,19 @@ function SidebarLink({ href, active, icon, label }: any) {
     <Link
       href={href}
       className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${active
-        ? "bg-teal-50 text-teal-700 font-bold border border-teal-100/50"
+        ? "bg-cx-tint text-cx-deep font-bold border border-cx-tint/50"
         : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
         }`}
     >
       <span
-        className={`${active ? "text-teal-600" : "text-slate-400 group-hover:text-slate-600"
+        className={`${active ? "text-cx-primary" : "text-slate-400 group-hover:text-slate-600"
           } transition-colors`}
       >
         {icon}
       </span>
       <span className="text-sm">{label}</span>
       {active && (
-        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-600 shadow-[0_0_8px_rgba(13,148,136,0.5)]" />
+        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cx-primary shadow-[0_0_8px_rgba(11,110,121,0.45)]" />
       )}
     </Link>
   );

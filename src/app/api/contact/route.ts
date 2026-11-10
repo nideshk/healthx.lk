@@ -1,8 +1,33 @@
 import { sendSupportEmail } from "@/lib/email";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
+
+const CONTACT_LIMIT = 5;
+const CONTACT_WINDOW_MS = 60_000;
 
 export async function POST(req: Request) {
     try {
+        const limit = rateLimit(
+            `contact:${clientIp(req)}`,
+            CONTACT_LIMIT,
+            CONTACT_WINDOW_MS
+        );
+        if (!limit.ok) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "Too many requests. Please try again shortly.",
+                },
+                {
+                    status: 429,
+                    headers: {
+                        "Retry-After": String(limit.retryAfterSeconds),
+                        "Cache-Control": "no-store",
+                    },
+                }
+            );
+        }
+
         const { email, phone, concern } = await req.json();
 
         await sendSupportEmail({

@@ -1,10 +1,20 @@
 import { supabaseClient } from "@/lib/supabaseClient";
+import { isAdminRole, requireUser } from "@/lib/authGuard";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const includeInactive = searchParams.get("includeInactive") === "true";
+    let includeInactive = searchParams.get("includeInactive") === "true";
+
+    // Inactive specialties are an admin catalog. Public callers, including
+    // ones that pass the flag, only receive active services.
+    if (includeInactive) {
+      const { authorized, role } = await requireUser(req);
+      if (!authorized || !isAdminRole(role)) {
+        includeInactive = false;
+      }
+    }
 
     // 🧩 Build Supabase query
     let query = supabaseClient

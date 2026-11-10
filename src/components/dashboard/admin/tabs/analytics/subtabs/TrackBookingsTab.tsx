@@ -175,12 +175,12 @@ const TrackBookingsTab: React.FC = () => {
         const statusMap: Record<string, string> = {
           COMPLETED: "bg-emerald-100 text-emerald-700",
           CANCELLED: "bg-red-100 text-red-700",
-          SCHEDULED: "bg-blue-100 text-blue-700",
+          SCHEDULED: "bg-cx-tint text-cx-deep",
           PENDING: "bg-amber-100 text-amber-700",
         };
         const currentStatus = item.status?.toUpperCase() || "";
         const colorClass =
-          statusMap[currentStatus] || "bg-blue-100 text-blue-700";
+          statusMap[currentStatus] || "bg-cx-tint text-cx-deep";
 
         return (
           <span
