@@ -787,7 +787,7 @@
     "backHome": "Back to home"
   },
   "appointmentConfirmation": {
-    "termsRefund": "A full refund is available if you cancel more than 24 hours before the appointment. A 50% refund is available if you cancel between 24 hours and 5 hours before. No refund is available if you cancel 5 hours or less before the appointment. No-show appointments may incur fees. Payment is due at time of service."
+    "termsRefund": "A full refund is available if you cancel more than 24 hours before the appointment. A 50% refund is available if you cancel between 24 hours and 5 hours before. No refund is available if you cancel 5 hours or less before the appointment. No-show appointments may incur fees. Payment is taken when you book."
   },
   "rateLimit": {
     "tooManyRequests": "Too many requests. Please try again shortly."

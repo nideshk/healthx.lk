@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import en from "../src/messages/en.json";
 import si from "../src/messages/si.json";
@@ -30,7 +31,22 @@ describe("approved Sinhala catalog", () => {
     }
   });
 
-  it("keeps the consent terms placeholder until a full translation exists", () => {
-    expect(si.consentForm.telehealthContent.toLowerCase()).toContain("coming soon");
+  it("uses the official Sinhala telehealth consent instead of the placeholder", () => {
+    const placeholder =
+      "මෙම ලේඛනයේ සම්පූර්ණ සිංහල පරිවර්තනය සඳහා කරුණාකර අපගේ සහාය කණ්ඩායම අමතන්න: support@squarecoin.com.au. (Full translation coming soon)";
+    const value = si.consentForm.telehealthContent;
+    expect(value).not.toBe(placeholder);
+    expect(value.toLowerCase()).not.toContain("coming soon");
+    expect(value).toContain("ටෙලිහෙල්ත්, ඩිජිටල් හෙල්ත් සහ ප්ලැට්ෆෝමයට අනුමැතිය දීම");
+    expect(value).toContain("I. ප්ලැට්ෆෝමය පිලිබඳ තොරතුරු");
+    expect(value).toContain("පැය 12");
+
+    const markdown = readFileSync(
+      new URL("../public/content/telehealth-si.md", import.meta.url),
+      "utf8"
+    );
+    expect(markdown.toLowerCase()).not.toContain("coming soon");
+    expect(markdown).toContain("<h2>I. ප්ලැට්ෆෝමය පිලිබඳ තොරතුරු</h2>");
+    expect(markdown).toContain("අවලංගු කිරීමට හැකි කාල සීමාව");
   });
 });
