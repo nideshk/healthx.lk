@@ -49,15 +49,12 @@ vi.mock("@/components/common/LanguageToggle", () => ({
 
 function renderSi(node: ReactNode) {
   return renderToStaticMarkup(
-    createElement(
-      NextIntlClientProvider,
-      {
-        locale: "si",
-        messages: si as never,
-        timeZone: "Asia/Colombo",
-      },
-      node
-    )
+    createElement(NextIntlClientProvider, {
+      locale: "si",
+      messages: si as never,
+      timeZone: "Asia/Colombo",
+      children: node,
+    })
   );
 }
 
