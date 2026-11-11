@@ -29,7 +29,7 @@ export default function Checkbox({
   const lightStyles = cn(
     baseStyles,
     checked
-      ? "bg-[#018BB5] border-[#018BB5] text-white"
+      ? "bg-cx-primary border-cx-primary text-white"
       : "bg-white border-gray-300 text-transparent hover:bg-gray-50",
     disabled && "opacity-50 cursor-not-allowed",
     error && "border-red-500 focus:ring-red-500"
@@ -38,7 +38,7 @@ export default function Checkbox({
   const darkStyles = cn(
     baseStyles,
     checked
-      ? "bg-[#018BB5] border-[#018BB5] text-white"
+      ? "bg-cx-primary border-cx-primary text-white"
       : "bg-gray-800 border-gray-600 text-transparent hover:bg-gray-700",
     disabled && "opacity-50 cursor-not-allowed",
     error && "border-red-500 focus:ring-red-500"

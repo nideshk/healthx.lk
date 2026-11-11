@@ -87,7 +87,7 @@ export default function ConfirmBookingModal({
               disabled={disabled}
               className={`px-4 py-2 rounded-md text-white font-semibold flex items-center gap-2 ${disabled
                 ? 'bg-gray-400'
-                : 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-cx-primary hover:bg-cx-deep'
                 }`}
             >
               {loading ? (
@@ -162,7 +162,7 @@ export default function ConfirmBookingModal({
         {/* 💰 Fee Summary */}
         <div className="mt-4 border-t pt-3">
           <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-blue-600" /> Fee Summary
+            <Wallet className="w-4 h-4 text-cx-primary" /> Fee Summary
           </h4>
           <div className="text-xs text-gray-700 space-y-1">
             <div className="flex justify-between">

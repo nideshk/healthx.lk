@@ -14,7 +14,7 @@ const  SettingsTab: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-cx-primary to-cx-deep rounded-xl p-6 text-white">
         <div className="text-lg font-semibold">Settings</div>
         <div className="text-xs opacity-90">
           Security, account preferences, availability and pricing

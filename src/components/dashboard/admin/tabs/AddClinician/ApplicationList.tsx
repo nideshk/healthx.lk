@@ -78,7 +78,7 @@ const ApplicationList: React.FC<ApplicationListProps> = ({ onViewDetails, onAddN
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors"
               >
                 <div className="cursor-pointer" onClick={() => onViewDetails(app.id)}>
-                  <div className="text-sm font-bold text-blue-600 capitalize">
+                  <div className="text-sm font-bold text-cx-primary capitalize">
                     {app.first_name} {app.last_name}
                   </div>
                   <div className="text-xs text-slate-500">{app.email}</div>

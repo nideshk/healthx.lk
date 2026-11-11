@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from "next/navigation";
+import { useFormatSpecialties } from "@/lib/specialtyLabels";
 import { useEffect, useState, useCallback } from "react";
 import { DateTime } from "luxon";
 import {
@@ -29,6 +30,7 @@ import { toast } from "sonner";
 import Loader from "@/components/atom/Loader/Loader";
 import { authFetch } from "@/lib/authFetch";
 import { uploadAttachmentAfterBooking } from "@/lib/s3/uploadAttachmentAfterBooking";
+import { meetingJoinPath } from "@/lib/meetings/joinLink";
 
 const CANCEL_REASONS = [
   "Schedule conflict",
@@ -42,6 +44,7 @@ const CANCEL_REASONS = [
 export default function AppointmentDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const formatSpecialties = useFormatSpecialties();
   const [appointment, setAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -137,22 +140,23 @@ export default function AppointmentDetailsPage() {
   const now = DateTime.now();
 
   const canJoin = appointment.status === "confirmed" && now >= start.minus({ minutes: 15 }) && now <= end.plus({ minutes: 30 });
+  const joinPath = meetingJoinPath(appointment.room_key);
   const canCancel = appointment.status !== "cancelled" && now < start;
 
   return (
     <div className="min-h-screen bg-[#FBFDFF] pb-12">
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-400 hover:text-teal-600 transition-all font-bold text-xs uppercase tracking-widest">
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-400 hover:text-cx-primary transition-all font-bold text-xs uppercase tracking-widest">
             <ArrowLeft className="w-4 h-4" /> Dashboard
           </button>
           <div className="flex items-center gap-4">
-            <button onClick={handleShare} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-600 transition-all text-[10px] font-black uppercase tracking-widest border border-slate-100">
+            <button onClick={handleShare} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 text-slate-600 hover:bg-cx-tint hover:text-cx-primary transition-all text-[10px] font-black uppercase tracking-widest border border-slate-100">
               <Share2 className="w-3.5 h-3.5" /> Share Summary
             </button>
             <div className="h-4 w-[1px] bg-slate-200" />
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-teal-500" /> HIPAA Secure
+              <ShieldCheck className="w-3 h-3 text-cx-primary" /> HIPAA Secure
             </span>
           </div>
         </div>
@@ -164,7 +168,7 @@ export default function AppointmentDetailsPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* HEADER CARD */}
             <div className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
-              <div className={`px-8 py-3 flex justify-between items-center ${appointment.status === 'cancelled' ? 'bg-rose-600' : 'bg-teal-600'}`}>
+              <div className={`px-8 py-3 flex justify-between items-center ${appointment.status === 'cancelled' ? 'bg-rose-600' : 'bg-cx-primary'}`}>
                 <span className="text-white text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" /> Consultation {appointment.status}
                 </span>
@@ -183,14 +187,14 @@ export default function AppointmentDetailsPage() {
 
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <Stethoscope className="w-4 h-4 text-teal-500" />
-                      <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Medical Specialist</span>
+                      <Stethoscope className="w-4 h-4 text-cx-primary" />
+                      <span className="text-[10px] font-black text-cx-primary uppercase tracking-widest">Medical Specialist</span>
                     </div>
                     <h1 className="text-3xl font-black text-slate-900 leading-tight uppercase tracking-tight">
                       Dr. {appointment.practitioner.full_name}
                     </h1>
                     <p className="text-slate-500 font-bold text-sm mt-1 uppercase tracking-wide italic">
-                      {appointment.practitioner.specialization?.join(" • ")}
+                      {formatSpecialties(appointment.practitioner.specialization, " • ")}
                     </p>
 
                     <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-12 border-t border-slate-50 pt-8">
@@ -207,7 +211,7 @@ export default function AppointmentDetailsPage() {
             {/* INTAKE INFO */}
             <section className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                <FileText className="w-4 h-4 text-teal-500" /> Intake Information
+                <FileText className="w-4 h-4 text-cx-primary" /> Intake Information
               </h3>
               <div className="space-y-6">
                 <div>
@@ -229,11 +233,11 @@ export default function AppointmentDetailsPage() {
           {/* RIGHT SIDEBAR */}
           <div className="space-y-6">
             {/* JOIN ACTION CARD */}
-            {canJoin && (
+            {canJoin && joinPath && (
               <section className="bg-slate-900 rounded-[2.5rem] p-4 shadow-2xl shadow-slate-200 ring-8 ring-slate-100">
                 <button
-                  onClick={() => router.push(`/meeting?room=${appointment.room_key}`)}
-                  className="w-full py-6 bg-teal-500 hover:bg-teal-400 text-white rounded-[2rem] text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all group"
+                  onClick={() => router.push(joinPath)}
+                  className="w-full py-6 bg-cx-primary hover:bg-cx-deep text-white rounded-[2rem] text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all group"
                 >
                   <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   Join Consultation
@@ -243,7 +247,7 @@ export default function AppointmentDetailsPage() {
 
             {/* BILLING CARD */}
             <section className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 rotate-12 translate-x-4 -translate-y-4 opacity-[0.03] text-teal-900 pointer-events-none">
+              <div className="absolute top-0 right-0 rotate-12 translate-x-4 -translate-y-4 opacity-[0.03] text-cx-deep pointer-events-none">
                 <CreditCard size={120} />
               </div>
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
@@ -256,9 +260,9 @@ export default function AppointmentDetailsPage() {
                     {appointment.currency} {appointment.fee_charged.toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-4 bg-teal-50 rounded-2xl border border-teal-100">
-                  <span className="text-[10px] font-black text-teal-700 uppercase">Payment Status</span>
-                  <span className="text-[10px] font-black text-teal-700 uppercase flex items-center gap-1 bg-white px-2 py-1 rounded-md shadow-sm">
+                <div className="flex items-center justify-between p-4 bg-cx-tint rounded-2xl border border-cx-tint">
+                  <span className="text-[10px] font-black text-cx-deep uppercase">Payment Status</span>
+                  <span className="text-[10px] font-black text-cx-deep uppercase flex items-center gap-1 bg-white px-2 py-1 rounded-md shadow-sm">
                     <CheckCircle2 className="w-3 h-3" /> {appointment.payment_status}
                   </span>
                 </div>
@@ -276,9 +280,9 @@ export default function AppointmentDetailsPage() {
             )}
 
             {/* REBOOK FOOTER */}
-            <section className="bg-teal-600 rounded-[2.5rem] p-8 shadow-xl shadow-teal-100 text-white group cursor-pointer" onClick={() => router.push(`/appointment`)}>
+            <section className="bg-cx-primary rounded-[2.5rem] p-8 shadow-xl shadow-cx-tint text-white group cursor-pointer" onClick={() => router.push(`/appointment`)}>
               <h4 className="font-black text-sm uppercase tracking-widest mb-1">Follow up?</h4>
-              <p className="text-teal-100 text-[10px] font-medium leading-relaxed mb-4">Book another session with Dr. {appointment.practitioner.full_name.split(' ')[0]}</p>
+              <p className="text-cx-tint text-[10px] font-medium leading-relaxed mb-4">Book another session with Dr. {appointment.practitioner.full_name.split(' ')[0]}</p>
               <div className="flex items-center justify-between font-black text-[10px] uppercase tracking-widest border-t border-white/20 pt-4">
                 Schedule New <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -298,16 +302,16 @@ export default function AppointmentDetailsPage() {
 
             <div className="space-y-3">
               {CANCEL_REASONS.map((reason) => (
-                <label key={reason} className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${cancelReason === reason ? 'border-teal-500 bg-teal-50/50' : 'border-slate-100 hover:border-slate-200'}`}>
+                <label key={reason} className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${cancelReason === reason ? 'border-cx-primary bg-cx-tint/50' : 'border-slate-100 hover:border-slate-200'}`}>
                   <input type="radio" name="cancelReason" className="hidden" value={reason} checked={cancelReason === reason} onChange={(e) => setCancelReason(e.target.value)} />
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${cancelReason === reason ? 'border-teal-500' : 'border-slate-300'}`}>
-                    {cancelReason === reason && <div className="w-2 h-2 bg-teal-500 rounded-full" />}
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${cancelReason === reason ? 'border-cx-primary' : 'border-slate-300'}`}>
+                    {cancelReason === reason && <div className="w-2 h-2 bg-cx-primary rounded-full" />}
                   </div>
                   <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">{reason}</span>
                 </label>
               ))}
               {cancelReason === "Other" && (
-                <textarea placeholder="Reason..." className="w-full border-2 border-slate-100 focus:border-teal-500 focus:ring-0 p-4 rounded-2xl text-sm mt-2 transition-all" rows={3} value={customReason} onChange={(e) => setCustomReason(e.target.value)} />
+                <textarea placeholder="Reason..." className="w-full border-2 border-slate-100 focus:border-cx-primary focus:ring-0 p-4 rounded-2xl text-sm mt-2 transition-all" rows={3} value={customReason} onChange={(e) => setCustomReason(e.target.value)} />
               )}
             </div>
 
@@ -326,21 +330,21 @@ export default function AppointmentDetailsPage() {
 
         {/* Upload Dropzone */}
         {appointment.attachments?.length < 3 ? (
-          <label className="group relative flex flex-col items-center justify-center gap-2 px-6 py-8 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200 hover:border-teal-500 hover:bg-teal-50/30 transition-all cursor-pointer overflow-hidden">
+          <label className="group relative flex flex-col items-center justify-center gap-2 px-6 py-8 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200 hover:border-cx-primary hover:bg-cx-tint/30 transition-all cursor-pointer overflow-hidden">
             {uploading ? (
               <div className="flex flex-col items-center gap-2 animate-pulse">
-                <RefreshCcw className="w-5 h-5 text-teal-500 animate-spin" />
-                <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Processing File...</span>
+                <RefreshCcw className="w-5 h-5 text-cx-primary animate-spin" />
+                <span className="text-[10px] font-black text-cx-primary uppercase tracking-widest">Processing File...</span>
               </div>
             ) : (
               <>
                 <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
-                  <UploadCloud className="w-5 h-5 text-slate-400 group-hover:text-teal-500" />
+                  <UploadCloud className="w-5 h-5 text-slate-400 group-hover:text-cx-primary" />
                 </div>
                 <div className="text-center">
                   <p className="text-xs font-black text-slate-600 uppercase tracking-widest">Upload Document</p>
                   <p className="text-[9px] text-slate-400 font-medium mt-1">PDF, JPG or PNG (Max 10MB)</p>
-                  <p className="text-[9px] text-teal-600 font-bold mt-1 uppercase tracking-widest">
+                  <p className="text-[9px] text-cx-primary font-bold mt-1 uppercase tracking-widest">
                     {appointment.attachments?.length} / 3 Uploaded
                   </p>
                 </div>
@@ -357,7 +361,7 @@ export default function AppointmentDetailsPage() {
         ) : (
           <div className="flex flex-col items-center justify-center gap-2 px-6 py-8 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-100 opacity-60">
             <div className="p-3 bg-white rounded-2xl border border-slate-100">
-              <CheckCircle2 className="w-5 h-5 text-teal-500" />
+              <CheckCircle2 className="w-5 h-5 text-cx-primary" />
             </div>
             <div className="text-center">
               <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Limit Reached</p>
@@ -373,10 +377,10 @@ export default function AppointmentDetailsPage() {
             {appointment.attachments.map((file: any) => (
               <div
                 key={file.id}
-                className="group flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 hover:border-teal-200 hover:shadow-md hover:shadow-teal-500/5 transition-all"
+                className="group flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 hover:border-cx-border hover:shadow-md hover:shadow-cx-primary/5 transition-all"
               >
                 {/* File Icon based on extension */}
-                <div className="w-10 h-10 flex-shrink-0 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors">
+                <div className="w-10 h-10 flex-shrink-0 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-cx-tint group-hover:text-cx-primary transition-colors">
                   <FileText size={18} />
                 </div>
 
@@ -408,7 +412,7 @@ export default function AppointmentDetailsPage() {
 function DataPoint({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
     <div className="flex items-start gap-4 group">
-      <div className="mt-0.5 text-slate-300 group-hover:text-teal-500 transition-colors">{icon}</div>
+      <div className="mt-0.5 text-slate-300 group-hover:text-cx-primary transition-colors">{icon}</div>
       <div>
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">{label}</p>
         <p className="text-sm font-bold text-slate-700 leading-tight">{value}</p>

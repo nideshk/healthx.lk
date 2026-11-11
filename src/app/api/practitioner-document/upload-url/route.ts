@@ -6,6 +6,10 @@ import { s3 } from "@/lib/s3/s3";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { requireUser } from "@/lib/authGuard";
 import { auditLog } from "@/lib/audit/auditLog";
+import {
+  applicationUploadKeyAllows,
+  readApplicationUploadKey,
+} from "@/lib/applicationUploadKey";
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET!;
 
@@ -53,14 +57,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const keyAllows = applicationUploadKeyAllows(
+      readApplicationUploadKey(req),
+      application_id
+    );
+
+    let user = null;
+    if (!keyAllows) {
+      const auth = await requireUser(req);
+      if (!auth.authorized || !auth.user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      user = auth.user;
+    }
+
     /* ---------------- S3 KEY ---------------- */
 
-    const ext = fileName.split(".").pop();
+    if (
+      application_id.includes("/") ||
+      application_id.includes("\\") ||
+      application_id.includes("..")
+    ) {
+      return NextResponse.json(
+        { error: "Invalid application_id" },
+        { status: 400 }
+      );
+    }
+
+    const safeName = String(fileName).split(/[/\\]/).pop() ?? "";
+    if (!safeName || safeName === "." || safeName === ".." || safeName.includes("\0")) {
+      return NextResponse.json({ error: "Invalid fileName" }, { status: 400 });
+    }
+
+    const ext = safeName.includes(".") ? safeName.split(".").pop() : "bin";
     const fileId = uuidv4();
 
     const s3Key =
       documentType === "signature"
-        ? `practitioner-supporting-document-upload/${application_id}/signature/${fileName}`
+        ? `practitioner-supporting-document-upload/${application_id}/signature/${safeName}`
         : `practitioner-supporting-document-upload/${application_id}/${fileId}.${ext}`;
 
     const command = new PutObjectCommand({
@@ -72,8 +106,6 @@ export async function POST(req: NextRequest) {
     const uploadUrl = await getSignedUrl(s3, command, {
       expiresIn: 300,
     });
-
-    const { user } = await requireUser(req);
 
     /* ---------------- RESPONSE ---------------- */
     const cnx = getAuditContext(req, user);

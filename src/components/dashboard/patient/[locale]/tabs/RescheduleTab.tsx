@@ -68,7 +68,7 @@ export default function RescheduleTab() {
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-cx-tint rounded-2xl flex items-center justify-center">
                     <User className="w-6 h-6" />
                   </div>
                   <div>
@@ -91,7 +91,7 @@ export default function RescheduleTab() {
 
                 <Link
                   href={`/dashboard/reschedule/${appt.id}`}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-900 text-white text-sm font-bold"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-cx-primary hover:bg-cx-deep text-white text-sm font-bold"
                 >
                   {t("reschedule")}
                   <ChevronRight className="w-4 h-4" />

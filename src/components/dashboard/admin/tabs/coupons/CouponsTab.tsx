@@ -47,7 +47,7 @@ export default function AdminCouponsPage() {
 
                     <button
                         onClick={() => setOpen(true)}
-                        className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold shadow-sm"
+                        className="px-5 py-2.5 bg-cx-primary hover:bg-cx-deep text-white rounded-xl font-semibold shadow-sm"
                     >
                         + Create Coupon
                     </button>

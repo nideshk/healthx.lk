@@ -71,7 +71,7 @@ export default function AllAppointmentsPage() {
     );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] px-6 py-14">
+    <div className="min-h-screen bg-cx-bg px-6 py-14">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-12">
@@ -87,7 +87,7 @@ export default function AllAppointmentsPage() {
           <Section
             title={t("upcoming")}
             items={upcoming}
-            icon={<CalendarCheck className="w-5 h-5 text-blue-600" />}
+            icon={<CalendarCheck className="w-5 h-5 text-cx-primary" />}
             emptyText={t("emptyUpcoming")}
             locale={locale}
           />
@@ -172,7 +172,7 @@ function AppointmentCard({ appt, cancelled, locale }: any) {
         ${
           cancelled
             ? "border-red-100 bg-red-50/30 hover:bg-red-50 hover:border-red-200"
-            : "border-slate-100 bg-white hover:shadow-xl hover:shadow-slate-200/50 hover:border-blue-200"
+            : "border-slate-100 bg-white hover:shadow-xl hover:shadow-slate-200/50 hover:border-cx-border"
         }
       `}
     >
@@ -184,7 +184,7 @@ function AppointmentCard({ appt, cancelled, locale }: any) {
               ${
                 cancelled
                   ? "bg-red-100 border-red-200 text-red-600"
-                  : "bg-blue-50 border-blue-100 text-blue-600"
+                  : "bg-cx-tint border-cx-tint text-cx-primary"
               }
             `}
           >
@@ -192,7 +192,7 @@ function AppointmentCard({ appt, cancelled, locale }: any) {
           </div>
 
           <div>
-            <h4 className="font-bold text-slate-900 text-lg group-hover:text-blue-600 transition-colors">
+            <h4 className="font-bold text-slate-900 text-lg group-hover:text-cx-primary transition-colors">
               Dr. {appt.practitioner?.full_name || t("defaultDoctor")}
             </h4>
 
@@ -225,7 +225,7 @@ function AppointmentCard({ appt, cancelled, locale }: any) {
           </div>
         </div>
 
-        <div className="p-2 rounded-full bg-slate-50 text-slate-300 group-hover:bg-blue-600 group-hover:text-white transition-all">
+        <div className="p-2 rounded-full bg-slate-50 text-slate-300 group-hover:bg-cx-deep group-hover:text-white transition-all">
           <ChevronRight className="w-5 h-5" />
         </div>
       </div>

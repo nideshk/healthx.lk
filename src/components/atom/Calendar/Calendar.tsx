@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -9,6 +9,8 @@ type CalendarProps = {
   minDate?: Date;
   highlightedDates?: string[];
   theme?: "light" | "dark";
+  /** Fires with YYYY-MM when the visible month changes, including the first paint. */
+  onMonthChange?: (month: string) => void;
 };
 
 export default function Calendar({
@@ -17,6 +19,7 @@ export default function Calendar({
   minDate = new Date(),
   highlightedDates = [],
   theme = "light",
+  onMonthChange,
 }: CalendarProps) {
   const today = new Date();
 
@@ -26,6 +29,14 @@ export default function Calendar({
   const [currentYear, setCurrentYear] = useState(
     value?.getFullYear() ?? today.getFullYear()
   );
+
+  const onMonthChangeRef = useRef(onMonthChange);
+  onMonthChangeRef.current = onMonthChange;
+
+  useEffect(() => {
+    const month = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`;
+    onMonthChangeRef.current?.(month);
+  }, [currentYear, currentMonth]);
 
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -75,7 +86,7 @@ export default function Calendar({
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-black uppercase tracking-widest text-blue-600">
+        <h3 className="text-sm font-black uppercase tracking-widest text-cx-primary">
           {months[currentMonth]} {currentYear}
         </h3>
         <div className="flex gap-1">
@@ -138,11 +149,11 @@ export default function Calendar({
               className={cn(
                 "h-10 w-full flex items-center justify-center rounded-xl text-xs font-bold transition-all",
                 isSelected
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
+                  ? "bg-cx-primary text-white shadow-lg shadow-cx-primary/15"
                   : !isPast && isAvailable
-                    ? "bg-teal-500 text-white hover:bg-teal-600"
+                    ? "bg-cx-primary text-white hover:bg-cx-deep"
                     : isToday
-                      ? "border-2 border-blue-100 text-blue-600"
+                      ? "border-2 border-cx-border text-cx-primary"
                       : "text-slate-300 cursor-not-allowed"
               )}
             >

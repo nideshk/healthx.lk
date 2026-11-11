@@ -1,74 +1,87 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Button from "@/components/atom/Button/Button";
-import { useModalStore } from "@/store/useModalStore";
-import { ShieldCheck, Clock, BadgeCheck, X, AlertTriangle } from "lucide-react";
-import ServiceDoctorFlow from "@/components/homepage/home/ServiceDoctorFlow";
-import { useAuth } from "@/contexts/AuthContext";
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
+import { useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import {
+  AlertTriangle,
+  BadgeCheck,
+  CalendarCheck,
+  Clock,
+  ShieldCheck,
+  Stethoscope,
+  User,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import Modal from "@/components/atom/Modal/Modal";
+import ServiceDoctorFlow from "@/components/homepage/home/ServiceDoctorFlow";
+import MeetDoctors from "@/components/homepage/home/MeetDoctors";
+import { openSpecialties } from "@/lib/homeNavigation";
 
-/* ================= HERO ================= */
+const stepIcons = [Stethoscope, User, CalendarCheck];
 
 const HeroSection = () => {
   const t = useTranslations("homepage.hero");
-
+  const tHow = useTranslations("howto");
+  const tHome = useTranslations("homeRedesign");
   const { user } = useAuth();
   const router = useRouter();
-  const { openLoginModal } = useModalStore();
+  const pathname = usePathname();
+
+  const book = () => openSpecialties(pathname, (href) => router.push(href));
 
   return (
-    <section className="pt-24 pb-20 bg-gradient-to-b from-white to-cyan-50">
-      <div className="max-w-7xl mx-auto px-6 text-center">
-        <h1
-          className="text-4xl md:text-5xl font-bold text-gray-900"
-          suppressHydrationWarning
-        >
-          {t("title")}
-        </h1>
+    <section className="pt-10 pb-16 md:pt-16 md:pb-24">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        <div>
+          <h1 className="cx-heading" suppressHydrationWarning>
+            {t("title")}
+          </h1>
+          <p
+            className="mt-4 text-base md:text-lg text-cx-ink max-w-xl"
+            suppressHydrationWarning
+          >
+            {t("subtitle")}
+          </p>
 
-        <p
-          className="text-lg text-gray-600 mt-4 max-w-2xl mx-auto"
-          suppressHydrationWarning
-        >
-          {t("subtitle")}
-        </p>
+          <ul className="mt-6 flex flex-col gap-3 text-base text-cx-ink">
+            <TrustItem icon={<BadgeCheck size={18} />} text={t("trust.verified")} />
+            <TrustItem icon={<ShieldCheck size={18} />} text={t("trust.secure")} />
+            <TrustItem icon={<Clock size={18} />} text={t("trust.instant")} />
+          </ul>
 
-        {/* Trust strip */}
-        <div className="mt-6 flex flex-wrap justify-center gap-6 text-sm text-gray-600">
-          <TrustItem
-            icon={<BadgeCheck size={16} />}
-            text={t("trust.verified")}
-          />
-          <TrustItem
-            icon={<ShieldCheck size={16} />}
-            text={t("trust.secure")}
-          />
-          <TrustItem icon={<Clock size={16} />} text={t("trust.instant")} />
-        </div>
-
-        {/* Secondary CTA */}
-        <div className="mt-10 flex justify-center gap-4">
-          {!user ? (
-            <Button onClick={() => router.push("#booking")}>
-              {t("cta.bookNow")}
-            </Button>
-          ) : (
-            <Button onClick={() => router.push("/appointment")}>
-              {t("cta.bookNow")}
-            </Button>
-          )}
+          <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <button type="button" className="cx-btn inline-flex" onClick={book}>
+              {tHome("bookConsultation")}
+            </button>
+            <a href="#how-it-works" className="cx-btn-secondary inline-flex">
+              {tHow("title")}
+            </a>
+          </div>
 
           {user ? (
-            <Button onClick={() => router.push("/dashboard")}>
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard")}
+              className="mt-4 min-h-12 text-base font-semibold text-cx-primary underline-offset-4 hover:underline"
+            >
               {t("cta.dashboard")}
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={openLoginModal}>
-              {t("cta.login")}
-            </Button>
-          )}
+            </button>
+          ) : null}
+        </div>
+
+        <div className="min-w-0">
+          <Image
+            src="/images/clinecxa-hero.webp"
+            alt={tHome("heroImageAlt")}
+            width={1454}
+            height={977}
+            priority
+            sizes="(max-width: 767px) calc(100vw - 2rem), 33rem"
+            className="h-auto w-full"
+            style={{ width: "100%", height: "auto" }}
+          />
         </div>
       </div>
     </section>
@@ -76,56 +89,106 @@ const HeroSection = () => {
 };
 
 const TrustItem = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
-  <div className="flex items-center gap-2">
-    <span className="text-cyan-600">{icon}</span>
+  <li className="flex items-center gap-3">
+    <span className="text-cx-primary shrink-0">{icon}</span>
     <span>{text}</span>
-  </div>
+  </li>
 );
 
-/* ================= WHY Clinecxa ================= */
-
-const FeaturesSection = () => {
-  const t = useTranslations("homepage.features");
+const HowItWorksSection = () => {
+  const t = useTranslations("howto");
+  const tHome = useTranslations("homeRedesign");
+  const steps = [1, 2, 3] as const;
 
   return (
-    <section className="py-20 bg-white">
-      <div className="max-w-6xl mx-auto px-6 text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-12">{t("title")}</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          <Feature
-            title={t("items.verified.title")}
-            text={t("items.verified.text")}
-          />
-          <Feature
-            title={t("items.secure.title")}
-            text={t("items.secure.text")}
-          />
-          <Feature title={t("items.fast.title")} text={t("items.fast.text")} />
-        </div>
+    <section id="how-it-works" className="scroll-mt-24 py-16 md:py-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <h2 className="cx-heading">{t("title")}</h2>
+        <ol className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {steps.map((step, index) => {
+            const Icon = stepIcons[index] ?? Stethoscope;
+            return (
+              <li
+                key={step}
+                className="rounded-2xl border border-cx-border bg-white p-6"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-cx-tint text-cx-primary">
+                    <Icon size={22} strokeWidth={1.5} aria-hidden="true" />
+                  </span>
+                  <span className="text-sm font-semibold text-cx-primary">
+                    {index + 1}
+                  </span>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-cx-ink">
+                  {tHome(`howItWorks.step${step}Title`)}
+                </h3>
+                <p className="mt-2 text-base md:text-lg text-cx-ink">
+                  {tHome(`howItWorks.step${step}Text`)}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
       </div>
     </section>
   );
 };
 
-const Feature = ({ title, text }: { title: string; text: string }) => (
-  <div>
-    <p className="font-semibold text-gray-900">{title}</p>
-    <p className="text-sm text-gray-600 mt-2">{text}</p>
-  </div>
-);
+const FamilyAndWhySection = () => {
+  const t = useTranslations("homepage.features");
+  const tHome = useTranslations("homeRedesign");
+  const items = [
+    { key: "verified", icon: BadgeCheck },
+    { key: "secure", icon: ShieldCheck },
+    { key: "fast", icon: Clock },
+  ] as const;
 
-/* ================= DISCLAIMER MODAL ================= */
+  return (
+    <section className="py-16 md:py-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <article className="rounded-2xl border border-cx-border bg-white p-6 md:p-8">
+          <h2 className="cx-heading">{tHome("family.title")}</h2>
+          <p className="mt-4 text-base md:text-lg text-cx-ink">
+            {tHome("family.text")}
+          </p>
+        </article>
+
+        <article className="rounded-2xl border border-cx-border bg-white p-6 md:p-8">
+          <h2 className="cx-heading">{t("title")}</h2>
+          <ul className="mt-6 space-y-5">
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.key} className="flex gap-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cx-tint text-cx-primary">
+                    <Icon size={22} strokeWidth={1.5} aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className="text-lg font-semibold text-cx-ink">
+                      {t(`items.${item.key}.title`)}
+                    </p>
+                    <p className="mt-1 text-base md:text-lg text-cx-ink">
+                      {t(`items.${item.key}.text`)}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </article>
+      </div>
+    </section>
+  );
+};
+
 const DisclaimerModal = () => {
   const t = useTranslations("footer");
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const disclaimerDismissed = localStorage.getItem(
-      "disclaimerModalDismissed",
-    );
+    const disclaimerDismissed = localStorage.getItem("disclaimerModalDismissed");
 
-    // Only prevent modal if value is explicitly "true"
     if (disclaimerDismissed !== "true") {
       const timer = setTimeout(() => {
         setIsOpen(true);
@@ -140,86 +203,44 @@ const DisclaimerModal = () => {
     localStorage.setItem("disclaimerModalDismissed", "true");
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-amber-50 flex items-center justify-center p-4 
-                    bg-white/10 backdrop-blur-md">
-      <div className="bg-white/90 bg-amber-50 backdrop-blur-lg 
-                      rounded-2xl shadow-2xl 
-                      max-w-2xl w-full max-h-[90vh] overflow-y-auto
-                      border border-white/40">
-
-        <div className="sticky top-0 bg-amber-50 backdrop-blur-md
-                        border-b border-gray-200 
-                        p-6 flex items-start justify-between
-                        rounded-t-2xl">
-          <div className="flex items-start gap-3">
-            <div className="bg-amber-100 p-2 rounded-xl">
-              <AlertTriangle
-                className="text-amber-600 bg-amber-50 flex-shrink-0"
-                size={22}
-              />
-            </div>
-            <h2 className="text-xl font-semibold bg-amber-50 text-gray-900">
-              {t("disclaimerTitle")}
-            </h2>
-          </div>
-
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-700 
-                       hover:bg-gray-100 rounded-lg p-2 transition"
-            aria-label="Close"
-          >
-            <X size={20} />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={t("disclaimerTitle")}
+      width="2xl"
+      maxHeight="90vh"
+      footer={
+        <button type="button" onClick={handleClose} className="cx-btn inline-flex">
+          I Understand
+        </button>
+      }
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <div className="bg-cx-gold p-2 rounded-xl">
+          <AlertTriangle className="text-cx-ink flex-shrink-0" size={22} />
         </div>
-
-        <div className="p-6 bg-amber-50">
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">
-            {t("disclaimerText")}
-          </p>
-        </div>
-
-        <div className="border-t border-gray-200 p-6 
-                        bg-amber-50 backdrop-blur-md
-                        flex justify-end rounded-b-2xl">
-          <Button
-            onClick={handleClose}
-            className="bg-cyan-600 hover:bg-cyan-700 
-                       text-white px-6 py-2.5 
-                       rounded-xl font-medium
-                       shadow-md hover:shadow-lg
-                       transition-all"
-          >
-            I Understand
-          </Button>
-        </div>
+        <p className="text-cx-ink leading-relaxed whitespace-pre-wrap text-base">
+          {t("disclaimerText")}
+        </p>
       </div>
-    </div>
+    </Modal>
   );
 };
-
-
-/* ================= DISCLAIMER SECTION ================= */
 
 const DisclaimerSection = () => {
   const t = useTranslations("footer");
 
   return (
-    <section className="py-12 bg-amber-50 border-l-4 border-amber-600">
-      <div className="max-w-6xl mx-auto px-6">
+    <section className="py-12 bg-cx-gold text-cx-ink">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-start gap-4">
-          <AlertTriangle
-            className="text-amber-600 flex-shrink-0 mt-1"
-            size={28}
-          />
+          <AlertTriangle className="text-cx-ink flex-shrink-0 mt-1" size={28} />
           <div>
-            <h3 className="text-lg font-bold text-amber-900 mb-2">
+            <h2 className="text-[2rem] md:text-[2.5rem] font-semibold leading-tight mb-3">
               {t("disclaimerTitle")}
-            </h3>
-            <p className="text-sm text-amber-800 leading-relaxed whitespace-pre-wrap">
+            </h2>
+            <p className="text-base md:text-lg leading-relaxed whitespace-pre-wrap">
               {t("disclaimerText")}
             </p>
           </div>
@@ -229,83 +250,82 @@ const DisclaimerSection = () => {
   );
 };
 
-/* ================= PAGE ================= */
+const PractitionerSection = () => {
+  const t = useTranslations("homepage.practitioner");
+  const tHome = useTranslations("homeRedesign");
+  const router = useRouter();
+  const benefits = [
+    tHome("practitioner.benefit1"),
+    tHome("practitioner.benefit2"),
+    tHome("practitioner.benefit3"),
+  ];
+
+  return (
+    <section className="py-16 md:py-24">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="rounded-2xl border border-cx-border bg-white px-6 py-10 md:px-10 text-center">
+          <h2 className="cx-heading">{t("title")}</h2>
+          <p className="mt-4 text-base md:text-lg text-cx-ink max-w-2xl mx-auto">
+            {tHome("practitioner.subtitle")}
+          </p>
+          <ul className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+            {benefits.map((benefit) => (
+              <li
+                key={benefit}
+                className="rounded-2xl border border-cx-border p-5"
+              >
+                <BadgeCheck className="text-cx-primary mb-3" size={24} strokeWidth={1.5} />
+                <p className="text-base md:text-lg text-cx-ink">{benefit}</p>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="cx-btn inline-flex mt-8"
+            onClick={() => router.push("/register")}
+          >
+            {t("cta")}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const MobileBookBar = () => {
+  const tHome = useTranslations("homeRedesign");
+  const router = useRouter();
+  const pathname = usePathname();
+
+  return (
+    <div className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-cx-border bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <button
+        type="button"
+        className="cx-btn inline-flex w-full"
+        onClick={() => openSpecialties(pathname, (href) => router.push(href))}
+      >
+        {tHome("bookConsultation")}
+      </button>
+    </div>
+  );
+};
 
 const Body = () => {
   return (
     <main>
-      {/* DISCLAIMER MODAL - Shows 3 seconds after landing */}
       <DisclaimerModal />
-
-      {/* HERO */}
       <HeroSection />
-
-      {/* DISCLAIMER SECTION - Visual warning on page */}
-      <DisclaimerSection />
-
-      {/* PRIMARY BOOKING FLOW */}
-      <section id="book">
+      <div id="book">
         <ServiceDoctorFlow />
-      </section>
-
-      {/* TRUST / FEATURES */}
-      <FeaturesSection />
-
-      {/* PRACTITIONER CTA */}
-      <PractitionerSection />
-    </main>
-  );
-};
-
-/* ================= PRACTITIONER CTA ================= */
-
-const PractitionerSection = () => {
-  const t = useTranslations("homepage.practitioner");
-  const router = useRouter();
-
-  return (
-    <section className="py-24 bg-cyan-900 text-white relative overflow-hidden">
-      {/* Subtle Background Decorative Circles */}
-      <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-cyan-800 rounded-full blur-3xl opacity-50" />
-      <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-96 h-96 bg-cyan-950 rounded-full blur-3xl opacity-50" />
-
-      <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-        <div className="space-y-8">
-          <div className="space-y-4">
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-              {t("title")}
-            </h2>
-            <p className="text-cyan-100 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-              {t("subtitle")}
-            </p>
-          </div>
-
-          {/* Benefits Grid - Better for text-only layouts */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-6">
-            {[1, 2, 3].map((key) => (
-              <div
-                key={key}
-                className="bg-white/5 border border-white/10 p-6 rounded-2xl backdrop-blur-sm"
-              >
-                <BadgeCheck className="text-cyan-400 mx-auto mb-3" size={28} />
-                <p className="text-sm md:text-base font-medium text-cyan-50">
-                  {t(`benefits.${key}`)}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-4">
-            <Button
-              className="bg-white text-cyan-900 hover:bg-cyan-50 border-none px-10 py-7 text-lg font-bold shadow-xl transition-all hover:scale-105 active:scale-95"
-              onClick={() => router.push("/register")}
-            >
-              {t("cta")}
-            </Button>
-          </div>
-        </div>
       </div>
-    </section>
+      <HowItWorksSection />
+      <MeetDoctors />
+      <FamilyAndWhySection />
+      <DisclaimerSection />
+      <PractitionerSection />
+      <div className="h-24 md:hidden" aria-hidden="true" />
+      <MobileBookBar />
+    </main>
   );
 };
 

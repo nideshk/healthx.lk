@@ -21,12 +21,16 @@ import Loader from "@/components/atom/Loader/Loader";
 import { useTranslations } from "next-intl";
 import { authFetch } from "@/lib/authFetch";
 import Price from "@/components/common/Price";
+import { useFormatSpecialties } from "@/lib/specialtyLabels";
 
 const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
   const t = useTranslations("bookAppointment");
+  const tRetry = useTranslations("actions");
+  const formatSpecialties = useFormatSpecialties();
 
   const practitionerId = bookingData?.selectedDoctor?.id;
-  const [availableDates, setAvailableDates] = useState<any>([]);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [visibleMonth, setVisibleMonth] = useState<string | null>(null);
 
   const [practitioner, setPractitioner] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -34,7 +38,10 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [availability, setAvailability] = useState<any>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [slotsError, setSlotsError] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
   const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
@@ -53,60 +60,109 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   const timeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function loadAvailabilityDates() {
-      if (!practitionerId) return;
+    if (!practitionerId || !visibleMonth) return;
 
-      try {
-        const res = await authFetch(
-          `/api/practitioner/availability?practitioner_id=${practitionerId}`
-        );
-        const data = await res.json();
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    setAvailableDates([]);
 
-        const windows = data.availability || [];
-
-        const dates = windows.map((w: any) =>
-          DateTime.fromISO(w.starts_at)
-            .setZone(w.timezone || "Asia/Colombo")
-            .toISODate()
-        );
-
-        // remove duplicates
-        const uniqueDates = Array.from(new Set(dates));
-
-        setAvailableDates(uniqueDates || []);
-      } catch (err) {
-        console.error(err);
+    axios
+      .get(`/api/booking/${practitionerId}/available-dates?month=${visibleMonth}`, {
+        signal: controller.signal,
+        timeout: 15000,
+      })
+      .then((res) => {
+        if (cancelled || res.data?.month !== visibleMonth) return;
+        setAvailableDates(Array.isArray(res.data?.dates) ? res.data.dates : []);
+      })
+      .catch(() => {
+        if (cancelled) return;
         setAvailableDates([]);
-      }
-    }
+      });
 
-    loadAvailabilityDates();
-  }, [practitionerId]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [practitionerId, visibleMonth]);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await authFetch(`/api/practitioners/${practitionerId}`);
+    if (!practitionerId) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    setLoadingInfo(true);
+    setLoadError(false);
+
+    authFetch(`/api/practitioners/${practitionerId}`, { signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("load failed");
         const data = await res.json();
+        if (cancelled) return;
+        if (!data?.practitioner) throw new Error("missing practitioner");
         setPractitioner(data.practitioner);
-      } catch {
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadError(true);
         toast.error(t("loadDoctorError"));
-      } finally {
-        setLoadingInfo(false);
-      }
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        if (!cancelled) setLoadingInfo(false);
+      });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [practitionerId, loadAttempt, t]);
+
+  const preselectedTypeId = useRef<string | null>(null);
+  useEffect(() => {
+    const types = practitioner?.appointment_types;
+    if (!Array.isArray(types) || types.length !== 1) return;
+    const only = types[0];
+    if (preselectedTypeId.current === only.id) return;
+    preselectedTypeId.current = only.id;
+    setSelectedType(only);
+    if (!isInHomeType(only)) {
+      updateData({
+        appointmentType: only,
+        selectedAttendees:
+          only.max_attendees <= 1
+            ? []
+            : bookingData.selectedAttendees?.slice(0, Math.max(0, only.max_attendees - 1)),
+      });
     }
-    if (practitionerId) load();
-  }, [practitionerId]);
+  }, [practitioner]);
 
   async function fetchAvailability(dateStr: string) {
     if (!practitionerId || !selectedType) return;
     setLoadingAvailability(true);
+    setSlotsError(false);
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 15000);
     try {
-      const res = await axios.get(`/api/booking/${practitionerId}/availability?date=${dateStr}`);
+      const res = await axios.get(
+        `/api/booking/${practitionerId}/availability?date=${dateStr}`,
+        { signal: controller.signal, timeout: 15000 }
+      );
       setAvailability(res.data);
-    } catch {
+    } catch (err) {
+      if (axios.isCancel(err) && !timedOut) return;
+      setAvailability(null);
+      setSlotsError(true);
       toast.error(t("loadSlotsError"));
     } finally {
+      clearTimeout(timer);
       setLoadingAvailability(false);
     }
   }
@@ -140,6 +196,21 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
 
   if (loadingInfo) return <div className="flex justify-center py-20"><Loader size="lg" /></div>;
 
+  if (loadError || !practitioner) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 px-4 text-center">
+        <p className="text-base font-semibold text-cx-ink">{t("loadDoctorError")}</p>
+        <button
+          type="button"
+          onClick={() => setLoadAttempt((n) => n + 1)}
+          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-cx-primary px-5 font-semibold text-white hover:bg-cx-deep"
+        >
+          {tRetry("retry")}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-32 pt-6 md:pt-12 bg-[#FBFDFF] min-h-screen relative">
       <div className="max-w-6xl mx-auto px-4">
@@ -148,9 +219,9 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
         <div className="flex items-center justify-between mb-10">
           <button
             onClick={() => prevStep()}
-            className="group flex items-center gap-2 text-slate-400 hover:text-teal-600 transition-all"
+            className="group flex items-center gap-2 text-slate-400 hover:text-cx-primary transition-all"
           >
-            <div className="p-2 rounded-full bg-white shadow-sm border border-slate-100 group-hover:bg-teal-50 group-hover:border-teal-100 transition-colors">
+            <div className="p-2 rounded-full bg-white shadow-sm border border-slate-100 group-hover:bg-cx-tint group-hover:border-cx-primary transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </div>
             <span className="text-xs font-black uppercase tracking-[0.15em]">
@@ -159,7 +230,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
           </button>
 
           <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-100 shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-teal-500" />
+            <ShieldCheck className="w-4 h-4 text-cx-primary" />
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               {t("secured")}
             </span>
@@ -170,7 +241,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
 
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-10">
             <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-teal-50 text-teal-600 px-5 py-2 rounded-bl-2xl text-[10px] font-black uppercase tracking-widest">
+              <div className="absolute top-0 right-0 bg-cx-tint text-cx-primary px-5 py-2 rounded-bl-2xl text-[10px] font-black uppercase tracking-widest">
                 {t("specialist")}
               </div>
 
@@ -199,15 +270,15 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                   Dr. {practitioner.full_name}
                 </h2>
                 <p className="text-sm font-bold text-slate-700">
-                  {practitioner.profile_bios || " is specialised in " + practitioner.specialization.join(' • ') + " with over " + practitioner.experience_years + " years of experience"}
+                  {practitioner.profile_bios || " is specialised in " + formatSpecialties(practitioner.specialization, ' • ') + " with over " + practitioner.experience_years + " years of experience"}
                 </p>
 
                 {/* Specialization Mapping */}
-                <div className="flex items-center gap-1.5 mt-2 text-teal-600">
+                <div className="flex items-center gap-1.5 mt-2 text-cx-primary">
                   <Stethoscope className="w-3.5 h-3.5" />
                   <p className="font-bold text-xs uppercase tracking-tighter">
                     {practitioner.specialization?.length > 0
-                      ? practitioner.specialization.join(' • ')
+                      ? formatSpecialties(practitioner.specialization, ' • ')
                       : t("clinicalPractice")}
                   </p>
                 </div>
@@ -258,7 +329,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
             {/* Appointment Type */}
             <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-50">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                <span className="w-6 h-6 rounded-lg bg-teal-500 text-white flex items-center justify-center text-[10px]">01</span>
+                <span className="w-6 h-6 rounded-lg bg-cx-primary text-white flex items-center justify-center text-[10px]">01</span>
                 {t("sessionType")}
               </h3>
 
@@ -279,22 +350,22 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                       }
                     }}
                     className={`group relative p-6 rounded-3xl border-2 text-left transition-all ${selectedType?.id === type.id
-                      ? "border-teal-500 bg-teal-50/30"
-                      : "border-slate-100 hover:border-teal-200 bg-white"
+                      ? "border-cx-primary bg-cx-tint/30"
+                      : "border-slate-100 hover:border-cx-primary bg-white"
                       }`}
                   >
                     {selectedType?.id === type.id && (
-                      <CheckCircle2 className="absolute top-6 right-6 w-6 h-6 text-teal-500 fill-teal-50" />
+                      <CheckCircle2 className="absolute top-6 right-6 w-6 h-6 text-cx-primary fill-cx-tint" />
                     )}
 
-                    <p className={`font-black text-lg ${selectedType?.id === type.id ? 'text-teal-900' : 'text-slate-800'}`}>
+                    <p className={`font-black text-lg ${selectedType?.id === type.id ? 'text-cx-deep' : 'text-slate-800'}`}>
                       {type.name}{" "}
                       <span className="text-xs font-bold uppercase tracking-tight">
                         (<Price amount={(type.fee ?? 0) + (type.platform_fee ?? 0)} />)
                       </span>
                     </p>
 
-                    <div className="flex items-center gap-2 mt-2 text-slate-400 group-hover:text-teal-600 transition-colors">
+                    <div className="flex items-center gap-2 mt-2 text-slate-400 group-hover:text-cx-primary transition-colors">
                       <Clock className="w-3.5 h-3.5" />
                       <span className="text-xs font-bold uppercase tracking-tight">
                         {type.duration_mins} {t("minuteSession")}
@@ -313,13 +384,14 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                   {/* Calendar */}
                   <div>
                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-lg bg-teal-500 text-white flex items-center justify-center text-[10px]">02</span>
+                      <span className="w-6 h-6 rounded-lg bg-cx-primary text-white flex items-center justify-center text-[10px]">02</span>
                       {t("chooseDate")}
                     </h3>
 
                     <div className="flex justify-center md:justify-start scale-110 origin-top-left">
                       <Calendar
                         highlightedDates={availableDates}
+                        onMonthChange={setVisibleMonth}
                         value={selectedDate ? new Date(selectedDate) : undefined}
                         onChange={(date) => {
                           if (!date) return;
@@ -336,7 +408,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                   {/* Time */}
                   <div ref={timeRef}>
                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-lg bg-teal-500 text-white flex items-center justify-center text-[10px]">03</span>
+                      <span className="w-6 h-6 rounded-lg bg-cx-primary text-white flex items-center justify-center text-[10px]">03</span>
                       {t("availableSlots")}
                     </h3>
 
@@ -350,6 +422,17 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                     ) : loadingAvailability ? (
                       <div className="h-64 flex items-center justify-center">
                         <Loader size="md" />
+                      </div>
+                    ) : slotsError ? (
+                      <div className="h-64 flex flex-col items-center justify-center gap-3 text-center">
+                        <p className="text-sm font-semibold text-cx-ink">{t("loadSlotsError")}</p>
+                        <button
+                          type="button"
+                          onClick={() => selectedDate && fetchAvailability(selectedDate)}
+                          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-cx-primary px-5 font-semibold text-white hover:bg-cx-deep"
+                        >
+                          {tRetry("retry")}
+                        </button>
                       </div>
                     ) : slots.length === 0 ? (
                       <div className="h-64 flex flex-col items-center justify-center text-center p-8 bg-amber-50/50 rounded-[2rem] border-2 border-dashed border-amber-100">
@@ -380,8 +463,8 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                               });
                             }}
                             className={`py-4 rounded-2xl text-[13px] font-black transition-all ${selectedTime === time
-                              ? "bg-teal-500 text-white shadow-lg shadow-teal-100"
-                              : "bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-700"
+                              ? "bg-cx-primary text-white shadow-lg shadow-cx-primary/15"
+                              : "bg-slate-50 text-slate-600 hover:bg-cx-tint hover:text-cx-primary"
                               }`}
                           >
                             {time}
@@ -403,10 +486,10 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                 <div className="flex items-center justify-center gap-3">
                   {WHATSAPP_NUMBER ? (
                     <a
-                      href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || bookingData?.selectedDoctor?.full_name || ''}${practitioner?.specialization?.length ? ' (' + (Array.isArray(practitioner.specialization) ? practitioner.specialization.join(', ') : practitioner.specialization) + ')' : ''}${selectedDate && selectedTime ? ' Preferred: ' + selectedDate + ' ' + selectedTime : ''}.`)}`}
+                      href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I'd like to book an In-Home Visit consultation with Dr. ${practitioner?.full_name || bookingData?.selectedDoctor?.full_name || ''}${practitioner?.specialization?.length ? ' (' + formatSpecialties(practitioner.specialization) + ')' : ''}${selectedDate && selectedTime ? ' Preferred: ' + selectedDate + ' ' + selectedTime : ''}.`)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-8 py-3 bg-teal-600 text-white rounded-2xl font-bold inline-block"
+                      className="px-8 py-3 bg-cx-primary text-white rounded-2xl font-bold inline-block"
                     >
                       Contact on WhatsApp
                     </a>
@@ -431,11 +514,11 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
 
           <div className="flex items-center gap-6">
-            <div className="hidden sm:flex w-14 h-14 rounded-2xl bg-teal-50 items-center justify-center border border-teal-100">
-              <CalendarDays className="w-6 h-6 text-teal-600" />
+            <div className="hidden sm:flex w-14 h-14 rounded-2xl bg-cx-tint items-center justify-center border border-cx-border">
+              <CalendarDays className="w-6 h-6 text-cx-primary" />
             </div>
             <div>
-              <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em] mb-1">
+              <p className="text-[10px] font-black text-cx-primary uppercase tracking-[0.2em] mb-1">
                 {t("summary")}
               </p>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -453,7 +536,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
           <button
             disabled={isConfirming}
             onClick={handleFinalConfirm}
-            className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-50"
+            className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-cx-primary transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-50"
           >
             {isConfirming ? (
               <>{t("confirming")} <Loader2 className="w-4 h-4 animate-spin" /></>

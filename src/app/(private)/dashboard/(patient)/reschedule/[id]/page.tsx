@@ -90,7 +90,7 @@ function ReschedulePage() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-cx-primary" />
       </div>
     );
   }
@@ -191,8 +191,8 @@ function ReschedulePage() {
           <h2 className="font-semibold text-lg mb-3">Current Appointment</h2>
 
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <CalendarDays className="text-blue-700" size={24} />
+            <div className="p-3 bg-cx-tint rounded-lg">
+              <CalendarDays className="text-cx-deep" size={24} />
             </div>
 
             <div>
@@ -259,7 +259,7 @@ function ReschedulePage() {
           disabled={!canReschedule}
           onClick={handleReschedule}
           className={`px-6 py-2 rounded-lg text-white font-semibold flex items-center gap-2 ${canReschedule
-            ? "bg-blue-600 hover:bg-blue-700"
+            ? "bg-cx-primary hover:bg-cx-deep"
             : "bg-gray-400 cursor-not-allowed"
             }`}
         >

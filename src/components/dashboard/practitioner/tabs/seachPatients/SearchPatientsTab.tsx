@@ -286,7 +286,7 @@ const SearchPatientsTab: React.FC<SearchPatientsTabProps> = ({
                 <div className="flex flex-col text-sm">
                   <button
                     type="button"
-                    className="text-blue-600 font-semibold text-left hover:underline"
+                    className="text-cx-primary font-semibold text-left hover:underline"
                     onClick={() => onSelectPatient(p)}
                   >
                     {p.full_name}

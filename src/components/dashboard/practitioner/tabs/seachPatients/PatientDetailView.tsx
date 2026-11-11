@@ -41,7 +41,7 @@ const PatientDetailView: React.FC<PatientDetailViewProps> = ({
 
       {/* 2. Patient header bar */}
       <Card>
-        <CardBody className="flex flex-col md:flex-row md:items-center md:justify-between bg-blue-50 rounded-xl">
+        <CardBody className="flex flex-col md:flex-row md:items-center md:justify-between bg-cx-tint rounded-xl">
           <div className="space-y-1">
             <div className="text-lg font-semibold text-slate-900">
               {patient.full_name}
@@ -211,7 +211,7 @@ const PatientOverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
               {!isEditingAllergies ? (
                 <button
                   onClick={() => setIsEditingAllergies(true)}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-cx-primary hover:text-cx-deep"
                 >
                   <Edit2 size={12} />
                 </button>
@@ -628,7 +628,7 @@ const AppointmentRow: React.FC<{
 
   const statusClasses =
     appointment.status === "confirmed"
-      ? "bg-blue-50 text-blue-700"
+      ? "bg-cx-tint text-cx-deep"
       : appointment.status === "completed"
         ? "bg-green-50 text-green-700"
         : appointment.status === "pending"
@@ -826,7 +826,7 @@ const AppointmentRow: React.FC<{
             {structuredPrescription && (
                 <section className="pt-4 border-t border-slate-100">
                     <h3 className="font-semibold text-slate-900 pb-3 flex items-center gap-2">
-                        <Pill size={16} className="text-blue-500" />
+                        <Pill size={16} className="text-cx-primary" />
                         Prescription
                     </h3>
                     <PrescriptionTab 
@@ -870,12 +870,12 @@ const AppointmentRow: React.FC<{
                         href={doc.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all group"
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-cx-tint hover:border-cx-border transition-all group"
                       >
                         <div className="flex items-center gap-3">
                           <FileText
                             size={18}
-                            className="text-slate-400 group-hover:text-blue-600"
+                            className="text-slate-400 group-hover:text-cx-primary"
                           />
                           <span className="text-xs font-medium uppercase truncate max-w-[150px]">
                             {(doc.name || doc.document_type || "Document").replace(
@@ -886,7 +886,7 @@ const AppointmentRow: React.FC<{
                         </div>
                         <ExternalLink
                           size={14}
-                          className="text-slate-300 group-hover:text-blue-600"
+                          className="text-slate-300 group-hover:text-cx-primary"
                         />
                       </a>
                     )
@@ -904,12 +904,12 @@ const AppointmentRow: React.FC<{
                     onChange={(e) =>
                       updateAppointmentField("followUpNeeded", e.target.checked)
                     }
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-slate-300 text-cx-primary focus:ring-cx-primary"
                   />
                 ) : (
                   <span
                     className={`inline-flex h-3 w-3 rounded-full border-4 ${appointmentForm.followUpNeeded
-                      ? "border-blue-500"
+                      ? "border-cx-primary"
                       : "border-slate-300"
                       } bg-white`}
                   />
@@ -925,7 +925,7 @@ const AppointmentRow: React.FC<{
                     </span>
                     <input
                       type="date"
-                      className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                      className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-cx-primary"
                       value={appointmentForm.followUpDate}
                       onChange={(e) =>
                         updateAppointmentField("followUpDate", e.target.value)
@@ -938,7 +938,7 @@ const AppointmentRow: React.FC<{
                     </span>
                     <input
                       type="time"
-                      className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                      className="rounded-md border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-cx-primary"
                       value={appointmentForm.followUpTime}
                       onChange={(e) =>
                         updateAppointmentField("followUpTime", e.target.value)
@@ -951,7 +951,7 @@ const AppointmentRow: React.FC<{
               {!isEditingAppointment &&
                 appointmentForm.followUpNeeded &&
                 appointmentForm.followUpDate && (
-                  <div className="text-[11px] text-blue-600 font-medium">
+                  <div className="text-[11px] text-cx-primary font-medium">
                     Scheduled for: {appointmentForm.followUpDate}
                   </div>
                 )}

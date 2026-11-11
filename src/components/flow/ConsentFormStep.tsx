@@ -185,7 +185,7 @@ const ConsentFormStep = forwardRef(
                   noCheckbox: true,
                 },
               ].map((section) => (
-                <div key={section.id} className={`group bg-white border-2 rounded-2xl transition-all duration-300 ${section.checked ? 'border-blue-500 shadow-md' : 'border-slate-200'}`}>
+                <div key={section.id} className={`group bg-white border-2 rounded-2xl transition-all duration-300 ${section.checked ? 'border-cx-primary shadow-md' : 'border-slate-200'}`}>
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -262,17 +262,17 @@ const ConsentFormStep = forwardRef(
                     </div>
 
                     {!section.noCheckbox && (
-                        <label className={`flex items-center gap-3 mt-5 p-3 rounded-lg cursor-pointer transition-colors ${!section.read ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50'}`}>
+                        <label className={`flex items-center gap-3 mt-5 p-3 rounded-lg cursor-pointer transition-colors ${!section.read ? 'opacity-50 cursor-not-allowed' : 'hover:bg-cx-tint'}`}>
                           <div className="relative flex items-center">
                             <input
                               type="checkbox"
                               disabled={!section.read}
                               checked={section.checked}
                               onChange={(e) => setConsent(p => ({ ...p, [section.id]: e.target.checked }))}
-                              className="w-6 h-6 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer disabled:cursor-not-allowed"
+                              className="w-6 h-6 rounded border-slate-300 text-cx-primary focus:ring-cx-primary transition-all cursor-pointer disabled:cursor-not-allowed"
                             />
                           </div>
-                          <span className={`text-sm font-semibold ${section.checked ? 'text-blue-700' : 'text-slate-600'}`}>
+                          <span className={`text-sm font-semibold ${section.checked ? 'text-cx-primary' : 'text-slate-600'}`}>
                             {t("agreeText", { section: section.title })}
                           </span>
                         </label>
@@ -289,7 +289,7 @@ const ConsentFormStep = forwardRef(
                 onClick={handleContinue}
                 disabled={!consent.telehealth || !consent.terms}
                 className={`w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all transform active:scale-95 shadow-xl ${consent.telehealth && consent.terms
-                  ? "bg-slate-900 text-white shadow-slate-200 hover:bg-teal-600"
+                  ? "bg-slate-900 text-white shadow-slate-200 hover:bg-cx-primary"
                   : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
                   }`}
               >

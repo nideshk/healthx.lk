@@ -36,7 +36,7 @@ const AttendeeSelectionStep = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-blue-50 font-sans flex flex-col items-center justify-between py-10 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-cx-tint via-white to-cx-tint font-sans flex flex-col items-center justify-between py-10 px-4">
       {/* Title */}
       <div className="text-center max-w-xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">
@@ -61,13 +61,13 @@ const AttendeeSelectionStep = ({
           className={`flex flex-col items-center justify-between p-6 rounded-2xl shadow-md transition-all duration-300 cursor-pointer text-center w-full md:w-1/2 min-h-[300px]
             ${
               selectedOption === "single"
-                ? "border-2 border-blue-600 shadow-blue-200 bg-white"
-                : "border border-gray-200 hover:border-blue-400 hover:shadow-lg"
+                ? "border-2 border-cx-primary shadow-cx-primary/20 bg-white"
+                : "border border-gray-200 hover:border-cx-primary hover:shadow-lg"
             }`}
         >
           <div className="flex flex-col items-center">
-            <div className="p-4 bg-blue-100 rounded-full mb-4">
-              <User className="w-10 h-10 text-blue-600" />
+            <div className="p-4 bg-cx-tint rounded-full mb-4">
+              <User className="w-10 h-10 text-cx-primary" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900">Only Me</h3>
             <p className="text-sm text-gray-600 mt-2 max-w-xs">
@@ -78,8 +78,8 @@ const AttendeeSelectionStep = ({
           <button
             className={`mt-6 w-full py-2 font-semibold text-sm rounded-lg transition-all duration-200 ${
               selectedOption === "single"
-                ? "bg-blue-600 text-white"
-                : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                ? "bg-cx-primary text-white"
+                : "bg-cx-tint text-cx-primary hover:bg-cx-tint"
             }`}
           >
             Select
@@ -93,13 +93,13 @@ const AttendeeSelectionStep = ({
             className={`flex flex-col items-center justify-between p-6 rounded-2xl shadow-md transition-all duration-300 cursor-pointer text-center w-full md:w-1/2 min-h-[300px]
               ${
                 selectedOption === "group"
-                  ? "border-2 border-blue-600 shadow-blue-200 bg-white"
-                  : "border border-gray-200 hover:border-blue-400 hover:shadow-lg"
+                  ? "border-2 border-cx-primary shadow-cx-primary/20 bg-white"
+                  : "border border-gray-200 hover:border-cx-primary hover:shadow-lg"
               }`}
           >
             <div className="flex flex-col items-center">
-              <div className="p-4 bg-blue-100 rounded-full mb-4">
-                <Users className="w-10 h-10 text-blue-600" />
+              <div className="p-4 bg-cx-tint rounded-full mb-4">
+                <Users className="w-10 h-10 text-cx-primary" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900">Me + Family Member</h3>
               <p className="text-sm text-gray-600 mt-2 max-w-xs">
@@ -110,8 +110,8 @@ const AttendeeSelectionStep = ({
             <button
               className={`mt-6 w-full py-2 font-semibold text-sm rounded-lg transition-all duration-200 ${
                 selectedOption === "group"
-                  ? "bg-blue-600 text-white"
-                  : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                  ? "bg-cx-primary text-white"
+                  : "bg-cx-tint text-cx-primary hover:bg-cx-tint"
               }`}
             >
               Select
@@ -124,7 +124,7 @@ const AttendeeSelectionStep = ({
       <div className="mt-12">
         <button
           onClick={() => prevStep()}
-          className="flex items-center text-gray-600 hover:text-blue-500 transition text-sm font-medium"
+          className="flex items-center text-gray-600 hover:text-cx-primary transition text-sm font-medium"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

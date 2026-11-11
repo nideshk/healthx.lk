@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit --pretty false"
   },
   "dependencies": {
     "@aws-sdk/client-ivs-realtime": "^3.986.0",
@@ -60,7 +62,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^3.2.7"
   },
   "overrides": {
     "@parcel/watcher": "2.1.0"

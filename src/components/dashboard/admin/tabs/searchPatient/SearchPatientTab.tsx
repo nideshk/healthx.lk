@@ -349,7 +349,7 @@ useEffect(() => {
                 <select
                   value={limit}
                   onChange={(e) => setLimit(Number(e.target.value))}
-                  className="text-xs border border-slate-200 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="text-xs border border-slate-200 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-cx-primary"
                 >
                   {[10, 20, 50, 100].map((val) => (
                     <option key={val} value={val}>
@@ -386,7 +386,7 @@ useEffect(() => {
                     <div className="flex flex-col text-sm">
                       <button
                         type="button"
-                        className="text-blue-600 font-semibold text-left hover:underline"
+                        className="text-cx-primary font-semibold text-left hover:underline"
                         onClick={() => setSelectedPatient(p)}
                       >
                         {p.full_name || p.name}

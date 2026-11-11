@@ -5,10 +5,12 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
 export async function POST(req: NextRequest) {
-    const { user } = await requireUser(req);
+    const { authorized, user, response } = await requireUser(req);
+    if (!authorized || !user) return response;
+
     const body = await req.json();
     const cnx = getAuditContext(req, user);
-    if (!["admin", "superadmin", "practitioner"].includes(user?.role || "admin")) {
+    if (!["admin", "superadmin", "practitioner"].includes(user.role)) {
         await auditLog({
             ...cnx,
             action: "FAILED",
@@ -121,6 +123,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     const { user } = await requireUser(req);
+    if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const cnx = getAuditContext(req, user);
     let query = supabaseAdmin
         .from("discount_coupons")

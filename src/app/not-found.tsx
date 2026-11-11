@@ -11,7 +11,7 @@ export default function NotFound() {
         </h1>
 
         {/* Message */}
-        <div className="bg-blue-500 px-2 text-sm rounded rotate-12 absolute transform -translate-y-20 translate-x-12">
+        <div className="bg-cx-primary text-white px-2 text-sm rounded rotate-12 absolute transform -translate-y-20 translate-x-12">
           Page not found
         </div>
 
@@ -29,7 +29,7 @@ export default function NotFound() {
       <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          className="inline-flex items-center gap-2 rounded-lg bg-cx-primary px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-cx-deep"
         >
           <Home size={18} />
           Back to Home

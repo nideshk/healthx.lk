@@ -152,7 +152,7 @@ const AuditTrackingTab: React.FC = () => {
     },
     {
       header: "Actor",
-      render: (log) => <span className="text-blue-600 uppercase font-bold text-xs">{log.actor_role}</span>
+      render: (log) => <span className="text-cx-primary uppercase font-bold text-xs">{log.actor_role}</span>
     },
     {
       header: "Action",
@@ -175,7 +175,7 @@ const AuditTrackingTab: React.FC = () => {
       render: (log) => (
         <button
           onClick={() => { setSelectedLog(log); setIsModalOpen(true); }}
-          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all text-xs font-semibold"
+          className="flex items-center gap-2 px-3 py-1.5 bg-cx-tint text-cx-primary rounded-lg hover:bg-cx-tint transition-all text-xs font-semibold"
         >
           <Eye size={14} /> View Details
         </button>
@@ -244,7 +244,7 @@ const MetadataModal = ({ log, onClose }: { log: AuditLogItem; onClose: () => voi
         {entries.map(([key, value]) => (
           <div key={key} className="border-b border-slate-100 pb-2 last:border-0">
             <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key.replace(/_/g, ' ')}</span>
-            <div className="pl-2 border-l-2 border-blue-100">
+            <div className="pl-2 border-l-2 border-cx-tint">
               {typeof value === 'object' ? renderPrettyContent(value) : <span className="text-sm text-slate-700">{String(value)}</span>}
             </div>
           </div>
@@ -257,19 +257,19 @@ const MetadataModal = ({ log, onClose }: { log: AuditLogItem; onClose: () => voi
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2"><ShieldCheck className="text-blue-600" size={20} /> Audit Details</h3>
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><ShieldCheck className="text-cx-primary" size={20} /> Audit Details</h3>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
         </div>
 
         <div className="px-6 py-4 flex gap-2">
-          <button onClick={() => setViewMode("pretty")} className={`flex-1 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border transition-all ${viewMode === "pretty" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white text-slate-600 border-slate-200"}`}><LayoutList size={16} /> Pretty View</button>
-          <button onClick={() => setViewMode("raw")} className={`flex-1 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border transition-all ${viewMode === "raw" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white text-slate-600 border-slate-200"}`}><FileJson size={16} /> Raw JSON</button>
+          <button onClick={() => setViewMode("pretty")} className={`flex-1 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border transition-all ${viewMode === "pretty" ? "bg-cx-primary text-white border-cx-primary shadow-md" : "bg-white text-slate-600 border-slate-200"}`}><LayoutList size={16} /> Pretty View</button>
+          <button onClick={() => setViewMode("raw")} className={`flex-1 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border transition-all ${viewMode === "raw" ? "bg-cx-primary text-white border-cx-primary shadow-md" : "bg-white text-slate-600 border-slate-200"}`}><FileJson size={16} /> Raw JSON</button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 pt-0">
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
             {viewMode === "pretty" ? renderPrettyContent(log.metadata) : (
-              <pre className="text-xs font-mono text-blue-400 bg-slate-900 p-4 rounded-xl overflow-x-auto">{JSON.stringify(log, null, 2)}</pre>
+              <pre className="text-xs font-mono text-cx-tint bg-slate-900 p-4 rounded-xl overflow-x-auto">{JSON.stringify(log, null, 2)}</pre>
             )}
           </div>
         </div>
@@ -284,7 +284,7 @@ const MetadataModal = ({ log, onClose }: { log: AuditLogItem; onClose: () => voi
 
 const ActionBadge = ({ text }: { text: string }) => {
   const styles: Record<string, string> = {
-    VIEWED: "bg-blue-100 text-blue-700 border-blue-200",
+    VIEWED: "bg-cx-tint text-cx-deep border-cx-border",
     CREATED: "bg-green-100 text-green-700 border-green-200",
     UPDATED: "bg-amber-100 text-amber-700 border-amber-200",
     DELETED: "bg-red-100 text-red-700 border-red-200",

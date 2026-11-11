@@ -14,7 +14,7 @@ export default function AboutUs() {
             {/* Hero Section: The Story */}
             <section className="py-20 px-4 max-w-4xl mx-auto">
                 <div className="text-center mb-12">
-                    <span className="text-blue-600 font-semibold tracking-wide uppercase text-sm">
+                    <span className="text-cx-primary font-semibold tracking-wide uppercase text-sm">
                         {t("hero.badge")}
                     </span>
                     <h1 className="text-4xl md:text-5xl font-bold mt-4 text-slate-900 leading-tight">
@@ -23,7 +23,7 @@ export default function AboutUs() {
                 </div>
 
                 <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-slate-100 leading-relaxed">
-                    <h2 className="text-2xl font-bold mb-6 text-blue-900">{t("story.title")}</h2>
+                    <h2 className="text-2xl font-bold mb-6 text-cx-deep">{t("story.title")}</h2>
                     <div className="space-y-4 text-slate-700">
                         <p>{t("story.para1")}</p>
                         <p>{t("story.para2")}</p>
@@ -36,9 +36,9 @@ export default function AboutUs() {
             </section>
 
             {/* Vision Banner */}
-            <section className="bg-blue-900 py-16 px-6 text-center text-white">
+            <section className="bg-cx-deep py-16 px-6 text-center text-white">
                 <div className="max-w-3xl mx-auto">
-                    <p className="text-blue-300 font-medium uppercase tracking-widest text-sm mb-4">
+                    <p className="text-cx-tint font-medium uppercase tracking-widest text-sm mb-4">
                         {t("vision.label")}
                     </p>
                     <h2 className="text-2xl md:text-3xl font-light italic leading-snug">
@@ -56,9 +56,9 @@ export default function AboutUs() {
                     {commitmentKeys.map((key) => (
                         <div key={key} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
                             <div className="mb-4">
-                                {key === "trust" && <ShieldCheck className="w-8 h-8 text-blue-600" />}
-                                {key === "quality" && <Stethoscope className="w-8 h-8 text-blue-600" />}
-                                {key === "equality" && <Users className="w-8 h-8 text-blue-600" />}
+                                {key === "trust" && <ShieldCheck className="w-8 h-8 text-cx-primary" />}
+                                {key === "quality" && <Stethoscope className="w-8 h-8 text-cx-primary" />}
+                                {key === "equality" && <Users className="w-8 h-8 text-cx-primary" />}
                             </div>
                             <h3 className="text-xl font-bold mb-3">{t(`commitments.${key}.title`)}</h3>
                             <p className="text-slate-600 text-sm leading-relaxed">
@@ -72,12 +72,12 @@ export default function AboutUs() {
             {/* Founder's Note */}
             <section className="py-20 bg-slate-100 px-4">
                 <div className="max-w-4xl mx-auto bg-white rounded-3xl overflow-hidden shadow-sm flex flex-col md:flex-row border border-slate-200">
-                    <div className="md:w-1/3 bg-blue-700 p-10 flex flex-col justify-center items-center text-white text-center">
-                        <div className="w-24 h-24 bg-blue-500 rounded-full mb-4 flex items-center justify-center text-3xl font-bold shadow-inner">
+                    <div className="md:w-1/3 bg-cx-deep p-10 flex flex-col justify-center items-center text-white text-center">
+                        <div className="w-24 h-24 bg-cx-primary rounded-full mb-4 flex items-center justify-center text-3xl font-bold shadow-inner">
                             NK
                         </div>
                         <h3 className="text-lg font-bold">Nidesh Kulatunga</h3>
-                        <p className="text-blue-200 text-xs">{t("founder.role")}</p>
+                        <p className="text-cx-tint text-xs">{t("founder.role")}</p>
                         <a
                             href="https://www.linkedin.com/in/nidesh-kulatunga/"
                             target="_blank"
@@ -102,7 +102,7 @@ export default function AboutUs() {
                                 </p>
                                 <a
                                     href={t("founder.linkedin")}
-                                    className="text-blue-600 hover:underline text-xs mt-2 block"
+                                    className="text-cx-primary hover:underline text-xs mt-2 block"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >

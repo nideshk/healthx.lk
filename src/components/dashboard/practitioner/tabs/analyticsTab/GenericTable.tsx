@@ -35,12 +35,12 @@ const GenericTable = <T extends { id: string | number }>({
     <div className="bg-white border border-slate-200 rounded-2xl relative overflow-hidden shadow-sm">
       {loading && (
         <div className="absolute inset-0 bg-white/50 z-20 flex items-center justify-center rounded-2xl">
-          <Loader2 className="animate-spin text-blue-600" size={32} />
+          <Loader2 className="animate-spin text-cx-primary" size={32} />
         </div>
       )}
       <div className="overflow-x-auto">
         <table className={`w-full text-sm`} style={{ minWidth }}>
-          <thead className="bg-blue-600 text-white sticky top-0 z-10">
+          <thead className="bg-cx-primary text-white sticky top-0 z-10">
             <tr>
               {columns.map((col, idx) => (
                 <th key={idx} className={`px-4 py-4 text-left font-semibold ${col.className || ""}`}>
@@ -81,7 +81,7 @@ const GenericTable = <T extends { id: string | number }>({
               <select
                 value={pagination.perPage}
                 onChange={(e) => pagination.onLimitChange(Number(e.target.value))}
-                className="border border-slate-300 rounded px-2 py-1 bg-white outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-slate-300 rounded px-2 py-1 bg-white outline-none focus:ring-2 focus:ring-cx-primary"
               >
                 {[10, 20, 50, 100].map((limit) => (
                   <option key={limit} value={limit}>

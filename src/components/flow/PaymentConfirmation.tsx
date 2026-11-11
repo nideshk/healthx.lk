@@ -32,12 +32,12 @@ function PaymentConfirmation() {
                 <div className="p-6 space-y-5">
                     {/* Title */}
                     <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-blue-600" />
+                        <Calendar className="w-5 h-5 text-cx-primary" />
                         {t('prepareTitle')}
                     </h2>
 
                     {/* Email Confirmation */}
-                    <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 text-sm text-blue-900">
+                    <div className="border border-cx-border bg-cx-tint rounded-lg p-4 text-sm text-cx-deep">
                         <div className="flex items-center gap-2 font-semibold mb-1">
                             <Mail className="w-4 h-4" />
                             {t('email.title')}
@@ -77,7 +77,7 @@ function PaymentConfirmation() {
                         <p className="mb-4">{t('footer')}</p>
                         <button
                             onClick={() => router.push('/')}
-                            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                            className="px-6 py-2 bg-cx-primary text-white rounded-md hover:bg-cx-deep transition"
                         >
                             {t('returnHome')}
                         </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppointmentCard } from "../AppointmentCard";
+import { NextAppointmentCard } from "../NextAppointmentCard";
 import Loader from "@/components/atom/Loader/Loader";
 import {
   Activity,
@@ -59,8 +60,18 @@ export default function AppointmentTab() {
     return <EmptyDashboardState />;
   }
 
+  const allAppointments = [
+    ...data.ongoing,
+    ...data.upcoming,
+    ...data.pending,
+    ...data.past,
+    ...data.cancelled,
+  ];
+
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
+      <NextAppointmentCard appointments={allAppointments} />
+
       {(data.ongoing.length > 0 || data.pending.length > 0) && (
         <div className="grid grid-cols-1 gap-6">
           <Section
@@ -86,7 +97,7 @@ export default function AppointmentTab() {
       <Section
         title={t("upcoming")}
         items={data.upcoming}
-        icon={<CalendarClock className="text-blue-500" />}
+        icon={<CalendarClock className="text-cx-primary" />}
       >
         {(a: any) => <AppointmentCard appt={a} />}
       </Section>
@@ -120,7 +131,7 @@ function Section({ title, items, children, icon, accent = "blue", gridCols = "lg
   if (items.length === 0) return null;
 
   const accentColors: any = {
-    blue: "bg-blue-50 text-blue-700",
+    blue: "bg-cx-tint text-cx-deep",
     emerald: "bg-emerald-50 text-emerald-700",
     amber: "bg-amber-50 text-amber-700",
   };

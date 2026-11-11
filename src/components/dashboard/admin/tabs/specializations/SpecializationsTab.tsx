@@ -286,7 +286,7 @@ const SpecializationsTab: React.FC = () => {
                             <>
                                 <button 
                                     onClick={handleSaveEdit}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                    className="p-2 text-cx-primary hover:bg-cx-tint rounded-lg transition"
                                     title="Save"
                                 >
                                     <Save size={18} />
@@ -303,7 +303,7 @@ const SpecializationsTab: React.FC = () => {
                             <>
                                 <button 
                                     onClick={() => handleToggleActive(spec)}
-                                    className={`p-2 rounded-lg transition ${spec.active ? 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'text-blue-600 hover:bg-blue-50'}`}
+                                    className={`p-2 rounded-lg transition ${spec.active ? 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'text-cx-primary hover:bg-cx-tint'}`}
                                     title={spec.active ? "Hide" : "Show"}
                                 >
                                     {spec.active ? <EyeOff size={18} /> : <Eye size={18} />}

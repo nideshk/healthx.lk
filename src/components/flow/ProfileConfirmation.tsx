@@ -63,7 +63,7 @@ export default function PatientDetailsPage({ prevStep, nextStep }: { prevStep: (
                 {/* Header */}
                 <div className="bg-white px-8 py-6 border-b border-slate-100 flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                        <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-100">
+                        <div className="bg-cx-primary p-3 rounded-2xl shadow-lg shadow-cx-primary/15">
                             <User className="w-6 h-6 text-white" />
                         </div>
                         <div>
@@ -83,7 +83,7 @@ export default function PatientDetailsPage({ prevStep, nextStep }: { prevStep: (
                             <button
                                 onClick={onSave}
                                 disabled={isSaving}
-                                className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-md transition-all font-bold disabled:opacity-50"
+                                className="flex items-center gap-2 px-5 py-2 bg-cx-primary text-white rounded-xl hover:bg-cx-deep shadow-md transition-all font-bold disabled:opacity-50"
                             >
                                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                 Save
@@ -106,7 +106,7 @@ export default function PatientDetailsPage({ prevStep, nextStep }: { prevStep: (
                             <div className="w-full">
                                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Gender</p>
                                 {editing ? (
-                                    <select name="gender" value={form.gender} onChange={onChange} className="w-full bg-slate-50 border-b-2 border-slate-200 py-1.5 focus:border-blue-500 outline-none font-medium text-slate-800">
+                                    <select name="gender" value={form.gender} onChange={onChange} className="w-full bg-slate-50 border-b-2 border-slate-200 py-1.5 focus:border-cx-primary outline-none font-medium text-slate-800">
                                         <option value="">Select Gender</option>
                                         {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
                                     </select>
@@ -122,7 +122,7 @@ export default function PatientDetailsPage({ prevStep, nextStep }: { prevStep: (
                             <div className="w-full">
                                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Blood Group</p>
                                 {editing ? (
-                                    <select name="blood_type" value={form.blood_type} onChange={onChange} className="w-full bg-slate-50 border-b-2 border-slate-200 py-1.5 focus:border-blue-500 outline-none font-medium text-slate-800">
+                                    <select name="blood_type" value={form.blood_type} onChange={onChange} className="w-full bg-slate-50 border-b-2 border-slate-200 py-1.5 focus:border-cx-primary outline-none font-medium text-slate-800">
                                         <option value="">Select Group</option>
                                         {BLOOD_GROUPS.map(bg => <option key={bg} value={bg}>{bg}</option>)}
                                     </select>
@@ -150,7 +150,7 @@ export default function PatientDetailsPage({ prevStep, nextStep }: { prevStep: (
                     {/* Dot Progress */}
                     <div className="hidden sm:flex gap-2">
                         {[1, 2, 3, 4].map(s => (
-                            <div key={s} className={`h-2 rounded-full transition-all ${s === 2 ? 'w-8 bg-blue-600' : 'w-2 bg-slate-200'}`} />
+                            <div key={s} className={`h-2 rounded-full transition-all ${s === 2 ? 'w-8 bg-cx-primary' : 'w-2 bg-slate-200'}`} />
                         ))}
                     </div>
 
@@ -184,11 +184,11 @@ function Field({ label, value, icon }: any) {
 function EditableField({ label, editing, icon, ...rest }: any) {
     return (
         <div className="flex gap-5 group">
-            <div className="mt-1 text-slate-300 group-focus-within:text-blue-500 transition-colors">{icon}</div>
+            <div className="mt-1 text-slate-300 group-focus-within:text-cx-primary transition-colors">{icon}</div>
             <div className="w-full">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
                 {editing ? (
-                    <input className="w-full bg-slate-50 border-b-2 border-slate-200 focus:border-blue-500 outline-none py-1.5 transition-all text-slate-800 font-medium" {...rest} />
+                    <input className="w-full bg-slate-50 border-b-2 border-slate-200 focus:border-cx-primary outline-none py-1.5 transition-all text-slate-800 font-medium" {...rest} />
                 ) : (
                     <p className="font-semibold text-slate-700">{rest.value || '—'}</p>
                 )}
@@ -200,11 +200,11 @@ function EditableField({ label, editing, icon, ...rest }: any) {
 function EditableTextarea({ label, editing, icon, ...rest }: any) {
     return (
         <div className="flex gap-5 group">
-            <div className="mt-1 text-slate-300 group-focus-within:text-blue-500 transition-colors">{icon}</div>
+            <div className="mt-1 text-slate-300 group-focus-within:text-cx-primary transition-colors">{icon}</div>
             <div className="w-full">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
                 {editing ? (
-                    <textarea rows={3} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-blue-500 outline-none p-3 transition-all text-slate-800 text-sm" {...rest} />
+                    <textarea rows={3} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-cx-primary outline-none p-3 transition-all text-slate-800 text-sm" {...rest} />
                 ) : (
                     <p className="font-medium text-slate-600 text-sm leading-relaxed max-w-md">{rest.value || 'Not provided'}</p>
                 )}

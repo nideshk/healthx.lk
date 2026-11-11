@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle, Upload } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import Price from '@/components/common/Price';
+import { useTranslations } from 'next-intl';
 
 export default function AppointmentConfirmPage() {
   const router = useRouter();
+  const tConfirm = useTranslations('appointmentConfirmation');
 
   const [draft, setDraft] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -198,8 +200,7 @@ export default function AppointmentConfirmPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">📄 Terms and Conditions</h3>
             <div className="p-3 border rounded-md text-sm text-gray-600 h-32 overflow-y-auto bg-gray-50">
-              Appointments must be cancelled at least 24 hours in advance. No-show
-              appointments may incur fees. Payment is due at time of service.
+              {tConfirm('termsRefund')}
             </div>
             <label className="flex items-center mt-3 text-sm text-gray-700">
               <input

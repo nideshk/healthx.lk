@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import ClinicianCard from "./ClinicianCard";
 import { Search } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 interface Practitioner {
   id: string;
@@ -28,7 +29,7 @@ export default function SearchClinician() {
     const fetchPractitioners = async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/practitioners");
+        const res = await authFetch("/api/practitioners");
         const data = await res.json();
 
         if (!res.ok) throw new Error(data.error || "Failed to fetch clinicians");

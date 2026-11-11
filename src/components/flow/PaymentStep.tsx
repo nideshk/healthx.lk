@@ -406,7 +406,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
             <div className="relative z-[10001]">
               {(isPaymentProcessing || isExpired) && !isVerifying && (
                 <div
-                  className={`fixed top-0 left-0 right-0 z-[10001] transition-all duration-500 shadow-md ${isExpired || timeLeft < 60 ? "bg-red-600" : "bg-blue-600"}`}
+                  className={`fixed top-0 left-0 right-0 z-[10001] transition-all duration-500 shadow-md ${isExpired || timeLeft < 60 ? "bg-red-600" : "bg-cx-primary"}`}
                 >
                   <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between text-white">
                     <div className="flex items-center gap-3">
@@ -435,7 +435,7 @@ const PaymentStep = forwardRef<StepRefHandle, Props>(
               {isVerifying && (
                 <div className="fixed inset-0 z-[20000] flex flex-col items-center justify-center bg-black/40">
                   <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center text-center">
-                    <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+                    <div className="w-16 h-16 border-4 border-cx-primary border-t-transparent rounded-full animate-spin mb-4" />
                     <h3 className="text-xl font-bold">
                       {t("status.verifying")}
                     </h3>
