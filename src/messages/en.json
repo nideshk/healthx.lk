@@ -529,7 +529,9 @@
       "accountEmail": "Account Email",
       "sendLink": "Send Recovery Link",
       "backLogin": "Back to Login"
-    }
+    },
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "signup": {
     "title": "Create new account.",
@@ -613,7 +615,9 @@
       },
       "errors": {
         "loadDoctor": "Failed to load doctor details",
-        "missingSelection": "Please select appointment type, date and time"
+        "missingSelection": "Please select appointment type, date and time",
+        "loadDates": "Couldn't load available dates. Retry",
+        "loadTimes": "Couldn't load available times. Retry"
       }
     }
   },
@@ -746,5 +750,50 @@
     "phoneValue": "+94 771 050 867",
     "emailTitle": "Email",
     "emailValue": "support@clinecxa.lk"
+  },
+  "homeRedesign": {
+    "bookConsultation": "Book a consultation",
+    "heroImageAlt": "Doctor on a Clinecxa video consultation",
+    "howItWorks": {
+      "step1Title": "Choose a specialty",
+      "step1Text": "On the home page, select the specialty you need.",
+      "step2Title": "Choose a doctor and a time",
+      "step2Text": "Choose a doctor, then confirm a date and time.",
+      "step3Title": "Finish the booking",
+      "step3Text": "Sign in or create an account, then complete your profile, consent, and pre-consultation details. After payment you receive an email with the appointment confirmation and video link."
+    },
+    "doctors": {
+      "title": "Meet some of our doctors",
+      "empty": "Listed doctors will show here."
+    },
+    "family": {
+      "title": "Looking after family and ageing parents from abroad",
+      "text": "You can create an account for a family member and attend the consultation with them."
+    },
+    "practitioner": {
+      "subtitle": "Bring your patients online with Clinecxa. Share your booking page, see patients by video, and manage your schedule, fees, prescriptions and patient records in one place.",
+      "benefit1": "Your own booking page to share with patients",
+      "benefit2": "Video consultations on your own schedule",
+      "benefit3": "Prescriptions, follow-ups and patient records"
+    },
+    "loading": "Loading...",
+    "policyLoadError": "Unable to load this policy."
+  },
+  "actions": {
+    "retry": "Retry"
+  },
+  "doctorProfile": {
+    "notFound": "This doctor could not be found.",
+    "backHome": "Back to home"
+  },
+  "appointmentConfirmation": {
+    "termsRefund": "A full refund is available if you cancel more than 24 hours before the appointment. A 50% refund is available if you cancel between 24 hours and 5 hours before. No refund is available if you cancel 5 hours or less before the appointment. No-show appointments may incur fees. Payment is due at time of service."
+  },
+  "rateLimit": {
+    "tooManyRequests": "Too many requests. Please try again shortly."
+  },
+  "dialog": {
+    "close": "Close",
+    "untitled": "Dialog"
   }
 }

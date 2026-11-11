@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type ModalProps = {
@@ -43,6 +44,7 @@ export default function Modal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
+  const t = useTranslations("dialog");
 
   onCloseRef.current = onClose;
 
@@ -93,7 +95,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
-        aria-label={title ? undefined : "Dialog"}
+        aria-label={title ? undefined : t("untitled")}
         tabIndex={-1}
         className={cn(
           "flex flex-col rounded-2xl shadow-lg w-full max-h-[90vh] overflow-hidden outline-none",
@@ -118,7 +120,7 @@ export default function Modal({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("close")}
               className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 transition"
             >
               <X size={20} />

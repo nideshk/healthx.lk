@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import HomepageSlotPicker from "@/components/homepage/home/HomepageSlotPicker";
 import Loader from "@/components/atom/Loader/Loader";
 
@@ -11,6 +12,7 @@ export default function DoctorPage({
 }: {
     params: Promise<{ slug: string }>;
 }) {
+    const t = useTranslations("doctorProfile");
     const [doctor, setDoctor] = useState<any>(null);
     const [missing, setMissing] = useState(false);
 
@@ -39,9 +41,9 @@ export default function DoctorPage({
     if (missing) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
-                <p className="text-lg font-semibold text-cx-ink">This doctor could not be found.</p>
+                <p className="text-lg font-semibold text-cx-ink">{t("notFound")}</p>
                 <Link href="/" className="text-cx-primary font-semibold underline">
-                    Back to home
+                    {t("backHome")}
                 </Link>
             </div>
         );

@@ -51,6 +51,7 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
   setCoupon,
 }) => {
   const t = useTranslations("paymentUI");
+  const tRate = useTranslations("rateLimit");
   console.log("booking data", bookingData);
   const consent = (() => {
     const raw = bookingData?.consent ?? bookingData?.consents;
@@ -116,6 +117,12 @@ const PaymentStepUI: React.FC<PaymentStepUIProps> = ({
       });
 
       const data = await res.json();
+
+      if (res.status === 429) {
+        setAppliedCoupon(null);
+        setCouponError(tRate("tooManyRequests"));
+        return;
+      }
 
       if (!res.ok || !data.valid) {
         setAppliedCoupon(null);

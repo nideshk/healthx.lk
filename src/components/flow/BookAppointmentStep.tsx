@@ -25,6 +25,7 @@ import { useFormatSpecialties } from "@/lib/specialtyLabels";
 
 const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
   const t = useTranslations("bookAppointment");
+  const tRetry = useTranslations("actions");
   const formatSpecialties = useFormatSpecialties();
 
   const practitionerId = bookingData?.selectedDoctor?.id;
@@ -204,7 +205,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
           onClick={() => setLoadAttempt((n) => n + 1)}
           className="inline-flex min-h-12 items-center justify-center rounded-xl bg-cx-primary px-5 font-semibold text-white hover:bg-cx-deep"
         >
-          Retry
+          {tRetry("retry")}
         </button>
       </div>
     );
@@ -430,7 +431,7 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
                           onClick={() => selectedDate && fetchAvailability(selectedDate)}
                           className="inline-flex min-h-12 items-center justify-center rounded-xl bg-cx-primary px-5 font-semibold text-white hover:bg-cx-deep"
                         >
-                          Retry
+                          {tRetry("retry")}
                         </button>
                       </div>
                     ) : slots.length === 0 ? (

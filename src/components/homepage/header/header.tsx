@@ -35,7 +35,6 @@ import Modal from "@/components/atom/Modal/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import LanguageToggle from "@/components/common/LanguageToggle";
 import CurrencyToggle from "@/components/common/CurrencyToggle";
-import { homeRedesignCopy } from "@/content/homeRedesignCopy";
 import { openSpecialties } from "@/lib/homeNavigation";
 
 function BrandLockup() {
@@ -56,6 +55,7 @@ function BrandLockup() {
 
 export default function Header() {
   const t = useTranslations("header"); // Initialize translations
+  const tHome = useTranslations("homeRedesign");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -227,7 +227,7 @@ export default function Header() {
                 type="button"
                 className="md:hidden min-h-12 min-w-12 shrink-0 inline-flex items-center justify-center text-cx-ink hover:bg-cx-tint rounded-xl"
                 onClick={() => setIsMenuOpen(true)}
-                aria-label="Open menu"
+                aria-label={t("openMenu")}
               >
                 <Menu size={26} />
               </button>
@@ -273,13 +273,13 @@ export default function Header() {
                     {t("auth.logIn")}
                   </button>
                   <button type="button" onClick={onBook} className="cx-btn hidden md:inline-flex">
-                    {homeRedesignCopy.bookConsultation}
+                    {tHome("bookConsultation")}
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
                   <button type="button" onClick={onBook} className="cx-btn hidden md:inline-flex">
-                    {homeRedesignCopy.bookConsultation}
+                    {tHome("bookConsultation")}
                   </button>
                   <div className="relative" ref={userMenuRef}>
                     <button
@@ -342,7 +342,7 @@ export default function Header() {
             <span className="relative flex h-11 w-[7.25rem] items-center overflow-hidden">
               <img src="/assets/logo.png" alt="Clinecxa" className="absolute left-1/2 top-1/2 h-[6.75rem] w-auto max-w-none -translate-x-1/2 -translate-y-1/2" />
             </span>
-            <button type="button" onClick={() => setIsMenuOpen(false)} className="min-h-12 min-w-12 inline-flex items-center justify-center text-cx-ink bg-cx-tint rounded-xl" aria-label="Close menu">
+            <button type="button" onClick={() => setIsMenuOpen(false)} className="min-h-12 min-w-12 inline-flex items-center justify-center text-cx-ink bg-cx-tint rounded-xl" aria-label={t("closeMenu")}>
               <X size={20} />
             </button>
           </div>
@@ -408,7 +408,7 @@ export default function Header() {
                   {t("auth.logIn")}
                 </button>
                 <button type="button" onClick={onBook} className="cx-btn inline-flex w-full">
-                  {homeRedesignCopy.bookConsultation}
+                  {tHome("bookConsultation")}
                 </button>
               </div>
             ) : (
