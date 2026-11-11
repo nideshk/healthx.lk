@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { homeRedesignCopy } from "@/content/homeRedesignCopy";
+import { useTranslations } from "next-intl";
 
 export type PolicyStatus = "loading" | "ready" | "error";
 
@@ -42,6 +42,8 @@ export function PolicyStatusMessage({
 }: {
   status: Exclude<PolicyStatus, "ready">;
 }) {
+  const tHome = useTranslations("homeRedesign");
+
   if (status === "loading") {
     return (
       <p
@@ -49,14 +51,14 @@ export function PolicyStatusMessage({
         role="status"
         aria-live="polite"
       >
-        {homeRedesignCopy.loading}
+        {tHome("loading")}
       </p>
     );
   }
 
   return (
     <p className="py-8 text-base text-slate-700" role="alert">
-      {homeRedesignCopy.policyLoadError}
+      {tHome("policyLoadError")}
     </p>
   );
 }

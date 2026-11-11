@@ -17,6 +17,7 @@ import {
 
 export default function ContactUs() {
     const t = useTranslations("contactUs");
+    const tRate = useTranslations("rateLimit");
     const searchParams = useSearchParams();
 
     const prefillConcern = searchParams.get("concern") || "";
@@ -64,12 +65,16 @@ export default function ContactUs() {
                 body: JSON.stringify(formData),
             });
 
-            if (!res.ok) throw new Error();
+            if (res.status === 429) {
+                toast.error(tRate("tooManyRequests"));
+            } else if (!res.ok) {
+                toast.error(t("errorMessage"));
+            } else {
+                toast.success(t("successMessage"));
+                setFormData({ email: "", phone: "", concern: "" });
+            }
 
-            toast.success(t("successMessage"));
-            setFormData({ email: "", phone: "", concern: "" });
-
-        } catch (err) {
+        } catch {
             toast.error(t("errorMessage"));
         }
 

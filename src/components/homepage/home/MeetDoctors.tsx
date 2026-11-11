@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useFormatSpecialties } from "@/lib/specialtyLabels";
 import { practitionerPublicPath } from "@/lib/practitionerPath";
-import { homeRedesignCopy } from "@/content/homeRedesignCopy";
 
 type PublicDoctor = {
   id: string;
@@ -26,6 +25,7 @@ const MAX_DOCTORS = 6;
 
 export default function MeetDoctors() {
   const tSelection = useTranslations("doctorSelection");
+  const tHome = useTranslations("homeRedesign");
   const formatSpecialties = useFormatSpecialties();
   const [doctors, setDoctors] = useState<PublicDoctor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ export default function MeetDoctors() {
     <section aria-labelledby="meet-doctors-title" className="py-16 md:py-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <h2 id="meet-doctors-title" className="cx-heading">
-          {homeRedesignCopy.doctors.title}
+          {tHome("doctors.title")}
         </h2>
 
         {loading ? (
@@ -106,7 +106,7 @@ export default function MeetDoctors() {
           </div>
         ) : doctors.length === 0 ? (
           <p className="mt-6 text-base md:text-lg text-cx-ink">
-            {homeRedesignCopy.doctors.empty}
+            {tHome("doctors.empty")}
           </p>
         ) : (
           <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

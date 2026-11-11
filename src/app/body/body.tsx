@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -17,7 +17,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import Modal from "@/components/atom/Modal/Modal";
 import ServiceDoctorFlow from "@/components/homepage/home/ServiceDoctorFlow";
 import MeetDoctors from "@/components/homepage/home/MeetDoctors";
-import { homeRedesignCopy } from "@/content/homeRedesignCopy";
 import { openSpecialties } from "@/lib/homeNavigation";
 
 const stepIcons = [Stethoscope, User, CalendarCheck];
@@ -25,6 +24,7 @@ const stepIcons = [Stethoscope, User, CalendarCheck];
 const HeroSection = () => {
   const t = useTranslations("homepage.hero");
   const tHow = useTranslations("howto");
+  const tHome = useTranslations("homeRedesign");
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -53,7 +53,7 @@ const HeroSection = () => {
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <button type="button" className="cx-btn inline-flex" onClick={book}>
-              {homeRedesignCopy.bookConsultation}
+              {tHome("bookConsultation")}
             </button>
             <a href="#how-it-works" className="cx-btn-secondary inline-flex">
               {tHow("title")}
@@ -74,7 +74,7 @@ const HeroSection = () => {
         <div className="min-w-0">
           <Image
             src="/images/clinecxa-hero.webp"
-            alt={homeRedesignCopy.heroImageAlt}
+            alt={tHome("heroImageAlt")}
             width={1454}
             height={977}
             priority
@@ -97,18 +97,19 @@ const TrustItem = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
 
 const HowItWorksSection = () => {
   const t = useTranslations("howto");
-  const copy = homeRedesignCopy.howItWorks;
+  const tHome = useTranslations("homeRedesign");
+  const steps = [1, 2, 3] as const;
 
   return (
     <section id="how-it-works" className="scroll-mt-24 py-16 md:py-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <h2 className="cx-heading">{t("title")}</h2>
         <ol className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          {copy.steps.map((step, index) => {
+          {steps.map((step, index) => {
             const Icon = stepIcons[index] ?? Stethoscope;
             return (
               <li
-                key={step.title}
+                key={step}
                 className="rounded-2xl border border-cx-border bg-white p-6"
               >
                 <div className="flex items-center gap-3">
@@ -120,9 +121,11 @@ const HowItWorksSection = () => {
                   </span>
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-cx-ink">
-                  {step.title}
+                  {tHome(`howItWorks.step${step}Title`)}
                 </h3>
-                <p className="mt-2 text-base md:text-lg text-cx-ink">{step.text}</p>
+                <p className="mt-2 text-base md:text-lg text-cx-ink">
+                  {tHome(`howItWorks.step${step}Text`)}
+                </p>
               </li>
             );
           })}
@@ -134,6 +137,7 @@ const HowItWorksSection = () => {
 
 const FamilyAndWhySection = () => {
   const t = useTranslations("homepage.features");
+  const tHome = useTranslations("homeRedesign");
   const items = [
     { key: "verified", icon: BadgeCheck },
     { key: "secure", icon: ShieldCheck },
@@ -144,9 +148,9 @@ const FamilyAndWhySection = () => {
     <section className="py-16 md:py-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <article className="rounded-2xl border border-cx-border bg-white p-6 md:p-8">
-          <h2 className="cx-heading">{homeRedesignCopy.family.title}</h2>
+          <h2 className="cx-heading">{tHome("family.title")}</h2>
           <p className="mt-4 text-base md:text-lg text-cx-ink">
-            {homeRedesignCopy.family.text}
+            {tHome("family.text")}
           </p>
         </article>
 
@@ -248,12 +252,13 @@ const DisclaimerSection = () => {
 
 const PractitionerSection = () => {
   const t = useTranslations("homepage.practitioner");
-  const locale = useLocale();
+  const tHome = useTranslations("homeRedesign");
   const router = useRouter();
-  const englishCopy = locale === "en" ? homeRedesignCopy.practitioner : null;
-  const benefits = englishCopy
-    ? englishCopy.benefits
-    : [t("benefits.1"), t("benefits.2"), t("benefits.3")];
+  const benefits = [
+    tHome("practitioner.benefit1"),
+    tHome("practitioner.benefit2"),
+    tHome("practitioner.benefit3"),
+  ];
 
   return (
     <section className="py-16 md:py-24">
@@ -261,7 +266,7 @@ const PractitionerSection = () => {
         <div className="rounded-2xl border border-cx-border bg-white px-6 py-10 md:px-10 text-center">
           <h2 className="cx-heading">{t("title")}</h2>
           <p className="mt-4 text-base md:text-lg text-cx-ink max-w-2xl mx-auto">
-            {englishCopy ? englishCopy.subtitle : t("subtitle")}
+            {tHome("practitioner.subtitle")}
           </p>
           <ul className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
             {benefits.map((benefit) => (
@@ -288,6 +293,7 @@ const PractitionerSection = () => {
 };
 
 const MobileBookBar = () => {
+  const tHome = useTranslations("homeRedesign");
   const router = useRouter();
   const pathname = usePathname();
 
@@ -298,7 +304,7 @@ const MobileBookBar = () => {
         className="cx-btn inline-flex w-full"
         onClick={() => openSpecialties(pathname, (href) => router.push(href))}
       >
-        {homeRedesignCopy.bookConsultation}
+        {tHome("bookConsultation")}
       </button>
     </div>
   );

@@ -489,7 +489,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
                 onClick={() => setDatesAttempt((n) => n + 1)}
                 className="mt-3 text-sm font-semibold text-cx-primary underline"
               >
-                Couldn&apos;t load available dates. Retry
+                {t("errors.loadDates")}
               </button>
             )}
           </div>
@@ -515,7 +515,7 @@ const HomepageSlotPicker = ({ practitionerId, practitioner: initialDoctor, selec
                 onClick={() => setSlotAttempt((n) => n + 1)}
                 className="mt-4 text-sm font-semibold text-cx-primary underline"
               >
-                Couldn&apos;t load available times. Retry
+                {t("errors.loadTimes")}
               </button>
             ) : slots.length === 0 ? (
               <div className="text-sm text-gray-500 mt-4">
@@ -570,18 +570,21 @@ const SlotPickerError = ({
 }: {
   message: string;
   onRetry: () => void;
-}) => (
-  <div className="bg-white rounded-2xl border border-cx-border p-6 md:p-8 text-center">
-    <p className="text-base text-cx-ink">{message}</p>
-    <button
-      type="button"
-      onClick={onRetry}
-      className="mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-cx-primary px-5 font-semibold text-white hover:bg-cx-deep"
-    >
-      Retry
-    </button>
-  </div>
-);
+}) => {
+  const tRetry = useTranslations("actions");
+  return (
+    <div className="bg-white rounded-2xl border border-cx-border p-6 md:p-8 text-center">
+      <p className="text-base text-cx-ink">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-cx-primary px-5 font-semibold text-white hover:bg-cx-deep"
+      >
+        {tRetry("retry")}
+      </button>
+    </div>
+  );
+};
 
 const SlotPickerSkeleton = () => (
   <div className="bg-white rounded-2xl border border-cx-border p-6 md:p-8" aria-busy="true" aria-live="polite">

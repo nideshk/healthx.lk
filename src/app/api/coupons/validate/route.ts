@@ -5,6 +5,7 @@ import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 import { requireUser } from "@/lib/authGuard";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
+import { tooManyRequestsMessage } from "@/lib/i18n/tooManyRequestsMessage";
 
 const COUPON_LIMIT = 10;
 const COUPON_WINDOW_MS = 60_000;
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
             {
                 valid: false,
-                error: "Too many requests. Please try again shortly.",
+                error: await tooManyRequestsMessage(),
             },
             {
                 status: 429,

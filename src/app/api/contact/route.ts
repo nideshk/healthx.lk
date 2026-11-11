@@ -1,4 +1,5 @@
 import { sendSupportEmail } from "@/lib/email";
+import { tooManyRequestsMessage } from "@/lib/i18n/tooManyRequestsMessage";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Too many requests. Please try again shortly.",
+                    error: await tooManyRequestsMessage(),
                 },
                 {
                     status: 429,

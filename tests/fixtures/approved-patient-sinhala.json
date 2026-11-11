@@ -1,0 +1,270 @@
+{
+  "applied": [
+    {
+      "id": "HOME-01",
+      "key": "homeRedesign.bookConsultation",
+      "en": "Book a consultation",
+      "si": "උපදේශනයක් වෙන්කරගන්න"
+    },
+    {
+      "id": "HOME-02",
+      "key": "homeRedesign.heroImageAlt",
+      "en": "Doctor on a Clinecxa video consultation",
+      "si": "Clinecxa වීඩියෝ උපදේශනයක සිටින වෛද්‍යවරයෙක්"
+    },
+    {
+      "id": "HOME-03",
+      "key": "homeRedesign.howItWorks.step1Title",
+      "en": "Choose a specialty",
+      "si": "විශේෂඥතාව තෝරන්න"
+    },
+    {
+      "id": "HOME-04",
+      "key": "homeRedesign.howItWorks.step1Text",
+      "en": "On the home page, select the specialty you need.",
+      "si": "මුල් පිටුවේ ඔබට අවශ්‍ය විශේෂඥතාව තෝරන්න."
+    },
+    {
+      "id": "HOME-05",
+      "key": "homeRedesign.howItWorks.step2Title",
+      "en": "Choose a doctor and a time",
+      "si": "වෛද්‍යවරයෙකු සහ වේලාවක් තෝරන්න"
+    },
+    {
+      "id": "HOME-06",
+      "key": "homeRedesign.howItWorks.step2Text",
+      "en": "Choose a doctor, then confirm a date and time.",
+      "si": "වෛද්‍යවරයෙකු තෝරා, ඉන්පසු දිනයක් සහ වේලාවක් තහවුරු කරන්න."
+    },
+    {
+      "id": "HOME-07",
+      "key": "homeRedesign.howItWorks.step3Title",
+      "en": "Finish the booking",
+      "si": "වෙන්කරගැනීම සම්පූර්ණ කරන්න"
+    },
+    {
+      "id": "HOME-08",
+      "key": "homeRedesign.howItWorks.step3Text",
+      "en": "Sign in or create an account, then complete your profile, consent, and pre-consultation details. After payment you receive an email with the appointment confirmation and video link.",
+      "si": "ගිණුමට පිවිසෙන්න හෝ නව ගිණුමක් සාදන්න, ඉන්පසු ඔබේ පැතිකඩ, කැමැත්ත සහ පූර්ව උපදේශන විස්තර සම්පූර්ණ කරන්න. ගෙවීමෙන් පසු හමුවීම තහවුරු කිරීම සහ වීඩියෝ සබැඳිය සහිත විද්‍යුත් තැපෑලක් ඔබට ලැබේ."
+    },
+    {
+      "id": "HOME-09",
+      "key": "homeRedesign.doctors.title",
+      "en": "Meet some of our doctors",
+      "si": "අපගේ වෛද්‍යවරුන් කිහිප දෙනෙකු හඳුනාගන්න"
+    },
+    {
+      "id": "HOME-10",
+      "key": "homeRedesign.doctors.empty",
+      "en": "Listed doctors will show here.",
+      "si": "ලැයිස්තුගත වෛද්‍යවරුන් මෙහි පෙන්වනු ඇත."
+    },
+    {
+      "id": "HOME-11",
+      "key": "homeRedesign.family.title",
+      "en": "Looking after family and ageing parents from abroad",
+      "si": "විදේශයක සිට පවුලේ අය සහ වයසක දෙමාපියන් රැකබලා ගැනීම"
+    },
+    {
+      "id": "HOME-12",
+      "key": "homeRedesign.family.text",
+      "en": "You can create an account for a family member and attend the consultation with them.",
+      "si": "ඔබට පවුලේ සාමාජිකයෙකු සඳහා ගිණුමක් සාදා, ඔවුන් සමඟ උපදේශනයට සහභාගී විය හැක."
+    },
+    {
+      "id": "HOME-13",
+      "key": "homeRedesign.practitioner.subtitle",
+      "en": "Bring your patients online with Clinecxa. Share your booking page, see patients by video, and manage your schedule, fees, prescriptions and patient records in one place.",
+      "si": "Clinecxa සමඟ ඔබේ රෝගීන් මාර්ගගතව හමුවන්න. ඔබේ වෙන්කරගැනීම් පිටුව බෙදාගන්න, වීඩියෝ හරහා රෝගීන් පරීක්ෂා කරන්න, සහ ඔබේ කාලසටහන, ගාස්තු, බෙහෙත් වට්ටෝරු සහ රෝගී වාර්තා එකම තැනකින් කළමනාකරණය කරන්න."
+    },
+    {
+      "id": "HOME-14",
+      "key": "homeRedesign.practitioner.benefit1",
+      "en": "Your own booking page to share with patients",
+      "si": "රෝගීන් සමඟ බෙදාගැනීමට ඔබේම වෙන්කරගැනීම් පිටුවක්"
+    },
+    {
+      "id": "HOME-15",
+      "key": "homeRedesign.practitioner.benefit2",
+      "en": "Video consultations on your own schedule",
+      "si": "ඔබේම කාලසටහනට අනුව වීඩියෝ උපදේශන"
+    },
+    {
+      "id": "HOME-16",
+      "key": "homeRedesign.practitioner.benefit3",
+      "en": "Prescriptions, follow-ups and patient records",
+      "si": "බෙහෙත් වට්ටෝරු, පසු විපරම් සහ රෝගී වාර්තා"
+    },
+    {
+      "id": "BOOK-01",
+      "key": "slotFlow.slotPicker.errors.loadDates",
+      "en": "Couldn't load available dates. Retry",
+      "si": "ලබාගත හැකි දින පූරණය කළ නොහැකි විය. නැවත උත්සාහ කරන්න"
+    },
+    {
+      "id": "BOOK-02",
+      "key": "slotFlow.slotPicker.errors.loadTimes",
+      "en": "Couldn't load available times. Retry",
+      "si": "ලබාගත හැකි වේලාවන් පූරණය කළ නොහැකි විය. නැවත උත්සාහ කරන්න"
+    },
+    {
+      "id": "BOOK-03",
+      "key": "actions.retry",
+      "en": "Retry",
+      "si": "නැවත උත්සාහ කරන්න"
+    },
+    {
+      "id": "BOOK-04",
+      "key": "doctorProfile.notFound",
+      "en": "This doctor could not be found.",
+      "si": "මෙම වෛද්‍යවරයා සොයාගත නොහැකි විය."
+    },
+    {
+      "id": "BOOK-05",
+      "key": "doctorProfile.backHome",
+      "en": "Back to home",
+      "si": "මුල් පිටුවට ආපසු"
+    },
+    {
+      "id": "POL-01",
+      "key": "appointmentConfirmation.termsRefund",
+      "en": "A full refund is available if you cancel more than 24 hours before the appointment. A 50% refund is available if you cancel between 24 hours and 5 hours before. No refund is available if you cancel 5 hours or less before the appointment. No-show appointments may incur fees. Payment is due at time of service.",
+      "si": "හමුවීමට පැය 24කට වඩා පෙර අවලංගු කළහොත් සම්පූර්ණ මුදල ආපසු ලැබේ. හමුවීමට පැය 24 සහ පැය 5 අතර කාලයේ අවලංගු කළහොත් ගෙවූ මුදලින් 50%ක් ආපසු ලැබේ. හමුවීමට පැය 5ක් හෝ ඊට අඩු කාලයකට පෙර අවලංගු කළහොත් මුදල් ආපසු නොලැබේ. හමුවීමට සහභාගී නොවුවහොත් ගාස්තු අය කළ හැක. සේවාව ලබාගන්නා අවස්ථාවේදී ගෙවීම කළ යුතුය."
+    },
+    {
+      "id": "SPEC-01",
+      "key": "specialties.breast-surgeon",
+      "en": "Breast Surgeon",
+      "si": "පියයුරු ශල්‍ය වෛද්‍ය විශේෂඥ"
+    },
+    {
+      "id": "MSG-01",
+      "key": "rateLimit.tooManyRequests",
+      "en": "Too many requests. Please try again shortly.",
+      "si": "ඉල්ලීම් වැඩි ගණනක් ලැබී ඇත. කරුණාකර මඳ වේලාවකින් නැවත උත්සාහ කරන්න."
+    },
+    {
+      "id": "MSG-02",
+      "key": "header.openMenu",
+      "en": "Open menu",
+      "si": "මෙනුව විවෘත කරන්න"
+    },
+    {
+      "id": "MSG-03",
+      "key": "header.closeMenu",
+      "en": "Close menu",
+      "si": "මෙනුව වසන්න"
+    },
+    {
+      "id": "MSG-04",
+      "key": "dialog.close",
+      "en": "Close",
+      "si": "වසන්න"
+    },
+    {
+      "id": "MSG-05",
+      "key": "dialog.untitled",
+      "en": "Dialog",
+      "si": "සංවාද කවුළුව"
+    },
+    {
+      "id": "MSG-06",
+      "key": "homeRedesign.loading",
+      "en": "Loading...",
+      "si": "පූරණය වෙමින්..."
+    },
+    {
+      "id": "MSG-07",
+      "key": "homeRedesign.policyLoadError",
+      "en": "Unable to load this policy.",
+      "si": "මෙම ප්‍රතිපත්තිය පූරණය කළ නොහැකි විය."
+    }
+  ],
+  "preserved": [
+    {
+      "id": "REV-05",
+      "key": "howto.sections.booking.items.0.a",
+      "en": "Go to the home page and select the specialty you need, then choose a doctor and confirm a date and time. Sign in or create an account, then complete your profile, consent, and pre-consultation details. If that appointment type allows it, you can add one additional attendee during the pre-consultation step. After payment you will receive an email with the appointment confirmation and video link.",
+      "si": "පිළිතුර: මුල් පිටුවට ගොස් ඔබට අවශ්‍ය විශේෂඥතාව තෝරන්න. ඉන්පසු වෛද්‍යවරයෙකු තෝරා දිනයක් සහ වේලාවක් තහවුරු කරන්න. ගිණුමට පිවිසෙන්න හෝ නව ගිණුමක් සාදන්න, ඉන්පසු පැතිකඩ, කැමැත්ත සහ පූර්ව උපදේශන විස්තර සම්පූර්ණ කරන්න. එම හමුවීම් වර්ගය ඉඩ දෙන්නේ නම්, පූර්ව උපදේශන පියවරේදී අමතර සහභාගිවන්නෙකු එකතු කළ හැක. ගෙවීමෙන් පසු හමුවීම තහවුරු කිරීම සහ වීඩියෝ සබැඳිය සහිත විද්‍යුත් තැපෑලක් ලැබේ."
+    },
+    {
+      "id": "REV-06",
+      "key": "howto.sections.booking.items.2.a",
+      "en": "Yes, you can. You receive a full refund if you cancel more than 24 hours before the appointment, a 50% refund if you cancel between 24 hours and 5 hours before, and no refund if you cancel 5 hours or less before the appointment. Please refer to our Refund Policy linked in the footer for full details.",
+      "si": "පිළිතුර: ඔව්, ඔබට පුළුවන්. හමුවීමට පැය 24කට වඩා පෙර අවලංගු කළහොත් සම්පූර්ණ මුදල් ආපසු ලැබේ. පැය 24 සහ පැය 5 අතර කාලයේ අවලංගු කළහොත් 50% මුදල් ආපසු ලැබේ. හමුවීමට පැය 5ක් හෝ ඊට අඩු කාලයකට පෙර අවලංගු කළහොත් මුදල් ආපසු නොලැබේ. සම්පූර්ණ විස්තර සඳහා කරුණාකර පිටුවේ පහළ ඇති අපගේ මුදල් ආපසු ගෙවීමේ ප්‍රතිපත්තිය බලන්න."
+    },
+    {
+      "id": "REV-07",
+      "key": "howto.sections.refunds.items.0.a",
+      "en": "You receive a full refund if you cancel more than 24 hours before the appointment, a 50% refund if you cancel between 24 hours and 5 hours before, and no refund if you cancel 5 hours or less before the appointment. Other cases, such as a clinician cancellation, are described in the Refund Policy linked in the footer.",
+      "si": "පිළිතුර: හමුවීමට පැය 24කට වඩා පෙර අවලංගු කළහොත් සම්පූර්ණ මුදල් ආපසු ලැබේ. පැය 24 සහ පැය 5 අතර කාලයේ අවලංගු කළහොත් 50% මුදල් ආපසු ලැබේ. හමුවීමට පැය 5ක් හෝ ඊට අඩු කාලයකට පෙර අවලංගු කළහොත් මුදල් ආපසු නොලැබේ. වෛද්‍යවරයා අවලංගු කිරීම වැනි අනෙකුත් අවස්ථා පිටුවේ පහළ ඇති මුදල් ආපසු ගෙවීමේ ප්‍රතිපත්තියේ සඳහන් වේ."
+    },
+    {
+      "id": "REV-08",
+      "key": "doctorSelection.noCurrentAvailability",
+      "en": "No current availability",
+      "si": "දැනට වෙන්කරගත හැකි වේලාවන් නැත"
+    },
+    {
+      "id": "REV-09",
+      "key": "footer.builtBy",
+      "en": "Built by Square Coin",
+      "si": "Square Coin විසින් නිර්මාණය කරන ලදී"
+    },
+    {
+      "id": "REV-10",
+      "key": "specialties.general",
+      "en": "General Practitioner",
+      "si": "සාමාන්‍ය වෛද්‍යවරයා"
+    },
+    {
+      "id": "REV-11",
+      "key": "specialties.cancer-specialist",
+      "en": "Cancer Specialist",
+      "si": "පිළිකා රෝග විශේෂඥ"
+    },
+    {
+      "id": "REV-12",
+      "key": "specialties.pediatrician",
+      "en": "Paediatrician",
+      "si": "ළමා රෝග විශේෂඥ"
+    },
+    {
+      "id": "REV-12",
+      "key": "specialties.peadiatrician",
+      "en": "Paediatrician",
+      "si": "ළමා රෝග විශේෂඥ"
+    },
+    {
+      "id": "REV-12",
+      "key": "specialties.paediatrician",
+      "en": "Paediatrician",
+      "si": "ළමා රෝග විශේෂඥ"
+    },
+    {
+      "id": "REV-13",
+      "key": "specialties.gynecologist",
+      "en": "Gynaecologist",
+      "si": "ප්‍රසව හා නාරිවේද වෛද්‍ය"
+    },
+    {
+      "id": "REV-13",
+      "key": "specialties.gynaecologist",
+      "en": "Gynaecologist",
+      "si": "ප්‍රසව හා නාරිවේද වෛද්‍ය"
+    },
+    {
+      "id": "REV-14",
+      "key": "specialties.physiotherapist",
+      "en": "Physiotherapist",
+      "si": "භෞත චිකිත්සක"
+    },
+    {
+      "id": "REV-CONSENT",
+      "key": "consentForm.telehealthContent",
+      "en": "I. PLATFORM INFORMATION\n\n01. Clinecxa is a telehealth and patient health information management platform owned and operated by Square Coin Pty Ltd (‘Square Coin Australia’), a company duly registered and incorporated under the laws of Australia.\n\n02. Square Coin Lanka (Pvt) Ltd. (‘Square Coin Lanka’), a company duly registered and incorporated under the laws of the Socialist Democratic Republic of Sri Lanka, manages the operation of Clinecxa in the said republic.\n\n03. Any reference to Clinecxa’s responsibilities and/or liabilities herein and hereunder shall pertain solely to that of Square Coin Lanka, and not of Square Coin Australia. For all intents and purposes the former indemnifies the latter.\n\n04. Clinecxa’s legal responsibility is limited to the provision of the technology platform. Medical services are provided by independent, licensed healthcare practitioners and not employees, agents, or representatives of Clinecxa, Square Coin Pty Ltd, or Square Coin Lanka (Pvt) Ltd.\n\n05. Clinecxa does not provide medical advice and is not responsible for clinical decisions made by clinicians. All medical advice, diagnoses, treatment, and clinical decisions are the sole responsibility of the treating clinician. Clinecxa does not control or direct clinical practice and is not responsible for medical outcomes. Accordingly, Clinecxa disclaims liability for clinical decisions and treatment outcomes.\n\n06. Any/all users of Clinecxa agree to indemnify Clinecxa against claims arising from misuse of the platform or breach of these terms by other parties. For the avoidance of doubt, such indemnification applies to the benefit of both Square Coin Lanka, Square Coin Australia and its directors/shareholder/employees/agents.\n\nII. NATURE OF TELEHEALTH SERVICES\n\n07. Telehealth involves the use of electronic communications to enable healthcare providers to consult, assess, diagnose, treat, and educate patients using telecommunications technology, including video, audio, and secure digital messaging.\n\nIII. ELECTRONIC HEALTH RECORDS & DATA STORAGE\n\n08. By using Clinecxa, you hereby provide consent for:\n\na) Creation and maintenance of your personal and health data and information;\nb) Secure storage of your data and information in cloud infrastructure including Amazon S3 and Supabase, configured in a HIPAA-compliant manner;\nc) Access to your health data and information by your treating clinicians and authorised operational staff; and\nd) Use of your data and information for clinical care, care coordination, quality improvement, and continuity of treatment.\n\n09. All personal and health data and information is protected under the Personal Data Protection Act, No. 9 of 2022 (‘PDPA’). For further details, please refer to the Clinecxa Privacy Policy.\n\nIV. CARER / GUARDIAN CONSENT\n\n10. If you are making a booking on behalf of another person, you hereby confirm that:\n\na) You are legally authorised to act on behalf of the patient;\nb) You have authority to provide consent for telehealth services and data collection and processing;\nc) All information you provide is accurate and complete;\nd) You accept responsibility for the accuracy of the information submitted; and\ne) You provide consent on behalf of the patient for all terms outlined in this agreement.\n\nV. CLINICAL NOTES & RECORDINGS\n\n11. Telehealth sessions and consultation will not be recorded.\n\n12. Clinicians may take clinical notes as part of standard medical practice to support diagnosis, treatment, and continuity of care.\n\nVI. RISKS, LIMITATIONS & MEDICAL DISCLAIMER\n\n13. You hereby acknowledge and accept the following and any/all consequential risks and/or losses of the same:\n\na) Telehealth has inherent limitations and may not detect all medical conditions;\nb) A physical examination may be required for accurate diagnosis;\nc) No guarantee of diagnosis or treatment outcome can be provided;\nd) Clinical decisions are based on the information you provide and what can be reasonably assessed via telehealth;\ne) Miscommunication, technical issues, or incomplete information may affect care.\n\nVII. NOT AN EMERGENCY SERVICE\n\n14. Clinecxa and its clinicians do not provide emergency medical services.\n\n15. In case of a medical emergency, you must immediately contact local emergency services.\n\n16. Telehealth is not a replacement for ongoing in-person care by a general practitioner or specialist management.\n\nVIII. PRIVACY & SECURITY\n\n17. Reasonable technical and organisational safeguards are in place to protect your data and information. However, no system can be guaranteed to be completely secure. You acknowledge and accept the residual risk of unauthorised access.\n\nIX. COMMUNICATION CONSENT\n\n18. Subject to clause 19 below, you hereby consent to being contacted via: SMS, Email, Phone calls, and In-app notifications and messages.\n\n19. You hereby consent to be contacted for the purposes of: Appointment reminders, Clinical follow-ups, Care coordination, Service reviews and quality assurance, and Understanding and improving the performance of the platform and clinicians, and any other lawful purpose.\n\nX. PATIENT RESPONSIBILITIES\n\n20. You hereby agree to:\n\na) Provide accurate and complete medical information and data;\nb) Attend sessions from a private and safe location;\nc) Ensure adequate internet, camera, and audio;\nd) Test your technology prior to the appointment;\ne) Seek in-person or emergency care when advised.\n\nXI. PROVIDER RESPONSIBILITIES\n\n21. Clinicians and/or healthcare providers shall: Make reasonable attempts to verify patient identity and location, Maintain professional standards of care, Maintain confidentiality, Recommend in-person care when clinically required, and Discontinue telehealth if it is or becomes inappropriate for your condition.\n\n22. In the event a clinician or healthcare provider organizes a physical or in-person appointment with a patient and/or user upon the use of Clinecxa or in the absence of the use of Clinecxa, the legal responsibilities and liabilities associated with the care of the patient and medical services shall remain solely with the clinician or healthcare provider. Such providers shall indemnify Clinecxa against all losses, damages, claims and expenses arising from a breach of professional or legal responsibilities.\n\nXII. CANCELLATIONS, LATE ARRIVAL & REFUNDS\n\n23. Cancellation Window: A full refund is available if the appointment is cancelled more than 24 hours before the scheduled time. A 50% refund is available if it is cancelled between 24 hours and 5 hours before. No refund is available if it is cancelled 5 hours or less before the appointment.\n\n24. Late Arrival: A grace period of 5 minutes is allowed. Upon the lapse of 5 minutes, the appointment will be considered akin to being attended by the clinician and will be charged in full.\n\n25. No refund will be issued for late arrivals.\n\n26. If the clinician does not attend the appointment, you may contact Clinecxa to request a refund.\n\n27. For further details, please refer to the Refund Policy.\n\nXIII. CONSENT & WITHDRAWAL\n\n28. You may withdraw your consent at any time in writing. Withdrawal shall not affect care or actions already undertaken prior to withdrawal.\n\n29. By selecting “I Accept”, you confirm that:\n\na) You have read, understood, and voluntarily agreed to all terms and conditions above;\nb) You agree to indemnify and hold harmless Clinecxa, Square Coin Lanka and Square Coin Australia against all losses arising from your breach of terms;\nc) If you are outside Sri Lanka, you ensure that local laws permit the use of Clinecxa and you indemnify Clinecxa against any liability arising from your resident jurisdiction laws.\n\nXIV. GOVERNING LAW\n\n30. These Terms and Conditions are governed by and interpreted in accordance with the laws of the Democratic Socialist Republic of Sri Lanka.\n\nXV. AMENDMENTS\n\n31. Clinecxa reserves the right to modify these Terms and Conditions from time to time. Updated terms will be published on the platform and users will be prompted to peruse and accept or reject the same.",
+      "si": "මෙම ලේඛනයේ සම්පූර්ණ සිංහල පරිවර්තනය සඳහා කරුණාකර අපගේ සහාය කණ්ඩායම අමතන්න: support@squarecoin.com.au. (Full translation coming soon)"
+    }
+  ]
+}
