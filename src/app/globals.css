@@ -1,16 +1,30 @@
 @import "tailwindcss";
 
 :root {
+  --cx-primary: #0b6e79;
+  --cx-deep: #08494f;
+  --cx-gold: #e8a33d;
+  --cx-ink: #12262b;
+  --cx-tint: #d5ecea;
+  --cx-bg: #f4faf9;
+  --cx-border: color-mix(in srgb, var(--cx-primary) 22%, #ffffff);
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: var(--cx-ink);
   color-scheme: light;
 }
 
 @theme inline {
+  --color-cx-primary: var(--cx-primary);
+  --color-cx-deep: var(--cx-deep);
+  --color-cx-gold: var(--cx-gold);
+  --color-cx-ink: var(--cx-ink);
+  --color-cx-tint: var(--cx-tint);
+  --color-cx-bg: var(--cx-bg);
+  --color-cx-border: var(--cx-border);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-noto-sans), var(--font-noto-sinhala), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* Force dark mode to only apply with a .dark class which we won't use */
@@ -19,9 +33,93 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-noto-sans), var(--font-noto-sinhala), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 button {
   cursor: pointer;
+}
+
+.cx-heading {
+  color: var(--cx-ink);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 768px) {
+  .cx-heading {
+    font-size: 2.5rem;
+  }
+
+  body {
+    font-size: 1.125rem;
+  }
+}
+
+.cx-btn,
+.cx-btn-secondary {
+  align-items: center;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  justify-content: center;
+  line-height: 1.25;
+  min-height: 3rem;
+  padding: 0.75rem 1.25rem;
+  text-align: center;
+}
+
+.cx-btn {
+  background: var(--cx-primary);
+  color: #ffffff;
+}
+
+.cx-btn:hover {
+  background: var(--cx-deep);
+}
+
+.cx-btn-secondary {
+  background: #ffffff;
+  border: 1px solid var(--cx-border);
+  color: var(--cx-ink);
+}
+
+.cx-btn-secondary:hover {
+  background: var(--cx-tint);
+}
+
+.cx-btn:focus-visible,
+.cx-btn-secondary:focus-visible {
+  outline: 2px solid var(--cx-primary);
+  outline-offset: 2px;
+}
+
+.cx-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Home mobile book bar: 1px border + 0.75rem top padding + 3rem button
+   + bottom padding of max(0.75rem, the safe-area inset). */
+@media (max-width: 767px) {
+  .cx-mobile-book-clearance {
+    padding-bottom: calc(
+      0.75rem + 3rem + max(0.75rem, env(safe-area-inset-bottom, 0px)) + 1px
+    );
+  }
+}
+
+/* Home booking step uses the shared Button, whose fill is a different blue. */
+.cx-force-primary {
+  background-color: var(--cx-primary) !important;
+  color: #ffffff !important;
+}
+
+.cx-force-primary:hover:not(:disabled) {
+  background-color: var(--cx-deep) !important;
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import Modal from "@/components/atom/Modal/Modal";
+import { PolicyStatusMessage, usePolicyMarkdown } from "./usePolicyMarkdown";
 import { useLocale } from "next-intl";
 import { ShieldCheck, Lock, Globe, Clock, ChevronRight, Mail, FileText, UserCheck, AlertTriangle, Scale, RefreshCw, Smartphone, HeartPulse, UserPlus, Info } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
@@ -16,21 +17,11 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
     const locale = useLocale();
     const isSi = locale === "si";
     const [scrolledToEnd, setScrolledToEnd] = useState(false);
-    const [markdownContent, setMarkdownContent] = useState<string>("");
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const fetchContent = async () => {
-            try {
-                const response = await fetch(isSi ? '/content/privacy-si.md' : '/content/privacy-en.md');
-                const text = await response.text();
-                setMarkdownContent(text);
-            } catch (error) {
-                console.error("Failed to load privacy policy:", error);
-            }
-        };
-        fetchContent();
-    }, [isSi]);
+    const { markdown: markdownContent, status: policyStatus } = usePolicyMarkdown(
+        isSi ? "/content/privacy-si.md" : "/content/privacy-en.md",
+        isOpen
+    );
 
     // Track scroll progress for "Accept" logic
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -111,6 +102,9 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
                     onScroll={handleScroll}
                     className="flex-1 overflow-y-auto pr-2 custom-scrollbar scroll-smooth"
                 >
+                    {policyStatus !== "ready" ? (
+                        <PolicyStatusMessage status={policyStatus} />
+                    ) : (
                     <div className="max-w-3xl py-4">
                         <header className="mb-16">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wider mb-6 border border-emerald-100 dark:border-emerald-800">
@@ -127,8 +121,7 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
                         </header>
 
                         <div className="space-y-12">
-                            {markdownContent ? (
-                                <ReactMarkdown
+                            <ReactMarkdown
                                     rehypePlugins={[rehypeRaw]}
                                     components={{
                                         h2: ({ node, id, children, ...props }: any) => {
@@ -167,22 +160,6 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
                                 >
                                     {markdownContent}
                                 </ReactMarkdown>
-                            ) : (
-                                <div className="animate-pulse space-y-8">
-                                    <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded w-1/3"></div>
-                                    <div className="space-y-3">
-                                        <div className="h-4 bg-slate-100 dark:bg-slate-800/50 rounded w-full"></div>
-                                        <div className="h-4 bg-slate-100 dark:bg-slate-800/50 rounded w-5/6"></div>
-                                        <div className="h-4 bg-slate-100 dark:bg-slate-800/50 rounded w-4/6"></div>
-                                    </div>
-                                    <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded w-1/4 mt-8"></div>
-                                    <div className="space-y-3">
-                                        <div className="h-4 bg-slate-100 dark:bg-slate-800/50 rounded w-full"></div>
-                                        <div className="h-4 bg-slate-100 dark:bg-slate-800/50 rounded w-full"></div>
-                                        <div className="h-4 bg-slate-100 dark:bg-slate-800/50 rounded w-3/4"></div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         {/* Final Consent Footer */}
@@ -206,6 +183,7 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
                         </div>
 
                     </div>
+                    )}
                 </div>
             </div>
         </Modal>

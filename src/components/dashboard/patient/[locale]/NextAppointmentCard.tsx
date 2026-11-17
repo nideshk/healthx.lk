@@ -1,29 +1,43 @@
+"use client";
+
 import Link from "next/link";
 import { Calendar, Clock, Stethoscope } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { formatDate, formatTime, formatTimeLeft } from "@/utils/formatters";
-import { getLocaleFromCookie } from "@/utils/getLocale";
+import {
+  resolveNextAppointmentJoin,
+  type JoinableAppointment,
+} from "@/lib/meetings/joinLink";
 
-export async function NextAppointmentCard({ appt }: any) {
+export function NextAppointmentCard({
+  appt,
+  appointments,
+}: {
+  appt?: JoinableAppointment | null;
+  appointments?: readonly JoinableAppointment[] | null;
+}) {
   const t = useTranslations("nextAppointment");
+  const locale = useLocale() as "en" | "si";
+  const resolved = resolveNextAppointmentJoin({ appt, appointments });
+  if (!resolved) return null;
 
-  const start = new Date(appt.starts_at);
-  const locale = await getLocaleFromCookie();
-  const timeLeft = formatTimeLeft(appt.starts_at, locale);
+  const { appointment, joinPath } = resolved;
+  const start = new Date(appointment.starts_at);
+  const timeLeft = formatTimeLeft(appointment.starts_at, locale);
   const isLive = timeLeft === "now";
 
   return (
     <div className="mt-4 p-4 rounded-2xl bg-white/80 backdrop-blur ring-1 ring-black/5 shadow-sm">
       <div className="flex items-start gap-3">
-        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
-          <Stethoscope className="w-6 h-6 text-blue-700" />
+        <div className="w-12 h-12 rounded-xl bg-cx-tint flex items-center justify-center">
+          <Stethoscope className="w-6 h-6 text-cx-deep" />
         </div>
 
         <div className="flex-1">
           <p className="text-base font-semibold text-gray-900">
-            {appt.practitioner?.full_name || t("defaultPractitioner")}
+            {appointment.practitioner?.full_name || t("defaultPractitioner")}
           </p>
-          <p className="text-sm text-gray-600">{appt.appointment_type?.name}</p>
+          <p className="text-sm text-gray-600">{appointment.appointment_type?.name}</p>
         </div>
       </div>
 
@@ -43,16 +57,16 @@ export async function NextAppointmentCard({ appt }: any) {
           className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
             isLive
               ? "bg-green-600 text-white animate-pulse"
-              : "bg-blue-50 text-blue-700"
+              : "bg-cx-tint text-cx-deep"
           }`}
         >
           {isLive ? t("live") : t("startsIn", { time: timeLeft })}
         </span>
       </div>
 
-      {isLive && (
+      {isLive && joinPath && (
         <Link
-          href={`/appointment/meeting?room=${appt.telehealth_url}`}
+          href={joinPath}
           className="mt-4 block w-full text-center rounded-xl bg-green-600 py-2 text-sm font-semibold text-white hover:bg-green-700 transition"
         >
           {t("join")}

@@ -30,7 +30,7 @@ export default function HowToFAQ() {
                 return (
                     <section key={sectionKey} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            <span className="h-1 w-8 bg-blue-600 rounded-full" />
+                            <span className="h-1 w-8 bg-cx-primary rounded-full" />
                             {t(`${sectionKey}.title`)}
                         </h2>
 
@@ -42,18 +42,18 @@ export default function HowToFAQ() {
                                 return (
                                     <div
                                         key={itemId}
-                                        className={`border transition-all duration-200 rounded-2xl overflow-hidden ${isOpen ? "border-blue-200 shadow-sm bg-blue-50/30" : "border-slate-200 bg-white hover:border-slate-300"
+                                        className={`border transition-all duration-200 rounded-2xl overflow-hidden ${isOpen ? "border-cx-border shadow-sm bg-cx-tint/30" : "border-slate-200 bg-white hover:border-slate-300"
                                             }`}
                                     >
                                         <button
                                             onClick={() => toggleAccordion(itemId)}
                                             className="w-full flex items-center justify-between p-5 text-left transition-colors"
                                         >
-                                            <span className={`font-medium pr-4 ${isOpen ? "text-blue-700" : "text-slate-800"}`}>
+                                            <span className={`font-medium pr-4 ${isOpen ? "text-cx-primary" : "text-slate-800"}`}>
                                                 {item.q}
                                             </span>
                                             <ChevronDown
-                                                className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180 text-blue-600" : ""
+                                                className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180 text-cx-primary" : ""
                                                     }`}
                                             />
                                         </button>
@@ -63,7 +63,7 @@ export default function HowToFAQ() {
                                                 }`}
                                         >
                                             <div className="overflow-hidden">
-                                                <div className="p-5 pt-0 text-slate-600 leading-relaxed border-t border-blue-100/50 mt-1">
+                                                <div className="p-5 pt-0 text-slate-600 leading-relaxed border-t border-cx-border mt-1">
                                                     {item.a}
                                                 </div>
                                             </div>

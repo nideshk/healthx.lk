@@ -1,10 +1,10 @@
-import React from 'react'
+import { Suspense } from "react";
 import SignupForm from "@/components/form/SignupForm";
 
-function page() {
+export default function Page() {
   return (
-    <SignupForm></SignupForm>
-)
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
+  );
 }
-
-export default page

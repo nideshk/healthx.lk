@@ -5,6 +5,148 @@ import { requireUser } from "@/lib/authGuard";
 import { getAuditContext } from "@/lib/audit/getAuditContext";
 import { auditLog } from "@/lib/audit/auditLog";
 
+const AUTHENTICATED_PRACTITIONER_COLUMNS = `
+  id,
+  slug,
+  gender,
+  license_number,
+  contact_number,
+  contact_email,
+  full_name,
+  first_name,
+  last_name,
+  profile_bio,
+  specialization,
+  qualification,
+  languages,
+  experience_years,
+  profile_picture_url,
+  available_services,
+  fees
+`;
+
+const PUBLIC_PRACTITIONER_COLUMNS = `
+  id,
+  slug,
+  full_name,
+  specialization,
+  profile_bio,
+  qualification,
+  languages,
+  experience_years,
+  profile_picture_url,
+  fees
+`;
+
+const APPOINTMENT_TYPE_COLUMNS = `
+  id,
+  name,
+  duration_mins,
+  max_attendee,
+  platform_fee,
+  extra_fee_per_attendee
+`;
+
+const AVAILABILITY_COLUMNS = `
+  id,
+  practitioner_id,
+  starts_at,
+  ends_at,
+  timezone,
+  added_by
+`;
+
+const PRIVATE_CACHE = {
+  "Cache-Control": "private, no-store",
+  Vary: "Authorization",
+};
+
+const PUBLIC_CACHE = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+  Vary: "Authorization",
+};
+
+type FeeConfig = Record<string, any>;
+
+function mapAppointmentTypes(
+  feeConfig: FeeConfig,
+  appointmentTypeMap: Record<string, any>
+) {
+  return Object.entries<any>(feeConfig).map(([appointment_type_id, f]) => {
+    const typeMeta = appointmentTypeMap[appointment_type_id];
+
+    return {
+      id: appointment_type_id,
+      name: typeMeta?.name ?? f.type,
+      fee: f.fee,
+      platform_fee: typeMeta?.platform_fee ?? null,
+      duration_mins: typeMeta?.duration_mins ?? f.duration_mins,
+      max_attendees: typeMeta?.max_attendee ?? f.max_attendees,
+      extra_fee_per_attendee:
+        typeMeta?.extra_fee_per_attendee ?? f.extra_fee_per_attendee ?? 0,
+    };
+  });
+}
+
+async function fetchPublicPractitioner(id: string) {
+  const [practitionerResult, typesResult] = await Promise.all([
+    supabaseClient
+      .from("practitioners")
+      .select(PUBLIC_PRACTITIONER_COLUMNS)
+      .eq("id", id)
+      .maybeSingle(),
+    supabaseClient
+      .from("appointment_type")
+      .select(APPOINTMENT_TYPE_COLUMNS)
+      .eq("is_active", true)
+      .is("deleted_at", null),
+  ]);
+
+  if (practitionerResult.error || !practitionerResult.data) {
+    return NextResponse.json(
+      { error: "Practitioner not found" },
+      { status: 404 }
+    );
+  }
+
+  if (typesResult.error) {
+    console.error("Failed to load appointment types:", typesResult.error);
+  }
+
+  const practitioner = practitionerResult.data;
+  const feeConfig =
+    practitioner.fees && typeof practitioner.fees === "object"
+      ? practitioner.fees
+      : {};
+  const appointmentTypeMap = (typesResult.data || []).reduce(
+    (acc, at) => {
+      acc[at.id] = at;
+      return acc;
+    },
+    {} as Record<string, any>
+  );
+
+  return NextResponse.json(
+    {
+      success: true,
+      practitioner: {
+        id: practitioner.id,
+        slug: practitioner.slug ?? null,
+        full_name: practitioner.full_name,
+        specialization: practitioner.specialization,
+        profile_bio: practitioner.profile_bio,
+        qualification: practitioner.qualification,
+        languages: practitioner.languages ?? [],
+        experience_years: practitioner.experience_years,
+        profile_image: practitioner.profile_picture_url,
+        profile_picture_url: practitioner.profile_picture_url,
+        appointment_types: mapAppointmentTypes(feeConfig, appointmentTypeMap),
+      },
+    },
+    { headers: PUBLIC_CACHE }
+  );
+}
+
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -21,12 +163,17 @@ export async function GET(
 
     const { user } = await requireUser(req);
 
+    // Anonymous callers never enter the admin/self payload below.
+    if (!user) {
+      return fetchPublicPractitioner(id);
+    }
+
     // ---------------------------
     // 1️⃣ Fetch Practitioner
     // ---------------------------
     const { data: practitioner, error: dbError } = await supabaseClient
       .from("practitioners")
-      .select("*")
+      .select(AUTHENTICATED_PRACTITIONER_COLUMNS)
       .eq("id", id)
       .single();
 
@@ -52,14 +199,7 @@ export async function GET(
     if (appointmentTypeIds.length > 0) {
       const { data: appointmentTypes, error } = await supabaseClient
         .from("appointment_type")
-        .select(`
-          id,
-          name,
-          duration_mins,
-          max_attendee,
-          platform_fee,
-          extra_fee_per_attendee
-        `)
+        .select(APPOINTMENT_TYPE_COLUMNS)
         .in("id", appointmentTypeIds)
         .eq("is_active", true)
         .is("deleted_at", null);
@@ -77,24 +217,7 @@ export async function GET(
       );
     }
 
-    const appointmentTypes = Object.entries<any>(feeConfig).map(
-      ([appointment_type_id, f]) => {
-        const typeMeta = appointmentTypeMap[appointment_type_id];
-
-        return {
-          id: appointment_type_id,
-          name: typeMeta?.name ?? f.type,
-          fee: f.fee, // ✅ includes platform fee
-          platform_fee: typeMeta?.platform_fee ?? null,
-          duration_mins: typeMeta?.duration_mins ?? f.duration_mins,
-          max_attendees: typeMeta?.max_attendee ?? f.max_attendees,
-          extra_fee_per_attendee:
-            typeMeta?.extra_fee_per_attendee ??
-            f.extra_fee_per_attendee ??
-            0,
-        };
-      }
-    );
+    const appointmentTypes = mapAppointmentTypes(feeConfig, appointmentTypeMap);
 
     // ---------------------------
     // 3️⃣ Admin-only Bank Details
@@ -135,7 +258,7 @@ export async function GET(
           appointment_types: appointmentTypes,
           languages: practitioner.languages ?? []
         },
-      });
+      }, { headers: PRIVATE_CACHE });
     }
 
     // ---------------------------
@@ -150,7 +273,7 @@ export async function GET(
 
     const { data: available, error: availableError } = await supabaseClient
       .from("practitioner_availability")
-      .select("*")
+      .select(AVAILABILITY_COLUMNS)
       .eq("practitioner_id", id);
 
     if (availableError) {
@@ -198,6 +321,7 @@ export async function GET(
         profile_bio: practitioner.profile_bio,
         specialization: practitioner.specialization,
         qualifications: practitioner.qualification,
+        slug: practitioner.slug ?? null,
         languages: practitioner.languages ?? [],
         experience_years: practitioner.experience_years,
         profile_image: practitioner.profile_picture_url,
@@ -207,7 +331,7 @@ export async function GET(
       },
       bank_details: bankDetails,
       requested_by: user?.auth_user_id,
-    });
+    }, { headers: PRIVATE_CACHE });
   } catch (error: any) {
     console.error("❌ Practitioner fetch failed:", error);
     return NextResponse.json(

@@ -84,7 +84,7 @@ export function ReviewModal({ appointment, onClose }: any) {
                         className="
               mt-4 w-full rounded-xl border border-gray-200
               px-3 py-2 text-sm
-              focus:outline-none focus:ring-2 focus:ring-blue-500
+              focus:outline-none focus:ring-2 focus:ring-cx-primary
             "
                         rows={3}
                         placeholder="Optional comment (avoid personal or medical details)"
@@ -105,7 +105,7 @@ export function ReviewModal({ appointment, onClose }: any) {
                             disabled={loading}
                             className="
                 px-5 py-2 text-sm rounded-lg text-white
-                bg-blue-600 hover:bg-blue-700
+                bg-cx-primary hover:bg-cx-deep
                 disabled:opacity-50
               "
                         >

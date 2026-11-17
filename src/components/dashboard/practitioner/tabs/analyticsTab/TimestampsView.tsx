@@ -38,7 +38,7 @@ const TimestampsView: React.FC<Props> = ({
     {
       header: "Status",
       render: (r) => (
-        <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-100">
+        <span className="bg-cx-tint text-cx-primary px-2 py-0.5 rounded text-[10px] font-bold border border-cx-tint">
           {r.status}
         </span>
       ),
@@ -89,7 +89,7 @@ const TimestampsView: React.FC<Props> = ({
             type="date"
             value={fromDate}
             onChange={(e) => onChangeFromDate(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-cx-primary outline-none transition-all"
           />
         </div>
         <div className="space-y-1">
@@ -98,7 +98,7 @@ const TimestampsView: React.FC<Props> = ({
             type="date"
             value={toDate}
             onChange={(e) => onChangeToDate(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-cx-primary outline-none transition-all"
           />
         </div>
       </div>

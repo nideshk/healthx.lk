@@ -19,8 +19,8 @@ export default function NextAppointmentCard({ appt }: { appt: Appointment }) {
   return (
     <div>
       <div className="flex items-start gap-3 mb-3">
-        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-          <Stethoscope className="w-6 h-6 text-blue-700" />
+        <div className="w-12 h-12 bg-cx-tint rounded-xl flex items-center justify-center">
+          <Stethoscope className="w-6 h-6 text-cx-primary" />
         </div>
 
         <div>
@@ -39,7 +39,7 @@ export default function NextAppointmentCard({ appt }: { appt: Appointment }) {
           disabled={!joinEnabled}
           className={`flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer
             ${joinEnabled
-              ? "bg-blue-600 text-white hover:bg-blue-700"
+              ? "bg-cx-primary text-white hover:bg-cx-deep"
               : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
         >
           Join

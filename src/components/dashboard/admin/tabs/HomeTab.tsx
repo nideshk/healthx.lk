@@ -354,7 +354,7 @@ const HomeTab: React.FC = () => {
                   key={c.id}
                   className={`w-full text-left px-5 py-3 transition-colors flex items-center justify-between group ${
                     selectedClinician?.id === c.id
-                      ? "bg-blue-50"
+                      ? "bg-cx-tint"
                       : "hover:bg-slate-50"
                   }`}
                   onClick={() => handleSelectClinician(c)}
@@ -363,8 +363,8 @@ const HomeTab: React.FC = () => {
                     <div
                       className={`p-2 rounded-full ${
                         selectedClinician?.id === c.id
-                          ? "bg-blue-100 text-blue-600"
-                          : "bg-slate-100 text-slate-400 group-hover:text-blue-500 transition-colors"
+                          ? "bg-cx-tint text-cx-primary"
+                          : "bg-slate-100 text-slate-400 group-hover:text-cx-primary transition-colors"
                       }`}
                     >
                       <User size={18} />
@@ -380,7 +380,7 @@ const HomeTab: React.FC = () => {
                     </div>
                   </div>
                   {selectedClinician?.id === c.id && (
-                    <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider bg-blue-100 px-2 py-1 rounded">
+                    <div className="text-[10px] font-bold text-cx-primary uppercase tracking-wider bg-cx-tint px-2 py-1 rounded">
                       Selected
                     </div>
                   )}
@@ -428,7 +428,7 @@ const HomeTab: React.FC = () => {
         {selectedClinician && (
           <>
             <div className="mb-4 flex items-center gap-3 px-1">
-              <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+              <div className="h-2 w-2 rounded-full bg-cx-primary animate-pulse" />
               <h3 className="text-sm font-bold text-slate-800">
                 Viewing Schedule: {selectedClinician.name}
               </h3>

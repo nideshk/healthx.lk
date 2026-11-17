@@ -135,7 +135,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
               type="button"
               onClick={() => setViewMode("weekly")}
               className={`rounded-full px-3 py-1 border text-xs ${viewMode === "weekly"
-                  ? "bg-blue-600 text-white border-blue-600"
+                  ? "bg-cx-primary text-white border-cx-primary"
                   : "bg-white text-slate-600 border-slate-200"
                 }`}
             >
@@ -145,7 +145,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
               type="button"
               onClick={() => setViewMode("daily")}
               className={`rounded-full px-3 py-1 border text-xs ${viewMode === "daily"
-                  ? "bg-blue-600 text-white border-blue-600"
+                  ? "bg-cx-primary text-white border-cx-primary"
                   : "bg-white text-slate-600 border-slate-200"
                 }`}
             >
@@ -236,7 +236,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                           const isCompleted = appt.status === "completed";
                           const colorClasses = isCompleted
                             ? "bg-slate-200 text-slate-600"
-                            : "bg-blue-500 text-white";
+                            : "bg-cx-primary text-white";
 
                           return (
                             <button
@@ -447,7 +447,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
                     appointment.patient || "",
                   )
                 }
-                className="text-blue-600 font-semibold hover:underline text-left"
+                className="text-cx-primary font-semibold hover:underline text-left"
               >
                 {appointment.patient}
               </button>

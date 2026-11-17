@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isAdminRole, requireUser } from "@/lib/authGuard";
 
 export async function POST(req: Request) {
   try {
+    // This route creates an auth user and a practitioner row with the
+    // service role. The public signup form does not call it; it posts to
+    // /api/auth/practitioner-application, which issues an upload key.
+    const { authorized, role } = await requireUser(req);
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!isAdminRole(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     const {

@@ -58,7 +58,7 @@ const ClinicianCard: React.FC<ClinicianCardProps> = ({
       <div className="flex justify-between items-start">
         <div>
           <div
-            className={`text-sm font-semibold text-blue-600 hover:underline cursor-pointer ${loading ? "pointer-events-none opacity-60" : ""
+            className={`text-sm font-semibold text-cx-primary hover:underline cursor-pointer ${loading ? "pointer-events-none opacity-60" : ""
               }`}
             onClick={handleViewProfile}
           >

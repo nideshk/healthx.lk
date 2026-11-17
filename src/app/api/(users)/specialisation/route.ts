@@ -1,15 +1,34 @@
 import { supabaseClient } from "@/lib/supabaseClient";
+import { isAdminRole, requireUser } from "@/lib/authGuard";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const includeInactive = searchParams.get("includeInactive") === "true";
+    let includeInactive = searchParams.get("includeInactive") === "true";
+
+    // Inactive specialties are an admin catalog. Public callers, including
+    // ones that pass the flag, only receive active services.
+    if (includeInactive) {
+      const { authorized, role } = await requireUser(req);
+      if (!authorized || !isAdminRole(role)) {
+        includeInactive = false;
+      }
+    }
 
     // 🧩 Build Supabase query
     let query = supabaseClient
       .from("services")
-      .select("*")
+      .select(`
+        id,
+        name,
+        slug,
+        icon,
+        description,
+        sin_description,
+        sin_slug,
+        active
+      `)
       .order("created_at", { ascending: false });
 
     // Optionally exclude inactive
@@ -24,11 +43,25 @@ export async function GET(req: Request) {
         { status: 500 }
       );
     }
-    return NextResponse.json({
-      success: true,
-      count: data?.length || 0,
-      services: data,
-    });
+    // Public specialty catalog changes rarely. Inactive-inclusive admin
+    // reads stay uncached. Availability is not part of this payload.
+    const cacheControl =
+      includeInactive
+        ? "private, no-store"
+        : "public, max-age=120, s-maxage=300, stale-while-revalidate=900";
+
+    return NextResponse.json(
+      {
+        success: true,
+        count: data?.length || 0,
+        services: data,
+      },
+      {
+        headers: {
+          "Cache-Control": cacheControl,
+        },
+      }
+    );
   } catch (err: any) {
     console.error("❌ Unexpected Server Error:", err);
     return NextResponse.json(

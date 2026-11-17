@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { unauthorizedCronResponse } from "@/lib/cronAuth";
 
 export async function GET(reques: NextRequest) {
+    const denied = unauthorizedCronResponse(reques);
+    if (denied) return denied;
 
     try {
         const expiryTime = new Date(Date.now() - 15 * 60 * 1000).toISOString(); // 15 minutes older

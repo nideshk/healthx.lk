@@ -103,7 +103,7 @@ export default function Dropdown({
               className={cn(
                 "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700",
                 opt.value === value &&
-                  "bg-[#018BB5] text-white hover:bg-[#017A9F]"
+                  "bg-cx-primary text-white hover:bg-cx-deep"
               )}
             >
               {opt.label}

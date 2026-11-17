@@ -33,7 +33,7 @@ export default function Button({
 
   // Variant styles for light theme
   const lightVariantStyles: Record<string, string> = {
-    primary: "bg-[#018BB5] text-white hover:bg-[#017A9F] focus:ring-[#018BB5]",
+    primary: "bg-cx-primary text-white hover:bg-cx-deep focus:ring-cx-primary",
     secondary: "bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-400",
     outline:
       "border border-gray-300 text-gray-900 hover:bg-gray-100 focus:ring-gray-400",
@@ -42,7 +42,7 @@ export default function Button({
 
   // Variant styles for dark theme
   const darkVariantStyles: Record<string, string> = {
-    primary: "bg-[#018BB5] text-white hover:bg-[#017A9F] focus:ring-[#018BB5]",
+    primary: "bg-cx-primary text-white hover:bg-cx-deep focus:ring-cx-primary",
     secondary:
       "bg-gray-700 text-gray-100 hover:bg-gray-600 focus:ring-gray-500",
     outline:

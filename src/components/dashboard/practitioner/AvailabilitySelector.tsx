@@ -36,7 +36,7 @@ export default function AvailabilitySelector({
             {/* Header - Matches the card style of the list */}
             <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex items-center justify-between backdrop-blur-sm">
                 <div className="flex items-center gap-3">
-                    <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm text-teal-600">
+                    <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm text-cx-primary">
                         <Calendar className="w-4 h-4" />
                     </div>
                     <div>
@@ -123,7 +123,7 @@ export default function AvailabilitySelector({
                 w-full sm:w-auto ml-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200
                 ${!isComplete || isTimeInvalid
                                     ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                                    : "bg-teal-600 text-white hover:bg-teal-700 active:scale-[0.98] shadow-md shadow-teal-100"
+                                    : "bg-cx-primary text-white hover:bg-cx-deep active:scale-[0.98] shadow-md shadow-cx-tint"
                                 }
               `}
                         >

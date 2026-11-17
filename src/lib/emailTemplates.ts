@@ -1,3 +1,5 @@
+import { resolveJoinHref } from "./meetings/joinLink";
+
 type BaseEmailParams = {
   recipientName?: string;
   eventType?: string;
@@ -113,7 +115,11 @@ export function generateAppointmentReminderEmail({
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hello,';
   const startTime = new Date(appointment.startsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
 
-  const finalActionUrl = actionUrl || appointment.meetingUrl;
+  const roomHref = resolveJoinHref({
+    roomKey: appointment.roomKey,
+    meetingUrl: appointment.meetingUrl,
+  });
+  const finalActionUrl = actionUrl || roomHref;
   const finalActionText = actionText || 'Join Meeting';
 
   return `
@@ -353,7 +359,10 @@ export function generatePractitionerConfirmationEmail({
   const greeting = `Dear Dr. ${practitionerName},`;
   const startTime = new Date(appointment.startsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
   const endTime = new Date(appointment.endsAt).toLocaleString("en-LK", { timeZone: "Asia/Colombo" });
-  const meetingUrl = appointment.meetingUrl || `https://www.clinecxa.lk/appointment/meeting?room=${appointment.roomKey}`;
+  const meetingUrl = resolveJoinHref({
+    roomKey: appointment.roomKey,
+    meetingUrl: appointment.meetingUrl,
+  });
 
   return `
 <!DOCTYPE html>

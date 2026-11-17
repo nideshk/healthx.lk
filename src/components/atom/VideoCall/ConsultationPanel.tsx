@@ -720,7 +720,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
         <button
           onClick={() => setActiveTab("consultation")}
           className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium transition-colors ${activeTab === "consultation"
-            ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50/50"
+            ? "text-cx-primary border-b-2 border-cx-primary bg-cx-tint/50"
             : "text-black hover:text-gray-700 hover:bg-gray-50"
             }`}
         >
@@ -729,7 +729,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
         <button
           onClick={() => setActiveTab("prescription")}
           className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium transition-colors ${activeTab === "prescription"
-            ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50/50"
+            ? "text-cx-primary border-b-2 border-cx-primary bg-cx-tint/50"
             : "text-black hover:text-gray-700 hover:bg-gray-50"
             }`}
         >
@@ -838,7 +838,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                         href={att.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                        className="flex items-center gap-2 text-sm text-cx-primary hover:underline"
                       >
                         <FileText size={14} />
                         {att.name || `Attachment ${i + 1}`}
@@ -871,7 +871,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                           if (diagSearchResults.length > 0) setShowDiagDropdown(true);
                         }}
                         placeholder="Search diagnosis by code or name..."
-                        className="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                        className="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary text-black"
                       />
                       {isSearchingDiag && (
                         <Loader2
@@ -890,7 +890,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                             <li
                               key={result.id}
                               onClick={() => selectDiagnosis(result)}
-                              className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-0"
+                              className="px-4 py-2 hover:bg-cx-tint cursor-pointer border-b last:border-0"
                             >
                               <div className="text-sm font-medium text-black">
                                 {result.code} - {result.name}
@@ -919,7 +919,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                       onChange={(e) => setDiagCode(e.target.value)}
                       disabled={isLocked}
                       placeholder="e.g. J06.9"
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black text-black"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black text-black"
                     />
                   </div>
                   <div>
@@ -932,7 +932,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                       onChange={(e) => setDiagName(e.target.value)}
                       disabled={isLocked}
                       placeholder="Diagnosis name"
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black text-black"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black text-black"
                     />
                   </div>
                 </div>
@@ -946,7 +946,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                     disabled={isLocked}
                     rows={2}
                     placeholder="Optional description"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black text-black"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black text-black"
                   />
                 </div>
                 {!isLocked && (diagCode || diagName) && (
@@ -977,7 +977,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                     checked={followUpNeeded}
                     onChange={(e) => setFollowUpNeeded(e.target.checked)}
                     disabled={isLocked}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-cx-primary focus:ring-cx-primary"
                   />
                   Follow-up needed
                 </label>
@@ -997,7 +997,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                           value={followUpDate || ""}
                           onChange={(e) => setFollowUpDate(e.target.value)}
                           disabled={isLocked}
-                          className="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                          className="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black"
                         />
                       </div>
                     </div>
@@ -1011,7 +1011,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                         disabled={isLocked}
                         rows={2}
                         placeholder="Notes for the follow-up..."
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black"
                       />
                     </div>
                   </>
@@ -1029,7 +1029,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                   disabled={isLocked}
                   rows={4}
                   placeholder="Clinical observations, findings, assessment..."
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black text-black"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black text-black"
                 />
               </section>
 
@@ -1038,7 +1038,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                 <button
                   onClick={saveSession}
                   disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-black font-medium rounded-lg py-2.5 text-sm transition-colors disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 bg-cx-primary hover:bg-cx-deep text-black font-medium rounded-lg py-2.5 text-sm transition-colors disabled:opacity-50"
                 >
                   {saving ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -1063,7 +1063,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                   {!isLocked && (
                     <button
                       onClick={addMedicine}
-                      className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                      className="flex items-center gap-1 text-xs font-medium text-cx-primary hover:text-cx-primary transition-colors"
                     >
                       <Plus size={14} /> Add
                     </button>
@@ -1103,7 +1103,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                         }
                         disabled={isLocked}
                         placeholder="e.g. Amoxicillin"
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black text-black"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black text-black"
                       />
                     </div>
 
@@ -1120,7 +1120,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                           }
                           disabled={isLocked}
                           placeholder="500mg"
-                          className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                          className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black"
                         />
                       </div>
                       <div>
@@ -1133,7 +1133,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                             updateMedicine(idx, "route", e.target.value)
                           }
                           disabled={isLocked}
-                          className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                          className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black"
                         >
                           {ROUTE_OPTIONS.map((r) => (
                             <option key={r} value={r}>
@@ -1154,7 +1154,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                           }
                           disabled={isLocked}
                           placeholder="7 days"
-                          className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                          className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black"
                         />
                       </div>
                     </div>
@@ -1171,7 +1171,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                         }
                         disabled={isLocked}
                         placeholder="e.g. After meals, twice daily"
-                        className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                        className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black"
                       />
                     </div>
                   </div>
@@ -1189,7 +1189,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                   disabled={isLocked}
                   rows={3}
                   placeholder="Allergies, warnings, additional instructions..."
-                  className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-black"
+                  className="w-full text-black rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-cx-primary disabled:bg-gray-100 disabled:text-black"
                 />
               </section>
 
@@ -1231,7 +1231,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                   <button
                     onClick={previewPrescription}
                     disabled={saving || pdfPreviewLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold rounded-xl py-3 text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 bg-cx-tint hover:bg-cx-tint text-cx-primary border border-cx-border font-semibold rounded-xl py-3 text-sm transition-all active:scale-[0.98] disabled:opacity-50"
                   >
                     {pdfPreviewLoading ? (
                       <Loader2 size={16} className="animate-spin" />
@@ -1296,10 +1296,10 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white w-[92vw] max-w-5xl h-[90vh] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center justify-between px-5 py-3 border-b bg-gradient-to-r from-cx-tint to-cx-tint">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <FileText size={16} className="text-blue-600" />
+                <div className="w-8 h-8 rounded-lg bg-cx-tint flex items-center justify-center">
+                  <FileText size={16} className="text-cx-primary" />
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-gray-900">{pdfPreviewName || "Prescription Preview"}</div>
@@ -1311,7 +1311,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                   href={pdfPreviewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-cx-primary hover:text-cx-primary font-medium px-3 py-1.5 rounded-lg hover:bg-cx-tint transition-colors"
                 >
                   <ExternalLink size={13} />
                   Open in new tab
@@ -1330,7 +1330,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
             {pdfPreviewLoading && (
               <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80">
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="animate-spin text-blue-600" size={36} />
+                  <Loader2 className="animate-spin text-cx-primary" size={36} />
                   <span className="text-sm text-gray-500 font-medium">Generating PDF preview…</span>
                 </div>
               </div>
@@ -1352,7 +1352,7 @@ export default function ConsultationPanel({ appointmentId, readOnly = false }: P
                     href={pdfPreviewUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                    className="flex items-center gap-2 bg-cx-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cx-deep transition-colors"
                   >
                     <ExternalLink size={14} />
                     Open PDF

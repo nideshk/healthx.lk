@@ -97,7 +97,7 @@
 
 <h2>XII. CANCELLATIONS, LATE ARRIVAL & REFUNDS</h2>
 
-<p>23. Cancellation Window: Appointments must be cancelled at least 12 hours before the scheduled time for no fee. Cancellations within 12 hours may incur a cancellation fee.</p>
+<p>23. Cancellation Window: A full refund is available if the appointment is cancelled more than 24 hours before the scheduled time. A 50% refund is available if it is cancelled between 24 hours and 5 hours before. No refund is available if it is cancelled 5 hours or less before the appointment.</p>
 
 <p>24. Late Arrival: A grace period of 5 minutes is allowed. Upon the lapse of 5 minutes, the appointment will be considered akin to being attended by the clinician and will be charged in full.</p>
 

@@ -204,7 +204,7 @@ const PatientDetails: React.FC<PatientDetailViewProps> = ({
 
       {/* Patient Header */}
       <Card>
-        <CardBody className="flex flex-col md:flex-row md:items-center md:justify-between bg-blue-50 rounded-xl">
+        <CardBody className="flex flex-col md:flex-row md:items-center md:justify-between bg-cx-tint rounded-xl">
           <div className="space-y-1">
             <div className="text-lg font-semibold text-slate-900">
               {isEditing ? formData.full_name : (patient.full_name || (patient as any).name)}
@@ -435,7 +435,7 @@ const InfoRow: React.FC<{
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange?.(e.target.value)}
-        className="border border-blue-300 rounded-lg px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-cx-primary rounded-lg px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-cx-primary"
       />
     ) : (
       <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 text-slate-800">
@@ -722,7 +722,7 @@ const AppointmentRow: React.FC<{
       <CardBody className="text-xs space-y-3">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <div className="font-bold text-md text-blue-600">
+            <div className="font-bold text-md text-cx-primary">
               Dr. {appointment.doctorName}
             </div>
             <div className="text-slate-600">

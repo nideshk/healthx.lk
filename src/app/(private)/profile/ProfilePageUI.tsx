@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { useFormatSpecialties } from "@/lib/specialtyLabels";
 
 /* -----------------------------
    S3 Upload Helper
@@ -58,6 +59,7 @@ async function uploadAvatarToS3(file: File) {
 }
 export default function UnifiedProfileUI() {
     const { user, refreshUser } = useAuth();
+    const formatSpecialties = useFormatSpecialties();
 
     const [userData, setUserData] = useState<any>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -324,7 +326,7 @@ export default function UnifiedProfileUI() {
 
                                 {isPractitioner ? (
                                     <>
-                                        <FormInput label="Specialty" value={user.practitioner.specialization.join(", ")} isEditing={false} onChange={(v: string) => setEditForm({ ...editForm, specialty: v })} icon={<Activity size={16} />} />
+                                        <FormInput label="Specialty" value={formatSpecialties(user.practitioner.specialization)} isEditing={false} onChange={(v: string) => setEditForm({ ...editForm, specialty: v })} icon={<Activity size={16} />} />
                                     </>
                                 ) : (
                                     <>

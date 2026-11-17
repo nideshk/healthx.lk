@@ -250,7 +250,7 @@ const AvailabilityTab: React.FC<AvailabilityTabProps> = ({
   ${!isCurrentMonth ? "text-slate-300" : ""}
 
   ${isSelected
-              ? "bg-blue-600 text-white font-semibold"
+              ? "bg-cx-primary text-white font-semibold"
               : leave?.leaveType === "full_day"
                 ? "bg-red-100 text-red-700 font-semibold"
                 : leave?.leaveType === "first_half"

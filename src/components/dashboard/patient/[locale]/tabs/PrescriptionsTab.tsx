@@ -87,23 +87,23 @@ export default function PrescriptionsTab() {
     <div className="space-y-6">
       <div className="grid gap-4">
         {prescriptions.map((px) => (
-          <Card key={px.id} className="group hover:shadow-md transition-all duration-300 border-l-4 border-l-teal-500">
+          <Card key={px.id} className="group hover:shadow-md transition-all duration-300 border-l-4 border-l-cx-primary">
             <CardBody className="p-0">
               <div className="flex flex-col md:flex-row md:items-center justify-between p-6 gap-6">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-teal-50 rounded-2xl text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition-colors duration-300 flex-shrink-0">
+                  <div className="p-3 bg-cx-tint rounded-2xl text-cx-primary group-hover:bg-cx-deep group-hover:text-white transition-colors duration-300 flex-shrink-0">
                     <FileText size={24} />
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                       <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
+                       <span className="text-[10px] font-black uppercase tracking-wider text-cx-primary bg-cx-tint px-2 py-0.5 rounded-full border border-cx-tint">
                         {px.status}
                       </span>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                         ID: {px.id.split('-')[0]}
                       </p>
                     </div>
-                    <h4 className="text-lg font-black text-slate-900 group-hover:text-teal-700 transition-colors">
+                    <h4 className="text-lg font-black text-slate-900 group-hover:text-cx-deep transition-colors">
                       {t("practitioner")}: {px.practitioner.name}
                     </h4>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 font-medium">
@@ -121,7 +121,7 @@ export default function PrescriptionsTab() {
                       href={px.pdf_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-teal-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
+                      className="flex items-center gap-2 px-6 py-3 bg-cx-primary hover:bg-cx-deep text-white rounded-2xl font-bold text-sm shadow-lg shadow-cx-primary/20 transition-all active:scale-[0.98]"
                     >
                       <ExternalLink size={16} />
                       {t("viewPdf")}

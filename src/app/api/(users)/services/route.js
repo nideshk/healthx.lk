@@ -1,7 +1,10 @@
 // app/api/services/route.js
 
+import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authGuard";
 import { supabaseClient } from "@/lib/supabaseClient";
+import { getAuditContext } from "@/lib/audit/getAuditContext";
+import { auditLog } from "@/lib/audit/auditLog";
 
 export async function GET(req) {
   try {
@@ -20,7 +23,7 @@ export async function GET(req) {
       return Response.json({ error: error.message }, { status: 500 });
     }
 
-    const cnx = getAuditContext(_, user);
+    const cnx = getAuditContext(req, user);
     await auditLog({
       ...cnx,
       action: "VIEWED",

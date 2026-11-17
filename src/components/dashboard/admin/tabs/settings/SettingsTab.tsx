@@ -26,7 +26,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ email }) => {
   return (
     <div className="space-y-4 relative">
       {/* HEADER */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-md">
+      <div className="bg-gradient-to-r from-cx-primary to-cx-deep rounded-xl p-6 text-white shadow-md">
         <div className="text-lg font-semibold">Settings</div>
         <div className="text-xs opacity-90">Security, account preferences, platform charges and organization details</div>
       </div>

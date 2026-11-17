@@ -33,7 +33,25 @@ interface DetailsTabProps {
     contact_number: string;
     email: string;
     languages: string[];
+    slug?: string | null;
   };
+}
+
+function languagesToText(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item).trim())
+      .filter(Boolean)
+      .join(", ");
+  }
+  return typeof value === "string" ? value : "";
+}
+
+function languagesFromText(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
@@ -66,7 +84,8 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
     gender: clinician.gender,
     contact_number: clinician.contact_number,
     email: clinician.email,
-    languages: clinician.languages,
+    languages: languagesToText(clinician.languages),
+    slug: clinician.slug ?? "",
   });
 
   /* ---------------- EFFECTS ---------------- */
@@ -114,7 +133,8 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
       gender: clinician.gender,
       contact_number: clinician.contact_number,
       email: clinician.email,
-      languages: clinician.languages,
+      languages: languagesToText(clinician.languages),
+      slug: clinician.slug ?? "",
     });
     setIsEditing(false);
     setIsSpecOpen(false);
@@ -141,7 +161,8 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
           gender: formData.gender,
           contact_number: formData.contact_number,
           contact_email: formData.email,
-          languages: formData.languages,
+          languages: languagesFromText(formData.languages),
+          slug: formData.slug,
           bank_details: {
             account_holder_name: formData.accountName,
             bank_name: formData.bankName,
@@ -241,7 +262,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
             </label>
             <div
               className={`w-full min-h-[40px] px-3 py-2 rounded-lg border flex items-center justify-between transition-colors ${isEditing
-                  ? "border-slate-300 bg-white focus-within:ring-2 focus-within:ring-teal-500"
+                  ? "border-slate-300 bg-white focus-within:ring-2 focus-within:ring-cx-primary"
                   : "border-slate-200 bg-slate-50"
                 }`}
             >
@@ -256,7 +277,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
                     return (
                       <span
                         key={slug}
-                        className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-xs font-medium"
+                        className="bg-cx-tint text-cx-deep px-2 py-1 rounded-full text-xs font-medium"
                       >
                         {spec?.name || slug}
                       </span>
@@ -286,7 +307,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
                     >
                       <input
                         type="checkbox"
-                        className="rounded accent-teal-600"
+                        className="rounded accent-cx-primary"
                         checked={formData.specialty.includes(spec.slug)}
                         onChange={() => toggleSpecialization(spec.slug)}
                       />
@@ -309,7 +330,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
             <label className="text-xs text-slate-600 font-medium">Gender</label>
             <select
               className={`w-full h-[40px] px-3 py-2 rounded-lg border transition-colors focus:outline-none ${isEditing
-                  ? "border-slate-300 bg-white focus:ring-2 focus:ring-teal-500"
+                  ? "border-slate-300 bg-white focus:ring-2 focus:ring-cx-primary"
                   : "border-slate-200 bg-slate-50"
                 }`}
               value={formData.gender}
@@ -340,11 +361,24 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
           <div className="col-span-2">
             <Input
               label="Languages (comma separated)"
-              value={Array.isArray(formData.languages) ? formData.languages.join(", ") : ""}
-              onChange={(e) => handleChange("languages", e.target.value.split(",").map(s => s.trim()).filter(s => s !== ""))}
+              value={formData.languages}
+              onChange={(e) => handleChange("languages", e.target.value)}
               disabled={!isEditing}
               placeholder="e.g. English, Sinhala, Tamil"
             />
+          </div>
+
+          <div className="col-span-2">
+            <Input
+              label="Public profile slug"
+              value={formData.slug}
+              onChange={(e) => handleChange("slug", e.target.value)}
+              disabled={!isEditing}
+              placeholder="sihara-lokuhennadige"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Used in /practitioner/… Leave blank to use the practitioner id.
+            </p>
           </div>
         </div>
       </div>
@@ -360,7 +394,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ clinician }) => {
 
         <textarea
           className={`w-full border rounded-lg p-3 text-sm focus:outline-none transition-colors ${isEditing
-              ? "border-blue-300 bg-white"
+              ? "border-cx-primary bg-white"
               : "border-slate-300 bg-slate-50"
             }`}
           rows={4}

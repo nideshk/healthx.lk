@@ -87,7 +87,7 @@ const LEAVE_TYPES: {
 }[] = [
     { label: "Full Day", value: "full_day", color: "bg-red-400", bgColor: "bg-red-50" },
     { label: "First Half", value: "first_half", color: "bg-yellow-400", bgColor: "bg-yellow-50" },
-    { label: "Second Half", value: "second_half", color: "bg-blue-400", bgColor: "bg-blue-50" },
+    { label: "Second Half", value: "second_half", color: "bg-cx-primary", bgColor: "bg-cx-tint" },
   ];
 
 const MAX_DAYS_AHEAD = 45;
@@ -194,7 +194,7 @@ const CancelLeaveModal: React.FC<CancelLeaveModalProps> = ({
             <button
               onClick={onConfirm}
               disabled={isLoading}
-              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-cx-primary hover:bg-cx-deep text-white font-medium rounded-xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isLoading ? <Loader /> : "Confirm Cancellation"}
             </button>
@@ -484,7 +484,7 @@ const Availability: React.FC = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-cx-bg py-12 px-4 sm:px-6 lg:px-8">
         {/* 1. Page Header: Context is key */}
         <div className="max-w-5xl mx-auto mb-8">
           <h1 className="text-2xl font-bold text-slate-900">Manage Availability</h1>
@@ -507,8 +507,8 @@ const Availability: React.FC = () => {
             </div>
 
             {/* Optional: Helper text or illustration could go here */}
-            <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-              <p className="text-sm text-blue-800">
+            <div className="p-4 bg-cx-tint rounded-xl border border-cx-tint">
+              <p className="text-sm text-cx-deep">
                 <strong>Tip:</strong> Adding specific time blocks helps reduce back-and-forth scheduling emails.
               </p>
             </div>
@@ -519,7 +519,7 @@ const Availability: React.FC = () => {
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm w-full">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <Calendar className="w-5 h-5 text-cx-primary" />
                   Current Schedule
                 </h2>
                 <span className="text-xs font-medium px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full">
@@ -542,7 +542,7 @@ const Availability: React.FC = () => {
                   {availabilityList.map((a) => (
                     <div
                       key={a.id}
-                      className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                      className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-cx-primary hover:shadow-md transition-all duration-200"
                     >
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-slate-800 font-medium">
@@ -582,7 +582,7 @@ const Availability: React.FC = () => {
             {(selectedStartDate || selectedEndDate) && (
               <button
                 onClick={() => { setSelectedStartDate(""); setSelectedEndDate(""); setWarning(""); setConflicts([]) }}
-                className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition"
+                className="text-xs font-bold text-cx-primary hover:bg-cx-tint px-3 py-1.5 rounded-lg border border-cx-tint transition"
               >
                 Clear Selection
               </button>
@@ -609,9 +609,9 @@ const Availability: React.FC = () => {
                   disabled={!isDateInRange(date, today, maxAllowedDate)}
                   onClick={() => handleDateClick(ds)}
                   className={`relative h-10 rounded-lg text-sm font-medium transition flex items-center justify-center
-                  ${isActive ? "bg-blue-600 text-white shadow-md" : inRange ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100"}
+                  ${isActive ? "bg-cx-primary text-white shadow-md" : inRange ? "bg-cx-tint text-cx-deep" : "hover:bg-slate-100"}
                   ${!isDateInRange(date, today, maxAllowedDate) ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}
-                  ${formatDate(today) === ds ? "border-2 border-blue-400" : ""}`}
+                  ${formatDate(today) === ds ? "border-2 border-cx-primary" : ""}`}
                 >
                   {date.getDate()}
                   <div className="absolute bottom-1 flex gap-0.5">
@@ -636,7 +636,7 @@ const Availability: React.FC = () => {
 
             <div className="flex gap-2">
               {LEAVE_TYPES.map(t => (
-                <button key={t.value} onClick={() => setLeaveType(t.value)} className={`flex-1 py-2 rounded-lg text-xs font-medium border transition ${leaveType === t.value ? `border-blue-500 text-blue-700 ${t.bgColor}` : "border-slate-200"}`}>
+                <button key={t.value} onClick={() => setLeaveType(t.value)} className={`flex-1 py-2 rounded-lg text-xs font-medium border transition ${leaveType === t.value ? `border-cx-primary text-cx-deep ${t.bgColor}` : "border-slate-200"}`}>
                   {t.label}
                 </button>
               ))}

@@ -15,6 +15,7 @@ import {
   X,
   ChevronDown,
   User,
+  LogIn,
   LogOut,
   LayoutDashboard,
   Calendar,
@@ -34,9 +35,27 @@ import Modal from "@/components/atom/Modal/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import LanguageToggle from "@/components/common/LanguageToggle";
 import CurrencyToggle from "@/components/common/CurrencyToggle";
+import { openSpecialties } from "@/lib/homeNavigation";
+
+function BrandLockup() {
+  return (
+    <Link
+      href="/"
+      className="relative block h-11 w-[7.25rem] max-w-full min-w-0 shrink overflow-hidden md:h-14 md:w-[11rem] md:max-w-none md:shrink-0"
+      aria-label="Clinecxa"
+    >
+      <img
+        src="/assets/logo.png"
+        alt=""
+        className="absolute left-1/2 top-1/2 h-auto w-[calc(100%*500/429)] max-w-none -translate-x-1/2 -translate-y-1/2 md:h-[10rem] md:w-auto"
+      />
+    </Link>
+  );
+}
 
 export default function Header() {
   const t = useTranslations("header"); // Initialize translations
+  const tHome = useTranslations("homeRedesign");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -97,6 +116,17 @@ export default function Header() {
   // Prevent background scroll when sidebar is open
   useEffect(() => {
     document.body.style.overflow = isMenuOpen ? "hidden" : "unset";
+  }, [isMenuOpen]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (document.querySelector("[data-currency-menu='open']")) return;
+      setIsMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [isMenuOpen]);
 
   // Handle outside clicks for dropdowns
@@ -166,20 +196,20 @@ export default function Header() {
     return pathname === href;
   };
 
+  const onBook = () => {
+    setIsMenuOpen(false);
+    openSpecialties(pathname, (href) => router.push(href));
+  };
+
 
   if (loading) {
     return (
-      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Left: Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/assets/logo.png" alt="Clinecxa" className="w-24 h-24" />
-          </Link>
-
-          {/* Right: Skeleton */}
+      <header className="sticky top-0 z-50 w-full bg-white border-b border-cx-border">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <BrandLockup />
           <div className="flex items-center gap-4">
-            <div className="w-20 h-8 bg-slate-100 rounded-lg animate-pulse" />
-            <div className="w-10 h-10 bg-slate-200 rounded-full animate-pulse" />
+            <div className="w-24 h-10 bg-cx-tint rounded-lg animate-pulse" />
+            <div className="w-10 h-10 bg-cx-tint rounded-full animate-pulse" />
           </div>
         </div>
       </header>
@@ -188,30 +218,28 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
+      <header className="sticky top-0 z-50 w-full bg-white border-b border-cx-border">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+          <div className="flex h-20 min-w-0 items-center justify-between gap-1 sm:gap-4">
 
-            {/* LEFT SIDE: MOBILE BURGER + LOGO + DESKTOP NAV */}
-            <div className="flex items-center gap-6 md:gap-10">
+            <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-4 md:gap-8">
               <button
-                className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                type="button"
+                className="md:hidden min-h-12 min-w-12 shrink-0 inline-flex items-center justify-center text-cx-ink hover:bg-cx-tint rounded-xl"
                 onClick={() => setIsMenuOpen(true)}
+                aria-label={t("openMenu")}
               >
                 <Menu size={26} />
               </button>
 
-              <Link href="/" className="flex items-center gap-2 group">
-                <img src="/assets/logo.png" alt="" className="w-24 h-24" />
-              </Link>
+              <BrandLockup />
 
-              {/* DESKTOP NAVIGATION (Public Only) */}
               <nav className="hidden md:flex items-center gap-1">
                 {[...(user ? privateLinks : []), ...publicLinks].map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${pathname === link.href ? "text-teal-600 bg-teal-50" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    className={`px-3 py-2 rounded-lg text-base font-semibold min-h-12 inline-flex items-center ${pathname === link.href ? "text-cx-primary bg-cx-tint" : "text-cx-ink hover:bg-cx-tint"
                       }`}
                   >
                     {link.name}
@@ -220,52 +248,64 @@ export default function Header() {
               </nav>
             </div>
 
-            {/* RIGHT SIDE: PROFILE / AUTH */}
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-3 mr-2">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+              <div className="flex items-center gap-1 md:hidden">
+                <LanguageToggle compact />
+                {!user ? (
+                  <button
+                    type="button"
+                    onClick={() => openLoginModal("/dashboard")}
+                    className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-cx-ink hover:bg-cx-tint sm:hidden"
+                    aria-label={t("auth.logIn")}
+                  >
+                    <LogIn size={22} aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+              <div className="hidden md:flex items-center self-center gap-2">
                 <CurrencyToggle />
                 <LanguageToggle />
               </div>
 
               {!user ? (
                 <div className="flex items-center gap-2">
-                  <button onClick={() => openLoginModal("/dashboard")} className="hidden sm:block px-5 py-2.5 text-sm font-bold text-slate-700 hover:text-teal-600 transition-colors">
+                  <button type="button" onClick={() => openLoginModal("/dashboard")} className="hidden sm:inline-flex min-h-12 items-center px-3 text-base font-semibold text-cx-ink hover:text-cx-primary">
                     {t("auth.logIn")}
                   </button>
-                  <button onClick={() => openLoginModal("/")} className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-teal-600 shadow-lg transition-all active:scale-95">
-                    {t("auth.getStarted")}
+                  <button type="button" onClick={onBook} className="cx-btn hidden md:inline-flex">
+                    {tHome("bookConsultation")}
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-4">
-                  {/* Notification Bell (Simplified for full code) */}
-
-                  {/* USER DROPDOWN */}
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={onBook} className="cx-btn hidden md:inline-flex">
+                    {tHome("bookConsultation")}
+                  </button>
                   <div className="relative" ref={userMenuRef}>
                     <button
                       onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                      className="flex items-center gap-3 p-1.5 pl-4 bg-slate-50 border border-slate-200 rounded-full hover:bg-white transition-all shadow-sm"
+                      className="flex items-center gap-3 p-1.5 pl-3 min-h-12 bg-white border border-cx-border rounded-full hover:bg-cx-tint"
                     >
                       <div className="flex flex-col items-end hidden sm:flex">
-                        <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{firstName}</span>
-                        <span className="text-[10px] text-teal-600 font-bold uppercase">{user.role}</span>
+                        <span className="text-sm font-semibold text-cx-ink">{firstName}</span>
+                        <span className="text-xs text-cx-primary font-semibold uppercase">{user.role}</span>
                       </div>
-                      <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-xs overflow-hidden shrink-0 shadow-inner">
+                      <div className="w-9 h-9 bg-cx-primary rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden shrink-0">
                         {user.profile?.avatar_url ? (
                           <img src={user.profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
                           userInitial
                         )}
                       </div>
-                      <ChevronDown size={14} className={`text-slate-400 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-cx-ink transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     {isUserDropdownOpen && (
-                      <div className="absolute right-0 mt-3 w-60 bg-white border border-slate-100 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in duration-200">
-                        <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
+                      <div className="absolute right-0 mt-3 w-60 bg-white border border-cx-border rounded-2xl p-2 z-50">
+                        <Link href="/dashboard" className="flex items-center gap-3 px-3 py-3 text-base font-semibold text-cx-ink hover:bg-cx-tint rounded-xl">
                           <LayoutDashboard size={18} /> {t("dropdown.dashboard")}
                         </Link>
-                        {user.role === "patient" || user.role === "practitioner" ? <Link href={"/profile"} className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl transition-all">
+                        {user.role === "patient" || user.role === "practitioner" ? <Link href={"/profile"} className="flex items-center gap-3 px-3 py-3 text-base font-semibold text-cx-ink hover:bg-cx-tint rounded-xl">
                           <User size={18} /> {t("dropdown.profile")}
                         </Link> : null}
                         <button
@@ -289,20 +329,20 @@ export default function Header() {
 
       {/* --- MOBILE SIDEBAR (LEFT SIDE) --- */}
       <div
-        className={`fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 md:hidden ${isMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`fixed inset-0 z-[60] bg-cx-deep/40 transition-opacity duration-300 md:hidden ${isMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         onClick={() => setIsMenuOpen(false)}
       />
 
-      <div className={`fixed inset-y-0 left-0 z-[70] w-[300px] bg-white shadow-2xl transform transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] md:hidden ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
+      <div className={`fixed inset-y-0 left-0 z-[70] w-[300px] bg-white border-r border-cx-border transform transition-transform duration-300 md:hidden ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-6 border-b border-slate-50 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img src="/assets/logo.png" alt="logo" className="w-20 h-20" />
-            </div>
-            <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 rounded-xl transition-all">
+          <div className="p-4 border-b border-cx-border flex items-center justify-between">
+            <span className="relative flex h-11 w-[7.25rem] items-center overflow-hidden">
+              <img src="/assets/logo.png" alt="Clinecxa" className="absolute left-1/2 top-1/2 h-[6.75rem] w-auto max-w-none -translate-x-1/2 -translate-y-1/2" />
+            </span>
+            <button type="button" onClick={() => setIsMenuOpen(false)} className="min-h-12 min-w-12 inline-flex items-center justify-center text-cx-ink bg-cx-tint rounded-xl" aria-label={t("closeMenu")}>
               <X size={20} />
             </button>
           </div>
@@ -312,17 +352,17 @@ export default function Header() {
 
             {/* Section: Main Menu */}
             <div>
-              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">{t("sidebar.explore")}</p>
+              <p className="px-4 text-sm font-semibold text-cx-primary mb-3">{t("sidebar.explore")}</p>
               <div className="space-y-1">
                 {[...(user ? privateLinks : []), ...publicLinks].map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center gap-4 p-4 text-sm font-bold rounded-2xl transition-all group ${isLinkActive(link.href) ? "bg-teal-50 text-teal-700 shadow-sm shadow-teal-100/50" : "text-slate-600 hover:bg-slate-50"
+                    className={`flex items-center gap-4 p-4 min-h-12 text-base font-semibold rounded-2xl ${isLinkActive(link.href) ? "bg-cx-tint text-cx-primary" : "text-cx-ink hover:bg-cx-tint"
                       }`}
                   >
-                    <div className={`p-2 rounded-lg transition-colors ${isLinkActive(link.href) ? "bg-white text-teal-600" : "bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-teal-600"}`}>
+                    <div className={`p-2 rounded-lg ${isLinkActive(link.href) ? "bg-white text-cx-primary" : "bg-cx-tint text-cx-primary"}`}>
                       <link.icon size={18} />
                     </div>
                     {link.name}
@@ -334,17 +374,17 @@ export default function Header() {
             {/* Section: Dashboard (Only visible if user logged in) */}
             {user && (
               <div>
-                <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">{t("sidebar.patientPortal")}</p>
+                <p className="px-4 text-sm font-semibold text-cx-primary mb-3">{t("sidebar.patientPortal")}</p>
                 <div className="space-y-1">
                   {patientPortalLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
                       onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center gap-4 p-4 text-sm font-bold rounded-2xl transition-all group ${isLinkActive(link.href) ? "bg-teal-50 text-teal-700 shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                      className={`flex items-center gap-4 p-4 min-h-12 text-base font-semibold rounded-2xl ${isLinkActive(link.href) ? "bg-cx-tint text-cx-primary" : "text-cx-ink hover:bg-cx-tint"
                         }`}
                     >
-                      <div className={`p-2 rounded-lg transition-colors ${isLinkActive(link.href) ? "bg-white text-teal-600" : "bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-teal-600"}`}>
+                      <div className={`p-2 rounded-lg ${isLinkActive(link.href) ? "bg-white text-cx-primary" : "bg-cx-tint text-cx-primary"}`}>
                         <link.icon size={18} />
                       </div>
                       {link.name}
@@ -354,21 +394,21 @@ export default function Header() {
               </div>
             )}
 
-            <div className="pt-4 border-t border-slate-100 flex flex-col gap-4">
-              <CurrencyToggle />
-              <LanguageToggle />
+            <div className="pt-4 border-t border-cx-border grid grid-cols-2 gap-3">
+              <CurrencyToggle fullWidth />
+              <LanguageToggle fullWidth />
             </div>
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-slate-50 bg-slate-50/30">
+          <div className="p-4 border-t border-cx-border bg-cx-bg">
             {!user ? (
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => { setIsMenuOpen(false); openLoginModal(); }} className="py-3.5 text-xs font-black text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm">
+              <div className="grid grid-cols-1 gap-3">
+                <button type="button" onClick={() => { setIsMenuOpen(false); openLoginModal(); }} className="cx-btn-secondary inline-flex w-full">
                   {t("auth.logIn")}
                 </button>
-                <button onClick={() => { setIsMenuOpen(false); openLoginModal(); }} className="py-3.5 text-xs font-black text-white bg-slate-900 rounded-xl shadow-lg">
-                  {t("auth.joinNow")}
+                <button type="button" onClick={onBook} className="cx-btn inline-flex w-full">
+                  {tHome("bookConsultation")}
                 </button>
               </div>
             ) : (
@@ -401,7 +441,7 @@ export default function Header() {
               <input
                 type="text" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 placeholder="0 0 0 0 0 0"
-                className="w-full text-center tracking-[0.5em] font-black text-3xl py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500"
+                className="w-full text-center tracking-[0.5em] font-black text-3xl py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-cx-primary"
               />
               <button
                 onClick={async () => {
@@ -412,7 +452,7 @@ export default function Header() {
                   finalizeLogin(data.session);
                 }}
                 disabled={otp.length !== 6}
-                className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-2 hover:bg-teal-600 transition-all"
+                className="cx-btn inline-flex w-full"
               >
                 {t("modal.confirm")}
               </button>
@@ -422,31 +462,31 @@ export default function Header() {
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t("modal.emailLabel")}</label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600" />
-                  <input name="email" type="email" required className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500" placeholder="email@example.com" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-cx-primary" />
+                  <input name="email" type="email" required className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-cx-primary" placeholder="email@example.com" />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t("modal.passwordLabel")}</label>
-                  <button type="button" onClick={() => setShowForgot(true)} className="text-[10px] font-black text-teal-600 hover:underline uppercase">{t("modal.forgot")}</button>
+                  <button type="button" onClick={() => setShowForgot(true)} className="text-[10px] font-black text-cx-primary hover:underline uppercase">{t("modal.forgot")}</button>
                 </div>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600" />
-                  <input name="password" type={showPassword ? "text" : "password"} required className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500" placeholder="••••••••" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-cx-primary" />
+                  <input name="password" type={showPassword ? "text" : "password"} required className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-cx-primary" placeholder="••••••••" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
-              <button disabled={isSubmitting} className="w-full bg-slate-900 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex justify-center items-center gap-3 shadow-xl transition-all">
+              <button disabled={isSubmitting} className="cx-btn inline-flex w-full">
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : t("modal.signInTitle")}
               </button>
               <button type="button" onClick={() => {
                 const dest = redirectTo;
                 closeLoginModal();
                 router.push(dest ? `/create-account?callbackUrl=${encodeURIComponent(dest)}` : "/create-account");
-              }} className="w-full bg-slate-100 text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all">
+              }} className="cx-btn-secondary inline-flex w-full">
                 {t("modal.createAccount")}
               </button>
             </form>
@@ -481,10 +521,10 @@ function ForgotPasswordForm({ onDone, t }: { onDone: () => void, t: any }) {
         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t("modal.accountEmail")}</label>
         <div className="relative">
           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-teal-500" placeholder="email@example.com" />
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-cx-primary" placeholder="email@example.com" />
         </div>
       </div>
-      <button disabled={loading} className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl hover:bg-teal-600 transition-all">
+      <button disabled={loading} className="cx-btn inline-flex w-full">
         {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} {t("modal.sendLink")}
       </button>
       <button type="button" onClick={onDone} className="text-[10px] font-black text-slate-400 hover:text-slate-800 uppercase text-center w-full">

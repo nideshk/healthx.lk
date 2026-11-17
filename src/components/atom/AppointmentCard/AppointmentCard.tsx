@@ -29,7 +29,7 @@ export function AppointmentCard({
             isPast
               ? "bg-gray-100 text-gray-600"
               : appt.status === "confirmed"
-              ? "bg-blue-100 text-blue-700"
+              ? "bg-cx-tint text-cx-primary"
               : appt.status === "completed"
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-600"
@@ -48,8 +48,8 @@ export function AppointmentCard({
 
       {/* Doctor Info */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-          <Stethoscope className="w-6 h-6 text-blue-700" />
+        <div className="w-12 h-12 bg-cx-tint rounded-full flex items-center justify-center">
+          <Stethoscope className="w-6 h-6 text-cx-primary" />
         </div>
 
         <div>
@@ -63,12 +63,12 @@ export function AppointmentCard({
       {/* Appointment details */}
       <div className="space-y-2 text-gray-700 text-sm">
         <p className="flex items-center gap-2">
-          <CalendarDays className="w-4 h-4 text-blue-600" />
+          <CalendarDays className="w-4 h-4 text-cx-primary" />
           {start.toLocaleDateString()}
         </p>
 
         <p className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-blue-600" />
+          <Clock className="w-4 h-4 text-cx-primary" />
           {start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} •{" "}
           {appt.appointment_type?.duration_mins} mins
         </p>
@@ -82,7 +82,7 @@ export function AppointmentCard({
       <div className="mt-4">
         <Link
           href={`/appointments/${appt.id}`}
-          className="text-blue-600 text-sm font-medium hover:text-blue-800 underline"
+          className="text-cx-primary text-sm font-medium hover:text-cx-deep underline"
         >
           View Details →
         </Link>

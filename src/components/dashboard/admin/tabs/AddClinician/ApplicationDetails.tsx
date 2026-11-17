@@ -219,7 +219,7 @@ const ApplicationDetails = ({
                     <div className="flex flex-wrap gap-2">
                       {Array.isArray(formData.specialization) && formData.specialization.length === 0 ? <span className="text-slate-400 text-sm">Select...</span> : 
                         (Array.isArray(formData.specialization) ? formData.specialization : []).map(slug => (
-                          <span key={slug} className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-sm">{specializations.find(s => s.slug === slug)?.name || slug}</span>
+                          <span key={slug} className="bg-cx-tint text-cx-deep px-2 py-1 rounded-full text-sm">{specializations.find(s => s.slug === slug)?.name || slug}</span>
                         ))
                       }
                     </div>
@@ -229,7 +229,7 @@ const ApplicationDetails = ({
                     <div className="absolute z-20 mt-2 w-full max-h-60 overflow-auto bg-white border border-slate-200 rounded-lg shadow-lg">
                       {specializations.filter(s => s.active).map(spec => (
                         <label key={spec.id} className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 cursor-pointer">
-                          <input type="checkbox" className="rounded accent-teal-600" checked={Array.isArray(formData.specialization) && formData.specialization.includes(spec.slug)} onChange={() => toggleSpecialization(spec.slug)} />
+                          <input type="checkbox" className="rounded accent-cx-primary" checked={Array.isArray(formData.specialization) && formData.specialization.includes(spec.slug)} onChange={() => toggleSpecialization(spec.slug)} />
                           <span className="text-slate-700">{spec.name}</span>
                         </label>
                       ))}
@@ -244,7 +244,7 @@ const ApplicationDetails = ({
             </div>
             <div className="mt-4">
               <label className="text-xs text-slate-600 mb-1 block font-medium">Profile Bio</label>
-              <textarea className="w-full p-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-teal-500 outline-none" rows={4} value={formData.profile_bio} onChange={(e) => handleChange("profile_bio", e.target.value)} disabled={!isEditing} />
+              <textarea className="w-full p-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-cx-primary outline-none" rows={4} value={formData.profile_bio} onChange={(e) => handleChange("profile_bio", e.target.value)} disabled={!isEditing} />
             </div>
           </section>
 
@@ -264,7 +264,7 @@ const ApplicationDetails = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {data.documents?.map((doc: any, idx: number) => (
                 <a key={doc.id || idx} href={doc.view_url} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-50">
-                  <FileText className="text-teal-600" />
+                  <FileText className="text-cx-primary" />
                   <div>
                     <p className="text-sm font-medium text-slate-900">{doc.document_type.replace("_", " ")}</p>
                     <p className="text-xs text-slate-500">View Document</p>
@@ -277,7 +277,7 @@ const ApplicationDetails = ({
           {!isEditing && (
             <div className="flex gap-4 pt-6 border-t">
               <Button className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 border-none" onClick={() => setShowRejectModal(true)}>Reject Application</Button>
-              <Button className="flex-1 bg-teal-600" onClick={() => setShowApproveModal(true)}>Approve Application</Button>
+              <Button className="flex-1 bg-cx-primary" onClick={() => setShowApproveModal(true)}>Approve Application</Button>
             </div>
           )}
         </CardBody>
@@ -291,7 +291,7 @@ const ApplicationDetails = ({
             <p className="text-sm text-slate-600 mb-6">Confirming will save details and update the status.</p>
             <div className="flex gap-3">
               <Button className="flex-1" variant="outline" onClick={() => setShowApproveModal(false)}>Back</Button>
-              <Button className="flex-1 bg-teal-600" disabled={processing} onClick={handleSave}>
+              <Button className="flex-1 bg-cx-primary" disabled={processing} onClick={handleSave}>
                 {processing ? <Loader2 className="animate-spin" /> : "Confirm"}
               </Button>
             </div>

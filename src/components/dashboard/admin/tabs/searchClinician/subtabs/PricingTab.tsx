@@ -232,14 +232,14 @@ const PricingTab: React.FC<PricingTabProps> = ({ clinicianId }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pricingData.available_pricing_types.map((service) => (
-              <div key={service.appointment_type_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl bg-white hover:border-blue-200 hover:shadow-sm transition-all group">
+              <div key={service.appointment_type_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl bg-white hover:border-cx-border hover:shadow-sm transition-all group">
                 <div>
-                  <div className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{service.name}</div>
+                  <div className="text-sm font-bold text-slate-800 group-hover:text-cx-primary transition-colors">{service.name}</div>
                   <div className="text-[10px] text-slate-500 font-medium mt-1">Default: {service.base_fee} LKR • {service.duration_mins} mins</div>
                 </div>
                 <button
                   onClick={() => addService(service)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-cx-tint text-cx-primary rounded-lg text-xs font-bold hover:bg-cx-deep hover:text-white transition-all active:scale-95"
                 >
                   <Plus size={14} /> Add
                 </button>

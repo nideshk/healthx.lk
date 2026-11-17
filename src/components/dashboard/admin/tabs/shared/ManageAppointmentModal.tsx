@@ -178,7 +178,7 @@ Clinecxa Team
               w-full text-left px-4 py-3 rounded-lg
               border border-slate-200
               text-slate-700
-              hover:bg-blue-500 hover:text-white
+              hover:bg-cx-deep hover:text-white
               transition-colors
             "
             >

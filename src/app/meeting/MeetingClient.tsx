@@ -62,10 +62,12 @@ export default function MeetingPage() {
         /* -------- STEP 2: FETCH IVS TOKEN -------- */
         const ivsRes = await fetch("/api/ivs/token", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authJson.token}`,
+          },
           body: JSON.stringify({
             appointmentId: authJson.appointmentId,
-            role: authJson.role,
           }),
         });
 

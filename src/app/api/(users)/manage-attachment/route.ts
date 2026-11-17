@@ -6,7 +6,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
-    const { user } = await requireUser(req);
+    const auth = await requireUser(req);
+    if (!auth.authorized) return auth.response;
+    const user = auth.user;
 
     /* user.patientId is trusted */
     const { data: files, error } = await supabaseClient

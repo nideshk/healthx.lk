@@ -268,7 +268,7 @@ const PricingSettings: React.FC = () => {
                           onChange={(e) =>
                             updateFee(feeId, Number(e.target.value))
                           }
-                          className="max-w-[160px] h-11 border-slate-200 focus:border-blue-400 focus:ring-blue-100"
+                          className="max-w-[160px] h-11 border-slate-200 focus:border-cx-primary focus:ring-cx-tint"
                         />
                       </div>
 
@@ -301,10 +301,10 @@ const PricingSettings: React.FC = () => {
                   {pricingData.available_pricing_types.map((service) => (
                     <div
                       key={service.appointment_type_id}
-                      className="flex items-center justify-between p-5 border border-slate-200 rounded-xl bg-white hover:border-blue-200 hover:shadow-md transition-all duration-300 group"
+                      className="flex items-center justify-between p-5 border border-slate-200 rounded-xl bg-white hover:border-cx-border hover:shadow-md transition-all duration-300 group"
                     >
                       <div className="space-y-1">
-                        <div className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                        <div className="text-sm font-bold text-slate-800 group-hover:text-cx-primary transition-colors">
                           {service.name}
                         </div>
                         <div className="flex gap-2 text-[11px] text-slate-500 font-medium">
@@ -314,7 +314,7 @@ const PricingSettings: React.FC = () => {
                       </div>
                       <button
                         onClick={() => addAvailableService(service)}
-                        className="px-5 py-2 text-xs font-bold bg-white border border-slate-200 text-blue-600 rounded-lg shadow-sm hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-200"
+                        className="px-5 py-2 text-xs font-bold bg-white border border-slate-200 text-cx-primary rounded-lg shadow-sm hover:bg-cx-deep hover:text-white hover:border-cx-primary transition-all duration-200"
                       >
                         + Add
                       </button>

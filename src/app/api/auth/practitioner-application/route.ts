@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt } from "@/lib/crypto";
 import { practitionerApiSchema } from "@/lib/validation/practitioner";
+import {
+  applicationUploadSecretReady,
+  issueApplicationUploadKey,
+} from "@/lib/applicationUploadKey";
 
 export async function POST(req: Request) {
   try {
@@ -43,6 +47,10 @@ export async function POST(req: Request) {
       bank_details,
       languages
     } = result.data;
+
+    if (!applicationUploadSecretReady()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     // 🔐 Encrypt password
     const encrypted_password = encrypt(password);
@@ -88,10 +96,16 @@ export async function POST(req: Request) {
       );
     }
 
+    const uploadKey = data?.id ? issueApplicationUploadKey(data.id) : null;
+    if (!data?.id || !uploadKey) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return NextResponse.json({
       success: true,
       message: "Application submitted successfully",
-      application_id: data?.id,
+      application_id: data.id,
+      upload_key: uploadKey,
     });
   } catch (err: any) {
     console.error("Unexpected Practitioner Registration Error:", err);

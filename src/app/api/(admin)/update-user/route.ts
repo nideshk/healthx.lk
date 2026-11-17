@@ -39,6 +39,7 @@ type PractitionerPayload = {
   contact_number?: string;
   profile_bio?: string;
   languages?: string[];
+  slug?: string | null;
   available_services?: string[];
   fees?: Record<string, any>;
 
@@ -55,6 +56,18 @@ type PractitionerPayload = {
 /* ---------------------------------------------
    HELPERS
 --------------------------------------------- */
+
+function normalizePractitionerSlug(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return slug.length > 0 ? slug : null;
+}
 
 function clean<T extends Record<string, any>>(obj?: T) {
   if (!obj) return {};
@@ -287,8 +300,36 @@ export async function PATCH(req: NextRequest) {
         fees: practitioner?.fees,
         languages: practitioner?.languages,
         gender: practitioner?.gender,
+        slug:
+          practitioner &&
+          Object.prototype.hasOwnProperty.call(practitioner, "slug")
+            ? normalizePractitionerSlug(practitioner.slug)
+            : undefined,
         updated_at: new Date().toISOString(),
       });
+
+      if (typeof practitionerUpdate.slug === "string") {
+        const { data: taken, error: slugError } = await supabaseAdmin
+          .from("practitioners")
+          .select("id")
+          .eq("slug", practitionerUpdate.slug)
+          .neq("id", user_id)
+          .maybeSingle();
+
+        if (slugError) {
+          return NextResponse.json(
+            { error: "Could not check the profile link" },
+            { status: 500 }
+          );
+        }
+
+        if (taken) {
+          return NextResponse.json(
+            { error: "That profile link is already in use" },
+            { status: 409 }
+          );
+        }
+      }
 
       // 🔹 Update profile (needs supabase_user_id)
       if (Object.keys(profileUpdate).length)

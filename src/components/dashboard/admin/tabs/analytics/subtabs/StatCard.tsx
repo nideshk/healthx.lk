@@ -18,7 +18,7 @@ const StatCard: React.FC<StatCardProps> = ({
   onClick,
 }) => {
   const colorMap = {
-    blue: "bg-blue-600",
+    blue: "bg-cx-primary",
     green: "bg-green-600",
     orange: "bg-orange-500",
     purple: "bg-purple-600",

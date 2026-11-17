@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { unauthorizedCronResponse } from "@/lib/cronAuth";
 
 /* ---------------------------------------------------------
    Types
@@ -73,6 +74,9 @@ function calculateDuration(events: AuditEvent[]): number {
    CRON HANDLER
 --------------------------------------------------------- */
 export async function GET(_req: NextRequest) {
+  const denied = unauthorizedCronResponse(_req);
+  if (denied) return denied;
+
   try {
     /* -----------------------------------------------------
        1️⃣ Fetch logs

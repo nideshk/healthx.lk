@@ -80,24 +80,33 @@ export async function requireUser(req: Request): Promise<RequireUserResult> {
   /* -------------------------------
      4️⃣ Domain mapping
   ------------------------------- */
-  const { data: patient } = await supabaseAdmin
-    .from("patients")
-    .select("*")
-    .eq("supabase_user_id", auth_user_id)
-    .maybeSingle();
-
-  const { data: practitioner } = await supabaseAdmin
-    .from("practitioners")
-    .select("*")
-    .eq("supabase_user_id", auth_user_id)
-    .maybeSingle();
-
-
-  const { data: adminUser } = await supabaseAdmin
-    .from("admin_users")
-    .select("id, role")
-    .eq("supabase_user_id", auth_user_id)
-    .maybeSingle();
+  const [
+    { data: patient },
+    { data: practitioner },
+    { data: adminUser },
+    { data: goveId },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("patients")
+      .select("*")
+      .eq("supabase_user_id", auth_user_id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("practitioners")
+      .select("*")
+      .eq("supabase_user_id", auth_user_id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("admin_users")
+      .select("id, role")
+      .eq("supabase_user_id", auth_user_id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("user_government_ids")
+      .select("*")
+      .eq("user_id", auth_user_id)
+      .maybeSingle(),
+  ]);
 
   let admin = null;
 
@@ -113,8 +122,6 @@ export async function requireUser(req: Request): Promise<RequireUserResult> {
       policies: policyRows?.map((p) => p.policy_code) ?? [],
     };
   }
-
-  const { data: goveId } = await supabaseAdmin.from("user_government_ids").select("*").eq("user_id", auth_user_id).maybeSingle();
   function maskId(id: string) {
     if (!id) return null;
     const last4 = id.slice(-4);
@@ -148,6 +155,10 @@ export async function requireUser(req: Request): Promise<RequireUserResult> {
 /* -------------------------------
    Helpers
 ------------------------------- */
+
+export function isAdminRole(role: string | null | undefined) {
+  return role === "admin" || role === "superadmin";
+}
 
 function unauthorized(): RequireUserResult {
   return {

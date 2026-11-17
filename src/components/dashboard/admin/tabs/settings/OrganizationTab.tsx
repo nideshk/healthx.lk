@@ -107,7 +107,7 @@ const OrganizationTab: React.FC = () => {
               Physical Address
             </label>
             <textarea
-              className="w-full min-h-[148px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+              className="w-full min-h-[148px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary transition-all resize-none"
               value={settings.org_address}
               onChange={(e) => setSettings({ ...settings, org_address: e.target.value })}
               placeholder="Enter the full physical address..."
@@ -119,7 +119,7 @@ const OrganizationTab: React.FC = () => {
               PDF Disclaimer
             </label>
             <textarea
-              className="w-full min-h-[80px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+              className="w-full min-h-[80px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cx-primary/20 focus:border-cx-primary transition-all resize-none"
               value={settings.disclaimer}
               onChange={(e) => setSettings({ ...settings, disclaimer: e.target.value })}
               placeholder="Enter the disclaimer to be displayed at the bottom of the PDF..."

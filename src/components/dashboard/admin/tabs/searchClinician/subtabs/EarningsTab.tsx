@@ -138,7 +138,7 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
         <StatCard
           label="Completed Appointments"
           value={summary.completedAppointments}
-          valueClass="text-blue-600"
+          valueClass="text-cx-primary"
         />
 
         <StatCard
@@ -156,7 +156,7 @@ const EarningsTab: React.FC<EarningsTabProps> = ({ clinicianId }) => {
         <StatCard
           label="Net Amount (LKR)"
           value={(summary.consultationFees ?? 0).toLocaleString()}
-          valueClass="text-blue-600"
+          valueClass="text-cx-primary"
         />
       </div>
 

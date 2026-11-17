@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CalendarDays, Stethoscope, Pill } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { useTranslations } from "next-intl";
+import { useFormatSpecialties } from "@/lib/specialtyLabels";
 
 type FollowUpRequestType = {
   id: string;
@@ -27,6 +28,7 @@ type FollowUpRequestType = {
 };
 
 export default function FollowUpRequest() {
+  const formatSpecialties = useFormatSpecialties();
   const t = useTranslations("followUpRequest");
 
   const [followUps, setFollowUps] = useState<FollowUpRequestType[]>([]);
@@ -114,7 +116,7 @@ export default function FollowUpRequest() {
                       Dr. {req.appointment.practitioner.full_name}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {req.appointment.practitioner.specialization.join(", ")}
+                      {formatSpecialties(req.appointment.practitioner.specialization)}
                     </p>
                   </div>
 
@@ -178,7 +180,7 @@ export default function FollowUpRequest() {
                 <div className="mt-6 flex justify-end">
                   <Link
                     href={`/appointment?followUpFor=${req.appointment.id}`}
-                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
+                    className="inline-flex items-center gap-2 rounded-xl bg-cx-primary px-4 py-2 text-sm font-semibold text-white hover:bg-cx-deep transition"
                   >
                     <CalendarDays className="w-4 h-4" />
                     {t("book")}

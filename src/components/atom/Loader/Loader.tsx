@@ -21,7 +21,7 @@ export default function Loader({
   const colorClasses =
     theme === "dark"
       ? "border-gray-500 border-t-white"
-      : "border-gray-300 border-t-[#018BB5]";
+      : "border-gray-300 border-t-cx-primary";
 
   return (
     <div

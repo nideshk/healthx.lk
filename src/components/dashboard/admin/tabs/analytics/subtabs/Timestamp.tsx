@@ -327,7 +327,7 @@ const TimestampTab: React.FC = () => {
 const StatusBadge = ({ status }: { status: string }) => {
   const colorMap: Record<string, string> = {
     confirmed: "bg-green-100 text-green-700 border-green-200",
-    completed: "bg-blue-100 text-blue-700 border-blue-200",
+    completed: "bg-cx-tint text-cx-deep border-cx-border",
     cancelled: "bg-red-100 text-red-700 border-red-200",
     pending: "bg-amber-100 text-amber-700 border-amber-200",
   };

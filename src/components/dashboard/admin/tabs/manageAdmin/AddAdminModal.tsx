@@ -135,7 +135,7 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({
                 Gender
               </label>
               <select
-                className="w-full border border-slate-200 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                className="w-full border border-slate-200 rounded-md p-2 text-sm focus:ring-2 focus:ring-cx-primary outline-none bg-white"
                 value={form.gender}
                 onChange={(e) => setForm({ ...form, gender: e.target.value })}
               >
@@ -202,7 +202,7 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({
                   type="radio"
                   checked={form.role === "admin"}
                   onChange={() => setForm({ ...form, role: "admin" })}
-                  className="w-4 h-4 accent-blue-600"
+                  className="w-4 h-4 accent-cx-primary"
                 />
                 Admin
               </label>
@@ -211,7 +211,7 @@ const AddAdminModal: React.FC<AddAdminModalProps> = ({
                   type="radio"
                   checked={form.role === "superadmin"}
                   onChange={() => setForm({ ...form, role: "superadmin" })}
-                  className="w-4 h-4 accent-blue-600"
+                  className="w-4 h-4 accent-cx-primary"
                 />
                 Super Admin
               </label>

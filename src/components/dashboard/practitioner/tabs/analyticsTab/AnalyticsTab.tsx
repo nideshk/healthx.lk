@@ -524,7 +524,7 @@ const AnalyticsTab: React.FC = () => {
         {
           header: "TXN ID",
           render: (item: RefundItem) => (
-            <span className="font-mono text-blue-600 font-bold">
+            <span className="font-mono text-cx-primary font-bold">
               {item.transaction_id}
             </span>
           ),
@@ -607,7 +607,7 @@ const AnalyticsTab: React.FC = () => {
       {
         header: "Type",
         render: (item) => (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cx-tint text-cx-deep border border-cx-tint">
             {item.appointment_type}
           </span>
         ),
@@ -619,7 +619,7 @@ const AnalyticsTab: React.FC = () => {
           const config = {
             completed: "bg-green-50 text-green-700 border-green-100",
             cancelled: "bg-red-50 text-red-700 border-red-100",
-            default: "bg-blue-50 text-blue-700 border-blue-100",
+            default: "bg-cx-tint text-cx-deep border-cx-tint",
           };
           const style = config[status as keyof typeof config] || config.default;
 
@@ -680,7 +680,7 @@ const AnalyticsTab: React.FC = () => {
         {(selectedDetail || activeTab === "timestamps") && (
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-2 bg-cx-primary hover:bg-cx-deep text-white px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95"
           >
             <Download size={14} /> Extract Excel
           </button>
@@ -795,7 +795,7 @@ const AnalyticsTabButton = ({
 }) => (
   <button
     onClick={() => onClick(id)}
-    className={`flex-1 rounded-full px-3 py-2 font-medium transition-all ${id === active ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+    className={`flex-1 rounded-full px-3 py-2 font-medium transition-all ${id === active ? "bg-cx-primary text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
       }`}
   >
     {label}
@@ -824,7 +824,7 @@ const BookingsView = ({
   showRefunds: boolean;
 }) => {
   const statCards = [
-    { id: "total", label: "Total Bookings", value: stats.totalBookings, bg: "bg-blue-500" },
+    { id: "total", label: "Total Bookings", value: stats.totalBookings, bg: "bg-cx-primary" },
     { id: "completed bookings", label: "Appointments Completed", value: stats.completed, bg: "bg-green-500" },
     { id: "cancelled bookings", label: "Cancelled Bookings", value: stats.cancelled, bg: "bg-red-500" },
     ...(showRefunds ? [{ id: "refunds", label: "Refunds Requested", value: stats.refunds, bg: "bg-amber-400" }] : []),
@@ -875,7 +875,7 @@ const DateInput = ({
       type="date"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-cx-primary outline-none"
     />
   </div>
 );

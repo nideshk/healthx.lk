@@ -9,6 +9,7 @@ import {
   generatePractitionerConfirmationEmail,
   generateAdminConfirmationEmail
 } from "@/lib/emailTemplates";
+import { meetingJoinUrl } from "@/lib/meetings/joinLink";
 
 
 export async function processNotifications() {
@@ -86,7 +87,11 @@ export async function processNotifications() {
             appointmentData = {
               id: appointment.id,
               roomKey: appointment.room_key,
-              meetingUrl: appointment.telehealth_url,
+              meetingUrl:
+                meetingJoinUrl(
+                  appointment.room_key,
+                  process.env.NEXT_PUBLIC_BASE_URL || "https://www.clinecxa.lk",
+                ) ?? "",
               startsAt: appointment.starts_at,
               endsAt: appointment.ends_at,
               practitionerName: practitioner?.full_name || "Your Practitioner",

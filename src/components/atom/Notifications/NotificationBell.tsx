@@ -52,7 +52,7 @@ export default function NotificationBell({
                 key={n.id}
                 onClick={() => markAsRead(n.id)}
                 className={`p-3 cursor-pointer text-sm border-b hover:bg-gray-50 ${
-                  n.status === "unread" ? "bg-blue-50" : ""
+                  n.status === "unread" ? "bg-cx-tint" : ""
                 }`}
               >
                 <p className="font-medium">{n.title}</p>

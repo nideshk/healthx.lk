@@ -50,13 +50,13 @@ export default function ForgotPasswordPage() {
           placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-cx-primary"
         />
       </div>
 
       <button
         disabled={loading}
-        className="w-full bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition"
+        className="w-full bg-cx-primary hover:bg-cx-deep disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition"
       >
         {loading ? "Sending reset link…" : "Send reset link"}
       </button>

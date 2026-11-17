@@ -104,7 +104,7 @@ export default function ResetPasswordPage() {
 
         <button
           onClick={() => router.push("/forgot-password")}
-          className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-medium"
+          className="bg-cx-primary hover:bg-cx-deep text-white px-4 py-2 rounded-lg font-medium"
         >
           Request new link
         </button>
@@ -183,7 +183,7 @@ export default function ResetPasswordPage() {
           password !== confirmPassword ||
           strength.label === "Weak"
         }
-        className="w-full bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition"
+        className="w-full bg-cx-primary hover:bg-cx-deep disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition"
       >
         {loading ? "Updating…" : "Update password"}
       </button>

@@ -22,7 +22,7 @@ const DashboardShell: React.FC<DashboardShellProps> = ({
   children,
 }) => {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-cx-bg flex flex-col">
       {/* TOP HEADER */}
       <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between">
         <div>
