@@ -138,6 +138,7 @@
     "loadingDoctors": "Finding best specialists...",
     "noDoctors": "No doctors available for this service yet.",
     "noCurrentAvailability": "No current availability",
+    "homeVisitsAvailable": "Home visits available",
     "tryAnotherService": "Try another service",
     "verifiedSpecialist": "Verified Specialist",
     "consultationFee": "Consultation starting at",

@@ -137,6 +137,7 @@
     "loadingDoctors": "හොඳම විශේෂඥයින් සොයමින්...",
     "noDoctors": "මෙම සේවාව සඳහා දැනට වෛද්‍යවරු නොමැත.",
     "noCurrentAvailability": "දැනට වෙන්කරගත හැකි වේලාවන් නැත",
+    "homeVisitsAvailable": "නිවසට පැමිණීමේ සේවාව ලබා ගත හැක",
     "tryAnotherService": "වෙනත් සේවාවක් උත්සාහ කරන්න",
     "verifiedSpecialist": "සත්‍යාපිත විශේෂඥ",
     "consultationFee": "උපදේශනය ආරම්භ වේ",

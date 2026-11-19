@@ -70,6 +70,7 @@ const DoctorSelectionStep = forwardRef(
             currency: 'LKR',
             rating: { overall: 4.8 },
             hasCurrentAvailability: p.has_current_availability !== false,
+            offersHomeVisit: p.offers_home_visit === true,
           }));
           setDoctors(mapped);
         } catch (err) {
@@ -194,7 +195,8 @@ const DoctorSelectionStep = forwardRef(
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedDoctors.map((doctor: any) => {
                 const isSelected = selectedDoctorId === doctor.id;
-                const unavailable = doctor.hasCurrentAvailability === false;
+                const offersHomeVisit = doctor.offersHomeVisit === true;
+                const unavailable = doctor.hasCurrentAvailability === false && !offersHomeVisit;
 
                 return (
                   <div
@@ -251,11 +253,15 @@ const DoctorSelectionStep = forwardRef(
                         <p className="text-[10px] font-black text-cx-primary uppercase tracking-[0.2em] mt-1.5">
                           {t('verifiedSpecialist')}
                         </p>
-                        {unavailable && (
+                        {offersHomeVisit && doctor.hasCurrentAvailability === false ? (
+                          <p className="mt-2 inline-flex text-xs font-bold text-cx-primary bg-cx-tint border border-cx-border rounded-full px-2.5 py-1 normal-case tracking-normal">
+                            {t('homeVisitsAvailable')}
+                          </p>
+                        ) : unavailable ? (
                           <p className="mt-2 inline-flex text-xs font-bold text-amber-800 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-1 normal-case tracking-normal">
                             {t('noCurrentAvailability')}
                           </p>
-                        )}
+                        ) : null}
                       </div>
 
                       <div className="space-y-3 mb-8">
