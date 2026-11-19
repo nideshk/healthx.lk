@@ -1,5 +1,6 @@
 import { supabaseClient } from "@/lib/supabaseClient";
 import { specialtySlugVariants } from "@/lib/specialtySlugVariants";
+import { isInHomeType } from "@/lib/isInHomeType";
 import { NextResponse } from "next/server";
 
 /* ------------------------- helpers ------------------------- */
@@ -184,6 +185,11 @@ export async function GET(
 
     const practitioners = data.map((p) => {
       const { starting_price, ending_price } = calculateFeeRange(p.fees);
+      const appointment_types = appointmentTypesFromFees(
+        (p.fees ?? null) as Record<string, FeeItem> | null,
+        appointmentTypeMap
+      );
+      const offers_home_visit = appointment_types.some((type) => isInHomeType(type));
 
       return {
         id: p.id,
@@ -200,10 +206,8 @@ export async function GET(
         has_current_availability: availabilityKnown
           ? availableIds.has(p.id)
           : true,
-        appointment_types: appointmentTypesFromFees(
-          (p.fees ?? null) as Record<string, FeeItem> | null,
-          appointmentTypeMap
-        ),
+        offers_home_visit,
+        appointment_types,
       };
     });
 

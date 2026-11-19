@@ -22,6 +22,7 @@ import { useTranslations } from "next-intl";
 import { authFetch } from "@/lib/authFetch";
 import Price from "@/components/common/Price";
 import { useFormatSpecialties } from "@/lib/specialtyLabels";
+import { isInHomeType } from "@/lib/isInHomeType";
 
 const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookingData }: any, ref) => {
   const t = useTranslations("bookAppointment");
@@ -45,17 +46,6 @@ const BookAppointmentStep = forwardRef(({ nextStep, prevStep, updateData, bookin
   const [isConfirming, setIsConfirming] = useState(false);
 
   const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
-
-  function isInHomeType(type: any) {
-    if (!type) return false;
-    const slug = (type.slug || type.sin_slug || "").toString().toLowerCase();
-    if (slug) {
-      if (slug === "in-home-visit" || slug === "in-home" || slug.includes("home")) return true;
-    }
-    const name = (type.name || "").toString().toLowerCase();
-    if (name.includes("in-home") || name.includes("home visit") || name.includes("home")) return true;
-    return false;
-  }
 
   const timeRef = useRef<HTMLDivElement>(null);
 

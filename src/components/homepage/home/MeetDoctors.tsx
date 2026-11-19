@@ -15,6 +15,7 @@ type PublicDoctor = {
   qualification?: string | null;
   profile_picture_url?: string | null;
   has_current_availability?: boolean;
+  offers_home_visit?: boolean;
 };
 
 type ServiceRow = {
@@ -112,7 +113,8 @@ export default function MeetDoctors() {
           <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {doctors.map((doctor) => {
               const specialties = formatSpecialties(doctor.specialization);
-              const bookable = doctor.has_current_availability !== false;
+              const offersHomeVisit = doctor.offers_home_visit === true;
+              const bookable = doctor.has_current_availability !== false || offersHomeVisit;
               return (
                 <li
                   key={doctor.id}
@@ -146,7 +148,11 @@ export default function MeetDoctors() {
                           {doctor.qualification}
                         </p>
                       ) : null}
-                      {!bookable ? (
+                      {offersHomeVisit && doctor.has_current_availability === false ? (
+                        <p className="mt-3 inline-flex text-sm font-semibold text-cx-primary bg-cx-tint rounded-full px-3 py-1">
+                          {tSelection("homeVisitsAvailable")}
+                        </p>
+                      ) : !bookable ? (
                         <p className="mt-3 inline-flex text-sm font-semibold text-cx-ink bg-cx-gold rounded-full px-3 py-1">
                           {tSelection("noCurrentAvailability")}
                         </p>
