@@ -40,6 +40,7 @@ type Doctor = {
   profile_bio: string | null;
   profile_picture_url: string | null;
   has_current_availability?: boolean;
+  offers_home_visit?: boolean;
 };
 
 /* ---------- Main Component ---------- */
@@ -433,7 +434,8 @@ const DoctorPicker = ({ doctors, service, onSelect, headingRef }: DoctorPickerPr
       <div className="space-y-4">
         {sortedDoctors.length > 0 ? (
           sortedDoctors.map((d: any) => {
-            const unavailable = d.has_current_availability === false;
+            const offersHomeVisit = d.offers_home_visit === true;
+            const unavailable = d.has_current_availability === false && !offersHomeVisit;
             return (
             <button
               key={d.id}
@@ -499,11 +501,15 @@ const DoctorPicker = ({ doctors, service, onSelect, headingRef }: DoctorPickerPr
                     )}
                   </div>
 
-                  {unavailable && (
+                  {offersHomeVisit && d.has_current_availability === false ? (
+                    <p className="mt-2 inline-flex text-sm font-semibold text-cx-primary bg-cx-tint rounded-full px-3 py-1">
+                      {tSelection("homeVisitsAvailable")}
+                    </p>
+                  ) : unavailable ? (
                     <p className="mt-2 inline-flex text-sm font-semibold text-cx-ink bg-cx-gold rounded-full px-3 py-1">
                       {tSelection("noCurrentAvailability")}
                     </p>
-                  )}
+                  ) : null}
 
                   {/* Bio */}
                   {d.profile_bio && (
